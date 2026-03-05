@@ -3,8 +3,8 @@ import { SectionCard } from "@/components/settings/section-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { SettingsSaveButton } from "@/components/settings/settings-save-button";
+import { SettingsSwitch } from "@/components/settings/settings-switch";
 
 export default async function AdminSettingsNotificationsPage() {
   await requireAdminSettings();
@@ -18,13 +18,13 @@ export default async function AdminSettingsNotificationsPage() {
       >
         <div className="grid gap-2">
           <Label>Resend API Key</Label>
-          <Input type="password" placeholder="••••••••" />
+          <Input name="resendApiKey" type="password" placeholder="••••••••" />
           <Label>From Name</Label>
-          <Input defaultValue="PrintHub" />
+          <Input name="emailFromName" defaultValue="PrintHub" />
           <Label>From Email</Label>
-          <Input defaultValue="hello@printhub.africa" />
+          <Input name="emailFrom" defaultValue="hello@printhub.africa" />
           <Label>Reply-To</Label>
-          <Input placeholder="support@printhub.africa" />
+          <Input name="emailReplyTo" placeholder="support@printhub.africa" />
         </div>
         <Button type="button" variant="outline" size="sm" className="mt-2">Test Email</Button>
       </SectionCard>
@@ -34,9 +34,9 @@ export default async function AdminSettingsNotificationsPage() {
       >
         <div className="grid gap-2">
           <Label>API Key / Username</Label>
-          <Input type="password" placeholder="••••••••" />
+          <Input name="smsApiKey" type="password" placeholder="••••••••" />
           <Label>Sender ID</Label>
-          <Input defaultValue="PrintHub" placeholder="Max 11 characters" />
+          <Input name="smsSenderId" defaultValue="PrintHub" placeholder="Max 11 characters" maxLength={11} aria-label="Sender ID (max 11 characters)" />
         </div>
         <Button type="button" variant="outline" size="sm" className="mt-2">Test SMS</Button>
       </SectionCard>
@@ -46,13 +46,12 @@ export default async function AdminSettingsNotificationsPage() {
       >
         <div className="grid gap-2">
           <Label>WhatsApp Number</Label>
-          <Input placeholder="+254 XXX XXX XXX" />
+          <Input name="whatsappNumber" placeholder="+254 XXX XXX XXX" />
           <Label>Pre-filled message</Label>
-          <Input placeholder="Hi PrintHub, I'd like to get a quote for..." />
+          <Input name="whatsappMessage" placeholder="Hi PrintHub, I'd like to get a quote for..." />
         </div>
         <div className="flex items-center gap-4 mt-4">
-          <Switch defaultChecked />
-          <Label>Show WhatsApp floating button on all pages</Label>
+          <SettingsSwitch name="whatsappFloatingButton" defaultValue={true} label="Show WhatsApp floating button on all pages" />
         </div>
       </SectionCard>
       <SectionCard
@@ -64,7 +63,7 @@ export default async function AdminSettingsNotificationsPage() {
         </p>
         <div className="grid gap-2 mt-4">
           <Label>Admin alert email</Label>
-          <Input placeholder="admin@printhub.africa" />
+          <Input name="adminAlertEmail" placeholder="admin@printhub.africa" />
         </div>
       </SectionCard>
       <SectionCard

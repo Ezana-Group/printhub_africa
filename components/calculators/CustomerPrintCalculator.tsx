@@ -13,13 +13,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { use3DRates } from "@/hooks/use3DRates";
-import {
-  calculatePrintCost,
-  roundUpToTen,
-  formatKes,
-  type PrintJob,
-} from "@/lib/3d-calculator-engine";
+import { useCalculatorConfig, compute3DEstimateFromConfig } from "@/hooks/useCalculatorConfig";
+import { formatKes, type PrintJob } from "@/lib/3d-calculator-engine";
 import {
   COLOUR_PILLS,
   BRAND_COLOUR_HEX,
@@ -44,8 +39,10 @@ const TIME_GUIDE = `Rough time guide:
 • Large object (150g+):    8–24+ hours
 These vary by layer height and infill.`;
 
-type MaterialWithColors = import("@/lib/3d-calculator-engine").MaterialRate & {
-  colorOptions?: string[];
+type MaterialWithColors = {
+  code: string;
+  name: string;
+  costPerKgKes: number;
   baseMaterial?: string;
   color?: string;
   quantity?: number;
@@ -57,7 +54,7 @@ type CustomerPrintCalculatorProps = {
 };
 
 export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, onMaterialChange }: CustomerPrintCalculatorProps) {
-  const { data: rates, loading: ratesLoading } = use3DRates();
+  const { data: config, loading: configLoading } = useCalculatorConfig();
   const { data: session } = useSession();
 
   const [materialType, setMaterialType] = useState("");
@@ -71,18 +68,26 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
   const [instructions, setInstructions] = useState("");
   const [submitStatus, setSubmitStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
 
-  const materials: MaterialWithColors[] = rates?.materials ?? [];
-  const settings = rates?.printerSettings;
+  const materials: MaterialWithColors[] = useMemo(() => {
+    if (!config?.filaments?.length) return [];
+    return config.filaments.map((f) => ({
+      code: f.id,
+      name: f.name,
+      costPerKgKes: f.costPerKg,
+      baseMaterial: f.material,
+      color: canonicalColorFromSpec(f.colour ?? ""),
+      quantity: 1,
+    }));
+  }, [config?.filaments]);
 
   const { materialTypes, byMaterialType, availableColorSet, inStockColorSet } = useMemo(() => {
     const byBase: Record<string, { code: string; name: string; color: string; quantity: number }[]> = {};
     for (const m of materials) {
       const base = m.baseMaterial ?? (m.name.replace(/\s*\([^)]*\)\s*$/, "").trim() || m.name);
       if (!byBase[base]) byBase[base] = [];
-      const rawColor = (m as MaterialWithColors).color ?? ((m.name.match(/\s*\(([^)]+)\)\s*$/) ?? [])[1]?.trim());
+      const rawColor = m.color ?? ((m.name.match(/\s*\(([^)]+)\)\s*$/) ?? [])[1]?.trim());
       const canonical = canonicalColorFromSpec(rawColor);
-      const quantity = (m as MaterialWithColors).quantity ?? 0;
-      byBase[base].push({ code: m.code, name: m.name, color: canonical, quantity });
+      byBase[base].push({ code: m.code, name: m.name, color: canonical, quantity: m.quantity ?? 1 });
     }
     const types = Object.keys(byBase);
     const sorted = [...new Set([...PREFERRED_MATERIAL_ORDER.filter((p) => types.some((t) => t.toLowerCase() === p.toLowerCase())), ...types])];
@@ -95,10 +100,10 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
         const pill = COLOUR_PILLS.find((p) => p.id.toLowerCase() === x.color.toLowerCase());
         if (pill) {
           pillIds.add(pill.id);
-          if (x.quantity > 0) inStock.add(pill.id);
+          inStock.add(pill.id);
         } else {
           pillIds.add(x.color);
-          if (x.quantity > 0) inStock.add(x.color);
+          inStock.add(x.color);
         }
       }
       colorSet[t] = pillIds;
@@ -144,7 +149,7 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
   useEffect(() => {
     if (effectiveMaterial && materials.length) {
       const mat = materials.find((m) => m.code === effectiveMaterial);
-      if (mat) onMaterialChange?.(mat.code, (mat as MaterialWithColors).baseMaterial ?? mat.name, colorChoice || undefined);
+      if (mat) onMaterialChange?.(mat.code, mat.baseMaterial ?? mat.name, colorChoice || undefined);
     }
   }, [effectiveMaterial, materials, colorChoice, onMaterialChange]);
 
@@ -160,18 +165,27 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
     [effectiveMaterial, weightGrams, printTimeHours, postProcessing, quantity]
   );
 
-  const breakdown = useMemo(() => {
-    if (!settings || !materials.length || !effectiveMaterial) return null;
-    if (job.weightGrams <= 0 || job.printTimeHours <= 0) return null;
-    try {
-      return calculatePrintCost(job, settings, materials);
-    } catch {
-      return null;
-    }
-  }, [job, settings, materials, effectiveMaterial]);
+  const selectedFilament = useMemo(
+    () => materials.find((m) => m.code === effectiveMaterial),
+    [materials, effectiveMaterial]
+  );
 
-  const priceLow = breakdown ? roundUpToTen(breakdown.sellingPriceIncVat * 0.85) : null;
-  const priceHigh = breakdown ? roundUpToTen(breakdown.sellingPriceIncVat * 1.25) : null;
+  const breakdown = useMemo(() => {
+    if (!config || !selectedFilament) return null;
+    const w = Number(weightGrams) || 0;
+    const t = Number(printTimeHours) || 0;
+    const qty = Math.max(1, Math.min(999, quantity));
+    if (w <= 0 || t <= 0) return null;
+    return compute3DEstimateFromConfig(config, {
+      weightG: w,
+      printTimeHrs: t,
+      quantity: qty,
+      costPerKg: selectedFilament.costPerKgKes,
+    });
+  }, [config, selectedFilament, weightGrams, printTimeHours, quantity]);
+
+  const priceLow = breakdown?.rangeLow ?? null;
+  const priceHigh = breakdown?.rangeHigh ?? null;
   const showEstimate = priceLow != null && priceHigh != null;
 
   useEffect(() => {
@@ -191,7 +205,7 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           quoteType: "3d",
-          estimatedTotal: breakdown?.sellingPriceIncVat ?? 0,
+          estimatedTotal: breakdown?.finalPrice ?? 0,
           inputs: {
             material: job.material,
             color: colorChoice || undefined,
@@ -217,17 +231,17 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
   const isLight = variant === "light";
   const cardClass = isLight
     ? "rounded-2xl border border-slate-200 bg-card p-6 shadow-sm md:p-8"
-    : "rounded-2xl border border-[#FF4D00]/20 bg-[#0A0A0A] p-6 text-white shadow-xl md:p-8";
+    : "rounded-2xl border border-[#E8440A]/20 bg-[#0A0A0A] p-6 text-white shadow-xl md:p-8";
   const labelClass = isLight ? "text-slate-700" : "text-white/70";
   const inputClass = isLight
     ? "mt-1.5 w-full rounded-xl border border-input bg-background px-3 py-2.5 text-slate-900"
-    : "mt-1.5 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-white focus:border-[#FF4D00] focus:outline-none focus:ring-1 focus:ring-[#FF4D00]";
-  const accentBg = isLight ? "bg-blue-500" : "bg-[#FF4D00]";
+    : "mt-1.5 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-white focus:border-[#E8440A] focus:outline-none focus:ring-1 focus:ring-[#E8440A]";
+  const accentBg = isLight ? "bg-[#E8440A]" : "bg-[#E8440A]";
   const accentText = isLight ? "text-white" : "text-white";
 
-  if (ratesLoading || !rates) {
+  if (configLoading || !config) {
     return (
-      <div className={isLight ? "rounded-2xl border border-slate-200 bg-card p-8 text-center text-slate-600" : "rounded-2xl border border-[#FF4D00]/20 bg-[#0A0A0A] p-8 text-center text-white/60"}>
+      <div className={isLight ? "rounded-2xl border border-slate-200 bg-card p-8 text-center text-slate-600" : "rounded-2xl border border-[#E8440A]/20 bg-[#0A0A0A] p-8 text-center text-white/60"}>
         Loading calculator…
       </div>
     );
@@ -235,7 +249,7 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
 
   if (!materials.length) {
     return (
-      <div className={isLight ? "rounded-2xl border border-slate-200 bg-card p-8 text-center text-slate-600" : "rounded-2xl border border-[#FF4D00]/20 bg-[#0A0A0A] p-8 text-center text-white/60"}>
+      <div className={isLight ? "rounded-2xl border border-slate-200 bg-card p-8 text-center text-slate-600" : "rounded-2xl border border-[#E8440A]/20 bg-[#0A0A0A] p-8 text-center text-white/60"}>
         No materials configured. Please try again later.
       </div>
     );
@@ -439,7 +453,7 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
                 type="checkbox"
                 checked={postProcessing}
                 onChange={(e) => setPostProcessing(e.target.checked)}
-                className={isLight ? "rounded border-slate-300 text-blue-500" : "rounded border-white/30 text-[#FF4D00]"}
+                className={isLight ? "rounded border-slate-300 text-[#E8440A]" : "rounded border-white/30 text-[#E8440A]"}
               />
               Post-processing / support removal
             </label>
@@ -448,7 +462,7 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
       </div>
 
       {showEstimate && !onEstimateChange && (
-        <div className={`mt-6 rounded-xl p-4 ${isLight ? "bg-blue-500/10 text-blue-800 border border-blue-200" : "bg-[#FF4D00] text-white"}`}>
+        <div className={`mt-6 rounded-xl p-4 ${isLight ? "bg-[#E8440A]/10 text-[#E8440A] border border-[#E8440A]/30" : "bg-[#E8440A] text-white"}`}>
           <p className="text-sm font-medium opacity-90">Your Estimate</p>
           <p className="mt-1 text-2xl font-bold">
             {formatKes(priceLow)} – {formatKes(priceHigh)}
@@ -466,13 +480,13 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
         <Sheet open={quoteOpen} onOpenChange={setQuoteOpen}>
           <SheetTrigger asChild>
             <Button
-              className={`w-full rounded-xl font-semibold ${isLight ? "bg-blue-500 text-white hover:bg-blue-600" : "bg-[#FF4D00] text-white hover:bg-[#FF4D00]/90"}`}
+              className={`w-full rounded-xl font-semibold ${isLight ? "bg-[#E8440A] text-white hover:bg-[#E8440A]/90" : "bg-[#E8440A] text-white hover:bg-[#E8440A]/90"}`}
               size="lg"
             >
               Submit for Quote →
             </Button>
           </SheetTrigger>
-          <SheetContent className={isLight ? "border-slate-200 bg-white text-slate-900" : "border-[#FF4D00]/20 bg-[#0A0A0A] text-white"}>
+          <SheetContent className={isLight ? "border-slate-200 bg-white text-slate-900" : "border-[#E8440A]/20 bg-[#0A0A0A] text-white"}>
             <SheetHeader>
               <SheetTitle className={isLight ? "text-slate-900" : "text-white"}>Submit for Quote</SheetTitle>
             </SheetHeader>
@@ -484,7 +498,7 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
                     estimate and get back to you within 2 business days.
                   </p>
                   <Button
-                    className={isLight ? "w-full rounded-xl bg-blue-500 text-white hover:bg-blue-600" : "w-full rounded-xl bg-[#FF4D00] text-white hover:bg-[#FF4D00]/90"}
+                    className={isLight ? "w-full rounded-xl bg-[#E8440A] text-white hover:bg-[#E8440A]/90" : "w-full rounded-xl bg-[#E8440A] text-white hover:bg-[#E8440A]/90"}
                     onClick={() => signIn()}
                   >
                     Sign in
@@ -512,7 +526,7 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
                     />
                   </div>
                   <Button
-                    className={isLight ? "w-full rounded-xl bg-blue-500 text-white hover:bg-blue-600" : "w-full rounded-xl bg-[#FF4D00] text-white hover:bg-[#FF4D00]/90"}
+                    className={isLight ? "w-full rounded-xl bg-[#E8440A] text-white hover:bg-[#E8440A]/90" : "w-full rounded-xl bg-[#E8440A] text-white hover:bg-[#E8440A]/90"}
                     onClick={handleSubmitQuote}
                     disabled={submitStatus === "loading"}
                   >

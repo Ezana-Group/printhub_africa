@@ -164,7 +164,7 @@ export function CustomersAdminClient({
         cell: ({ row }) => {
           const c = row.original;
           if (c.isTopSpender) return <Badge className="bg-amber-100 text-amber-800 border-0">⭐ VIP</Badge>;
-          if (c.isCorporate) return <Badge className="bg-blue-100 text-blue-800 border-0">Corporate</Badge>;
+          if (c.isCorporate) return <Badge className="bg-orange-100 text-orange-800 border-0">Corporate</Badge>;
           return <Badge variant="secondary" className="bg-[#F3F4F6] text-[#6B7280]">Regular</Badge>;
         },
       },

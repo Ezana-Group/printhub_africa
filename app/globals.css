@@ -4,8 +4,8 @@
 
 @layer base {
   :root {
-    /* Brand (services pages) */
-    --brand-orange: #FF4D00;
+    /* Brand (services pages) — audit: use #E8440A per checklist */
+    --brand-orange: #E8440A;
     --brand-black: #0A0A0A;
     --brand-white: #FAFAF8;
     --text-secondary: #6B6B6B;
@@ -23,9 +23,9 @@
     --muted-foreground: #64748B;
     --border: #E2E8F0;
     --input: #E2E8F0;
-    --ring: #FF4D00;
+    --ring: #E8440A;
     --ring-offset: #FAFBFC;
-    --primary: #FF4D00;
+    --primary: #E8440A;
     --primary-foreground: #FFFFFF;
     --secondary: #0F172A;
     --secondary-foreground: #F8FAFC;
@@ -50,8 +50,8 @@
     --border: #334155;
     --input: #334155;
     --ring-offset: #0F172A;
-    --ring: #FF4D00;
-    --primary: #FF6B2C;
+    --ring: #E8440A;
+    --primary: #E8440A;
     --primary-foreground: #FFFFFF;
     --secondary: #1E293B;
     --secondary-foreground: #F8FAFC;

@@ -21,12 +21,14 @@ export function FinanceTabs({
   orderCount,
   totalOrderValue,
   deliveredValue,
+  canEditFinance = true,
 }: {
   payments: PaymentRow[];
   totalRevenue: number;
   orderCount: number;
   totalOrderValue: number;
   deliveredValue: number;
+  canEditFinance?: boolean;
 }) {
   const [tab, setTab] = useState<"business-costs" | "revenue">("business-costs");
   const hasPayments = payments.length > 0;
@@ -54,7 +56,7 @@ export function FinanceTabs({
         </button>
       </div>
 
-      {tab === "business-costs" && <FinanceBusinessCostsForm />}
+      {tab === "business-costs" && <FinanceBusinessCostsForm canEdit={canEditFinance} />}
 
       {tab === "revenue" && (
         <>

@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { EditableSection } from "@/components/admin/editable-section";
 import { formatRelativeTime, formatDateForDisplay } from "@/lib/admin-utils";
 import {
   BarChart,
@@ -91,8 +94,35 @@ const PLACEHOLDER_PERF_DATA = [
   { week: "Week 4", orders: 22, quotes: 16 },
 ];
 
-export function StaffDetailTabs({ user }: { user: StaffDetailUser }) {
+export function StaffDetailTabs({
+  user,
+  canEditProfile = true,
+  canEditPermissions = true,
+}: {
+  user: StaffDetailUser;
+  canEditProfile?: boolean;
+  canEditPermissions?: boolean;
+}) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<StaffDetailTab>("profile");
+
+  const [profile, setProfile] = useState({
+    name: user.name ?? "",
+    email: user.email ?? "",
+    phone: user.phone ?? "",
+    department: user.staff?.department ?? "",
+    position: user.staff?.position ?? "",
+  });
+
+  useEffect(() => {
+    setProfile({
+      name: user.name ?? "",
+      email: user.email ?? "",
+      phone: user.phone ?? "",
+      department: user.staff?.department ?? "",
+      position: user.staff?.position ?? "",
+    });
+  }, [user]);
 
   const savedPermissions = user.staff?.permissions ?? [];
   const [permissions, setPermissions] = useState<Record<string, boolean>>(() => {
@@ -104,47 +134,10 @@ export function StaffDetailTabs({ user }: { user: StaffDetailUser }) {
     );
     return initial;
   });
-  const [permissionsSaving, setPermissionsSaving] = useState(false);
-  const [permissionsError, setPermissionsError] = useState<string | null>(null);
 
   const setPermission = useCallback((key: string, value: boolean) => {
     setPermissions((prev) => ({ ...prev, [key]: value }));
-    setPermissionsError(null);
   }, []);
-
-  const handleSavePermissions = useCallback(async () => {
-    setPermissionsError(null);
-    setPermissionsSaving(true);
-    try {
-      const payload = Object.entries(permissions)
-        .filter(([, v]) => v)
-        .map(([k]) => k);
-      const res = await fetch(`/api/admin/staff/${user.id}/permissions`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ permissions: payload }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setPermissionsError(data.error ?? "Failed to save permissions");
-        return;
-      }
-      // Re-fetch to confirm persistence (optional but confirms the save)
-      const getRes = await fetch(`/api/admin/staff/${user.id}/permissions`);
-      const getData = await getRes.json().catch(() => ({}));
-      if (getRes.ok && Array.isArray(getData.permissions)) {
-        const next: Record<string, boolean> = {};
-        PERMISSION_GROUPS.forEach((g) =>
-          g.permissions.forEach((p) => {
-            next[p.key] = getData.permissions.includes(p.key);
-          })
-        );
-        setPermissions(next);
-      }
-    } finally {
-      setPermissionsSaving(false);
-    }
-  }, [user.id, permissions]);
 
   return (
     <>
@@ -167,78 +160,165 @@ export function StaffDetailTabs({ user }: { user: StaffDetailUser }) {
       </div>
 
       {activeTab === "profile" && (
-        <Card id="profile" className="mt-6 bg-white border-[#E5E7EB] scroll-mt-4">
-          <CardHeader>
-            <CardTitle className="text-[14px] font-semibold uppercase tracking-wider text-[#111]">
-              Profile
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-[#6B7280]">Name</span>
-              <span className="text-[#111]">{user.name ?? "—"}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[#6B7280]">Email</span>
-              <span className="text-[#111]">{user.email}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[#6B7280]">Phone</span>
-              <span className="text-[#111]">{user.phone ?? "—"}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[#6B7280]">Department</span>
-              <span className="text-[#111]">{user.staff?.department ?? "—"}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[#6B7280]">Position</span>
-              <span className="text-[#111]">{user.staff?.position ?? "—"}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[#6B7280]">Joined</span>
-              <span className="text-[#111]">{formatDateForDisplay(user.createdAt)}</span>
-            </div>
-          </CardContent>
-        </Card>
+        <div id="profile" className="mt-6 scroll-mt-4">
+          <EditableSection
+            id="staff-profile"
+            title="Profile"
+            description="Name, email, phone, department, position."
+            canEdit={canEditProfile}
+            viewContent={
+              <div className="space-y-0">
+                {[
+                  { label: "Name", value: user.name ?? "—" },
+                  { label: "Email", value: user.email },
+                  { label: "Phone", value: user.phone ?? "—" },
+                  { label: "Department", value: user.staff?.department ?? "—" },
+                  { label: "Position", value: user.staff?.position ?? "—" },
+                  { label: "Joined", value: formatDateForDisplay(user.createdAt) },
+                ].map((row, i) => (
+                  <div
+                    key={i}
+                    className="flex flex-wrap items-baseline justify-between gap-2 py-2 border-b border-border/50 last:border-0 hover:bg-muted/30 rounded px-1 -mx-1"
+                  >
+                    <span className="text-sm text-muted-foreground">{row.label}</span>
+                    <span className="text-sm font-medium text-foreground">{row.value}</span>
+                  </div>
+                ))}
+              </div>
+            }
+            editContent={({ setHasChanges }) => (
+              <div className="space-y-4" onChange={() => setHasChanges(true)} onInput={() => setHasChanges(true)}>
+                <div className="space-y-1.5">
+                  <Label>Name</Label>
+                  <Input value={profile.name} onChange={(e) => setProfile((p) => ({ ...p, name: e.target.value }))} className="focus-visible:ring-orange-500" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Email</Label>
+                  <Input type="email" value={profile.email} onChange={(e) => setProfile((p) => ({ ...p, email: e.target.value }))} className="focus-visible:ring-orange-500" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Phone</Label>
+                  <Input value={profile.phone} onChange={(e) => setProfile((p) => ({ ...p, phone: e.target.value }))} placeholder="+254 XXX XXX XXX" className="focus-visible:ring-orange-500" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Department</Label>
+                  <Input value={profile.department} onChange={(e) => setProfile((p) => ({ ...p, department: e.target.value }))} className="focus-visible:ring-orange-500" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Position</Label>
+                  <Input value={profile.position} onChange={(e) => setProfile((p) => ({ ...p, position: e.target.value }))} className="focus-visible:ring-orange-500" />
+                </div>
+              </div>
+            )}
+            onSave={async () => {
+              let res: Response;
+              try {
+                res = await fetch(`/api/admin/staff/${user.id}`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    name: profile.name || undefined,
+                    email: profile.email || undefined,
+                    phone: profile.phone || null,
+                    department: profile.department || null,
+                    position: profile.position || null,
+                  }),
+                });
+              } catch (err) {
+                throw new Error(err instanceof Error ? err.message : "Network error");
+              }
+              const data = await res.json().catch(() => ({}));
+              if (!res.ok) throw new Error(data.error ?? "Failed to save");
+              router.refresh();
+            }}
+          />
+        </div>
       )}
 
       {activeTab === "permissions" && (
-        <Card className="mt-6 bg-white border-[#E5E7EB]">
-          <CardHeader>
-            <CardTitle className="text-[14px] font-semibold uppercase tracking-wider text-[#111]">
-              Permissions
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {PERMISSION_GROUPS.map((group) => (
-              <div key={group.category} className="space-y-3">
-                <h4 className="text-sm font-medium text-[#111]">{group.category}</h4>
-                <div className="space-y-2 pl-2">
-                  {group.permissions.map((p) => (
-                    <div key={p.key} className="flex items-center justify-between gap-4">
-                      <Label htmlFor={p.key} className="text-sm text-[#374151] cursor-pointer">
-                        {p.label}
-                      </Label>
-                      <Switch
-                        id={p.key}
-                        checked={permissions[p.key] ?? false}
-                        onCheckedChange={(checked) => setPermission(p.key, checked)}
-                      />
+        <div className="mt-6">
+          <EditableSection
+            id="staff-permissions"
+            title="Permissions"
+            description="Granular access for orders, products, finance, inventory."
+            canEdit={canEditPermissions}
+            viewContent={
+              <div className="space-y-6">
+                {PERMISSION_GROUPS.map((group) => (
+                  <div key={group.category} className="space-y-3">
+                    <h4 className="text-sm font-medium text-[#111]">{group.category}</h4>
+                    <div className="space-y-2 pl-2">
+                      {group.permissions.map((p) => (
+                        <div key={p.key} className="flex items-center justify-between gap-4 opacity-75">
+                          <Label className="text-sm text-[#374151]">{p.label}</Label>
+                          <Switch id={`view-${p.key}`} checked={permissions[p.key] ?? false} disabled className="opacity-70" />
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-            ))}
-            <div className="pt-2 flex flex-col gap-2">
-              <Button onClick={handleSavePermissions} disabled={permissionsSaving}>
-                {permissionsSaving ? "Saving…" : "Save permissions"}
-              </Button>
-              {permissionsError && (
-                <p className="text-sm text-destructive font-medium">{permissionsError}</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+            }
+            editContent={({ setHasChanges }) => (
+              <div className="space-y-6" onChangeCapture={() => setHasChanges(true)}>
+                {PERMISSION_GROUPS.map((group) => (
+                  <div key={group.category} className="space-y-3">
+                    <h4 className="text-sm font-medium text-[#111]">{group.category}</h4>
+                    <div className="space-y-2 pl-2">
+                      {group.permissions.map((p) => (
+                        <div key={p.key} className="flex items-center justify-between gap-4">
+                          <Label htmlFor={p.key} className="text-sm text-[#374151] cursor-pointer">
+                            {p.label}
+                          </Label>
+                          <Switch
+                            id={p.key}
+                            checked={permissions[p.key] ?? false}
+                            onCheckedChange={(checked) => setPermission(p.key, checked)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            onSave={async () => {
+              const payload = Object.entries(permissions)
+                .filter(([, v]) => v)
+                .map(([k]) => k);
+              let res: Response;
+              try {
+                res = await fetch(`/api/admin/staff/${user.id}/permissions`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ permissions: payload }),
+                });
+              } catch (err) {
+                throw new Error(err instanceof Error ? err.message : "Network error");
+              }
+              const data = await res.json().catch(() => ({}));
+              if (!res.ok) throw new Error(data.error ?? "Failed to save permissions");
+              let getRes: Response;
+              try {
+                getRes = await fetch(`/api/admin/staff/${user.id}/permissions`);
+              } catch {
+                router.refresh();
+                return;
+              }
+              const getData = await getRes.json().catch(() => ({}));
+              if (getRes.ok && Array.isArray(getData.permissions)) {
+                const next: Record<string, boolean> = {};
+                PERMISSION_GROUPS.forEach((g) =>
+                  g.permissions.forEach((p) => {
+                    next[p.key] = getData.permissions.includes(p.key);
+                  })
+                );
+                setPermissions(next);
+              }
+              router.refresh();
+            }}
+          />
+        </div>
       )}
 
       {activeTab === "activity" && (

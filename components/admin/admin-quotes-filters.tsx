@@ -2,13 +2,7 @@
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select } from "@/components/ui/select";
 import { Download } from "lucide-react";
 
 export type QuoteFiltersState = {
@@ -65,57 +59,35 @@ export function AdminQuotesFilters({
       <div className="w-[160px]">
         <label className="mb-1 block text-xs font-medium text-muted-foreground">Type</label>
         <Select
-          value={filters.type || "all"}
-          onValueChange={(v) => onFiltersChange({ ...filters, type: v === "all" ? "" : v })}
-        >
-          <SelectTrigger className="h-9">
-            <SelectValue placeholder="All" />
-          </SelectTrigger>
-          <SelectContent>
-            {TYPE_OPTIONS.map((o) => (
-              <SelectItem key={o.value || "all"} value={o.value || "all"}>
-                {o.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          options={TYPE_OPTIONS}
+          placeholder="All"
+          value={filters.type}
+          onChange={(e) => onFiltersChange({ ...filters, type: e.target.value })}
+          className="h-9"
+        />
       </div>
       <div className="w-[160px]">
         <label className="mb-1 block text-xs font-medium text-muted-foreground">Status</label>
         <Select
-          value={filters.status || "all"}
-          onValueChange={(v) => onFiltersChange({ ...filters, status: v === "all" ? "" : v })}
-        >
-          <SelectTrigger className="h-9">
-            <SelectValue placeholder="All" />
-          </SelectTrigger>
-          <SelectContent>
-            {STATUS_OPTIONS.map((o) => (
-              <SelectItem key={o.value || "all"} value={o.value || "all"}>
-                {o.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          options={STATUS_OPTIONS}
+          placeholder="All"
+          value={filters.status}
+          onChange={(e) => onFiltersChange({ ...filters, status: e.target.value })}
+          className="h-9"
+        />
       </div>
       <div className="w-[180px]">
         <label className="mb-1 block text-xs font-medium text-muted-foreground">Assigned to</label>
         <Select
-          value={filters.assignedTo || "all"}
-          onValueChange={(v) => onFiltersChange({ ...filters, assignedTo: v === "all" ? "" : v })}
-        >
-          <SelectTrigger className="h-9">
-            <SelectValue placeholder="All" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            {staffList.map((s) => (
-              <SelectItem key={s.id} value={s.id}>
-                {s.name || s.email}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          options={[
+            { value: "", label: "All" },
+            ...staffList.map((s) => ({ value: s.id, label: s.name || s.email })),
+          ]}
+          placeholder="All"
+          value={filters.assignedTo}
+          onChange={(e) => onFiltersChange({ ...filters, assignedTo: e.target.value })}
+          className="h-9"
+        />
       </div>
       <div className="flex gap-2">
         <div>

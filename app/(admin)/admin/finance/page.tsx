@@ -1,9 +1,16 @@
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { FinanceTabs } from "@/components/admin/finance-tabs";
 import { requireAdminSection } from "@/lib/admin-route-guard";
+import { hasFinanceAccess } from "@/lib/admin-permissions";
 
 export default async function AdminFinancePage() {
   await requireAdminSection("/admin/finance");
+  const session = await getServerSession(authOptions);
+  const role = (session?.user as { role?: string })?.role ?? "STAFF";
+  const permissions = (session?.user as { permissions?: string[] })?.permissions ?? [];
+  const canEditFinance = hasFinanceAccess(role, permissions, true);
   const [payments, allOrders, deliveredOrders] = await Promise.all([
     prisma.payment.findMany({
       orderBy: { createdAt: "desc" },
@@ -51,6 +58,7 @@ export default async function AdminFinancePage() {
         orderCount={orderCount}
         totalOrderValue={totalOrderValue}
         deliveredValue={deliveredValue}
+        canEditFinance={canEditFinance}
       />
     </div>
   );

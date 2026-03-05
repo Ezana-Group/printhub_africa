@@ -6,13 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { use3DRates } from "@/hooks/use3DRates";
-import {
-  calculatePrintCost,
-  formatKes,
-  type MaterialRate,
-  type PrintJob,
-} from "@/lib/3d-calculator-engine";
+import { useCalculatorConfig, compute3DEstimateFromConfig } from "@/hooks/useCalculatorConfig";
+import { formatKes, type PrintJob } from "@/lib/3d-calculator-engine";
 import {
   COLOUR_PILLS,
   BRAND_COLOUR_HEX,
@@ -23,7 +18,7 @@ import {
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type MaterialWithColors = MaterialRate & { colorOptions?: string[]; baseMaterial?: string; color?: string; quantity?: number };
+type MaterialWithColors = { code: string; name: string; color?: string; baseMaterial?: string; quantity?: number };
 import { Calculator, History, FileText } from "lucide-react";
 import { setQuoteDraft } from "@/lib/quote-draft";
 
@@ -49,7 +44,7 @@ const MARGIN_PRESETS = [20, 30, 40, 50, 60];
 
 export function AdminPrintCalculator() {
   const [selectedPrinterId, setSelectedPrinterId] = useState<string | "">("");
-  const { data: rates, loading: ratesLoading } = use3DRates(selectedPrinterId || undefined);
+  const { data: config, loading: configLoading } = useCalculatorConfig();
   const [tab, setTab] = useState<TabId>("calculator");
   const [printerOptions, setPrinterOptions] = useState<PrinterOption[]>([]);
 
@@ -68,19 +63,25 @@ export function AdminPrintCalculator() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyFilter, setHistoryFilter] = useState("");
 
-  const materials: MaterialWithColors[] = rates?.materials ?? [];
-  const settingsFromRates = rates?.printerSettings;
+  const materials: MaterialWithColors[] = useMemo(() => {
+    if (!config?.filaments?.length) return [];
+    return config.filaments.map((f) => ({
+      code: f.id,
+      name: f.name,
+      baseMaterial: f.material,
+      color: canonicalColorFromSpec(f.colour ?? ""),
+      quantity: 1,
+    }));
+  }, [config?.filaments]);
 
   const { materialTypes, byMaterialType, availableColorSet, inStockColorSet } = useMemo(() => {
     const byBase: Record<string, { code: string; name: string; color: string; quantity: number }[]> = {};
     for (const m of materials) {
       const base = m.baseMaterial ?? (m.name.replace(/\s*\([^)]*\)\s*$/, "").trim() || m.name);
       if (!byBase[base]) byBase[base] = [];
-      const fromName = m.name.match(/\s*\(([^)]+)\)\s*$/)?.[1]?.trim();
-      const rawColor = (m as MaterialWithColors).color ?? fromName ?? "";
+      const rawColor = m.color ?? ((m.name.match(/\s*\(([^)]+)\)\s*$/) ?? [])[1]?.trim() ?? "");
       const canonical = canonicalColorFromSpec(rawColor);
-      const quantity = (m as MaterialWithColors).quantity ?? 0;
-      byBase[base].push({ code: m.code, name: m.name, color: canonical, quantity });
+      byBase[base].push({ code: m.code, name: m.name, color: canonical, quantity: m.quantity ?? 1 });
     }
     const types = Object.keys(byBase);
     const sorted = [...new Set([...PREFERRED_MATERIAL_ORDER.filter((p) => types.some((t) => t.toLowerCase() === p.toLowerCase())), ...types])];
@@ -93,10 +94,10 @@ export function AdminPrintCalculator() {
         const pill = COLOUR_PILLS.find((p) => p.id.toLowerCase() === x.color.toLowerCase());
         if (pill) {
           pillIds.add(pill.id);
-          if (x.quantity > 0) inStock.add(pill.id);
+          inStock.add(pill.id);
         } else {
           pillIds.add(x.color);
-          if (x.quantity > 0) inStock.add(x.color);
+          inStock.add(x.color);
         }
       }
       colorSet[t] = pillIds;
@@ -117,7 +118,7 @@ export function AdminPrintCalculator() {
   const inStockForType = useMemo(() => inStockColorSet[materialType] ?? new Set<string>(), [materialType, inStockColorSet]);
 
   const effectiveMargin =
-    marginOverride !== "" ? Number(marginOverride) : (settingsFromRates?.profitMarginPercent ?? 40);
+    marginOverride !== "" ? Number(marginOverride) : (config?.profitMargin ?? 40);
 
   useEffect(() => {
     fetch("/api/admin/inventory/assets/printers?type=THREE_D")
@@ -161,29 +162,34 @@ export function AdminPrintCalculator() {
     [jobName, effectiveMaterial, weightGrams, printTimeHours, postProcessing, quantity]
   );
 
+  const selectedFilament = useMemo(
+    () => config?.filaments?.find((f) => f.id === effectiveMaterial),
+    [config?.filaments, effectiveMaterial]
+  );
+
   const breakdown = useMemo(() => {
-    if (!settingsFromRates || !materials.length || !effectiveMaterial) return null;
-    if (job.weightGrams <= 0 || job.printTimeHours <= 0) return null;
-    try {
-      return calculatePrintCost(
-        job,
-        settingsFromRates,
-        materials,
-        effectiveMargin
-      );
-    } catch {
-      return null;
-    }
-  }, [job, settingsFromRates, materials, effectiveMaterial, effectiveMargin]);
+    if (!config || !selectedFilament) return null;
+    const w = Number(weightGrams) || 0;
+    const t = Number(printTimeHours) || 0;
+    const qty = Math.max(1, Math.min(999, quantity));
+    if (w <= 0 || t <= 0) return null;
+    return compute3DEstimateFromConfig(config, {
+      weightG: w,
+      printTimeHrs: t,
+      quantity: qty,
+      costPerKg: selectedFilament.costPerKg,
+      profitMarginOverride: effectiveMargin,
+    });
+  }, [config, selectedFilament, weightGrams, printTimeHours, quantity, effectiveMargin]);
 
   const marginSensitivity = useMemo(() => {
-    if (!breakdown) return null;
-    const baseCost = breakdown.totalProductionCost;
+    if (!breakdown || !config) return null;
+    const baseCost = breakdown.subtotal;
     return MARGIN_PRESETS.map((pct) => ({
       pct,
-      selling: baseCost * (1 + pct / 100) * (1 + (settingsFromRates?.vatRatePercent ?? 16) / 100),
+      selling: baseCost * (1 + pct / 100) * (1 + config.vatPercent / 100),
     }));
-  }, [breakdown, settingsFromRates?.vatRatePercent]);
+  }, [breakdown, config]);
 
   const fetchHistory = useCallback(async () => {
     setHistoryLoading(true);
@@ -222,10 +228,10 @@ export function AdminPrintCalculator() {
           printTimeHours: job.printTimeHours,
           quantity: job.quantity,
           postProcessing: job.postProcessing,
-          productionCost: breakdown.totalProductionCost,
-          sellingPrice: breakdown.sellingPriceIncVat,
-          profitAmount: breakdown.profitAmount,
-          marginPercent: breakdown.grossMarginPercent,
+          productionCost: breakdown.subtotal,
+          sellingPrice: breakdown.finalPrice,
+          profitAmount: breakdown.profit,
+          marginPercent: breakdown.profitMarginPct,
         }),
       });
       if (res.ok) {
@@ -249,7 +255,7 @@ export function AdminPrintCalculator() {
     );
   }, [history, historyFilter]);
 
-  if (ratesLoading || !rates) {
+  if (configLoading || !config) {
     return (
       <Card>
         <CardContent className="py-10 text-center text-muted-foreground">
@@ -468,7 +474,7 @@ export function AdminPrintCalculator() {
                         : Math.max(0, Math.min(100, parseFloat(e.target.value) || 0))
                     )
                   }
-                  placeholder={String(settingsFromRates?.profitMarginPercent ?? 40)}
+                  placeholder={String(config?.profitMargin ?? 40)}
                   className="mt-1 w-24"
                 />
               </div>
@@ -489,7 +495,10 @@ export function AdminPrintCalculator() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Full cost breakdown</CardTitle>
+              <CardTitle className="text-lg">Cost breakdown</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Rates from Finance → Business costs. Select printer from Inventory → Hardware for reference.
+              </p>
             </CardHeader>
             <CardContent className="space-y-3">
               {!breakdown ? (
@@ -500,41 +509,33 @@ export function AdminPrintCalculator() {
                 <>
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between">
-                      <span>Material</span>
+                      <span>Material cost</span>
                       <span>{formatKes(breakdown.materialCost)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Electricity</span>
-                      <span>{formatKes(breakdown.electricityCost)}</span>
+                      <span>Machine cost</span>
+                      <span>{formatKes(breakdown.machineCost)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Depreciation</span>
-                      <span>{formatKes(breakdown.depreciationCost)}</span>
+                      <span>Labour cost</span>
+                      <span>{formatKes(breakdown.labourCost)}</span>
+                    </div>
+                    <div className="border-t pt-2 flex justify-between font-medium">
+                      <span>Subtotal</span>
+                      <span>{formatKes(breakdown.subtotal)}</span>
+                    </div>
+                    <div className="flex justify-between text-green-600">
+                      <span>Profit ({breakdown.profitMarginPct}%)</span>
+                      <span>{formatKes(breakdown.profit)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Maintenance</span>
-                      <span>{formatKes(breakdown.maintenanceCost)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Labour</span>
-                      <span>{formatKes(breakdown.laborCost)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Overhead</span>
-                      <span>{formatKes(breakdown.overheadCost)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Failed print buffer</span>
-                      <span>{formatKes(breakdown.failedPrintBuffer)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Packaging</span>
-                      <span>{formatKes(breakdown.packagingCost)}</span>
+                      <span>VAT ({breakdown.vatPercent}%)</span>
+                      <span>{formatKes(breakdown.vat)}</span>
                     </div>
                   </div>
-                  <div className="border-t pt-3 font-medium flex justify-between">
-                    <span>Production cost</span>
-                    <span>{formatKes(breakdown.totalProductionCost)}</span>
+                  <div className="border-t pt-3 font-bold flex justify-between text-primary">
+                    <span>Total estimate</span>
+                    <span>{formatKes(breakdown.rangeLow)} — {formatKes(breakdown.rangeHigh)}</span>
                   </div>
                   {selectedPrinterId && printerOptions.find((p) => p.id === selectedPrinterId)?.source === "PrinterAsset" && (
                     <p className="pt-1">
@@ -543,26 +544,6 @@ export function AdminPrintCalculator() {
                       </Link>
                     </p>
                   )}
-                  <div className="flex justify-between text-green-600">
-                    <span>Profit ({breakdown.grossMarginPercent}%)</span>
-                    <span>{formatKes(breakdown.profitAmount)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Selling (ex VAT)</span>
-                    <span>{formatKes(breakdown.sellingPriceExVat)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>VAT ({settingsFromRates?.vatRatePercent ?? 16}%)</span>
-                    <span>{formatKes(breakdown.vatAmount)}</span>
-                  </div>
-                  <div className="rounded-lg bg-primary/10 border border-primary/20 p-3 font-bold flex justify-between text-primary">
-                    <span>Selling price (inc VAT)</span>
-                    <span>{formatKes(breakdown.sellingPriceIncVat)}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Break-even: {formatKes(breakdown.breakEvenPrice)} · Margin:{" "}
-                    {breakdown.grossMarginPercent}%
-                  </p>
                   <Button
                     className="w-full mt-3"
                     onClick={() => {
@@ -576,7 +557,7 @@ export function AdminPrintCalculator() {
                           {
                             description: jobName.trim() || "Item",
                             materialCode: effectiveMaterial,
-                            color: colorChoice || (colorOptions[0] ?? ""),
+                            color: colorChoice || "",
                             weightGrams: Number(weightGrams) || 0,
                             printTimeHours: Number(printTimeHours) || 0,
                             quantity: Math.max(1, quantity),

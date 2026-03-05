@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const NAV_LINKS = [
   { label: "Home", href: "/" },
@@ -48,7 +48,10 @@ export function Header() {
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const cartCount = useCartStore((s) => s.itemCount());
+
+  useEffect(() => setMounted(true), []);
 
   const navDropdownClass =
     "w-56 bg-white text-slate-800 border border-slate-200/80 shadow-xl shadow-slate-200/50 rounded-2xl py-1.5 [&_a]:text-slate-800 [&_a:hover]:bg-slate-50";
@@ -189,10 +192,10 @@ export function Header() {
               <Search className="h-5 w-5" />
             </Link>
           </Button>
-          <Button variant="ghost" size="icon" aria-label="Cart" asChild className="rounded-xl text-slate-600 relative">
+          <Button variant="ghost" size="icon" aria-label={mounted && cartCount > 0 ? `Cart (${cartCount} items)` : "Cart"} asChild className="rounded-xl text-slate-600 relative">
             <Link href="/cart">
               <ShoppingCart className="h-5 w-5" />
-              {cartCount > 0 && (
+              {mounted && cartCount > 0 && (
                 <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
                   {cartCount}
                 </span>

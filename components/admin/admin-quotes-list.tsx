@@ -14,13 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select } from "@/components/ui/select";
 import { AdminQuotesFilters, type QuoteFiltersState } from "./admin-quotes-filters";
 import { MoreHorizontal, Eye, UserPlus, Send, Trash2, Loader2 } from "lucide-react";
 import {
@@ -54,8 +48,9 @@ const TYPE_LABELS: Record<string, string> = {
   design_and_print: "I Have an Idea",
 };
 
+// AUDIT FIX: brand orange #E8440A — no blue; use orange for primary types/statuses
 const TYPE_BADGE_CLASS: Record<string, string> = {
-  large_format: "bg-blue-100 text-blue-800 border-0",
+  large_format: "bg-orange-100 text-orange-800 border-0",
   three_d_print: "bg-purple-100 text-purple-800 border-0",
   design_and_print: "bg-green-100 text-green-800 border-0",
 };
@@ -63,7 +58,7 @@ const TYPE_BADGE_CLASS: Record<string, string> = {
 const STATUS_BADGE_CLASS: Record<string, string> = {
   new: "bg-red-100 text-red-800 border-0",
   reviewing: "bg-amber-100 text-amber-800 border-0",
-  quoted: "bg-blue-100 text-blue-800 border-0",
+  quoted: "bg-orange-100 text-orange-800 border-0",
   accepted: "bg-green-100 text-green-800 border-0",
   in_production: "bg-orange-100 text-orange-800 border-0",
   completed: "bg-emerald-700 text-white border-0",
@@ -320,19 +315,15 @@ export function AdminQuotesList({
               <AlertDialogDescription>Select a staff member to assign this quote to.</AlertDialogDescription>
             </AlertDialogHeader>
             <div className="py-2">
-              <Select onValueChange={(staffId) => handleAssign(assignQuoteId, staffId)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose staff…" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
-                  {staffList.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name || s.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Select
+                placeholder="Choose staff…"
+                options={[
+                  { value: "", label: "Unassigned" },
+                  ...staffList.map((s) => ({ value: s.id, label: s.name || s.email })),
+                ]}
+                value={quotes.find((q) => q.id === assignQuoteId)?.assignedStaff?.id ?? ""}
+                onChange={(e) => handleAssign(assignQuoteId, e.target.value)}
+              />
             </div>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>

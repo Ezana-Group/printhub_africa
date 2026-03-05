@@ -62,6 +62,9 @@ export function QuoteDetailClient({
   const [internalNote, setInternalNote] = useState(adminNotes ?? "");
   const [deadlineValue, setDeadlineValue] = useState(deadline ? deadline.slice(0, 10) : "");
   const [saving, setSaving] = useState(false);
+  const [deadlineSaving, setDeadlineSaving] = useState(false);
+  const [assignSaving, setAssignSaving] = useState(false);
+  const [noteSaving, setNoteSaving] = useState(false);
 
   useEffect(() => {
     setDeadlineValue(deadline ? deadline.slice(0, 10) : "");
@@ -111,7 +114,7 @@ export function QuoteDetailClient({
 
   async function handleSaveDeadline() {
     if (!deadlineValue.trim()) return;
-    setSaving(true);
+    setDeadlineSaving(true);
     setMessage(null);
     try {
       const res = await fetch(`/api/quotes/${quoteId}`, {
@@ -124,7 +127,7 @@ export function QuoteDetailClient({
     } catch {
       setMessage({ type: "error", text: "Failed to set deadline." });
     } finally {
-      setSaving(false);
+      setDeadlineSaving(false);
     }
   }
 
@@ -148,7 +151,7 @@ export function QuoteDetailClient({
   }
 
   async function handleAssign() {
-    setSaving(true);
+    setAssignSaving(true);
     setMessage(null);
     try {
       const res = await fetch(`/api/quotes/${quoteId}`, {
@@ -161,7 +164,7 @@ export function QuoteDetailClient({
     } catch {
       setMessage({ type: "error", text: "Failed to update assignment." });
     } finally {
-      setSaving(false);
+      setAssignSaving(false);
     }
   }
 
@@ -190,7 +193,7 @@ export function QuoteDetailClient({
   }
 
   async function handleSaveNote() {
-    setSaving(true);
+    setNoteSaving(true);
     setMessage(null);
     try {
       const res = await fetch(`/api/quotes/${quoteId}`, {
@@ -203,7 +206,7 @@ export function QuoteDetailClient({
     } catch {
       setMessage({ type: "error", text: "Failed to save note." });
     } finally {
-      setSaving(false);
+      setNoteSaving(false);
     }
   }
 
@@ -244,8 +247,8 @@ export function QuoteDetailClient({
                 onChange={(e) => setDeadlineValue(e.target.value)}
                 className="h-8 text-sm"
               />
-              <Button size="sm" variant="outline" onClick={handleSaveDeadline} disabled={saving || !deadlineValue.trim()}>
-                Save
+              <Button size="sm" variant="outline" onClick={handleSaveDeadline} disabled={deadlineSaving || !deadlineValue.trim()}>
+                {deadlineSaving ? "Saving…" : "Save"}
               </Button>
             </div>
           </div>
@@ -340,8 +343,8 @@ export function QuoteDetailClient({
               </option>
             ))}
           </select>
-          <Button size="sm" onClick={handleAssign} disabled={saving}>
-            Save
+          <Button size="sm" onClick={handleAssign} disabled={assignSaving}>
+            {assignSaving ? "Saving…" : "Save"}
           </Button>
         </CardContent>
       </Card>
@@ -422,7 +425,7 @@ export function QuoteDetailClient({
             </p>
           )}
           <p className="text-xs text-muted-foreground">Attach quote PDF via file upload (coming soon).</p>
-          <Button onClick={handleSendQuote} disabled={saving}>
+          <Button onClick={handleSendQuote} disabled={saving} className="bg-[#E8440A] hover:bg-[#E8440A]/90">
             Send quote
           </Button>
         </CardContent>
@@ -441,8 +444,8 @@ export function QuoteDetailClient({
             onChange={(e) => setInternalNote(e.target.value)}
             placeholder="Private notes (staff only)"
           />
-          <Button size="sm" variant="outline" onClick={handleSaveNote} disabled={saving}>
-            Save note
+          <Button size="sm" variant="outline" onClick={handleSaveNote} disabled={noteSaving}>
+            {noteSaving ? "Saving…" : "Save note"}
           </Button>
         </CardContent>
       </Card>

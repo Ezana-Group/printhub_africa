@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSection } from "@/lib/admin-route-guard";
 import { Button } from "@/components/ui/button";
@@ -8,12 +10,18 @@ import { StaffDetailTabs } from "@/components/admin/staff-detail-tabs";
 import { ResetPasswordButton } from "@/components/admin/reset-password-button";
 import { getInitials, nameToHue, getStaffRoleLabel } from "@/lib/admin-utils";
 
+const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
+
 export default async function AdminStaffDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   await requireAdminSection("/admin/staff");
+  const session = await getServerSession(authOptions);
+  const role = (session?.user as { role?: string })?.role ?? "STAFF";
+  const canEditStaff = ADMIN_ROLES.includes(role);
+
   const { id } = await params;
   const user = await prisma.user.findFirst({
     where: { id, role: { in: ["STAFF", "ADMIN", "SUPER_ADMIN"] } },
@@ -76,7 +84,11 @@ export default async function AdminStaffDetailPage({
         </div>
       </div>
 
-      <StaffDetailTabs user={staffUser} />
+      <StaffDetailTabs
+        user={staffUser}
+        canEditProfile={canEditStaff}
+        canEditPermissions={canEditStaff}
+      />
     </div>
   );
 }

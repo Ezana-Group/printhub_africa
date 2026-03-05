@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { AdminNav } from "@/components/admin/admin-nav";
+import { EditableSectionProvider } from "@/components/admin/editable-section-context";
 
 const ADMIN_ROLES = ["STAFF", "ADMIN", "SUPER_ADMIN"];
 
@@ -36,7 +37,9 @@ export default async function AdminLayout({
           View site
         </Link>
       </header>
-      <main className="pl-56 pt-14 min-h-screen bg-[#F9FAFB]">{children}</main>
+      <EditableSectionProvider>
+        <main className="pl-56 pt-14 min-h-screen bg-[#F9FAFB]">{children}</main>
+      </EditableSectionProvider>
     </div>
   );
 }

@@ -1,13 +1,35 @@
 import { requireAdminSettings } from "@/lib/auth-guard";
+import { prisma } from "@/lib/prisma";
 import { SectionCard } from "@/components/settings/section-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { SettingsSaveButton } from "@/components/settings/settings-save-button";
+import { SettingsSwitch } from "@/components/settings/settings-switch";
 
 export default async function AdminSettingsShippingPage() {
   await requireAdminSettings();
+  let settings: { freeShippingEnabled: boolean; expressEnabled: boolean; clickCollectEnabled: boolean } = {
+    freeShippingEnabled: false,
+    expressEnabled: false,
+    clickCollectEnabled: false,
+  };
+  try {
+    const row = await prisma.pricingConfig.findUnique({
+      where: { key: "adminSettings:shipping" },
+    });
+    if (row?.valueJson) {
+      const parsed = JSON.parse(row.valueJson) as Record<string, unknown>;
+      const asBool = (v: unknown) => v === true || v === "true";
+      settings = {
+        freeShippingEnabled: asBool(parsed.freeShippingEnabled) ?? false,
+        expressEnabled: asBool(parsed.expressEnabled) ?? false,
+        clickCollectEnabled: asBool(parsed.clickCollectEnabled) ?? false,
+      };
+    }
+  } catch {
+    // keep defaults
+  }
   return (
     <div className="space-y-6">
       <h1 className="font-display text-2xl font-bold">Shipping & Delivery</h1>
@@ -26,10 +48,7 @@ export default async function AdminSettingsShippingPage() {
         title="Free Shipping"
         description="Orders above threshold get free delivery."
       >
-        <div className="flex items-center gap-4">
-          <Switch />
-          <Label>Enable free shipping</Label>
-        </div>
+        <SettingsSwitch name="freeShippingEnabled" defaultValue={settings.freeShippingEnabled} label="Enable free shipping" />
         <div className="grid gap-2 mt-4">
           <Label>Free shipping threshold (KES)</Label>
           <Input name="freeShippingThreshold" type="number" defaultValue="5000" />
@@ -39,20 +58,14 @@ export default async function AdminSettingsShippingPage() {
         title="Express Delivery"
         description="Surcharge and available zones."
       >
-        <div className="flex items-center gap-4">
-          <Switch />
-          <Label>Enable express option</Label>
-        </div>
+        <SettingsSwitch name="expressEnabled" defaultValue={settings.expressEnabled} label="Enable express option" />
         <p className="text-sm text-muted-foreground mt-2">Express surcharge: +30% on standard fee. Available zones: multi-select.</p>
       </SectionCard>
       <SectionCard
         title="Click & Collect"
         description="Collection address and hours."
       >
-        <div className="flex items-center gap-4">
-          <Switch />
-          <Label>Enable collection option</Label>
-        </div>
+        <SettingsSwitch name="clickCollectEnabled" defaultValue={settings.clickCollectEnabled} label="Enable collection option" />
         <p className="text-sm text-muted-foreground mt-2">Collection window: 7 days. Customer notified by SMS + email when ready.</p>
       </SectionCard>
       <SectionCard
@@ -67,9 +80,9 @@ export default async function AdminSettingsShippingPage() {
       >
         <div className="grid gap-2">
           <Label>Primary courier</Label>
-          <Input placeholder="e.g. G4S, Wells Fargo" />
+          <Input name="primaryCourier" placeholder="e.g. G4S, Wells Fargo" />
           <Label>Tracking URL (use &#123;trackingNumber&#125; as placeholder)</Label>
-          <Input placeholder="https://courier.co.ke/track/{trackingNumber}" />
+          <Input name="trackingUrl" placeholder="https://courier.co.ke/track/{trackingNumber}" />
         </div>
         <Button type="button" variant="outline" size="sm" className="mt-2">Test Tracking Link</Button>
       </SectionCard>

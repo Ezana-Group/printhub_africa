@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { SectionCard } from "@/components/settings/section-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ interface MyAccountFormProps {
 }
 
 export function MyAccountForm({ name, email }: MyAccountFormProps) {
+  const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +37,7 @@ export function MyAccountForm({ name, email }: MyAccountFormProps) {
         return;
       }
       setSaved(true);
+      router.refresh();
       setTimeout(() => setSaved(false), 3000);
     } catch {
       setError("Something went wrong");

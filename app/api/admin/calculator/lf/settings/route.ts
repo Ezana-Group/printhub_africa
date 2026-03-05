@@ -50,31 +50,34 @@ export async function PATCH(req: Request) {
 
     if (business && typeof business === "object") {
       const row = await prisma.lFBusinessSettings.findFirst();
+      const data = {
+        labourRateKesPerHour: business.labourRateKesPerHour ?? row?.labourRateKesPerHour ?? 200,
+        finishingTimeEyeletStd: business.finishingTimeEyeletStd ?? row?.finishingTimeEyeletStd ?? 0.1,
+        finishingTimeEyeletHeavy: business.finishingTimeEyeletHeavy ?? row?.finishingTimeEyeletHeavy ?? 0.2,
+        finishingTimeHemAll4: business.finishingTimeHemAll4 ?? row?.finishingTimeHemAll4 ?? 0.25,
+        finishingTimeHemTop2: business.finishingTimeHemTop2 ?? row?.finishingTimeHemTop2 ?? 0.15,
+        finishingTimePole: business.finishingTimePole ?? row?.finishingTimePole ?? 0.2,
+        finishingTimeRope: business.finishingTimeRope ?? row?.finishingTimeRope ?? 0.1,
+        monthlyRentKes: business.monthlyRentKes ?? row?.monthlyRentKes ?? 35000,
+        monthlyUtilitiesKes: business.monthlyUtilitiesKes ?? row?.monthlyUtilitiesKes ?? 8000,
+        monthlyInsuranceKes: business.monthlyInsuranceKes ?? row?.monthlyInsuranceKes ?? 4000,
+        monthlyOtherKes: business.monthlyOtherKes ?? row?.monthlyOtherKes ?? 3000,
+        workingDaysPerMonth: business.workingDaysPerMonth ?? row?.workingDaysPerMonth ?? 26,
+        workingHoursPerDay: business.workingHoursPerDay ?? row?.workingHoursPerDay ?? 8,
+        wastageBufferPercent: business.wastageBufferPercent ?? row?.wastageBufferPercent ?? 3,
+        substrateWasteFactor: business.substrateWasteFactor ?? row?.substrateWasteFactor ?? 1.05,
+        rigidSheetWasteFactor: business.rigidSheetWasteFactor ?? row?.rigidSheetWasteFactor ?? 1.1,
+        defaultProfitMarginPct: business.defaultProfitMarginPct ?? row?.defaultProfitMarginPct ?? 40,
+        vatRatePct: business.vatRatePct ?? row?.vatRatePct ?? 16,
+        minOrderValueKes: business.minOrderValueKes ?? row?.minOrderValueKes ?? 500,
+      };
       if (row) {
         await prisma.lFBusinessSettings.update({
           where: { id: row.id },
-          data: {
-            labourRateKesPerHour: business.labourRateKesPerHour ?? row.labourRateKesPerHour,
-            finishingTimeEyeletStd: business.finishingTimeEyeletStd ?? row.finishingTimeEyeletStd,
-            finishingTimeEyeletHeavy: business.finishingTimeEyeletHeavy ?? row.finishingTimeEyeletHeavy,
-            finishingTimeHemAll4: business.finishingTimeHemAll4 ?? row.finishingTimeHemAll4,
-            finishingTimeHemTop2: business.finishingTimeHemTop2 ?? row.finishingTimeHemTop2,
-            finishingTimePole: business.finishingTimePole ?? row.finishingTimePole,
-            finishingTimeRope: business.finishingTimeRope ?? row.finishingTimeRope,
-            monthlyRentKes: business.monthlyRentKes ?? row.monthlyRentKes,
-            monthlyUtilitiesKes: business.monthlyUtilitiesKes ?? row.monthlyUtilitiesKes,
-            monthlyInsuranceKes: business.monthlyInsuranceKes ?? row.monthlyInsuranceKes,
-            monthlyOtherKes: business.monthlyOtherKes ?? row.monthlyOtherKes,
-            workingDaysPerMonth: business.workingDaysPerMonth ?? row.workingDaysPerMonth,
-            workingHoursPerDay: business.workingHoursPerDay ?? row.workingHoursPerDay,
-            wastageBufferPercent: business.wastageBufferPercent ?? row.wastageBufferPercent,
-            substrateWasteFactor: business.substrateWasteFactor ?? row.substrateWasteFactor,
-            rigidSheetWasteFactor: business.rigidSheetWasteFactor ?? row.rigidSheetWasteFactor,
-            defaultProfitMarginPct: business.defaultProfitMarginPct ?? row.defaultProfitMarginPct,
-            vatRatePct: business.vatRatePct ?? row.vatRatePct,
-            minOrderValueKes: business.minOrderValueKes ?? row.minOrderValueKes,
-          },
+          data,
         });
+      } else {
+        await prisma.lFBusinessSettings.create({ data });
       }
     }
 

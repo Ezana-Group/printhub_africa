@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useCartStore } from "@/store/cart-store";
@@ -9,10 +10,49 @@ import { formatPrice } from "@/lib/utils";
 import { VAT_RATE } from "@/lib/constants";
 
 export default function CartPage() {
-  const { items, updateQuantity, removeItem, total, clearCart } = useCartStore();
+  const { items, updateQuantity, removeItem, total, clearCart, appliedCoupon, setAppliedCoupon } = useCartStore();
+  const [couponInput, setCouponInput] = useState("");
+  const [couponError, setCouponError] = useState("");
+  const [couponLoading, setCouponLoading] = useState(false);
+
   const subtotal = total();
-  const vat = subtotal * VAT_RATE;
-  const totalWithVat = subtotal + vat;
+  const discount = appliedCoupon?.discountAmount ?? 0;
+  const subtotalAfterDiscount = Math.max(0, subtotal - discount);
+  const vat = subtotalAfterDiscount * VAT_RATE;
+  const totalWithVat = subtotalAfterDiscount + vat;
+
+  const handleApplyCoupon = async () => {
+    const code = couponInput.trim();
+    if (!code) {
+      setCouponError("Enter a coupon code.");
+      return;
+    }
+    setCouponError("");
+    setCouponLoading(true);
+    try {
+      const res = await fetch("/api/coupons/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, subtotal }),
+      });
+      const data = await res.json();
+      if (data.valid && data.discount != null) {
+        setAppliedCoupon({ code: data.code, discountAmount: data.discount });
+        setCouponInput("");
+      } else {
+        setCouponError(data.error ?? "This coupon could not be applied.");
+      }
+    } catch {
+      setCouponError("Could not validate coupon. Try again.");
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponError("");
+  };
 
   if (items.length === 0) {
     return (
@@ -88,16 +128,49 @@ export default function CartPage() {
           <h2 className="font-semibold text-slate-900">Order summary</h2>
           <div className="mt-4">
             <label className="text-sm text-slate-600">Coupon code</label>
-            <div className="mt-1 flex gap-2">
-              <Input placeholder="Code" className="rounded-xl bg-white" />
-              <Button variant="outline" size="sm" className="rounded-xl">Apply</Button>
-            </div>
+            {appliedCoupon ? (
+              <div className="mt-1 flex items-center justify-between gap-2 rounded-xl border border-green-200 bg-green-50 px-3 py-2">
+                <span className="text-sm font-medium text-green-800">
+                  {appliedCoupon.code} applied (−{formatPrice(appliedCoupon.discountAmount)})
+                </span>
+                <Button type="button" variant="ghost" size="sm" className="text-green-700 hover:text-green-900" onClick={handleRemoveCoupon}>
+                  Remove
+                </Button>
+              </div>
+            ) : (
+              <div className="mt-1 flex gap-2">
+                <Input
+                  placeholder="e.g. WELCOME10"
+                  className="rounded-xl bg-white"
+                  value={couponInput}
+                  onChange={(e) => setCouponInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleApplyCoupon())}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl shrink-0"
+                  onClick={handleApplyCoupon}
+                  disabled={couponLoading}
+                >
+                  {couponLoading ? "Checking…" : "Apply"}
+                </Button>
+              </div>
+            )}
+            {couponError && <p className="mt-1 text-xs text-red-600">{couponError}</p>}
           </div>
           <dl className="mt-6 space-y-2 text-sm">
             <div className="flex justify-between text-slate-600">
               <dt>Subtotal</dt>
               <dd>{formatPrice(subtotal)}</dd>
             </div>
+            {discount > 0 && (
+              <div className="flex justify-between text-green-600">
+                <dt>Discount ({appliedCoupon?.code})</dt>
+                <dd>−{formatPrice(discount)}</dd>
+              </div>
+            )}
             <div className="flex justify-between text-slate-600">
               <dt>VAT (16%)</dt>
               <dd>{formatPrice(vat)}</dd>

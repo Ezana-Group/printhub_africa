@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, startTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -229,6 +229,7 @@ export function StaffAdminClient({
                 className="text-destructive focus:text-destructive"
                 onClick={(e) => {
                   e.preventDefault();
+                  e.stopPropagation();
                   handleDeleteClick(s);
                 }}
               >
@@ -263,7 +264,11 @@ export function StaffAdminClient({
           </p>
         </div>
         {canInvite && (
-          <Button onClick={() => setInviteOpen(true)} className="bg-primary hover:bg-primary/90">
+          <Button
+            type="button"
+            onClick={() => startTransition(() => setInviteOpen(true))}
+            className="bg-primary hover:bg-primary/90"
+          >
             <Plus className="mr-2 h-4 w-4" />
             Invite Staff
           </Button>
@@ -305,7 +310,11 @@ export function StaffAdminClient({
                   Invite your first team member or adjust your filters.
                 </p>
                 {canInvite && (
-                  <Button onClick={() => setInviteOpen(true)} className="mt-4 bg-primary">
+                  <Button
+                    type="button"
+                    onClick={() => startTransition(() => setInviteOpen(true))}
+                    className="mt-4 bg-primary"
+                  >
                     <Plus className="mr-2 h-4 w-4" />
                     Invite Staff
                   </Button>
@@ -349,16 +358,15 @@ export function StaffAdminClient({
         </CardContent>
       </Card>
 
-      {inviteOpen && (
-        <InviteStaffSheet
-          open={inviteOpen}
-          onOpenChange={setInviteOpen}
-          onSuccess={() => {
-            setInviteOpen(false);
-            router.refresh();
-          }}
-        />
-      )}
+      {/* Always mount so Dialog open/close doesn't freeze (conditional mount + portal can block main thread) */}
+      <InviteStaffSheet
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
+        onSuccess={() => {
+          setInviteOpen(false);
+          router.refresh();
+        }}
+      />
 
       {/* AUDIT FIX: Delete confirmation dialog before deleting staff */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>

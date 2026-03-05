@@ -16,8 +16,9 @@ const TYPE_LABELS: Record<string, string> = {
   design_and_print: "I Have an Idea",
 };
 
+// AUDIT FIX: brand orange — no blue
 const TYPE_BADGE_CLASS: Record<string, string> = {
-  large_format: "bg-blue-100 text-blue-800 border-0",
+  large_format: "bg-orange-100 text-orange-800 border-0",
   three_d_print: "bg-purple-100 text-purple-800 border-0",
   design_and_print: "bg-green-100 text-green-800 border-0",
 };
@@ -90,8 +91,8 @@ export default async function AdminQuoteDetailPage({
               ? "bg-red-100 text-red-800"
               : quote.status === "reviewing"
                 ? "bg-amber-100 text-amber-800"
-                : quote.status === "quoted"
-                  ? "bg-blue-100 text-blue-800"
+                :                 quote.status === "quoted"
+                  ? "bg-orange-100 text-orange-800"
                   : quote.status === "accepted"
                     ? "bg-green-100 text-green-800"
                     : quote.status === "in_production"

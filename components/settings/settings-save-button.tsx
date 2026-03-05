@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 interface SettingsSaveButtonProps {
   formId: string;
@@ -10,6 +12,7 @@ interface SettingsSaveButtonProps {
 }
 
 export function SettingsSaveButton({ formId, action, children = "Save Changes" }: SettingsSaveButtonProps) {
+  const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +39,7 @@ export function SettingsSaveButton({ formId, action, children = "Save Changes" }
         return;
       }
       setSaved(true);
+      router.refresh();
       setTimeout(() => setSaved(false), 3000);
     } catch {
       setError("Something went wrong");
@@ -46,8 +50,15 @@ export function SettingsSaveButton({ formId, action, children = "Save Changes" }
 
   return (
     <div className="flex flex-col gap-2">
-      <Button type="button" onClick={handleSave} disabled={saving}>
-        {saving ? "Saving…" : saved ? "Saved" : children}
+      <Button
+        type="button"
+        onClick={handleSave}
+        disabled={saving}
+        variant={error ? "destructive" : "default"}
+        className={saved ? "bg-green-600 hover:bg-green-600 text-white" : ""}
+      >
+        {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        {saving ? "Saving…" : saved ? "✓ Saved!" : children}
       </Button>
       {saved && <p className="text-sm text-green-600 font-medium">Settings saved successfully.</p>}
       {error && <p className="text-sm text-destructive font-medium">{error}</p>}

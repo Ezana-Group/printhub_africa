@@ -382,26 +382,8 @@ export default function GetAQuotePage() {
             <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">
               Step 1 — Service type
             </h2>
+            {/* AUDIT FIX: Card order [Large Format] [3D Print] [I Have an Idea]; no blue — orange only */}
             <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setServiceType("design_and_print");
-                  setStatus("idle");
-                  setErrorMsg("");
-                }}
-                className={`group flex items-start gap-4 rounded-2xl border-2 p-5 text-left transition-all ${
-                  serviceType === "design_and_print" ? "border-amber-500 bg-amber-500/10 shadow-sm" : "border-slate-200 bg-card hover:border-amber-500/50"
-                }`}
-              >
-                <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${serviceType === "design_and_print" ? "bg-amber-500 text-white" : "bg-slate-100 text-slate-600 group-hover:bg-amber-500/10 group-hover:text-amber-600"}`}>
-                  <Lightbulb className="h-6 w-6" />
-                </span>
-                <div>
-                  <span className="font-display font-semibold text-slate-900">I Have an Idea</span>
-                  <p className="mt-1 text-sm text-slate-600">No design yet? We design &amp; print for you.</p>
-                </div>
-              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -431,15 +413,34 @@ export default function GetAQuotePage() {
                   setErrorMsg("");
                 }}
                 className={`group flex items-start gap-4 rounded-2xl border-2 p-5 text-left transition-all ${
-                  serviceType === "3d_print" ? "border-blue-500 bg-blue-500/10 shadow-sm" : "border-slate-200 bg-card hover:border-blue-500/50"
+                  serviceType === "3d_print" ? "border-primary bg-primary/5 shadow-sm" : "border-slate-200 bg-card hover:border-primary/50"
                 }`}
               >
-                <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${serviceType === "3d_print" ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-600 group-hover:bg-blue-500/10 group-hover:text-blue-600"}`}>
+                <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${serviceType === "3d_print" ? "bg-primary text-white" : "bg-slate-100 text-slate-600 group-hover:bg-primary/10 group-hover:text-primary"}`}>
                   <Box className="h-6 w-6" />
                 </span>
                 <div>
                   <span className="font-display font-semibold text-slate-900">3D print</span>
                   <p className="mt-1 text-sm text-slate-600">Prototypes &amp; parts — STL, OBJ, FBX, 3MF, STEP</p>
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setServiceType("design_and_print");
+                  setStatus("idle");
+                  setErrorMsg("");
+                }}
+                className={`group flex items-start gap-4 rounded-2xl border-2 p-5 text-left transition-all ${
+                  serviceType === "design_and_print" ? "border-primary bg-primary/5 shadow-sm" : "border-slate-200 bg-card hover:border-primary/50"
+                }`}
+              >
+                <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${serviceType === "design_and_print" ? "bg-primary text-white" : "bg-slate-100 text-slate-600 group-hover:bg-primary/10 group-hover:text-primary"}`}>
+                  <Lightbulb className="h-6 w-6" />
+                </span>
+                <div>
+                  <span className="font-display font-semibold text-slate-900">I Have an Idea</span>
+                  <p className="mt-1 text-sm text-slate-600">No design yet? We design &amp; print for you.</p>
                 </div>
               </button>
             </div>
