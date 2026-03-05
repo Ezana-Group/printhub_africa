@@ -1,0 +1,1108 @@
+// PrintHub — printhub.africa | An Ezana Group Company
+// Prisma schema — PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============== USERS & AUTH ==============
+enum UserRole {
+  CUSTOMER
+  STAFF
+  ADMIN
+  SUPER_ADMIN
+}
+
+model User {
+  id                  String    @id @default(cuid())
+  name                String?
+  email               String    @unique
+  phone               String? // Kenya +254 format
+  passwordHash        String?
+  role                UserRole  @default(CUSTOMER)
+  emailVerified       DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  profileImage        String?
+  loyaltyPoints       Int       @default(0)
+  preferredLanguage   String?   @default("en")
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+
+  accounts         Account[]
+  sessions         Session[]
+  addresses        Address[]
+  orders           Order[]
+  productReviews   ProductReview[]
+  uploadedFiles    UploadedFile[]
+  printQuotes      PrintQuote[]
+  quotes           Quote[]
+  couponUsages     CouponUsage[]
+  wishlists        Wishlist[]
+  notifications    Notification[]
+  corporateAccount CorporateAccount?
+  staff            Staff?
+  supportTickets   SupportTicket[]
+  ticketMessages   TicketMessage[]
+  auditLogs        AuditLog[]
+}
+
+model Address {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label      String // Home, Office
+  street     String
+  city       String
+  county     String
+  postalCode String?
+  isDefault  Boolean  @default(false)
+  lat        Float?
+  lng        Float?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ============== PRODUCTS & CATALOG ==============
+model Category {
+  id              String     @id @default(cuid())
+  name            String
+  slug            String     @unique
+  description     String?
+  image           String?
+  parentId        String?
+  parent          Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children        Category[] @relation("CategoryTree")
+  sortOrder       Int        @default(0)
+  isActive        Boolean    @default(true)
+  metaTitle       String?
+  metaDescription String?
+  products        Product[]
+
+  @@index([parentId])
+}
+
+enum ProductType {
+  READYMADE_3D
+  LARGE_FORMAT
+  CUSTOM
+}
+
+model Product {
+  id               String      @id @default(cuid())
+  name             String
+  slug             String      @unique
+  description      String?
+  shortDescription String?
+  categoryId       String
+  category         Category    @relation(fields: [categoryId], references: [id])
+  productType      ProductType
+  images           String[] // URLs
+  basePrice        Decimal     @db.Decimal(12, 2)
+  comparePrice     Decimal?    @db.Decimal(12, 2)
+  sku              String?     @unique
+  stock            Int         @default(0)
+  minOrderQty      Int         @default(1)
+  maxOrderQty      Int?
+  weight           Decimal?    @db.Decimal(10, 3)
+  dimensions       Json? // { length, width, height } in cm
+  materials        String[]
+  colors           String[]
+  finishes         String[]
+  isActive         Boolean     @default(true)
+  isFeatured       Boolean     @default(false)
+  metaTitle        String?
+  metaDescription  String?
+  tags             String[]
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  variants      ProductVariant[]
+  productImages ProductImage[]
+  reviews       ProductReview[]
+  orderItems    OrderItem[]
+  wishlists     Wishlist[]
+  inventory     Inventory[]
+
+  @@index([categoryId])
+  @@index([slug])
+  @@index([isFeatured, isActive])
+}
+
+model ProductVariant {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name       String
+  sku        String?  @unique
+  price      Decimal  @db.Decimal(12, 2)
+  stock      Int      @default(0)
+  attributes Json // { color, size, material }
+  image      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  orderItems OrderItem[]
+  inventory  Inventory[]
+
+  @@index([productId])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  altText   String?
+  sortOrder Int     @default(0)
+  isPrimary Boolean @default(false)
+
+  @@index([productId])
+}
+
+model ProductReview {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating     Int
+  title      String?
+  body       String?
+  images     String[]
+  isVerified Boolean  @default(false)
+  isApproved Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([productId])
+  @@index([userId])
+}
+
+// ============== 3D PRINTING ==============
+enum PrintMaterialType {
+  PLA
+  ABS
+  PETG
+  RESIN
+  NYLON
+  TPU
+}
+
+model PrintMaterial {
+  id             String            @id @default(cuid())
+  slug           String?           @unique // PLA_STD, PETG, RESIN_STD, etc.
+  name           String
+  description    String?
+  type           PrintMaterialType
+  colorOptions   String[]
+  pricePerGram   Decimal           @db.Decimal(10, 4)
+  density        Float?            // g/cm³ for weight estimate
+  minChargeGrams Int?             // minimum billable grams
+  leadTimeDays   Int               @default(3)
+  image          String?
+  properties     Json?
+  sortOrder      Int               @default(0)
+  isActive       Boolean           @default(true)
+}
+
+model PrintFinish {
+  id            String  @id @default(cuid())
+  name          String
+  description   String?
+  priceModifier Decimal @default(0) @db.Decimal(10, 2)
+  isActive      Boolean @default(true)
+}
+
+// ============== LARGE FORMAT ==============
+model PrintingMedium {
+  id              String   @id @default(cuid())
+  slug            String?  @unique // e.g. vinyl, canvas — used by instant quote calculator
+  name            String // Vinyl Banner, Canvas, etc.
+  pricePerSqMeter Decimal  @db.Decimal(12, 2)
+  minWidth        Float? // cm
+  maxWidth        Float?
+  minHeight       Float?
+  maxHeight       Float?
+  description     String?
+  sortOrder       Int      @default(0)
+  isActive        Boolean  @default(true)
+}
+
+model LaminationType {
+  id            String   @id @default(cuid())
+  slug          String?  @unique // NONE, LAM_GLOSS, LAM_MATTE, LAM_ASCRATCH
+  name          String
+  pricePerSqm   Decimal  @default(0) @db.Decimal(10, 2) // KES per sqm
+}
+
+// Large format finishing add-ons (per unit)
+model LargeFormatFinishing {
+  id           String  @id @default(cuid())
+  code         String  @unique // EYELET_STD, HEM_4, etc.
+  name         String
+  pricePerUnit Decimal @db.Decimal(10, 2)
+  sortOrder    Int     @default(0)
+  isActive     Boolean @default(true)
+}
+
+// Large format design / artwork setup (flat fee)
+model DesignServiceOption {
+  id       String  @id @default(cuid())
+  code     String  @unique // NONE, DESIGN_MIN, DESIGN_STD, etc.
+  name     String
+  flatFee  Decimal @default(0) @db.Decimal(10, 2)
+  sortOrder Int    @default(0)
+  isActive Boolean @default(true)
+}
+
+// Rush / turnaround surcharge (% on print subtotal)
+model TurnaroundOption {
+  id               String   @id @default(cuid())
+  code             String   @unique // STD, EXPRESS_1, EXPRESS_SD, etc.
+  name             String
+  surchargePercent Decimal  @default(0) @db.Decimal(5, 2)
+  serviceType      String   // LARGE_FORMAT | THREE_D
+  sortOrder        Int      @default(0)
+  isActive         Boolean  @default(true)
+}
+
+// ============== LARGE FORMAT COST ENGINE ==============
+// Printer machine settings — speed, depreciation, electricity, ink
+model LFPrinterSettings {
+  id                        String   @id @default(cuid())
+  name                      String   // "Roland VG3-540"
+  model                     String
+  isActive                  Boolean  @default(true)
+  isDefault                 Boolean  @default(false)
+  maxPrintWidthM            Float    // 1.52
+  printSpeedSqmPerHour      Float    // 15 (production)
+  printSpeedHighQualSqmHr    Float?   // 8 (high quality)
+  setupTimeHours            Float    @default(0.25)
+  purchasePriceKes          Float
+  lifespanHours             Float    @default(20000)
+  annualMaintenanceKes      Float
+  powerWatts                Float
+  electricityRateKesKwh     Float    @default(24)
+  inkChannelSettings        Json?    // { "C": { bottleMl, costKes, sqmPerBottle }, ... }
+  updatedBy                 String?
+  updatedAt                 DateTime @updatedAt
+  createdAt                 DateTime @default(now())
+}
+
+// Business settings — labour, overhead, waste, profit, VAT
+model LFBusinessSettings {
+  id                        String   @id @default(cuid())
+  labourRateKesPerHour      Float    @default(200)
+  finishingTimeEyeletStd    Float    @default(0.1)
+  finishingTimeEyeletHeavy  Float    @default(0.2)
+  finishingTimeHemAll4      Float    @default(0.25)
+  finishingTimeHemTop2      Float    @default(0.15)
+  finishingTimePole         Float    @default(0.2)
+  finishingTimeRope          Float    @default(0.1)
+  monthlyRentKes            Float
+  monthlyUtilitiesKes       Float
+  monthlyInsuranceKes       Float
+  monthlyOtherKes            Float
+  workingDaysPerMonth       Int      @default(26)
+  workingHoursPerDay       Int      @default(8)
+  wastageBufferPercent      Float    @default(3)
+  substrateWasteFactor      Float    @default(1.05)
+  rigidSheetWasteFactor     Float    @default(1.1)
+  defaultProfitMarginPct    Float    @default(40)
+  vatRatePct                Float    @default(16)
+  minOrderValueKes          Float    @default(500)
+  updatedBy                 String?
+  updatedAt                 DateTime @updatedAt
+}
+
+// Large format stock items — substrates, lamination, eyelets, tape, etc.
+// Cost flows into calculator via averageCostKes (weighted average on receive)
+model LFStockItem {
+  id                      String   @id @default(cuid())
+  code                    String   @unique // VINYL_OUTDOOR_152, LAM_GLOSS, EYELET_STD, HEM_TAPE
+  name                    String
+  category                String   // SUBSTRATE_ROLL | LAMINATION | FINISHING | INK
+  unitType                String   // ROLL_LM | SHEET | UNIT | BOTTLE_ML
+  rollWidthM              Float?   // for ROLL_LM — width in metres
+  quantityOnHand          Float    @default(0)
+  lowStockThreshold       Float    @default(0)
+  costPerUnit             Float    @default(0)   // KES per unit (lm, sheet, etc.)
+  lastPurchasePriceKes    Float?
+  averageCostKes          Float    @default(0)   // weighted average
+  totalUnitsEverPurchased Float    @default(0)
+  totalCostEverPurchased  Float    @default(0)
+  lastReceivedAt         DateTime?
+  printerAssetId          String?  // optional: part/accessory linked to this printer
+  replacementIntervalHours Float?  // wear part: replace every X machine hours
+  lastReplacedAt          DateTime?
+  nextReplacementDue      DateTime?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  maintenancePartUsages   MaintenancePartUsed[]
+}
+
+// 3D machine hourly rate
+model MachineType {
+  id          String   @id @default(cuid())
+  code        String   @unique // FDM_STD, RESIN, etc.
+  name        String
+  ratePerHour Decimal  @db.Decimal(10, 2)
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+}
+
+// 3D post-processing: support removal or finishing (per unit)
+model ThreeDAddon {
+  id           String  @id @default(cuid())
+  code         String  @unique // SUP_RM_BASIC, SAND_LT, PAINT_1, etc.
+  name         String
+  pricePerUnit Decimal @db.Decimal(10, 2)
+  category     String  // SUPPORT_REMOVAL | FINISHING
+  sortOrder    Int     @default(0)
+  isActive     Boolean @default(true)
+}
+
+// Global pricing config (VAT, minimums, etc.)
+model PricingConfig {
+  id        String @id @default(cuid())
+  key       String @unique // vatRate, minOrderLargeFormat, minOrder3D, quantityDiscountTiers
+  valueJson String // JSON value
+}
+
+// ============== ORDERS ==============
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  PRINTING
+  QUALITY_CHECK
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum OrderType {
+  SHOP
+  CUSTOM_PRINT
+  LARGE_FORMAT
+  QUOTE
+}
+
+model Order {
+  id                String      @id @default(cuid())
+  orderNumber       String      @unique // PHUB-XXXXXXX
+  userId            String?
+  user              User?       @relation(fields: [userId], references: [id])
+  status            OrderStatus @default(PENDING)
+  type              OrderType
+  subtotal          Decimal     @db.Decimal(12, 2)
+  tax               Decimal     @default(0) @db.Decimal(12, 2) // 16% VAT
+  shippingCost      Decimal     @default(0) @db.Decimal(12, 2)
+  discount          Decimal     @default(0) @db.Decimal(12, 2)
+  total             Decimal     @db.Decimal(12, 2)
+  currency          String      @default("KES")
+  notes             String?
+  estimatedDelivery DateTime?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  items           OrderItem[]
+  timeline        OrderTimeline[]
+  shippingAddress ShippingAddress?
+  payments        Payment[]
+  refunds         Refund[]
+  invoices        Invoice[]
+}
+
+model OrderItem {
+  id             String   @id @default(cuid())
+  orderId        String
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId      String?
+  product        Product? @relation(fields: [productId], references: [id])
+  variantId      String?
+  quantity       Int
+  unitPrice      Decimal  @db.Decimal(12, 2)
+  customizations Json?
+  uploadedFileId String?
+  instructions   String?
+  createdAt      DateTime @default(now())
+
+  productionQueue  ProductionQueue[]
+  productVariant   ProductVariant?   @relation(fields: [productVariantId], references: [id])
+  productVariantId String?
+
+  @@index([orderId])
+}
+
+model OrderTimeline {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    String
+  message   String?
+  timestamp DateTime @default(now())
+  updatedBy String?
+
+  @@index([orderId])
+}
+
+model ShippingAddress {
+  id             String  @id @default(cuid())
+  orderId        String  @unique
+  order          Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fullName       String
+  email          String
+  phone          String
+  street         String
+  city           String
+  county         String
+  postalCode     String?
+  deliveryMethod String? // Standard, Express, Pickup
+  lat            Float?
+  lng            Float?
+}
+
+model Refund {
+  id          String    @id @default(cuid())
+  orderId     String
+  order       Order     @relation(fields: [orderId], references: [id])
+  amount      Decimal   @db.Decimal(12, 2)
+  reason      String?
+  status      String // PENDING, COMPLETED, FAILED
+  processedBy String?
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([orderId])
+}
+
+// ============== PAYMENTS ==============
+enum PaymentProvider {
+  MPESA
+  PESAPAL
+  FLUTTERWAVE
+  STRIPE
+  BANK_TRANSFER
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model Payment {
+  id                    String          @id @default(cuid())
+  orderId               String
+  order                 Order           @relation(fields: [orderId], references: [id])
+  provider              PaymentProvider
+  amount                Decimal         @db.Decimal(12, 2)
+  currency              String          @default("KES")
+  status                PaymentStatus   @default(PENDING)
+  reference             String?
+  providerTransactionId String?
+  providerResponse      Json?
+  paidAt                DateTime?
+  createdAt             DateTime        @default(now())
+
+  mpesaTransaction MpesaTransaction?
+  invoices         Invoice[]
+
+  @@index([orderId])
+  @@index([status])
+}
+
+model MpesaTransaction {
+  id                 String   @id @default(cuid())
+  paymentId          String   @unique
+  payment            Payment  @relation(fields: [paymentId], references: [id])
+  phoneNumber        String
+  merchantRequestId  String?
+  checkoutRequestId  String?
+  resultCode         String?
+  resultDesc         String?
+  mpesaReceiptNumber String?
+  transactionDate    String?
+  amount             Decimal? @db.Decimal(12, 2)
+}
+
+model Invoice {
+  id            String    @id @default(cuid())
+  orderId       String
+  order         Order     @relation(fields: [orderId], references: [id])
+  paymentId     String?
+  payment       Payment?  @relation(fields: [paymentId], references: [id])
+  invoiceNumber String    @unique
+  issuedAt      DateTime  @default(now())
+  dueAt         DateTime?
+  pdfUrl        String?
+  vatAmount     Decimal   @db.Decimal(12, 2)
+  totalAmount   Decimal   @db.Decimal(12, 2)
+
+  @@index([orderId])
+}
+
+// ============== CUSTOM FILE UPLOADS ==============
+enum UploadedFileType {
+  STL
+  OBJ
+  FBX
+  AI
+  PDF
+  PSD
+  PNG
+  JPEG
+  SVG
+  DXF
+  DWG
+}
+
+enum UploadedFileStatus {
+  UPLOADED
+  REVIEWING
+  APPROVED
+  REJECTED
+  PROCESSING
+}
+
+model UploadedFile {
+  id           String             @id @default(cuid())
+  userId       String
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId      String?
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  url          String
+  thumbnailUrl String?
+  fileType     UploadedFileType
+  status       UploadedFileStatus @default(UPLOADED)
+  reviewedBy   String?
+  reviewNotes  String?
+  printVolume  Float? // cm³ for 3D
+  printWeight  Float? // grams
+  printTime    Float? // hours
+  dimensions   Json?
+  createdAt    DateTime           @default(now())
+
+  printQuotes PrintQuote[]
+}
+
+enum PrintQuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  EXPIRED
+  REJECTED
+}
+
+model PrintQuote {
+  id             String           @id @default(cuid())
+  uploadedFileId String?
+  uploadedFile   UploadedFile?     @relation(fields: [uploadedFileId], references: [id])
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  material       String?
+  quantity       Int              @default(1)
+  dimensions     Json?
+  area           Float? // sqm for large format
+  estimatedCost  Decimal?          @db.Decimal(12, 2)
+  validUntil     DateTime?
+  status         PrintQuoteStatus  @default(DRAFT)
+  staffNotes     String?
+  createdAt      DateTime         @default(now())
+
+  @@index([userId])
+}
+
+// ============== UNIFIED QUOTES (Get a Quote / Design+Print) ==============
+enum QuoteType {
+  large_format
+  three_d_print
+  design_and_print
+}
+
+enum QuoteStatus {
+  new
+  reviewing
+  quoted
+  accepted
+  rejected
+  in_production
+  completed
+  cancelled
+}
+
+enum PreferredContact {
+  email
+  whatsapp
+  phone
+}
+
+model Quote {
+  id                String           @id @default(cuid())
+  quoteNumber       String           @unique // PHQ-00001
+  type              QuoteType
+  status            QuoteStatus      @default(new)
+  customerId        String?
+  customer          User?             @relation(fields: [customerId], references: [id])
+  assignedStaffId   String?
+  assignedStaff     Staff?            @relation(fields: [assignedStaffId], references: [id])
+  customerName      String
+  customerEmail     String
+  customerPhone     String?
+  preferredContact  PreferredContact  @default(email)
+  projectName       String?
+  description       String?           @db.Text
+  referenceFiles    String[]         // URLs of uploaded reference/design files
+  referenceFilesMeta Json?            // optional: [{ url, originalName, sizeBytes, uploadedAt }]
+  specifications    Json?            // type-specific: dimensions, material, quantity, etc.
+  budgetRange       String?           // for design_and_print
+  deadline          DateTime?
+  quotedAmount      Decimal?          @db.Decimal(12, 2)
+  quotedAt          DateTime?
+  quoteBreakdown    String?           @db.Text
+  quoteValidityDays Int?
+  quotePdfUrl       String?
+  acceptedAt        DateTime?
+  rejectedAt        DateTime?
+  rejectionReason   String?           @db.Text
+  notes             String?           @db.Text // internal staff notes
+  adminNotes        String?           @db.Text
+  referralSource    String?           // UTM / marketing
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([customerId])
+  @@index([assignedStaffId])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// ============== MARKETING & CRM ==============
+enum CouponType {
+  PERCENTAGE
+  FIXED
+  FREE_SHIPPING
+}
+
+model Coupon {
+  id             String     @id @default(cuid())
+  code           String     @unique
+  type           CouponType
+  value          Decimal    @db.Decimal(10, 2)
+  minOrderAmount Decimal?   @db.Decimal(12, 2)
+  maxUses        Int?
+  usedCount      Int        @default(0)
+  startDate      DateTime
+  expiryDate     DateTime
+  isActive       Boolean    @default(true)
+  applicableTo   String     @default("ALL") // ALL, CATEGORY, PRODUCT
+  applicableIds  String[] // category or product IDs
+
+  usages CouponUsage[]
+}
+
+model CouponUsage {
+  id       String   @id @default(cuid())
+  couponId String
+  coupon   Coupon   @relation(fields: [couponId], references: [id])
+  userId   String
+  user     User     @relation(fields: [userId], references: [id])
+  orderId  String
+  usedAt   DateTime @default(now())
+
+  @@index([couponId])
+  @@index([userId])
+}
+
+model Newsletter {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  isSubscribed Boolean  @default(true)
+  subscribedAt DateTime @default(now())
+  source       String?
+}
+
+model Wishlist {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  addedAt   DateTime @default(now())
+
+  @@unique([userId, productId])
+  @@index([userId])
+}
+
+model Cart {
+  id        String   @id @default(cuid())
+  userId    String?
+  sessionId String? // for guests
+  items     Json // array of { productId, variantId, quantity, customizations }
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([sessionId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ============== B2B / CORPORATE ==============
+enum PaymentTerms {
+  NET_30
+  NET_60
+  PREPAID
+}
+
+model CorporateAccount {
+  id           String        @id @default(cuid())
+  userId       String        @unique
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName  String
+  kraPin       String?
+  industry     String?
+  creditLimit  Decimal?      @db.Decimal(12, 2)
+  paymentTerms PaymentTerms? @default(PREPAID)
+  isApproved   Boolean       @default(false)
+  approvedBy   String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model BulkQuote {
+  id            String    @id @default(cuid())
+  corporateId   String
+  items         Json
+  totalEstimate Decimal?  @db.Decimal(12, 2)
+  status        String
+  expiresAt     DateTime?
+  assignedTo    String?
+}
+
+// ============== INVENTORY & PRODUCTION ==============
+model Inventory {
+  id                String          @id @default(cuid())
+  productId         String
+  product           Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variantId         String?
+  quantity          Int             @default(0)
+  lowStockThreshold Int             @default(5)
+  location          String?
+  unitCostKes       Float?          // cost per unit (KES) – for margin/profit checks
+  productVariant    ProductVariant? @relation(fields: [productVariantId], references: [id])
+  productVariantId  String?
+}
+
+model ProductionQueue {
+  id          String    @id @default(cuid())
+  orderId     String
+  orderItemId String
+  assignedTo  String?
+  status      String // Queued, In Progress, Printing, Quality Check, Done
+  startedAt   DateTime?
+  completedAt DateTime?
+  machineId   String?
+  notes       String?
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id])
+}
+
+model Machine {
+  id               String  @id @default(cuid())
+  name             String
+  type             String // LARGE_FORMAT_PRINTER, 3D_PRINTER_FDM, 3D_PRINTER_RESIN
+  status           String  @default("IDLE") // IDLE, PRINTING, MAINTENANCE
+  location         String?
+  purchasePriceKes Float?  // purchase/asset value (KES) – for depreciation and valuation
+}
+
+// ============== PRINTER ASSETS (Phase 2 — full asset lifecycle) ==============
+enum PrinterType {
+  LARGE_FORMAT
+  FDM
+  RESIN
+  HYBRID
+}
+
+enum AssetStatus {
+  ACTIVE
+  IDLE
+  IN_MAINTENANCE
+  AWAITING_PARTS
+  RETIRED
+}
+
+enum MaintenanceType {
+  SCHEDULED_SERVICE
+  BREAKDOWN_REPAIR
+  CLEANING
+  CALIBRATION
+  PART_REPLACEMENT
+  FIRMWARE_UPDATE
+  INSPECTION
+}
+
+model PrinterAsset {
+  id                      String      @id @default(cuid())
+  assetTag                String      @unique // ASSET-LF-001, ASSET-3D-001
+  name                    String
+  manufacturer            String?
+  model                   String?
+  serialNumber            String?
+  printerType             PrinterType
+  location                String?
+  notes                   String?
+  isActive                Boolean     @default(true)
+  isDefault               Boolean     @default(false)
+  createdAt               DateTime    @default(now())
+  updatedAt               DateTime    @updatedAt
+
+  // Specs (for calculator)
+  maxPrintWidthM          Float?
+  buildVolumeX            Float?
+  buildVolumeY            Float?
+  buildVolumeZ            Float?
+  powerWatts              Float
+  electricityRateKesKwh   Float       @default(24)
+  productionSpeed         Float       // sqm/hr (LF) or cm3/hr (3D)
+  highQualitySpeed        Float?
+  setupTimeHours          Float       @default(0.25)
+  postProcessingTimeHours Float?      // 3D: extra hours for post-processing
+  compatibleMaterials     String[]    @default([]) // 3D: ["PLA", "PETG"]
+
+  // Financial
+  purchasePriceKes        Float
+  purchaseDate            DateTime?
+  supplierName            String?
+  expectedLifespanHours   Float
+  annualMaintenanceKes    Float       @default(0)
+  warrantyExpiryDate      DateTime?
+  insurancePolicyRef      String?
+
+  // Usage (updated from production / maintenance)
+  hoursUsedTotal          Float       @default(0)
+  hoursUsedThisMonth      Float       @default(0)
+  status                  AssetStatus @default(ACTIVE)
+  nextScheduledMaintDate DateTime?
+  maintenanceIntervalHours Float?
+
+  // Computed (updated on save)
+  remainingLifespanHours  Float?
+  depreciationPerHourKes  Float?
+  maintenancePerHourKes   Float?
+
+  maintenanceLogs         MaintenanceLog[]
+}
+
+model MaintenanceLog {
+  id                String          @id @default(cuid())
+  printerAssetId    String
+  printerAsset      PrinterAsset    @relation(fields: [printerAssetId], references: [id], onDelete: Cascade)
+  type              MaintenanceType
+  date              DateTime        @default(now())
+  performedBy       String
+  isExternal        Boolean         @default(false)
+  technicianCompany String?
+  description       String
+  labourHours       Float           @default(0)
+  labourCostKes     Float           @default(0)
+  totalCostKes      Float           @default(0)
+  nextServiceDate   DateTime?
+  nextServiceHours  Float?
+  notes             String?
+  createdAt         DateTime        @default(now())
+
+  partsUsed         MaintenancePartUsed[]
+
+  @@index([printerAssetId])
+}
+
+model MaintenancePartUsed {
+  id                String        @id @default(cuid())
+  maintenanceLogId  String
+  maintenanceLog    MaintenanceLog @relation(fields: [maintenanceLogId], references: [id], onDelete: Cascade)
+  lfStockItemId     String?
+  lfStockItem       LFStockItem?  @relation(fields: [lfStockItemId], references: [id])
+  quantityUsed      Float
+  unitCostKes       Float
+  totalCostKes      Float
+
+  @@index([maintenanceLogId])
+}
+
+// Inventory tabs: Hardware (printers etc.), Maintenance, Printer Accessories.
+// When category = HARDWARE and hardwareType = LARGE_FORMAT_PRINTER or THREE_D_PRINTER,
+// the calculator uses this item's cost fields for quote pricing; admin selects printer in Quote calculator.
+// linkedPrinterId can reference either InventoryHardwareItem (id of a printer) or PrinterAsset.id
+model InventoryHardwareItem {
+  id          String   @id @default(cuid())
+  name        String
+  category    String   // HARDWARE | MAINTENANCE | PRINTER_ACCESSORIES
+  priceKes    Float    @default(0) // purchase/selling price – required when adding item
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  location    String?  // e.g. "Production floor A" – for hardware
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // For MAINTENANCE / PRINTER_ACCESSORIES: which printer this applies to (id of a HARDWARE printer)
+  linkedPrinterId String?
+  // For MAINTENANCE / PRINTER_ACCESSORIES: time impact in hours (included in cost calculations)
+  timeHours       Float?
+
+  // For category = HARDWARE only: type of hardware (printer specs used in calculators)
+  hardwareType String? // LARGE_FORMAT_PRINTER | THREE_D_PRINTER | null for generic hardware
+  printerSubType String? // 3D: FDM, RESIN, DLP, SLS, OTHER | LF: SOLVENT, ECO_SOLVENT, LATEX, UV, DYE_SUBLIMATION, OTHER
+
+  // Large format printer fields (when hardwareType = LARGE_FORMAT_PRINTER)
+  model                 String?
+  maxPrintWidthM        Float?
+  printSpeedSqmPerHour   Float?
+  setupTimeHours        Float?
+  lifespanHours         Float?
+  annualMaintenanceKes  Float?
+  powerWatts            Float?
+  electricityRateKesKwh Float?
+
+  // 3D printer fields (when hardwareType = THREE_D_PRINTER)
+  maintenancePerYearKes   Float?
+  postProcessingTimeHours Float?
+}
+
+// 3D consumables: filament, resin, nozzles, etc.
+// costPerKgKes: FILAMENT – used by 3D calculator so quotes stay above cost
+// unitCostKes: RESIN/OTHER – cost per unit (bottle, piece) for margin/profit checks
+model ThreeDConsumable {
+  id                String   @id @default(cuid())
+  kind              String   // FILAMENT, RESIN, OTHER
+  name              String   // e.g. "PLA", "Resin 1L", "Nozzle 0.4mm"
+  specification     String?  // e.g. "Red 1kg", "Clear"
+  quantity          Int      @default(0)
+  lowStockThreshold Int      @default(2)
+  location          String?
+  costPerKgKes      Float?   // cost per kg (KES) – FILAMENT; used by 3D calculator
+  unitCostKes       Float?   // cost per unit (KES) – RESIN/OTHER; for margin/profit checks
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+// ============== STAFF & ADMIN ==============
+model Staff {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department     String?
+  position       String?
+  permissions    String[] // granular permissions
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  assignedQuotes Quote[]
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  before    Json?
+  after     Json?
+  ipAddress String?
+  timestamp DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity, entityId])
+}
+
+model SupportTicket {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId   String?
+  subject   String
+  status    String
+  priority  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages TicketMessage[]
+}
+
+model TicketMessage {
+  id          String        @id @default(cuid())
+  ticketId    String
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  senderId    String
+  sender      User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  senderType  String // CUSTOMER, STAFF
+  message     String
+  attachments String[]
+  createdAt   DateTime      @default(now())
+
+  @@index([ticketId])
+}

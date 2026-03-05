@@ -1,0 +1,53 @@
+# PrintHub — printhub.africa | An Ezana Group Company
+# Docker Compose: PostgreSQL + optional Next.js app
+#
+# Quick start (DB only — run app locally):
+#   docker compose up -d db
+#   export DATABASE_URL="postgresql://user:password@localhost:5432/printhub?schema=public"
+#   npx prisma migrate deploy && npm run db:seed
+#   npm run dev
+#
+# Full stack (DB + app in containers):
+#   docker compose up -d
+#   Then run migrations once: docker compose run --rm app npx prisma migrate deploy
+#   Optional seed: docker compose run --rm app npm run db:seed
+#
+# Production-style (build image first):
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: printhub
+    volumes:
+      - printhub_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d printhub"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://user:password@db:5432/printhub?schema=public
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-change-me-in-production}
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  printhub_pgdata:

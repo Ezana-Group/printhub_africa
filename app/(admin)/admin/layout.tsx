@@ -1,0 +1,42 @@
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import { prisma } from "@/lib/prisma";
+import { AdminNav } from "@/components/admin/admin-nav";
+
+const ADMIN_ROLES = ["STAFF", "ADMIN", "SUPER_ADMIN"];
+
+export default async function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) redirect("/login");
+  const role = (session.user as { role?: string }).role;
+  const permissions = (session.user as { permissions?: string[] }).permissions;
+  if (!role || !ADMIN_ROLES.includes(role)) redirect("/login");
+
+  const newQuotesCount = await prisma.quote.count({ where: { status: "new" } }).catch(() => 0);
+
+  return (
+    <div className="min-h-screen bg-background">
+      <aside className="fixed left-0 top-0 z-40 h-screen w-56 border-r border-border bg-card">
+        <Link href="/admin/dashboard" className="block p-4 font-display font-bold text-primary">
+          PrintHub Admin
+        </Link>
+        <AdminNav role={role} permissions={permissions} newQuotesCount={newQuotesCount} />
+      </aside>
+      <header className="fixed top-0 left-56 right-0 z-30 h-14 border-b border-border bg-card flex items-center justify-between px-6">
+        <span className="text-sm text-muted-foreground">
+          {session.user?.name ?? session.user?.email}
+        </span>
+        <Link href="/" className="text-sm text-primary hover:underline">
+          View site
+        </Link>
+      </header>
+      <main className="pl-56 pt-14 min-h-screen bg-[#F9FAFB]">{children}</main>
+    </div>
+  );
+}
