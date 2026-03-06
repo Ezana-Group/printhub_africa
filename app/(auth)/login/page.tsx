@@ -10,23 +10,60 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
-function LoginForm() {
+/** Messages that depend on searchParams; wrapped in Suspense so the form can render immediately (fixes WebKit E2E). */
+function LoginMessages({
+  error,
+  errorParam,
+  verified,
+}: {
+  error: string;
+  errorParam: string | null;
+  verified: string | null;
+}) {
+  return (
+    <>
+      {verified === "1" && (
+        <p className="text-sm text-success bg-success/10 border border-success/30 rounded-md p-2">
+          Email verified. You can sign in now.
+        </p>
+      )}
+      {errorParam === "InvalidOrExpiredToken" && (
+        <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-2">
+          Verification link invalid or expired.
+        </p>
+      )}
+      {(error || errorParam === "CredentialsSignin") && (
+        <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-2">
+          {error || (errorParam === "CredentialsSignin" ? "Invalid email or password." : errorParam ?? "")}
+        </p>
+      )}
+    </>
+  );
+}
+
+function LoginMessagesWithParams({ error }: { error: string }) {
   const searchParams = useSearchParams();
+  const verified = searchParams.get("verified");
+  const errorParam = searchParams.get("error");
+  return <LoginMessages error={error} errorParam={errorParam} verified={verified} />;
+}
+
+/**
+ * Login form is rendered immediately (no Suspense around it) so E2E and WebKit
+ * see #email / #password on first paint. Only the URL-dependent messages use Suspense.
+ */
+export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const verified = searchParams.get("verified");
-  const errorParam = searchParams.get("error");
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const callbackUrl = searchParams.get("callbackUrl")?.startsWith("/")
-      ? searchParams.get("callbackUrl")!
-      : "/login/success";
+    const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams();
+    const callbackUrl = params.get("callbackUrl")?.startsWith("/") ? params.get("callbackUrl")! : "/login/success";
     await signIn("credentials", {
       email,
       password,
@@ -47,21 +84,9 @@ function LoginForm() {
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
-          {verified === "1" && (
-            <p className="text-sm text-success bg-success/10 border border-success/30 rounded-md p-2">
-              Email verified. You can sign in now.
-            </p>
-          )}
-          {errorParam === "InvalidOrExpiredToken" && (
-            <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-2">
-              Verification link invalid or expired.
-            </p>
-          )}
-          {(error || errorParam === "CredentialsSignin") && (
-            <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-2">
-              {error || (errorParam === "CredentialsSignin" ? "Invalid email or password." : errorParam ?? "")}
-            </p>
-          )}
+          <Suspense fallback={null}>
+            <LoginMessagesWithParams error={error} />
+          </Suspense>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -111,13 +136,5 @@ function LoginForm() {
         </CardFooter>
       </form>
     </Card>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<Card><CardContent className="pt-6">Loading…</CardContent></Card>}>
-      <LoginForm />
-    </Suspense>
   );
 }

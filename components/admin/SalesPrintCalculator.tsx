@@ -109,7 +109,7 @@ export function SalesPrintCalculator({
     for (const m of materials) {
       const base = m.baseMaterial ?? (m.name.replace(/\s*\([^)]*\)\s*$/, "").trim() || m.name);
       if (!byBase[base]) byBase[base] = [];
-      const rawColor = (m as MaterialWithColors).color ?? ((m.name.match(/\s*\(([^)]+)\)\s*$/) ?? [])[1]?.trim();
+      const rawColor = (m as MaterialWithColors).color ?? ((m.name.match(/\s*\(([^)]+)\)\s*$/) ?? [])[1]?.trim());
       const canonical = canonicalColorFromSpec(rawColor);
       const quantity = (m as MaterialWithColors).quantity ?? 0;
       byBase[base].push({ code: m.code, name: m.name, color: canonical, quantity });
