@@ -20,18 +20,22 @@ if (!connectionString) {
 }
 
 const email = process.env.EMAIL?.trim();
-const password = process.env.PASSWORD;
+const rawPassword = process.env.PASSWORD;
 const name = process.env.NAME?.trim();
 
-if (!email || !password) {
+if (!email || !rawPassword) {
   console.error("Usage: EMAIL=user@example.com PASSWORD=secret [NAME=\"Display Name\"] npx tsx scripts/create-super-admin.ts");
   process.exit(1);
 }
 
-if (password.length < 8) {
+if (rawPassword.length < 8) {
   console.error("Password must be at least 8 characters.");
   process.exit(1);
 }
+
+const password: string = rawPassword;
+const safeEmail: string = email;
+const displayName: string = name ?? "Super Admin";
 
 async function main() {
   const adapter = new PrismaPg({ connectionString });
@@ -40,16 +44,16 @@ async function main() {
   const passwordHash = await bcrypt.hash(password, 12);
 
   const user = await prisma.user.upsert({
-    where: { email },
+    where: { email: safeEmail },
     update: {
       role: UserRole.SUPER_ADMIN,
       passwordHash,
-      ...(name != null && { name }),
+      ...(name != null && name !== "" && { name: displayName }),
       emailVerified: new Date(),
     },
     create: {
-      email,
-      name: name ?? "Super Admin",
+      email: safeEmail,
+      name: displayName,
       passwordHash,
       role: UserRole.SUPER_ADMIN,
       emailVerified: new Date(),
