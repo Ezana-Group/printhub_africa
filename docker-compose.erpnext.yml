@@ -64,11 +64,13 @@ services:
           fi
         done;
         echo "Configurator completed, creating site...";
-        bench new-site printhub.localhost --mariadb-root-password 123 --admin-password admin123 --no-mariadb-socket;
-        bench --site printhub.localhost install-app erpnext;
-        bench --site printhub.localhost set-config developer_mode 1;
+        if [[ ! -d sites/printhub.localhost ]]; then
+          bench new-site printhub.localhost --mariadb-root-password 123 --admin-password admin123 --no-mariadb-socket;
+          bench --site printhub.localhost install-app erpnext;
+          bench --site printhub.localhost set-config developer_mode 1;
+        fi;
         bench --site printhub.localhost clear-cache;
-        echo "✅ ERPNext site created successfully!";
+        echo "✅ ERPNext site ready.";
 
   frontend:
     image: frappe/erpnext:v15

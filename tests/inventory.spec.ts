@@ -64,7 +64,7 @@ test.describe("Inventory", () => {
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible({ timeout: 8000 });
     await expect(dialog.getByText(/Edit Filament/i)).toBeVisible({ timeout: 5000 });
-    await dialog.getByPlaceholder("e.g. Matte Black, Galaxy Purple").fill("E2E Updated Name");
+    await dialog.getByPlaceholder("Custom material name").fill("E2E Updated Name");
     await dialog.getByRole("button", { name: "Save changes" }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0, { timeout: 8000 });
     await expect(page.locator("table tbody").getByText("E2E Updated Name").first()).toBeVisible({ timeout: 5000 });
@@ -103,12 +103,23 @@ test.describe("Inventory", () => {
     await expect(page.getByRole("button", { name: "Add filament" })).toBeVisible({ timeout: 5000 });
     const firstRow = page.locator("table tbody tr").first();
     await expect(firstRow).toBeVisible({ timeout: 10000 });
+    const materialName = (await firstRow.locator("td").nth(1).textContent())?.trim() ?? "";
+    const quantityCell = firstRow.locator("td").nth(3);
+    const initialText = await quantityCell.textContent();
+    const initialQty = parseInt(initialText?.replace(/\D/g, "") || "0", 10);
+
     await firstRow.locator("td").last().getByRole("button").click();
     await page.getByRole("menuitem", { name: "Adjust stock" }).click();
     await page.getByRole("dialog").getByRole("button", { name: "− Remove stock" }).click();
     await page.getByRole("dialog").locator("#adjust-stock-qty").fill("1");
     await page.getByRole("dialog").getByRole("button", { name: "Save" }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0, { timeout: 5000 });
+
+    const rowAfter = page.locator("table tbody tr").filter({ hasText: materialName }).first();
+    await expect(rowAfter.locator("td").nth(3)).toContainText(/\d+/, { timeout: 5000 });
+    const newText = await rowAfter.locator("td").nth(3).textContent();
+    const newQty = parseInt(newText?.replace(/\D/g, "") || "0", 10);
+    expect(newQty).toBe(initialQty - 1);
   });
 
   test("Stock movement is logged after adjustment", async ({ page }) => {

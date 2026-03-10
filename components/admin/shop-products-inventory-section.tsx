@@ -86,10 +86,10 @@ export function ShopProductsInventorySection({ products }: { products: ShopProdu
                     <td className="p-4 text-muted-foreground">{p.category?.name ?? "—"}</td>
                     <td className="p-4">{p.stock}</td>
                     <td className="p-4">
-                      <StockBadge stock={p.stock} lowStockThreshold={p.lowStockThreshold} />
-                    </td>
-                    <td className="p-4">
-                      {!p.isActive && <Badge variant="outline" className="mr-2">Inactive</Badge>}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <StockBadge stock={p.stock} lowStockThreshold={p.lowStockThreshold} />
+                        {!p.isActive && <Badge variant="outline">Inactive</Badge>}
+                      </div>
                     </td>
                     <td className="p-4">
                       <Link href={`/admin/products/${p.id}`} className="text-primary hover:underline">

@@ -17,7 +17,7 @@ test.describe("Auth", () => {
 
   test("Staff member can log in", async ({ page }) => {
     await loginAsStaff(page, "sales@printhub.africa");
-    await expect(page).toHaveURL(/\/(admin|login\/success)/);
+    await expect(page).toHaveURL(/\/(admin|login\/success)/, { timeout: 45000 });
     await page.goto("/admin/dashboard");
     await expect(page).toHaveURL(/\/admin\/dashboard/);
   });

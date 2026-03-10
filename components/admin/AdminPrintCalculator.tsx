@@ -84,7 +84,7 @@ export function AdminPrintCalculator() {
       byBase[base].push({ code: m.code, name: m.name, color: canonical, quantity: m.quantity ?? 1 });
     }
     const types = Object.keys(byBase);
-    const sorted = [...new Set([...PREFERRED_MATERIAL_ORDER.filter((p) => types.some((t) => t.toLowerCase() === p.toLowerCase())), ...types])];
+    const sorted = Array.from(new Set([...PREFERRED_MATERIAL_ORDER.filter((p) => types.some((t) => t.toLowerCase() === p.toLowerCase())), ...types]));
     const colorSet: Record<string, Set<string>> = {};
     const inStockSet: Record<string, Set<string>> = {};
     for (const t of types) {
@@ -139,7 +139,7 @@ export function AdminPrintCalculator() {
       setMaterialType(first);
       const inStock = inStockColorSet[first];
       const avail = availableColorSet[first];
-      setColorChoice(inStock?.size ? [...inStock][0] : avail?.size ? [...avail][0] : "");
+      setColorChoice(inStock?.size ? Array.from(inStock)[0] : avail?.size ? Array.from(avail)[0] : "");
     }
   }, [materialTypes, materialType, availableColorSet, inStockColorSet]);
 

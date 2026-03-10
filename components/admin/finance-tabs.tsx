@@ -122,7 +122,7 @@ export function FinanceTabs({
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground">
-                Total revenue (this month): <strong className="text-foreground">{formatPrice(revenueByLine.shop + revenueByLine.printServices + revenueByLine.corporate)}</strong>
+                Total revenue (this month): <strong className="text-foreground">{formatPrice(totalRevenue)}</strong>
               </p>
             </CardContent>
           </Card>
@@ -134,8 +134,9 @@ export function FinanceTabs({
       {tab === "revenue" && (
         <>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-muted-foreground">Filter:</span>
+            <label htmlFor="revenue-filter-select" className="text-sm text-muted-foreground">Filter:</label>
             <select
+              id="revenue-filter-select"
               value={revenueFilter}
               onChange={(e) => setRevenueFilter(e.target.value as typeof revenueFilter)}
               className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"

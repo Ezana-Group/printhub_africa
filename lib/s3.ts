@@ -59,20 +59,18 @@ export async function getUploadUrl(key: string, contentType: string): Promise<st
   return getSignedUrl(client, command, { expiresIn: 3600 });
 }
 
-/** Presigned GET URL for private file download. */
+/** Presigned GET URL for private file download. Returns empty string if presigning is not possible (client/bucket not configured). */
 export async function getSignedDownloadUrl(key: string): Promise<string> {
   const client = getClient();
   const bucket = getBucket();
-  const publicUrl = R2_PUBLIC_URL ?? AWS_PUBLIC_URL;
-  if (!client || !bucket) {
-    return publicUrl ? `${publicUrl}/${key}` : "";
-  }
+  if (!client || !bucket) return "";
   const command = new GetObjectCommand({ Bucket: bucket, Key: key });
   return getSignedUrl(client, command, { expiresIn: 3600 });
 }
 
-/** Public URL for a stored key. Use R2_PUBLIC_URL when bucket has public read (e.g. printhub-public). */
+/** Public URL for a stored key. Use R2_PUBLIC_URL when bucket has public read (e.g. printhub-public). Throws if not configured. */
 export function getPublicUrl(key: string): string {
   const base = R2_PUBLIC_URL ?? AWS_PUBLIC_URL;
-  return base ? `${base.replace(/\/$/, "")}/${key}` : key;
+  if (!base) throw new Error("Missing R2_PUBLIC_URL or NEXT_PUBLIC_S3_URL for public file URLs. Set one in .env.");
+  return `${base.replace(/\/$/, "")}/${key}`;
 }

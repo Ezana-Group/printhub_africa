@@ -95,8 +95,12 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     redirect({ url, baseUrl }) {
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
-      if (new URL(url).origin === baseUrl) return url;
+      if (!url || url.startsWith("/")) return url ? `${baseUrl}${url}` : baseUrl;
+      try {
+        if (new URL(url).origin === baseUrl) return url;
+      } catch {
+        return baseUrl;
+      }
       return baseUrl;
     },
   },

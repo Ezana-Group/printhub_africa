@@ -22,6 +22,7 @@ test.describe("Permissions", () => {
     await editPermissionsBtn.click();
     const financeViewSwitch = permissionsPanel.locator("#finance_view");
     await expect(financeViewSwitch).toBeVisible({ timeout: 5000 });
+    await expect(financeViewSwitch).toBeEnabled({ timeout: 3000 });
     if ((await financeViewSwitch.getAttribute("aria-checked")) === "true") {
       await financeViewSwitch.click();
     }

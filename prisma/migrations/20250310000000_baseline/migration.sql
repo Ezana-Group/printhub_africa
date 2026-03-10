@@ -219,7 +219,8 @@ CREATE TABLE "ProductReview" (
     "isApproved" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "ProductReview_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "ProductReview_pkey" PRIMARY KEY ("id"),
+    CONSTRAINT "ProductReview_rating_check" CHECK ("rating" >= 1 AND "rating" <= 5)
 );
 
 -- CreateTable
@@ -455,7 +456,6 @@ CREATE TABLE "OrderItem" (
     "id" TEXT NOT NULL,
     "orderId" TEXT NOT NULL,
     "productId" TEXT,
-    "variantId" TEXT,
     "quantity" INTEGER NOT NULL,
     "unitPrice" DECIMAL(12,2) NOT NULL,
     "customizations" JSONB,
@@ -538,7 +538,7 @@ CREATE TABLE "MpesaTransaction" (
     "resultCode" TEXT,
     "resultDesc" TEXT,
     "mpesaReceiptNumber" TEXT,
-    "transactionDate" TEXT,
+    "transactionDate" TIMESTAMP(3),
     "amount" DECIMAL(12,2),
 
     CONSTRAINT "MpesaTransaction_pkey" PRIMARY KEY ("id")
@@ -748,7 +748,6 @@ CREATE TABLE "BulkQuote" (
 CREATE TABLE "Inventory" (
     "id" TEXT NOT NULL,
     "productId" TEXT NOT NULL,
-    "variantId" TEXT,
     "quantity" INTEGER NOT NULL DEFAULT 0,
     "lowStockThreshold" INTEGER NOT NULL DEFAULT 5,
     "location" TEXT,
@@ -997,7 +996,7 @@ CREATE TABLE "SupportTicket" (
 CREATE TABLE "TicketMessage" (
     "id" TEXT NOT NULL,
     "ticketId" TEXT NOT NULL,
-    "senderId" TEXT NOT NULL,
+    "senderId" TEXT,
     "senderType" TEXT NOT NULL,
     "message" TEXT NOT NULL,
     "attachments" TEXT[],
@@ -1346,5 +1345,21 @@ ALTER TABLE "SupportTicket" ADD CONSTRAINT "SupportTicket_userId_fkey" FOREIGN K
 ALTER TABLE "TicketMessage" ADD CONSTRAINT "TicketMessage_ticketId_fkey" FOREIGN KEY ("ticketId") REFERENCES "SupportTicket"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TicketMessage" ADD CONSTRAINT "TicketMessage_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "TicketMessage" ADD CONSTRAINT "TicketMessage_senderId_fkey" FOREIGN KEY ("senderId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey (referential integrity)
+ALTER TABLE "CouponUsage" ADD CONSTRAINT "CouponUsage_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+ALTER TABLE "LFStockItem" ADD CONSTRAINT "LFStockItem_printerAssetId_fkey" FOREIGN KEY ("printerAssetId") REFERENCES "PrinterAsset"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE "BulkQuote" ADD CONSTRAINT "BulkQuote_corporateId_fkey" FOREIGN KEY ("corporateId") REFERENCES "CorporateAccount"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "BulkQuote" ADD CONSTRAINT "BulkQuote_assignedTo_fkey" FOREIGN KEY ("assignedTo") REFERENCES "Staff"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE "ProductionQueue" ADD CONSTRAINT "ProductionQueue_orderId_fkey" FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ProductionQueue" ADD CONSTRAINT "ProductionQueue_machineId_fkey" FOREIGN KEY ("machineId") REFERENCES "Machine"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+CREATE UNIQUE INDEX "MpesaTransaction_mpesaReceiptNumber_key" ON "MpesaTransaction"("mpesaReceiptNumber") WHERE "mpesaReceiptNumber" IS NOT NULL;
+
+CREATE INDEX "ProductionQueue_orderId_idx" ON "ProductionQueue"("orderId");
+CREATE INDEX "ProductionQueue_machineId_idx" ON "ProductionQueue"("machineId");
 

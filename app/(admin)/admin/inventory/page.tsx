@@ -22,6 +22,7 @@ export default async function AdminInventoryPage() {
         name: true,
         sku: true,
         stock: true,
+        lowStockThreshold: true,
         images: true,
         isActive: true,
         category: { select: { name: true } },
@@ -112,7 +113,7 @@ export default async function AdminInventoryPage() {
     sku: p.sku,
     category: p.category,
     stock: p.stock,
-    lowStockThreshold: "lowStockThreshold" in p ? (p as { lowStockThreshold?: number }).lowStockThreshold ?? 0 : 0,
+    lowStockThreshold: p.lowStockThreshold ?? 0,
     images: p.images,
     isActive: p.isActive,
   }));

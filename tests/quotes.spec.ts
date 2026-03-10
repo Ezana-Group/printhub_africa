@@ -70,6 +70,11 @@ test.describe("Quote flow", () => {
     const moveToBtn = page.getByRole("button").filter({ hasText: /Move to/i }).first();
     await expect(moveToBtn).toBeVisible({ timeout: 10000 });
     await moveToBtn.click();
+    // moveToBtn may open a menu to pick status; if so, click the desired option. If it auto-advances one step, the toast appears.
+    const statusOption = page.getByRole("menuitem").filter({ hasText: /draft|submitted|in progress|approved|rejected/i }).first();
+    if (await statusOption.isVisible().catch(() => false)) {
+      await statusOption.click();
+    }
     await expect(page.getByText("Status updated.").first()).toBeVisible({ timeout: 8000 });
   });
 

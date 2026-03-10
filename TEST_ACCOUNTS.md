@@ -14,7 +14,7 @@ URL	http://localhost:8080
 Username	administrator
 Password	admin123
 Site	printhub.localhost
-Start ERPNext with npm run erpnext:start, 
+Start ERPNext with `npm run erpnext:start`. 
 
 | Role | Email | Password | Access |
 |------|--------|----------|--------|

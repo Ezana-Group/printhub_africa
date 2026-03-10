@@ -53,7 +53,7 @@ export default async function AdminOrdersPage({
     type: o.type,
     status: o.status,
     total: Number(o.total),
-    createdAt: o.createdAt.toLocaleDateString(),
+    createdAt: o.createdAt.toISOString(),
     user: o.user,
     payments: o.payments,
   }));

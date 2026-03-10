@@ -20,10 +20,19 @@ echo "⏳ Waiting for ERPNext to be ready..."
 echo "   (First time setup takes 3-5 minutes)"
 echo ""
 
-# Wait for ERPNext to be ready
-until curl -s -o /dev/null -w "%{http_code}" \
-  http://localhost:8080 | grep -q "200\|302"; do
+# Wait for ERPNext to be ready (with timeout)
+MAX_RETRIES=72
+retries=0
+while true; do
+  code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://localhost:8080 2>/dev/null || echo "000")
+  if echo "$code" | grep -q "200\|302"; then break; fi
   echo -n "."
+  retries=$((retries + 1))
+  if [ "$retries" -ge "$MAX_RETRIES" ]; then
+    echo ""
+    echo "❌ ERPNext did not become ready in time."
+    exit 1
+  fi
   sleep 5
 done
 

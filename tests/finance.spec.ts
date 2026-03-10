@@ -44,7 +44,8 @@ test.describe("Finance", () => {
       const labourInput = labourInputLocator(costsSection);
       await expect(labourInput).toBeVisible({ timeout: 5000 });
       await labourInput.fill(rateToRestore);
-      await costsSection.getByRole("button", { name: /save changes/i }).click({ timeout: 10000 });
+      await costsSection.getByRole("button", { name: /save changes/i }).waitFor({ state: "visible", timeout: 10000 });
+      await costsSection.getByRole("button", { name: /save changes/i }).click();
       await expect(page.getByText(/saved|updated/i).first()).toBeVisible({ timeout: 8000 });
     } catch {
       // Best-effort restore; avoid failing afterEach and masking the real test failure
@@ -72,7 +73,8 @@ test.describe("Finance", () => {
     const saveResponse = page.waitForResponse(
       (r) => r.url().includes("/api/admin/calculator/lf/settings") && r.request().method() === "PATCH" && r.status() === 200
     );
-    await costsSection.getByRole("button", { name: /save changes/i }).click({ timeout: 10000 });
+    await costsSection.getByRole("button", { name: /save changes/i }).waitFor({ state: "visible", timeout: 10000 });
+    await costsSection.getByRole("button", { name: /save changes/i }).click();
     await saveResponse;
     await expect(page.getByText(/saved|updated/i).first()).toBeVisible({ timeout: 8000 });
     await page.reload();

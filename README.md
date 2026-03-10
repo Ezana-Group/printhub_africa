@@ -88,6 +88,8 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Deploying to Vercel
 
+**Full guide:** See **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** for a complete step-by-step: Vercel, Neon (PostgreSQL), Cloudflare R2 (files), Resend (email), M-Pesa Daraja, Google OAuth, database migrations, and all env vars.
+
 The default `npm run build` runs only `prisma generate` and `next build`, so the build succeeds on Vercel (no database at build time).
 
 **Run migrations separately:** After deploying, run migrations against your production DB once per release. Options:
@@ -96,6 +98,17 @@ The default `npm run build` runs only `prisma generate` and `next build`, so the
 2. **Vercel Post-Deploy:** If you use a deploy hook or external CI, add `npx prisma migrate deploy` there with `DATABASE_URL` and `DIRECT_URL` set.
 
 Ensure `DATABASE_URL` and `DIRECT_URL` are set in the Vercel project (Settings → Environment Variables) for runtime.
+
+### Test environment (test.ezana.org)
+
+For the test deployment at **https://test.ezana.org**, set these in Vercel (and in any local `.env` when testing against that deployment):
+
+```bash
+NEXT_PUBLIC_APP_URL=https://test.ezana.org
+NEXTAUTH_URL=https://test.ezana.org
+```
+
+Use a separate test database and, if needed, a test Resend domain so production data and emails are not affected. Run migrations against the test DB after deploy (see above).
 
 ## Project structure
 

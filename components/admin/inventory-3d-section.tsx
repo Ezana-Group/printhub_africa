@@ -361,7 +361,7 @@ export function Inventory3DSection({
     setDeleteLoading(true);
     setBulkDeleteConfirm(false);
     try {
-      for (const id of selectedIds) {
+      for (const id of Array.from(selectedIds)) {
         await fetch(`/api/admin/3d-consumables/${id}`, { method: "DELETE" });
       }
       showToast(`${selectedIds.size} item(s) deleted`);

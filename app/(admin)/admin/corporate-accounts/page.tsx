@@ -38,7 +38,7 @@ export default async function AdminCorporateAccountsPage() {
                     <tr key={acc.id} className="border-b hover:bg-muted/30">
                       <td className="p-4 font-medium">{acc.companyName}</td>
                       <td className="p-4">{acc.user?.name ?? acc.user?.email ?? "—"}</td>
-                      <td className="p-4">{acc.creditLimit != null ? `KES ${Number(acc.creditLimit).toLocaleString()}` : "—"}</td>
+                      <td className="p-4">{acc.creditLimit != null ? `KES ${Number(acc.creditLimit).toLocaleString("en-KE")}` : "—"}</td>
                       <td className="p-4">{acc.paymentTerms ?? "—"}</td>
                       <td className="p-4">
                         <Link href={`/admin/customers/${acc.userId}`} className="text-primary hover:underline">

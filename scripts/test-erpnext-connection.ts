@@ -94,7 +94,8 @@ async function testConnection(): Promise<void> {
     } catch (error) {
       if (optional) {
         console.log(`  ⚠️ ${name} (optional)`);
-        console.log(`     ${error instanceof Error ? error.message : String(error)}`.slice(0, 120) + "...");
+        const msg = error instanceof Error ? error.message : String(error);
+        console.log(`     ${msg.length > 120 ? msg.slice(0, 120) + "..." : msg}`);
         optionalFailed++;
       } else {
         console.log(`  ❌ ${name}`);
@@ -126,6 +127,7 @@ async function testConnection(): Promise<void> {
     }
   } else {
     console.log("❌ Core tests failed. Run: npm run erpnext:setup");
+    process.exit(1);
   }
 }
 

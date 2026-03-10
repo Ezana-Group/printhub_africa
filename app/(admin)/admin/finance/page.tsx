@@ -36,8 +36,9 @@ export default async function AdminFinancePage() {
     }),
   ]);
 
-  const completedPayments = payments.filter((p) => p.status === "COMPLETED");
-  const totalRevenue = completedPayments.reduce((s, p) => s + Number(p.amount), 0);
+  const totalRevenue = paymentsWithType
+    .filter((p) => p.status === "COMPLETED")
+    .reduce((s, p) => s + Number(p.amount), 0);
   const orderCount = allOrders._count.id ?? 0;
   const totalOrderValue = Number(allOrders._sum.total ?? 0);
   const deliveredValue = Number(deliveredOrders._sum.total ?? 0);
@@ -65,15 +66,17 @@ export default async function AdminFinancePage() {
     { shop: 0, printServices: 0, corporate: 0 }
   );
 
-  const paymentsSerialized = payments.map((p) => ({
-    id: p.id,
-    orderNumber: p.order.orderNumber,
-    orderType: p.order?.type ?? "SHOP",
-    provider: p.provider,
-    amount: Number(p.amount),
-    status: p.status,
-    createdAt: p.createdAt.toLocaleString(),
-  }));
+  const paymentsSerialized = payments
+    .filter((p) => p.order != null)
+    .map((p) => ({
+      id: p.id,
+      orderNumber: p.order!.orderNumber,
+      orderType: p.order?.type ?? "SHOP",
+      provider: p.provider,
+      amount: Number(p.amount),
+      status: p.status,
+      createdAt: p.createdAt.toLocaleString(),
+    }));
 
   return (
     <div className="p-6 space-y-6">

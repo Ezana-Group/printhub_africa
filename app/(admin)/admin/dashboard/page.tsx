@@ -79,19 +79,23 @@ export default async function AdminDashboardPage() {
 
   let lfLow: { name: string; quantityOnHand: number }[] = [];
   let threeDLow: { name: string; quantity: number }[] = [];
+  const prismaWithOptional = prisma as unknown as {
+    lFStockItem?: { findMany: (args: object) => Promise<{ name: string; quantityOnHand: number; lowStockThreshold: number }[]> };
+    threeDConsumable?: { findMany: (args: object) => Promise<{ name: string; quantity: number; lowStockThreshold: number }[]> };
+  };
   try {
-    const prismaAny = prisma as unknown as {
-      lFStockItem: { findMany: (args: object) => Promise<{ name: string; quantityOnHand: number; lowStockThreshold: number }[]> };
-      threeDConsumable: { findMany: (args: object) => Promise<{ name: string; quantity: number; lowStockThreshold: number }[]> };
-    };
     const [lf, threeD] = await Promise.all([
-      prismaAny.lFStockItem?.findMany({ where: { lowStockThreshold: { gt: 0 } }, take: 5 }) ?? [],
-      prisma.threeDConsumable.findMany({ where: { lowStockThreshold: { gt: 0 } }, take: 5 }),
+      prismaWithOptional.lFStockItem
+        ? prismaWithOptional.lFStockItem.findMany({ where: { lowStockThreshold: { gt: 0 } }, take: 5 })
+        : [],
+      prismaWithOptional.threeDConsumable
+        ? prismaWithOptional.threeDConsumable.findMany({ where: { lowStockThreshold: { gt: 0 } }, take: 5 })
+        : [],
     ]);
     lfLow = (lf ?? []).filter((i) => i.quantityOnHand < i.lowStockThreshold);
-    threeDLow = threeD.filter((i) => i.quantity < i.lowStockThreshold);
-  } catch {
-    // ignore
+    threeDLow = (threeD ?? []).filter((i) => i.quantity < i.lowStockThreshold);
+  } catch (err) {
+    console.error("Dashboard low-stock fetch failed:", err);
   }
 
   const revenue = paymentsWithType.reduce((s, p) => s + Number(p.amount), 0);

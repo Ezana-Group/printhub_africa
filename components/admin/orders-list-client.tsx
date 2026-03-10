@@ -24,7 +24,7 @@ const ORDER_TYPE_CONFIG: Record<OrderType, { label: string; variant: "secondary"
   SHOP: { label: "Shop", variant: "secondary", icon: ShoppingCart },
   LARGE_FORMAT: { label: "Large Format", variant: "default", icon: Printer },
   THREE_D_PRINT: { label: "3D Print", variant: "outline", icon: Printer },
-  CUSTOM_PRINT: { label: "3D Print", variant: "outline", icon: Printer },
+  CUSTOM_PRINT: { label: "Custom Print", variant: "outline", icon: Printer },
   QUOTE: { label: "Quote", variant: "secondary", icon: FileText },
 };
 
@@ -106,7 +106,7 @@ export function OrdersListClient({
                     <td className="p-4">
                       <Badge variant={o.status === "PENDING" ? "destructive" : "outline"}>{o.status}</Badge>
                     </td>
-                    <td className="p-4 text-muted-foreground">{o.createdAt}</td>
+                    <td className="p-4 text-muted-foreground">{new Date(o.createdAt).toLocaleDateString("en-US", { dateStyle: "medium" })}</td>
                     <td className="p-4">
                       <Link href={`/admin/orders/${o.id}`} className="text-primary hover:underline">
                         View

@@ -61,7 +61,7 @@ async function main(): Promise<void> {
   for (const u of customers) {
     const customerName = u.name || u.email;
     try {
-      const existing = await erpList("Customer", `[["customer_name","=","${customerName.replace(/"/g, '\\"')}"]]`);
+      const existing = await erpList("Customer", JSON.stringify([["customer_name", "=", customerName]]));
       const payload = {
         customer_name: customerName,
         customer_group: "PrintHub Customers",
@@ -90,7 +90,7 @@ async function main(): Promise<void> {
   console.log(`Staff to sync: ${staffList.length}`);
   for (const s of staffList) {
     try {
-      const existing = await erpList("Employee", `[["user_id","=","${s.user.email}"]]`);
+      const existing = await erpList("Employee", JSON.stringify([["user_id", "=", s.user.email]]));
       const payload = {
         employee_name: s.user.name || s.user.email,
         company: "PrintHub",

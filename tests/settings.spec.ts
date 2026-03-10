@@ -54,7 +54,13 @@ test.describe("Settings", () => {
     await editBtn.click();
     const cancelBtn = section.getByRole("button", { name: "Cancel" });
     await expect(cancelBtn).toBeVisible({ timeout: 10000 });
+    const inputLocator = section.locator('input[type="text"]').first();
+    const initialValue = await inputLocator.inputValue();
+    await inputLocator.fill(initialValue + "X");
     await cancelBtn.click();
     await expect(section.getByRole("button", { name: /edit/i }).first()).toBeVisible({ timeout: 10000 });
+    const sectionAfter = page.locator("#business-identity");
+    const inputAfter = sectionAfter.locator('input[type="text"]').first();
+    await expect(inputAfter).toHaveValue(initialValue);
   });
 });

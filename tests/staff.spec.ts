@@ -51,7 +51,10 @@ test.describe("Staff", () => {
     await permissionsTab.click();
     await expect(page.getByText("Orders").first()).toBeVisible({ timeout: 3000 });
     await activityTab.click();
-    await expect(page.getByText(/activity|recent/i).first()).toBeVisible({ timeout: 3000 }).catch(() => {});
+    const activityEl = page.getByText(/activity|recent/i).first();
+    if ((await activityEl.count()) > 0) {
+      await expect(activityEl).toBeVisible({ timeout: 3000 });
+    }
     await performanceTab.click();
     await expect(performanceTab).toBeVisible();
     await profileTab.click();

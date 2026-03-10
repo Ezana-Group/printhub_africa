@@ -161,7 +161,7 @@ export default function GetAQuotePage() {
   const onDragLeave = () => setDragOver(false);
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const list = Array.from(e.dataTransfer?.files ?? e.target.files ?? []).filter((f) => f.size <= maxSizeMb * 1024 * 1024);
+    const list = Array.from(e.target.files ?? []).filter((f) => f.size <= maxSizeMb * 1024 * 1024);
     setFiles((prev) => [...prev, ...list].slice(0, maxFiles));
     e.target.value = "";
   };

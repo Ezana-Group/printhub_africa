@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { generateQuoteNumber, QUOTE_TYPE_API_TO_DB } from "@/lib/quote-utils";
 import { sendQuoteReceivedEmail } from "@/lib/email";
@@ -144,8 +145,8 @@ export async function POST(req: NextRequest) {
         projectName: data.projectName ?? undefined,
         description: data.description ?? undefined,
         referenceFiles: Array.isArray(data.referenceFiles) ? data.referenceFiles : [],
-        referenceFilesMeta: referenceFilesMetaJson ?? undefined,
-        specifications: specificationsJson,
+        referenceFilesMeta: (referenceFilesMetaJson ?? undefined) as Prisma.InputJsonValue | undefined,
+        specifications: specificationsJson as Prisma.InputJsonValue,
         budgetRange: data.budgetRange ?? undefined,
         deadline: deadline ?? undefined,
         referralSource: data.referralSource ?? undefined,

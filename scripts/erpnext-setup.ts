@@ -43,7 +43,7 @@ function updateEnv(apiKey: string, apiSecret: string): void {
   if (secretLine >= 0) lines[secretLine] = newSecret;
   else lines.push(newSecret);
 
-  if (!content.trimEnd().endsWith("\n") && lines.length) lines.push("");
+  if (!content.endsWith("\n") && lines.length) lines.push("");
   fs.writeFileSync(p, lines.join("\n"));
 }
 
@@ -52,13 +52,23 @@ function updateEnv(apiKey: string, apiSecret: string): void {
  * This works reliably in Docker where the API generate_keys often has permission issues.
  */
 function generateKeysViaBench(): { api_key: string; api_secret: string } {
+  if (!/^[a-z0-9_.-]+$/.test(SITE)) {
+    throw new Error(`Invalid SITE value: ${SITE}. Only alphanumeric, underscore, period, hyphen allowed.`);
+  }
   const composeFile = path.resolve(__dirname, "..", "docker-compose.erpnext.yml");
-  const cmd = `docker compose -f ${composeFile} exec -T backend bench --site ${SITE} execute "frappe.core.doctype.user.user.generate_keys" --args '["Administrator"]'`;
-  const out = child_process.execSync(cmd, {
+  const args = ["compose", "-f", composeFile, "exec", "-T", "backend", "bench", "--site", SITE, "execute", "frappe.core.doctype.user.user.generate_keys", "--args", '["Administrator"]'];
+  const result = child_process.spawnSync("docker", args, {
     encoding: "utf-8",
     maxBuffer: 10 * 1024,
   });
-  const data = JSON.parse(out.trim()) as { api_key?: string; api_secret?: string };
+  if (result.error) {
+    throw new Error("Failed to spawn docker: " + (result.error.message ?? String(result.error)) + (result.stderr ? " " + String(result.stderr).slice(0, 200) : ""));
+  }
+  const out = (result.stdout ?? "").trim();
+  if (result.status !== 0) {
+    throw new Error("bench execute failed: " + (result.stderr ?? out).slice(0, 200));
+  }
+  const data = JSON.parse(out) as { api_key?: string; api_secret?: string };
   if (data.api_key && data.api_secret) return { api_key: data.api_key, api_secret: data.api_secret };
   throw new Error("bench execute did not return api_key/api_secret: " + out.slice(0, 200));
 }
@@ -195,7 +205,7 @@ async function main(): Promise<void> {
         account_name: acc.name.replace(" - PH", ""),
         parent_account: acc.parent,
         root_type: acc.root_type,
-        account_type: acc.account_type ?? "Expense Account",
+        account_type: acc.account_type ?? (acc.root_type === "Income" ? "Income Account" : "Expense Account"),
         company: acc.company,
       }, auth);
     } catch (e: unknown) {
