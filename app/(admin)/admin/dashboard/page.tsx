@@ -25,18 +25,19 @@ export default async function AdminDashboardPage() {
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  const [
-    orders,
-    paymentsWithType,
-    pendingOrders,
-    uploadsAwaiting,
-    productsWithThreshold,
-    recentOrders,
-    todayOrders,
-    todayPayments,
-    productionQueueCounts,
-    printerStatus,
-  ] = await Promise.all([
+  try {
+    const [
+      orders,
+      paymentsWithType,
+      pendingOrders,
+      uploadsAwaiting,
+      productsWithThreshold,
+      recentOrders,
+      todayOrders,
+      todayPayments,
+      productionQueueCounts,
+      printerStatus,
+    ] = await Promise.all([
     prisma.order.findMany({
       where: { createdAt: { gte: startOfMonth } },
       include: { payments: true },
@@ -72,7 +73,7 @@ export default async function AdminDashboardPage() {
       select: { name: true },
       take: 5,
     }).catch(() => []),
-  ]);
+    ]);
 
   // Low stock: stock 0 or stock ≤ 5 (or stock < lowStockThreshold when that column exists)
   const shopLowStockList = productsWithThreshold.filter((p) => p.stock <= 5);
@@ -341,4 +342,26 @@ export default async function AdminDashboardPage() {
       </div>
     </div>
   );
+  } catch (err) {
+    console.error("Admin dashboard data load failed:", err);
+    const message = err instanceof Error ? err.message : "Database or connection error";
+    return (
+      <div className="p-6">
+        <h1 className="font-display text-2xl font-bold mb-4">Dashboard</h1>
+        <Card>
+          <CardHeader>
+            <p className="text-destructive font-medium">Unable to load dashboard</p>
+            <p className="text-sm text-muted-foreground">
+              {message}. Check that migrations have been run and DATABASE_URL is correct. Try again or contact support.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <Link href="/admin/dashboard" className="text-primary hover:underline">
+              Retry
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 }

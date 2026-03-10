@@ -16,7 +16,7 @@ Step-by-step guide to deploy PrintHub on **Vercel** with **Neon** (PostgreSQL), 
 | 6    | **Google OAuth**  | “Sign in with Google” → Client ID + Secret + redirect URI |
 | 7    | **Migrations** | Run `prisma migrate deploy` against production DB after first deploy |
 
-Use **test.ezana.org** for test; use **printhub.africa** (or your domain) for production. Set `NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` to the deployed URL for each environment.
+Use **test.ovid.co.ke** for test; use **printhub.africa** (or your domain) for production. Set `NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` to the deployed URL for each environment.
 
 ---
 
@@ -36,11 +36,11 @@ Do **not** set a custom build command that runs `prisma migrate deploy`; the bui
 
 ### 2.2 Environment variables (Vercel)
 
-Add all variables in **Project → Settings → Environment Variables**. Use **Production**, **Preview**, and **Development** as needed (e.g. Production = printhub.africa, Preview = test.ezana.org).
+Add all variables in **Project → Settings → Environment Variables**. Use **Production**, **Preview**, and **Development** as needed (e.g. Production = printhub.africa, Preview = test.ovid.co.ke).
 
 You will fill these as you complete Neon, R2, Resend, M-Pesa, and Google below. Required for a working deploy:
 
-- `NEXT_PUBLIC_APP_URL` — e.g. `https://test.ezana.org` or `https://printhub.africa`
+- `NEXT_PUBLIC_APP_URL` — e.g. `https://test.ovid.co.ke` or `https://printhub.africa`
 - `NEXTAUTH_URL` — same as `NEXT_PUBLIC_APP_URL`
 - `NEXTAUTH_SECRET` — generate: `openssl rand -base64 32`
 - `DATABASE_URL` — from Neon (pooled)
@@ -55,9 +55,9 @@ Optional but recommended for full features:
 
 ### 2.3 Domain
 
-- **Domains:** Project → Settings → Domains → Add (e.g. `test.ezana.org` or `printhub.africa`).
+- **Domains:** Project → Settings → Domains → Add (e.g. `test.ovid.co.ke` or `printhub.africa`).
 - Add the CNAME (or A) record at your DNS provider as shown by Vercel.
-- For test.ezana.org, use the value Vercel gives (e.g. `cname.vercel-dns.com`).
+- For test.ovid.co.ke, use the value Vercel gives (e.g. `cname.vercel-dns.com`).
 
 Redeploy after adding env vars or domain so the build uses the correct values.
 
@@ -159,7 +159,7 @@ Optional: `CONTACT_EMAIL` for contact form; app falls back to `FROM_EMAIL`.
 
 Callback URL must be a **public HTTPS** URL that M-Pesa can reach:
 
-- `https://test.ezana.org/api/payments/mpesa/callback` (or your real callback route path).
+- `https://test.ovid.co.ke/api/payments/mpesa/callback` (or your real callback route path).
 
 Register this URL in the Daraja portal if required (sandbox may allow any URL; production requires whitelisting).
 
@@ -178,7 +178,7 @@ Register this URL in the Daraja portal if required (sandbox may allow any URL; p
 | `MPESA_CONSUMER_SECRET` | From sandbox app | From prod app |
 | `MPESA_SHORTCODE`    | `174379` (sandbox till) | Your paybill/till |
 | `MPESA_PASSKEY`      | Sandbox passkey | Production passkey |
-| `MPESA_CALLBACK_URL` | `https://test.ezana.org/api/payments/mpesa/callback` | `https://printhub.africa/api/payments/mpesa/callback` |
+| `MPESA_CALLBACK_URL` | `https://test.ovid.co.ke/api/payments/mpesa/callback` | `https://printhub.africa/api/payments/mpesa/callback` |
 | `MPESA_ENV`          | `sandbox` | `production` |
 
 ---
@@ -193,7 +193,7 @@ Register this URL in the Daraja portal if required (sandbox may allow any URL; p
 4. If prompted, configure **OAuth consent screen** (External for public users, add scopes email, profile, openid).
 5. Application type: **Web application**.
 6. **Authorized redirect URIs** — add exactly:
-   - `https://test.ezana.org/api/auth/callback/google` (test)
+   - `https://test.ovid.co.ke/api/auth/callback/google` (test)
    - `https://printhub.africa/api/auth/callback/google` (production)
    - `http://localhost:3000/api/auth/callback/google` (local)
 7. Create and copy **Client ID** and **Client Secret**.
@@ -205,7 +205,7 @@ Register this URL in the Daraja portal if required (sandbox may allow any URL; p
 | `GOOGLE_CLIENT_ID`     | From Google Cloud Console |
 | `GOOGLE_CLIENT_SECRET` | From Google Cloud Console |
 
-NextAuth will use `NEXTAUTH_URL` to build the callback URL; ensure it matches the redirect URIs you added (e.g. `https://test.ezana.org` or `https://printhub.africa`).
+NextAuth will use `NEXTAUTH_URL` to build the callback URL; ensure it matches the redirect URIs you added (e.g. `https://test.ovid.co.ke` or `https://printhub.africa`).
 
 ---
 
@@ -230,7 +230,7 @@ export DIRECT_URL="postgresql://..."     # Neon direct (for migrations)
 npx prisma migrate deploy
 ```
 
-Use the **production** Neon URLs when targeting production DB; use **test** Neon URLs for test.ezana.org.
+Use the **production** Neon URLs when targeting production DB; use **test** Neon URLs for test.ovid.co.ke.
 
 **Option B — From CI / deploy hook:**
 
@@ -262,7 +262,7 @@ Use this as a single checklist. Add every variable you need to **Vercel → Sett
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `NEXT_PUBLIC_APP_URL` | Public app URL | `https://test.ezana.org` or `https://printhub.africa` |
+| `NEXT_PUBLIC_APP_URL` | Public app URL | `https://test.ovid.co.ke` or `https://printhub.africa` |
 | `NEXTAUTH_URL` | Same as app URL (NextAuth base) | Same as above |
 | `NEXTAUTH_SECRET` | Session encryption | `openssl rand -base64 32` |
 | `DATABASE_URL` | Postgres (pooled for serverless) | Neon pooled URL |
@@ -335,7 +335,7 @@ After that, test login (email + Google), file upload, M-Pesa flow, and email (e.
 ## 11. Troubleshooting
 
 - **Build fails with Prisma “url/directUrl” error:** Schema must not contain `url`/`directUrl`; they live in `prisma.config.ts`. See README and Prisma 7 upgrade notes.
-- **Invalid URL at build:** Set `NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` in Vercel (and optionally in Build env) so they are non-empty (e.g. `https://test.ezana.org`).
+- **Invalid URL at build:** Set `NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` in Vercel (and optionally in Build env) so they are non-empty (e.g. `https://test.ovid.co.ke`).
 - **M-Pesa callback not hit:** Ensure `MPESA_CALLBACK_URL` is exact, HTTPS, and reachable from the internet; check Vercel function logs for the callback route.
 - **Google sign-in redirect mismatch:** Redirect URI in Google Cloud must match exactly (including path `/api/auth/callback/google`); `NEXTAUTH_URL` must match the domain.
 - **DB connection errors in production:** Use pooled `DATABASE_URL` for runtime; use `DIRECT_URL` only for migrations. Ensure Neon IP allowlist (if any) allows Vercel.

@@ -99,13 +99,13 @@ The default `npm run build` runs only `prisma generate` and `next build`, so the
 
 Ensure `DATABASE_URL` and `DIRECT_URL` are set in the Vercel project (Settings → Environment Variables) for runtime.
 
-### Test environment (test.ezana.org)
+### Test environment (test.ovid.co.ke)
 
-For the test deployment at **https://test.ezana.org**, set these in Vercel (and in any local `.env` when testing against that deployment):
+For the test deployment at **https://test.ovid.co.ke**, set these in Vercel (and in any local `.env` when testing against that deployment):
 
 ```bash
-NEXT_PUBLIC_APP_URL=https://test.ezana.org
-NEXTAUTH_URL=https://test.ezana.org
+NEXT_PUBLIC_APP_URL=https://test.ovid.co.ke
+NEXTAUTH_URL=https://test.ovid.co.ke
 ```
 
 Use a separate test database and, if needed, a test Resend domain so production data and emails are not affected. Run migrations against the test DB after deploy (see above).
