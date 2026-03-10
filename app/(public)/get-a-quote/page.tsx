@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -103,6 +103,7 @@ export default function GetAQuotePage() {
   const [contactPhone, setContactPhone] = useState("");
 
   const [materialSlug3d, setMaterialSlug3d] = useState("");
+  const initialMaterialSlugSet = useRef(false);
   const [quantity3d] = useState(1);
   const [weightG] = useState<number | "">(50);
   const [printTimeHrs] = useState<number | "">(2);
@@ -126,16 +127,17 @@ export default function GetAQuotePage() {
       if (!res.ok) return;
       const data = await res.json();
       setThreeDOptions(data);
-      if (data.materials?.length && !materialSlug3d) {
+      if (data.materials?.length && !initialMaterialSlugSet.current) {
         const first = data.materials[0];
         const code = first.slug ?? first.code ?? first.id;
         setMaterialSlug3d(code);
         setSelectedMaterialName3d(first.name ?? null);
+        initialMaterialSlugSet.current = true;
       }
     } catch {
       setThreeDOptions(null);
     }
-  }, [materialSlug3d]);
+  }, []);
 
   useEffect(() => {
     if (serviceType !== "3d_print") {

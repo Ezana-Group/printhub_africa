@@ -1092,11 +1092,13 @@ model ThreeDConsumable {
   kind              String   // FILAMENT, RESIN, OTHER
   name              String   // e.g. "PLA", "Resin 1L", "Nozzle 0.4mm"
   specification     String?  // e.g. "Red 1kg", "Clear"
+  brand             String?  // optional e.g. "eSUN"
   quantity          Int      @default(0)
   lowStockThreshold Int      @default(2)
   location          String?
   costPerKgKes      Float?   // cost per kg (KES) – FILAMENT; used by 3D calculator
   unitCostKes       Float?   // cost per unit (KES) – RESIN/OTHER; for margin/profit checks
+  notes             String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }

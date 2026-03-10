@@ -9,10 +9,12 @@ const ADMIN_ROLES = ["STAFF", "ADMIN", "SUPER_ADMIN"];
 const patchSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   specification: z.string().max(200).optional().nullable(),
+  brand: z.string().max(200).optional().nullable(),
   quantity: z.number().int().min(0).optional(),
   lowStockThreshold: z.number().int().min(0).optional(),
   location: z.string().max(200).optional().nullable(),
   costPerKgKes: z.number().min(0).optional().nullable(),
+  notes: z.string().max(2000).optional().nullable(),
 });
 
 /** PATCH: Update a 3D consumable (filament or other). */

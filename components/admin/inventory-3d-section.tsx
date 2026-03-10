@@ -59,11 +59,13 @@ type ThreeDConsumable = {
   kind: string;
   name: string;
   specification: string | null;
+  brand: string | null;
   quantity: number;
   lowStockThreshold: number;
   location: string | null;
   costPerKgKes: number | null;
   unitCostKes: number | null;
+  notes: string | null;
 };
 
 const TAB_CONFIG = [
@@ -192,14 +194,14 @@ export function Inventory3DSection({
     setMaterialOther(matMatch ? "" : c.name);
     setColourHex("#1f2937");
     setColourName(c.specification ?? "");
-    setBrand("");
+    setBrand(c.brand ?? "");
     setWeightPerSpool(1);
     setWeightCustomKg(1);
     setSpools(c.quantity);
     setFilamentCostPerKg(c.costPerKgKes ?? "");
     setFilamentLocation(c.location ?? "");
     setFilamentThreshold(c.lowStockThreshold);
-    setNotes("");
+    setNotes(c.notes ?? "");
     setNotesOpen(false);
   };
 
@@ -224,10 +226,12 @@ export function Inventory3DSection({
           body: JSON.stringify({
             name: materialNameForApi,
             specification: colourName.trim() || null,
+            brand: brand.trim() || null,
             quantity: Number(spools) || 0,
             lowStockThreshold: Number(filamentThreshold) || 2,
             location: filamentLocation.trim() || null,
             costPerKgKes: filamentCostPerKg === "" ? null : Number(filamentCostPerKg),
+            notes: notes.trim() || null,
           }),
         });
         if (!res.ok) {
@@ -265,10 +269,12 @@ export function Inventory3DSection({
           kind: "FILAMENT",
           name: materialNameForApi,
           specification: colourName.trim() || undefined,
+          brand: brand.trim() || undefined,
           quantity: q,
           lowStockThreshold: Number(filamentThreshold) || 2,
           location: filamentLocation.trim() || undefined,
           costPerKgKes: costKg,
+          notes: notes.trim() || undefined,
         }),
       });
       const data = await res.json();

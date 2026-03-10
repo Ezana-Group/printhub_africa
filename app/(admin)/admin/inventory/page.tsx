@@ -10,7 +10,7 @@ export default async function AdminInventoryPage() {
   const prismaClient = prisma as unknown as {
     lFStockItem: { findMany: (args: object) => Promise<LFStockRow[]> };
     machine: { findMany: (args: object) => Promise<Array<{ id: string; name: string; type: string; status: string; location: string | null; purchasePriceKes: number | null }>> };
-    threeDConsumable: { findMany: (args: object) => Promise<Array<{ id: string; kind: string; name: string; specification: string | null; quantity: number; lowStockThreshold: number; location: string | null; costPerKgKes: number | null; unitCostKes: number | null }>> };
+    threeDConsumable: { findMany: (args: object) => Promise<Array<{ id: string; kind: string; name: string; specification: string | null; brand: string | null; quantity: number; lowStockThreshold: number; location: string | null; costPerKgKes: number | null; unitCostKes: number | null; notes: string | null }>> };
     inventoryHardwareItem: { findMany: (args: object) => Promise<HardwareRow[]> };
     printerAsset: { findMany: (args: object) => Promise<Array<{ id: string; name: string }>> };
   };
@@ -71,16 +71,18 @@ export default async function AdminInventoryPage() {
     purchasePriceKes: m.purchasePriceKes ?? null,
   }));
 
-  const consumablesSerialized = (consumables as Array<{ id: string; kind: string; name: string; specification: string | null; quantity: number; lowStockThreshold: number; location: string | null; costPerKgKes?: number | null; unitCostKes?: number | null }>).map((c) => ({
+  const consumablesSerialized = (consumables as Array<{ id: string; kind: string; name: string; specification: string | null; brand: string | null; quantity: number; lowStockThreshold: number; location: string | null; costPerKgKes?: number | null; unitCostKes?: number | null; notes: string | null }>).map((c) => ({
     id: c.id,
     kind: c.kind,
     name: c.name,
     specification: c.specification,
+    brand: c.brand ?? null,
     quantity: c.quantity,
     lowStockThreshold: c.lowStockThreshold,
     location: c.location,
     costPerKgKes: c.costPerKgKes ?? null,
     unitCostKes: c.unitCostKes ?? null,
+    notes: c.notes ?? null,
   }));
 
   const hardwareSerialized = hardwareItems.map((i: HardwareRow) => ({

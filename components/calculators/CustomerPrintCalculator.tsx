@@ -122,14 +122,14 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
   const availableColorsForType = useMemo(() => availableColorSet[materialType] ?? new Set<string>(), [materialType, availableColorSet]);
   const inStockForType = useMemo(() => inStockColorSet[materialType] ?? new Set<string>(), [materialType, inStockColorSet]);
 
+  // Only set default material/colour when none selected yet — never overwrite user selection (e.g. PETG).
   useEffect(() => {
-    if (materialTypes.length && !materialType) {
-      const firstType = materialTypes[0];
-      setMaterialType(firstType);
-      const inStock = inStockColorSet[firstType];
-      const avail = availableColorSet[firstType];
-      setColorChoice(inStock?.size ? [...inStock][0] : avail?.size ? [...avail][0] : "Natural/Transparent");
-    }
+    if (materialTypes.length === 0 || materialType) return;
+    const firstType = materialTypes[0];
+    setMaterialType(firstType);
+    const inStock = inStockColorSet[firstType];
+    const avail = availableColorSet[firstType];
+    setColorChoice(inStock?.size ? [...inStock][0] : avail?.size ? [...avail][0] : "Natural/Transparent");
   }, [materialTypes, materialType, availableColorSet, inStockColorSet]);
 
   useEffect(() => {
@@ -277,7 +277,13 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
           <Label className={labelClass}>What material do you need?</Label>
           <select
             value={materialType}
-            onChange={(e) => setMaterialType(e.target.value)}
+            onChange={(e) => {
+              const newType = e.target.value;
+              setMaterialType(newType);
+              const inStock = inStockColorSet[newType];
+              const avail = availableColorSet[newType];
+              setColorChoice(inStock?.size ? [...inStock][0] : avail?.size ? [...avail][0] : "Natural/Transparent");
+            }}
             className={inputClass}
           >
             {materialTypes.map((mt) => (

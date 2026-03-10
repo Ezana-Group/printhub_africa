@@ -12,11 +12,13 @@ const createSchema = z.object({
   kind: z.enum(KINDS),
   name: z.string().min(1).max(200),
   specification: z.string().max(200).optional(),
+  brand: z.string().max(200).optional(),
   quantity: z.number().int().min(0),
   lowStockThreshold: z.number().int().min(0).optional(),
   location: z.string().max(200).optional(),
   costPerKgKes: z.number().min(0).optional(),
   unitCostKes: z.number().min(0).optional(),
+  notes: z.string().max(2000).optional(),
 });
 
 export async function GET() {
@@ -54,11 +56,13 @@ export async function POST(req: Request) {
     kind,
     name,
     specification,
+    brand,
     quantity,
     lowStockThreshold = 2,
     location,
     costPerKgKes,
     unitCostKes,
+    notes,
   } = parsed.data;
 
   if (kind === "FILAMENT" && (costPerKgKes == null || costPerKgKes < 0)) {
@@ -74,11 +78,13 @@ export async function POST(req: Request) {
         kind,
         name,
         specification: specification || null,
+        brand: brand?.trim() || null,
         quantity,
         lowStockThreshold,
         location: location || null,
         costPerKgKes: kind === "FILAMENT" ? (costPerKgKes ?? 0) : costPerKgKes ?? null,
         unitCostKes: kind !== "FILAMENT" ? (unitCostKes ?? null) : null,
+        notes: notes?.trim() || null,
       },
     });
     return NextResponse.json(item);
