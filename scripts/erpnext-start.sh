@@ -1,0 +1,40 @@
+#!/bin/bash
+
+echo "🚀 Starting ERPNext for PrintHub..."
+echo ""
+
+# Check if already running
+if docker compose -f docker-compose.erpnext.yml ps | grep -q "running"; then
+  echo "✅ ERPNext is already running!"
+  echo "👉 Open: http://localhost:8080"
+  echo "👉 Login: administrator / admin123"
+  exit 0
+fi
+
+# First time setup or restart
+echo "Starting Docker containers..."
+docker compose -f docker-compose.erpnext.yml up -d
+
+echo ""
+echo "⏳ Waiting for ERPNext to be ready..."
+echo "   (First time setup takes 3-5 minutes)"
+echo ""
+
+# Wait for ERPNext to be ready
+until curl -s -o /dev/null -w "%{http_code}" \
+  http://localhost:8080 | grep -q "200\|302"; do
+  echo -n "."
+  sleep 5
+done
+
+echo ""
+echo "✅ ERPNext is ready!"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  ERPNext URL:  http://localhost:8080"
+echo "  Username:     administrator"
+echo "  Password:     admin123"
+echo "  Site:         printhub.localhost"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "Next step: Run npm run erpnext:setup"

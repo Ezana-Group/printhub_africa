@@ -236,7 +236,7 @@ export function StaffDetailTabs({
       )}
 
       {activeTab === "permissions" && (
-        <div className="mt-6">
+        <div className="mt-6" data-testid="staff-permissions-panel">
           <EditableSection
             id="staff-permissions"
             title="Permissions"

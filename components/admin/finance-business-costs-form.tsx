@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { EditableSection } from "@/components/admin/editable-section";
 import { CALCULATOR_CONFIG_INVALIDATE_EVENT } from "@/lib/calculator-config";
 
@@ -20,8 +21,10 @@ type BusinessSettings = {
 
 function formatNum(n: number | undefined): string {
   if (n == null || Number.isNaN(n)) return "—";
-  return n.toLocaleString("en-KE", { maximumFractionDigits: 1 });
+  return n.toLocaleString("en-KE", { maximumFractionDigits: 2 });
 }
+
+const UTILISATION_PCT = 70; // 70% machine utilisation for effective hours
 
 export function FinanceBusinessCostsForm({ canEdit = true }: { canEdit?: boolean }) {
   const [loading, setLoading] = useState(true);
@@ -100,6 +103,10 @@ export function FinanceBusinessCostsForm({ canEdit = true }: { canEdit?: boolean
     return monthlyOverhead / totalHoursPerMonth;
   }, [monthlyOverhead, totalHoursPerMonth]);
 
+  const effectiveMachineHours = useMemo(() => {
+    return totalHoursPerMonth * (UTILISATION_PCT / 100);
+  }, [totalHoursPerMonth]);
+
   if (loading) {
     return <p className="text-sm text-muted-foreground">Loading business costs…</p>;
   }
@@ -116,87 +123,247 @@ export function FinanceBusinessCostsForm({ canEdit = true }: { canEdit?: boolean
     );
   }
 
-  // Calculated from inputs: monthly overhead = rent + utilities + insurance + other; hourly rate = monthly overhead ÷ (days × hours)
-  const previewText = `Monthly overhead: KES ${formatNum(monthlyOverhead)} | Hourly overhead rate: KES ${formatNum(hourlyOverheadRate)}`;
-  const previewHint = "Calculated from rent, utilities, insurance and other costs below. Change those to update this.";
+  const summaryBlock = (
+    <Card className="bg-muted/30 border-primary/20">
+      <CardContent className="pt-6">
+        <div className="grid gap-6 sm:grid-cols-2">
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Total monthly fixed costs</p>
+            <p className="text-2xl font-bold mt-1">KES {formatNum(monthlyOverhead)}</p>
+            <p className="text-xs text-muted-foreground mt-1">Based on settings below</p>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Overhead rate per hour</p>
+            <p className="text-2xl font-bold mt-1">KES {formatNum(hourlyOverheadRate)}</p>
+            <p className="text-xs text-muted-foreground mt-1">At {UTILISATION_PCT}% utilisation</p>
+          </div>
+        </div>
+        <div className="mt-4 pt-4 border-t border-border">
+          <p className="text-sm text-muted-foreground">
+            Effective machine hours: <strong>{formatNum(effectiveMachineHours)}</strong> hrs/month
+            <span className="text-muted-foreground/80 ml-1">
+              ({business.workingDaysPerMonth ?? 0} days × {business.workingHoursPerDay ?? 0} hrs × {UTILISATION_PCT}% utilisation)
+            </span>
+          </p>
+        </div>
+        <p className="text-sm text-muted-foreground mt-3 flex items-start gap-2">
+          <span className="shrink-0">ℹ</span>
+          <span>
+            Used by Large Format and 3D printing calculators to price jobs. Does not affect shop product pricing.
+          </span>
+        </p>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <EditableSection
       id="finance-business-costs"
       title="Business costs"
-      description="Rent, utilities, labour, insurance, working schedule, profit target and VAT. Used by all calculators."
+      description="Operational overhead shared across Shop, Print Services, and Corporate. Shop product costs (COGS) are set per product in Products → Pricing."
       canEdit={canEdit}
       viewContent={
-        <div className="space-y-0">
-          {[
-            { label: "Labour rate (KES/hr)", value: formatNum(business.labourRateKesPerHour) },
-            { label: "Default profit margin %", value: formatNum(business.defaultProfitMarginPct) },
-            { label: "Monthly rent (KES)", value: formatNum(business.monthlyRentKes) },
-            { label: "Monthly utilities (KES)", value: formatNum(business.monthlyUtilitiesKes) },
-            { label: "Monthly insurance (KES)", value: formatNum(business.monthlyInsuranceKes) },
-            { label: "Monthly other (KES)", value: formatNum(business.monthlyOtherKes) },
-            { label: "Working days per month", value: String(business.workingDaysPerMonth ?? "—") },
-            { label: "Working hours per day", value: String(business.workingHoursPerDay ?? "—") },
-            { label: "VAT %", value: formatNum(business.vatRatePct) },
-          ].map((row, i) => (
-            <div
-              key={i}
-              className="flex flex-wrap items-baseline justify-between gap-2 py-2 border-b border-border/50 last:border-0 hover:bg-muted/30 rounded px-1 -mx-1"
-            >
-              <span className="text-sm text-muted-foreground">{row.label}</span>
-              <span className="text-sm font-medium text-foreground">{row.value}</span>
-            </div>
-          ))}
-          <div className="mt-3 pt-3 border-t border-border text-sm text-muted-foreground">
-            {previewText}
-            <p className="text-xs text-muted-foreground/80 mt-1">{previewHint}</p>
+        <div className="space-y-6">
+          {summaryBlock}
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-2">
+                <h3 className="text-sm font-semibold">Premises</h3>
+              </CardHeader>
+              <CardContent className="text-sm space-y-1">
+                <p>Rent: KES {formatNum(business.monthlyRentKes)}</p>
+                <p>Other: KES {formatNum(business.monthlyOtherKes)}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <h3 className="text-sm font-semibold">Utilities</h3>
+              </CardHeader>
+              <CardContent className="text-sm space-y-1">
+                <p>Electricity & water: KES {formatNum(business.monthlyUtilitiesKes)}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <h3 className="text-sm font-semibold">Insurance</h3>
+              </CardHeader>
+              <CardContent className="text-sm space-y-1">
+                <p>Business: KES {formatNum(business.monthlyInsuranceKes)}</p>
+              </CardContent>
+            </Card>
           </div>
+          <Card>
+            <CardHeader className="pb-2">
+              <h3 className="text-sm font-semibold">Labour & schedule</h3>
+            </CardHeader>
+            <CardContent className="text-sm">
+              <p>Standard rate: KES {formatNum(business.labourRateKesPerHour)}/hr</p>
+              <p className="mt-1 text-muted-foreground">
+                Days/month: {business.workingDaysPerMonth ?? "—"} · Hours/day: {business.workingHoursPerDay ?? "—"}
+              </p>
+              <p className="text-muted-foreground mt-2 text-xs">
+                Used per print job. Not applied to shop orders.
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <h3 className="text-sm font-semibold">Profitability & VAT</h3>
+            </CardHeader>
+            <CardContent className="text-sm">
+              <p>Default profit margin: {formatNum(business.defaultProfitMarginPct)}%</p>
+              <p className="mt-1">VAT: {formatNum(business.vatRatePct)}%</p>
+            </CardContent>
+          </Card>
         </div>
       }
       editContent={({ setHasChanges }) => (
-        <div className="space-y-4" onChange={() => setHasChanges(true)} onInput={() => setHasChanges(true)}>
-          <div className="rounded border border-orange-200 bg-orange-50/50 px-3 py-2 text-sm text-orange-900">
-            <p className="font-medium">{previewText}</p>
-            <p className="text-xs text-orange-700/90 mt-1">{previewHint}</p>
+        <div className="space-y-6" onChange={() => setHasChanges(true)} onInput={() => setHasChanges(true)}>
+          {summaryBlock}
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-2">
+                <h3 className="text-sm font-semibold">Premises</h3>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label>Rent (KES)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={business.monthlyRentKes ?? ""}
+                    onChange={(e) => update("monthlyRentKes", parseFloat(e.target.value) || 0)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Other (KES)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={business.monthlyOtherKes ?? ""}
+                    onChange={(e) => update("monthlyOtherKes", parseFloat(e.target.value) || 0)}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <h3 className="text-sm font-semibold">Utilities</h3>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label>Electricity & water (KES)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={business.monthlyUtilitiesKes ?? ""}
+                    onChange={(e) => update("monthlyUtilitiesKes", parseFloat(e.target.value) || 0)}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <h3 className="text-sm font-semibold">Insurance</h3>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label>Business (KES)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={business.monthlyInsuranceKes ?? ""}
+                    onChange={(e) => update("monthlyInsuranceKes", parseFloat(e.target.value) || 0)}
+                  />
+                </div>
+              </CardContent>
+            </Card>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>Labour rate (KES/hr)</Label>
-              <Input type="number" min={0} value={business.labourRateKesPerHour ?? ""} onChange={(e) => update("labourRateKesPerHour", parseFloat(e.target.value) || 0)} className="focus-visible:ring-orange-500" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Default profit margin %</Label>
-              <Input type="number" min={0} max={100} value={business.defaultProfitMarginPct ?? ""} onChange={(e) => update("defaultProfitMarginPct", parseFloat(e.target.value) || 0)} className="focus-visible:ring-orange-500" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Monthly rent (KES)</Label>
-              <Input type="number" min={0} value={business.monthlyRentKes ?? ""} onChange={(e) => update("monthlyRentKes", parseFloat(e.target.value) || 0)} className="focus-visible:ring-orange-500" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Monthly utilities (KES)</Label>
-              <Input type="number" min={0} value={business.monthlyUtilitiesKes ?? ""} onChange={(e) => update("monthlyUtilitiesKes", parseFloat(e.target.value) || 0)} className="focus-visible:ring-orange-500" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Monthly insurance (KES)</Label>
-              <Input type="number" min={0} value={business.monthlyInsuranceKes ?? ""} onChange={(e) => update("monthlyInsuranceKes", parseFloat(e.target.value) || 0)} className="focus-visible:ring-orange-500" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Monthly other (KES)</Label>
-              <Input type="number" min={0} value={business.monthlyOtherKes ?? ""} onChange={(e) => update("monthlyOtherKes", parseFloat(e.target.value) || 0)} className="focus-visible:ring-orange-500" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Working days per month</Label>
-              <Input type="number" min={1} max={31} value={business.workingDaysPerMonth ?? ""} onChange={(e) => update("workingDaysPerMonth", parseInt(e.target.value, 10) || 0)} className="focus-visible:ring-orange-500" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Working hours per day</Label>
-              <Input type="number" min={1} max={24} value={business.workingHoursPerDay ?? ""} onChange={(e) => update("workingHoursPerDay", parseInt(e.target.value, 10) || 0)} className="focus-visible:ring-orange-500" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>VAT %</Label>
-              <Input type="number" min={0} value={business.vatRatePct ?? ""} onChange={(e) => update("vatRatePct", parseFloat(e.target.value) || 0)} className="focus-visible:ring-orange-500" />
-            </div>
-          </div>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <h3 className="text-sm font-semibold">Labour rates</h3>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-1.5 max-w-xs">
+                <Label>Standard rate (KES/hr)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={business.labourRateKesPerHour ?? ""}
+                  onChange={(e) => update("labourRateKesPerHour", parseFloat(e.target.value) || 0)}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Used per print job. Not applied to shop orders.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <h3 className="text-sm font-semibold">Working schedule</h3>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-4">
+              <div className="space-y-1.5">
+                <Label>Days per month</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={31}
+                  value={business.workingDaysPerMonth ?? ""}
+                  onChange={(e) => update("workingDaysPerMonth", parseInt(e.target.value, 10) || 0)}
+                  className="w-24"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Hours per day</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={24}
+                  value={business.workingHoursPerDay ?? ""}
+                  onChange={(e) => update("workingHoursPerDay", parseInt(e.target.value, 10) || 0)}
+                  className="w-24"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Utilisation %</Label>
+                <Input type="number" min={1} max={100} value={UTILISATION_PCT} disabled className="w-24 bg-muted" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <h3 className="text-sm font-semibold">Profitability targets</h3>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-1.5 max-w-xs">
+                <Label>Default profit margin %</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={business.defaultProfitMarginPct ?? ""}
+                  onChange={(e) => update("defaultProfitMarginPct", parseFloat(e.target.value) || 0)}
+                />
+              </div>
+              <div className="space-y-1.5 max-w-xs">
+                <Label>VAT %</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={business.vatRatePct ?? ""}
+                  onChange={(e) => update("vatRatePct", parseFloat(e.target.value) || 0)}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Shop margin target is set per product in Products → Pricing. This margin applies to print calculators.
+              </p>
+            </CardContent>
+          </Card>
         </div>
       )}
       onSave={saveBusiness}

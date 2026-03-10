@@ -1,77 +1,77 @@
-import Link from "next/link";
+import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { formatPrice } from "@/lib/utils";
 import { requireAdminSection } from "@/lib/admin-route-guard";
+import { OrdersListClient } from "@/components/admin/orders-list-client";
 
-export default async function AdminOrdersPage() {
+const PRINT_JOB_TYPES = ["LARGE_FORMAT", "THREE_D_PRINT", "CUSTOM_PRINT"] as const;
+const SHOP_TYPE = "SHOP" as const;
+const QUOTE_TYPE = "QUOTE" as const;
+
+export default async function AdminOrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
   await requireAdminSection("/admin/orders");
-  const orders = await prisma.order.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 50,
-    include: {
-      user: { select: { name: true, email: true } },
-      payments: { take: 1, orderBy: { createdAt: "desc" } },
-    },
-  });
+  const { tab } = await searchParams;
+
+  const [orders, typeCounts] = await Promise.all([
+    prisma.order.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      where:
+        tab === "shop"
+          ? { type: SHOP_TYPE }
+          : tab === "print-jobs"
+            ? { type: { in: [...PRINT_JOB_TYPES] } }
+            : tab === "quotes"
+              ? { type: QUOTE_TYPE }
+              : undefined,
+      include: {
+        user: { select: { name: true, email: true } },
+        payments: { take: 1, orderBy: { createdAt: "desc" }, select: { status: true } },
+      },
+    }),
+    prisma.order.groupBy({
+      by: ["type"],
+      _count: { id: true },
+    }),
+  ]);
+
+  const countByType = Object.fromEntries(typeCounts.map((r) => [r.type, r._count.id]));
+  const shopCount = countByType["SHOP"] ?? 0;
+  const printJobsCount =
+    (countByType["LARGE_FORMAT"] ?? 0) +
+    (countByType["THREE_D_PRINT"] ?? 0) +
+    (countByType["CUSTOM_PRINT"] ?? 0);
+  const quotesCount = countByType["QUOTE"] ?? 0;
+  const allCount = Object.values(countByType).reduce((a, b) => a + b, 0);
+
+  const ordersSerialized = orders.map((o) => ({
+    id: o.id,
+    orderNumber: o.orderNumber,
+    type: o.type,
+    status: o.status,
+    total: Number(o.total),
+    createdAt: o.createdAt.toLocaleDateString(),
+    user: o.user,
+    payments: o.payments,
+  }));
 
   return (
-    <div className="p-6">
-      <h1 className="font-display text-2xl font-bold">Orders</h1>
-      <Card className="mt-6">
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="text-left p-4 font-medium">Order #</th>
-                  <th className="text-left p-4 font-medium">Customer</th>
-                  <th className="text-left p-4 font-medium">Type</th>
-                  <th className="text-left p-4 font-medium">Total</th>
-                  <th className="text-left p-4 font-medium">Payment</th>
-                  <th className="text-left p-4 font-medium">Status</th>
-                  <th className="text-left p-4 font-medium">Date</th>
-                  <th className="text-left p-4 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((o) => (
-                  <tr key={o.id} className="border-b hover:bg-muted/30">
-                    <td className="p-4 font-mono">{o.orderNumber}</td>
-                    <td className="p-4">
-                      {o.user?.name ?? o.user?.email ?? "Guest"}
-                    </td>
-                    <td className="p-4">{o.type}</td>
-                    <td className="p-4">{formatPrice(Number(o.total))}</td>
-                    <td className="p-4">
-                      <Badge variant={o.payments[0]?.status === "COMPLETED" ? "default" : "secondary"}>
-                        {o.payments[0]?.status ?? "—"}
-                      </Badge>
-                    </td>
-                    <td className="p-4">
-                      <Badge variant={o.status === "PENDING" ? "destructive" : "outline"}>
-                        {o.status}
-                      </Badge>
-                    </td>
-                    <td className="p-4 text-muted-foreground">
-                      {o.createdAt.toLocaleDateString()}
-                    </td>
-                    <td className="p-4">
-                      <Link href={`/admin/orders/${o.id}`} className="text-primary hover:underline">
-                        View
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {orders.length === 0 && (
-            <p className="p-8 text-center text-muted-foreground">No orders yet</p>
-          )}
-        </CardContent>
-      </Card>
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="font-display text-2xl font-bold">Orders</h1>
+        <p className="text-muted-foreground text-sm mt-1">
+          All orders — shop, print jobs, and quotes. Use tabs to filter by type.
+        </p>
+      </div>
+      <Suspense fallback={<div className="animate-pulse h-64 bg-muted/50 rounded-md" />}>
+        <OrdersListClient
+          orders={ordersSerialized}
+          counts={{ all: allCount, shop: shopCount, printJobs: printJobsCount, quotes: quotesCount }}
+        />
+      </Suspense>
     </div>
   );
 }

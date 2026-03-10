@@ -63,7 +63,9 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams();
-    const callbackUrl = params.get("callbackUrl")?.startsWith("/") ? params.get("callbackUrl")! : "/login/success";
+    const raw = params.get("callbackUrl");
+    const callbackUrl =
+      raw && /^\/(?!\/)/.test(raw) ? raw : "/login/success";
     await signIn("credentials", {
       email,
       password,

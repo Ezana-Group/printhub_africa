@@ -14,7 +14,19 @@ export default async function AdminInventoryPage() {
     inventoryHardwareItem: { findMany: (args: object) => Promise<HardwareRow[]> };
     printerAsset: { findMany: (args: object) => Promise<Array<{ id: string; name: string }>> };
   };
-  const [lfStockItems, machines, consumables, hardwareItems, printerAssets] = await Promise.all([
+  const [shopProducts, lfStockItems, machines, consumables, hardwareItems, printerAssets] = await Promise.all([
+    prisma.product.findMany({
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        sku: true,
+        stock: true,
+        images: true,
+        isActive: true,
+        category: { select: { name: true } },
+      },
+    }),
     prismaClient.lFStockItem.findMany({
       orderBy: [{ category: "asc" }, { code: "asc" }],
     }),
@@ -94,13 +106,24 @@ export default async function AdminInventoryPage() {
     sortOrder: i.sortOrder,
   }));
 
+  const shopProductsSerialized = shopProducts.map((p) => ({
+    id: p.id,
+    name: p.name,
+    sku: p.sku,
+    category: p.category,
+    stock: p.stock,
+    lowStockThreshold: "lowStockThreshold" in p ? (p as { lowStockThreshold?: number }).lowStockThreshold ?? 0 : 0,
+    images: p.images,
+    isActive: p.isActive,
+  }));
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold">Inventory</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Hardware, maintenance, accessories, large format materials, and 3D consumables. Printers added under Hardware feed the quote calculator.
+            Shop products (finished units), print materials (raw), and hardware & assets. Use tabs to switch.
           </p>
           <p className="text-sm mt-2">
             <Link href="/admin/inventory/hardware/printers" className="text-primary hover:underline">
@@ -112,6 +135,7 @@ export default async function AdminInventoryPage() {
       </div>
 
       <InventoryTabs
+        shopProducts={shopProductsSerialized}
         lfStockItems={lfItemsSerialized}
         machines={machinesSerialized}
         consumables={consumablesSerialized}

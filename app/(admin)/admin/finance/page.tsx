@@ -11,11 +11,15 @@ export default async function AdminFinancePage() {
   const role = (session?.user as { role?: string })?.role ?? "STAFF";
   const permissions = (session?.user as { permissions?: string[] })?.permissions ?? [];
   const canEditFinance = hasFinanceAccess(role, permissions, true);
-  const [payments, allOrders, deliveredOrders] = await Promise.all([
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const [payments, allOrders, deliveredOrders, paymentsWithType] = await Promise.all([
     prisma.payment.findMany({
       orderBy: { createdAt: "desc" },
       take: 50,
-      include: { order: { select: { orderNumber: true } } },
+      include: { order: { select: { orderNumber: true, type: true } } },
     }),
     prisma.order.aggregate({
       _count: { id: true },
@@ -26,17 +30,45 @@ export default async function AdminFinancePage() {
       _sum: { total: true },
       where: { status: { in: ["DELIVERED", "SHIPPED"] } },
     }),
+    prisma.payment.findMany({
+      where: { status: "COMPLETED", createdAt: { gte: startOfMonth } },
+      include: { order: { select: { type: true } } },
+    }),
   ]);
 
-  const completed = payments.filter((p) => p.status === "COMPLETED");
-  const totalRevenue = completed.reduce((s, p) => s + Number(p.amount), 0);
+  const completedPayments = payments.filter((p) => p.status === "COMPLETED");
+  const totalRevenue = completedPayments.reduce((s, p) => s + Number(p.amount), 0);
   const orderCount = allOrders._count.id ?? 0;
   const totalOrderValue = Number(allOrders._sum.total ?? 0);
   const deliveredValue = Number(deliveredOrders._sum.total ?? 0);
 
+  const revenueByLine = paymentsWithType.reduce(
+    (acc, p) => {
+      const type = p.order?.type ?? "SHOP";
+      const amount = Number(p.amount);
+      if (type === "SHOP") acc.shop += amount;
+      else if (type === "QUOTE") acc.corporate += amount;
+      else acc.printServices += amount; // LARGE_FORMAT, THREE_D_PRINT, CUSTOM_PRINT
+      return acc;
+    },
+    { shop: 0, printServices: 0, corporate: 0 }
+  );
+
+  const countsByLine = paymentsWithType.reduce(
+    (acc, p) => {
+      const type = p.order?.type ?? "SHOP";
+      if (type === "SHOP") acc.shop += 1;
+      else if (type === "QUOTE") acc.corporate += 1;
+      else acc.printServices += 1;
+      return acc;
+    },
+    { shop: 0, printServices: 0, corporate: 0 }
+  );
+
   const paymentsSerialized = payments.map((p) => ({
     id: p.id,
     orderNumber: p.order.orderNumber,
+    orderType: p.order?.type ?? "SHOP",
     provider: p.provider,
     amount: Number(p.amount),
     status: p.status,
@@ -58,6 +90,8 @@ export default async function AdminFinancePage() {
         orderCount={orderCount}
         totalOrderValue={totalOrderValue}
         deliveredValue={deliveredValue}
+        revenueByLine={revenueByLine}
+        countsByLine={countsByLine}
         canEditFinance={canEditFinance}
       />
     </div>

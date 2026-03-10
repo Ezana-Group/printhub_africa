@@ -18,7 +18,10 @@ export async function loginAsAdmin(page: Page, callbackUrl = "/admin/dashboard")
   await page.locator("#email").fill(SUPER_ADMIN.email);
   await page.locator("#password").fill(SUPER_ADMIN.password);
   await page.getByRole("button", { name: /sign in/i }).click();
-  await page.waitForURL(/\/(admin|login\/success)/, { timeout: 60000 });
+  // Wait for redirect: domcontentloaded is more reliable than load with client-side redirects
+  await page.waitForURL(/\/(admin|login\/success)/, { timeout: 60000, waitUntil: "domcontentloaded" });
+  // Ensure admin shell is ready (nav with admin links) so subsequent navigations don't race
+  await page.locator('nav a[href*="/admin"]').first().waitFor({ state: "visible", timeout: 10000 });
 }
 
 /**
@@ -30,7 +33,8 @@ export async function loginAsStaff(page: Page, email: string, callbackUrl = "/ad
   await page.locator("#email").fill(email);
   await page.locator("#password").fill(STAFF_PASSWORD);
   await page.getByRole("button", { name: /sign in/i }).click();
-  await page.waitForURL(/\/(admin|login\/success)/, { timeout: 60000 });
+  await page.waitForURL(/\/(admin|login\/success)/, { timeout: 60000, waitUntil: "domcontentloaded" });
+  await page.locator('nav a[href*="/admin"]').first().waitFor({ state: "visible", timeout: 10000 });
 }
 
 /**
@@ -43,5 +47,5 @@ export async function loginAsCustomer(page: Page, email: string, callbackUrl = "
   await page.locator("#email").fill(email);
   await page.locator("#password").fill(STAFF_PASSWORD);
   await page.getByRole("button", { name: /sign in/i }).click();
-  await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 60000 });
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 60000, waitUntil: "load" });
 }

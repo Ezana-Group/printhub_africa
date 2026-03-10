@@ -9,7 +9,7 @@ import { SettingsSwitch } from "@/components/settings/settings-switch";
 
 export default async function AdminSettingsShippingPage() {
   await requireAdminSettings();
-  let settings: { freeShippingEnabled: boolean; expressEnabled: boolean; clickCollectEnabled: boolean } = {
+  let settings: { freeShippingEnabled: boolean; expressEnabled: boolean; clickCollectEnabled: boolean; freeShippingThreshold?: string } = {
     freeShippingEnabled: false,
     expressEnabled: false,
     clickCollectEnabled: false,
@@ -21,10 +21,12 @@ export default async function AdminSettingsShippingPage() {
     if (row?.valueJson) {
       const parsed = JSON.parse(row.valueJson) as Record<string, unknown>;
       const asBool = (v: unknown) => v === true || v === "true";
+      const threshold = parsed.freeShippingThreshold;
       settings = {
         freeShippingEnabled: asBool(parsed.freeShippingEnabled) ?? false,
         expressEnabled: asBool(parsed.expressEnabled) ?? false,
         clickCollectEnabled: asBool(parsed.clickCollectEnabled) ?? false,
+        freeShippingThreshold: threshold != null ? String(threshold) : undefined,
       };
     }
   } catch {
@@ -51,7 +53,7 @@ export default async function AdminSettingsShippingPage() {
         <SettingsSwitch name="freeShippingEnabled" defaultValue={settings.freeShippingEnabled} label="Enable free shipping" />
         <div className="grid gap-2 mt-4">
           <Label>Free shipping threshold (KES)</Label>
-          <Input name="freeShippingThreshold" type="number" defaultValue="5000" />
+          <Input name="freeShippingThreshold" type="number" defaultValue={settings.freeShippingThreshold ?? "5000"} />
         </div>
       </SectionCard>
       <SectionCard

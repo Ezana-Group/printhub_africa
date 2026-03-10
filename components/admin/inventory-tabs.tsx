@@ -4,7 +4,8 @@ import { useState } from "react";
 import { LargeFormatInventorySection } from "@/components/admin/large-format-inventory-section";
 import { Inventory3DSection } from "@/components/admin/inventory-3d-section";
 import { InventoryHardwareSection, type HardwareItemSerialized } from "@/components/admin/inventory-hardware-section";
-import { LayoutTemplate, Box, Cpu, Wrench, Cable } from "lucide-react";
+import { ShopProductsInventorySection, type ShopProductRow } from "@/components/admin/shop-products-inventory-section";
+import { Package, LayoutTemplate, Cpu, Wrench, Cable, Box } from "lucide-react";
 
 export type LFStockItemSerialized = {
   id: string;
@@ -41,21 +42,32 @@ type ThreeDConsumable = {
   unitCostKes: number | null;
 };
 
-const TABS = [
+const TOP_TABS = [
+  { id: "shop" as const, label: "Shop Products", icon: Package, description: "Finished units" },
+  { id: "print-materials" as const, label: "Print Materials", icon: LayoutTemplate, description: "Raw materials for print services" },
+  { id: "hardware" as const, label: "Hardware & Assets", icon: Cpu, description: "Printers, machines, spare parts" },
+];
+
+const HARDWARE_SUB_TABS = [
   { id: "hardware" as const, label: "Hardware", icon: Cpu },
   { id: "maintenance" as const, label: "Maintenance", icon: Wrench },
   { id: "accessories" as const, label: "Printer Accessories", icon: Cable },
-  { id: "large-format" as const, label: "Large format printing", icon: LayoutTemplate },
-  { id: "3d-printing" as const, label: "3D printing", icon: Box },
+];
+
+const PRINT_MATERIALS_SUB_TABS = [
+  { id: "large-format" as const, label: "Large Format", icon: LayoutTemplate },
+  { id: "3d-printing" as const, label: "3D Printing", icon: Box },
 ];
 
 export function InventoryTabs({
+  shopProducts = [],
   lfStockItems,
-  machines: _machines, // reserved for future use
+  machines: _machines,
   consumables,
   hardwareItems,
   printerAssets = [],
 }: {
+  shopProducts?: ShopProductRow[];
   lfStockItems: LFStockItemSerialized[];
   machines: Machine[];
   consumables: ThreeDConsumable[];
@@ -63,20 +75,20 @@ export function InventoryTabs({
   printerAssets?: { id: string; name: string }[];
 }) {
   void _machines;
-  const [tab, setTab] = useState<"hardware" | "maintenance" | "accessories" | "large-format" | "3d-printing">("hardware");
+  const [topTab, setTopTab] = useState<"shop" | "print-materials" | "hardware">("shop");
+  const [hardwareSubTab, setHardwareSubTab] = useState<"hardware" | "maintenance" | "accessories">("hardware");
+  const [printMaterialsSubTab, setPrintMaterialsSubTab] = useState<"large-format" | "3d-printing">("large-format");
 
   return (
     <div className="space-y-4">
       <div className="flex gap-2 border-b border-border flex-wrap">
-        {TABS.map(({ id, label, icon: Icon }) => (
+        {TOP_TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             type="button"
-            onClick={() => setTab(id)}
+            onClick={() => setTopTab(id)}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              tab === id
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
+              topTab === id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
             <Icon className="h-4 w-4" />
@@ -85,38 +97,81 @@ export function InventoryTabs({
         ))}
       </div>
 
-      {tab === "hardware" && (
-        <InventoryHardwareSection
-          category="HARDWARE"
-          title="Hardware"
-          description="Printers and other equipment. Large format and 3D printers added here are available in the Quote calculator for pricing."
-          initialItems={hardwareItems}
-          printerAssets={printerAssets}
-        />
+      {topTab === "shop" && (
+        <ShopProductsInventorySection products={shopProducts} />
       )}
-      {tab === "maintenance" && (
-        <InventoryHardwareSection
-          category="MAINTENANCE"
-          title="Maintenance"
-          description="Maintenance items and services. Add name and price."
-          initialItems={hardwareItems}
-          printerAssets={printerAssets}
-        />
+
+      {topTab === "print-materials" && (
+        <>
+          <div className="flex gap-2 border-b border-border/50 flex-wrap">
+            {PRINT_MATERIALS_SUB_TABS.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setPrintMaterialsSubTab(id)}
+                className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                  printMaterialsSubTab === id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
+          {printMaterialsSubTab === "large-format" && (
+            <LargeFormatInventorySection lfStockItems={lfStockItems} />
+          )}
+          {printMaterialsSubTab === "3d-printing" && (
+            <Inventory3DSection consumables={consumables} />
+          )}
+        </>
       )}
-      {tab === "accessories" && (
-        <InventoryHardwareSection
-          category="PRINTER_ACCESSORIES"
-          title="Printer Accessories"
-          description="Accessories and consumables. Add name and price."
-          initialItems={hardwareItems}
-          printerAssets={printerAssets}
-        />
-      )}
-      {tab === "large-format" && (
-        <LargeFormatInventorySection lfStockItems={lfStockItems} />
-      )}
-      {tab === "3d-printing" && (
-        <Inventory3DSection consumables={consumables} />
+
+      {topTab === "hardware" && (
+        <>
+          <div className="flex gap-2 border-b border-border/50 flex-wrap">
+            {HARDWARE_SUB_TABS.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setHardwareSubTab(id)}
+                className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                  hardwareSubTab === id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
+          {hardwareSubTab === "hardware" && (
+            <InventoryHardwareSection
+              category="HARDWARE"
+              title="Hardware"
+              description="Printers and other equipment. Large format and 3D printers added here are available in the Quote calculator for pricing."
+              initialItems={hardwareItems}
+              printerAssets={printerAssets}
+            />
+          )}
+          {hardwareSubTab === "maintenance" && (
+            <InventoryHardwareSection
+              category="MAINTENANCE"
+              title="Maintenance"
+              description="Maintenance items and services. Add name and price."
+              initialItems={hardwareItems}
+              printerAssets={printerAssets}
+            />
+          )}
+          {hardwareSubTab === "accessories" && (
+            <InventoryHardwareSection
+              category="PRINTER_ACCESSORIES"
+              title="Printer Accessories"
+              description="Accessories and consumables. Add name and price."
+              initialItems={hardwareItems}
+              printerAssets={printerAssets}
+            />
+          )}
+        </>
       )}
     </div>
   );

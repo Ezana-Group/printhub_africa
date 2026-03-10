@@ -69,11 +69,17 @@ export function EditableSection({
     if (!isEditing) setHasChangesState(false);
   }, [isEditing]);
 
+  // Keep section state in context up to date while editing (no cleanup here so hasChanges/title updates don't close the section)
   useEffect(() => {
     if (!ctx || !isEditing) return;
     ctx.registerSection(id, { hasChanges: hasChanges, title });
-    return () => ctx.unregisterSection(id);
   }, [ctx, id, isEditing, hasChanges, title]);
+
+  // Unregister only when leaving edit mode or unmounting (cleanup must not depend on hasChanges/title or typing closes the section)
+  useEffect(() => {
+    if (!ctx || !isEditing) return;
+    return () => ctx.unregisterSection(id);
+  }, [ctx, id, isEditing]);
 
   useEffect(() => {
     if (!isEditing || !hasChanges) return;
@@ -125,6 +131,7 @@ export function EditableSection({
 
   return (
     <Card
+      id={id}
       className={cn(
         "transition-all duration-200 ease-out overflow-hidden",
         showView && "border border-border bg-card",

@@ -120,6 +120,41 @@ Change this in production.
 - VAT: 16% (Kenya)
 - Phone format: +254XXXXXXXXX
 
+## ERPNext Integration
+
+PrintHub uses ERPNext for finance, inventory, HR and payroll.
+
+### First Time Setup
+
+1. Make sure Docker Desktop is running
+2. `npm run erpnext:check` — verify prerequisites
+3. `npm run erpnext:start` — starts ERPNext (3–5 mins first time)
+4. `npm run erpnext:setup` — configures ERPNext for PrintHub
+5. `npm run erpnext:test` — verify everything works
+6. `npm run erpnext:migrate` — sync existing data to ERPNext
+
+### Daily Use
+
+| Command | Description |
+|--------|-------------|
+| `npm run erpnext:start` | Start ERPNext |
+| `npm run erpnext:stop` | Stop ERPNext |
+| `npm run erpnext:logs` | View logs |
+| `npm run erpnext:reset` | Reset all data (destructive) |
+
+### Access ERPNext Directly
+
+- **URL:** http://localhost:8080  
+- **Username:** administrator  
+- **Password:** admin123  
+
+### Troubleshooting
+
+- **ERPNext won’t start:** Ensure Docker Desktop is running. Try `npm run erpnext:reset` then `npm run erpnext:start`.
+- **API connection fails:** Run `npm run erpnext:setup` (regenerates API keys), then `npm run erpnext:test`.
+
+---
+
 ## License
 
 Proprietary — Ezana Group.

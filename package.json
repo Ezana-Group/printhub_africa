@@ -22,7 +22,15 @@
     "prepare": "husky",
     "docker:db": "docker compose up -d db",
     "docker:up": "docker compose up -d",
-    "docker:down": "docker compose down"
+    "docker:down": "docker compose down",
+    "erpnext:check": "bash scripts/check-docker.sh",
+    "erpnext:start": "bash scripts/erpnext-start.sh",
+    "erpnext:stop": "bash scripts/erpnext-stop.sh",
+    "erpnext:reset": "bash scripts/erpnext-reset.sh",
+    "erpnext:setup": "npx tsx scripts/erpnext-setup.ts",
+    "erpnext:migrate": "npx tsx scripts/erpnext-migrate.ts",
+    "erpnext:test": "npx tsx scripts/test-erpnext-connection.ts",
+    "erpnext:logs": "docker compose -f docker-compose.erpnext.yml logs -f"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

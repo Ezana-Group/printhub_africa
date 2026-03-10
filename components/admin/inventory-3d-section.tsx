@@ -883,13 +883,15 @@ export function Inventory3DSection({
                     </div>
                     <div className="space-y-4 py-2">
                       <div>
-                        <Label>Quantity to {adjustTab === "add" ? "add" : "remove"} (spools)</Label>
+                        <Label htmlFor="adjust-stock-qty">Quantity to {adjustTab === "add" ? "add" : "remove"} (spools)</Label>
                         <Input
+                          id="adjust-stock-qty"
                           type="number"
                           min={0}
                           value={adjustQty === "" ? "" : adjustQty}
                           onChange={(e) => setAdjustQty(e.target.value === "" ? "" : Math.max(0, parseInt(e.target.value, 10) || 0))}
                           className="mt-1"
+                          aria-label={`Quantity to ${adjustTab === "add" ? "add" : "remove"} (spools)`}
                         />
                       </div>
                       <p className="text-sm text-muted-foreground">

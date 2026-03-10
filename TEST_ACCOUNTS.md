@@ -9,6 +9,13 @@ npx prisma db seed
 
 Then log in at **/login** with email + password.
 
+Use these to log in to ERPNext when it’s running locally:
+URL	http://localhost:8080
+Username	administrator
+Password	admin123
+Site	printhub.localhost
+Start ERPNext with npm run erpnext:start, 
+
 | Role | Email | Password | Access |
 |------|--------|----------|--------|
 | **Super Admin** | admin@printhub.africa | Admin@Printhub2025! | Full admin dashboard, all areas |
