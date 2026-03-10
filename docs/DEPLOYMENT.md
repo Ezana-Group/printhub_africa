@@ -252,6 +252,13 @@ npx prisma db seed
 
 Uses `tsx prisma/seed.ts` (see `package.json`). Do **not** run seed in production if it would overwrite real data; use a separate test DB for that.
 
+### 8.4 Clearing the production database
+
+To wipe all data (or do a full schema reset), see **[scripts/db-clear-production.md](../scripts/db-clear-production.md)**. Summary:
+
+- **Option A — Truncate all tables:** Keeps schema, deletes all rows. Run `DATABASE_URL="..." npx tsx scripts/db-truncate-all.ts`. Back up first.
+- **Option B — Full reset:** Drop `public` schema, then `npx prisma migrate deploy` (and optionally seed). Use the **direct** connection URL for the drop step.
+
 ---
 
 ## 9. Environment variables summary

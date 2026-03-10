@@ -79,7 +79,27 @@ Start ERPNext with `npm run erpnext:start`.
 3. Run seed: `npx prisma db seed`
 4. Go to http://localhost:3000/login (or your dev URL) and sign in with any of the emails above.
 
+## Create a new super admin
+
+From the project root, with `DATABASE_URL` set (e.g. in `.env`):
+
+```bash
+EMAIL=your@email.com PASSWORD=YourSecurePassword npx tsx scripts/create-super-admin.ts
+```
+
+Optional display name:
+
+```bash
+EMAIL=your@email.com PASSWORD=YourSecurePassword NAME="Your Name" npx tsx scripts/create-super-admin.ts
+```
+
+- If the email **doesn’t exist**, a new user is created as SUPER_ADMIN.
+- If the email **already exists**, that user is updated to SUPER_ADMIN and the password is set to the one you provide.
+
+Then log in at `/login` with that email and password.
+
 ## Adding more admins or staff later
 
 - **Same emails, reset DB:** Run `npx prisma db seed` again (upsert won’t change existing users’ passwords).
-- **New user:** Register at `/register`, then in the database set `role` to `STAFF`, `ADMIN`, or `SUPER_ADMIN` and add a row in `Staff` if they’re STAFF (with `userId`, `department`, `position`, `permissions`). Easiest: use Prisma Studio with `DATABASE_URL` set to your deployed DB: `npx prisma studio`.
+- **New super admin:** Use `scripts/create-super-admin.ts` (see above).
+- **New staff/admin (other roles):** Register at `/register`, then in the database set `role` to `STAFF`, `ADMIN`, or `SUPER_ADMIN` and add a row in `Staff` if they’re STAFF (with `userId`, `department`, `position`, `permissions`). Easiest: use Prisma Studio with `DATABASE_URL` set to your deployed DB: `npx prisma studio`.
