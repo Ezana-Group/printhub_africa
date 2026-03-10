@@ -84,6 +84,18 @@ Open [http://localhost:3000](http://localhost:3000).
 | `npm run db:migrate` | Prisma migrate dev  |
 | `npm run db:seed` | Seed database        |
 | `npm run db:studio` | Prisma Studio       |
+| `npm run build:with-migrate` | Build + run Prisma migrations (use where DB is available at build time) |
+
+## Deploying to Vercel
+
+The default `npm run build` runs only `prisma generate` and `next build`, so the build succeeds on Vercel (no database at build time).
+
+**Run migrations separately:** After deploying, run migrations against your production DB once per release. Options:
+
+1. **From your machine:** `DATABASE_URL="your-vercel-postgres-url" npx prisma migrate deploy`
+2. **Vercel Post-Deploy:** If you use a deploy hook or external CI, add `npx prisma migrate deploy` there with `DATABASE_URL` and `DIRECT_URL` set.
+
+Ensure `DATABASE_URL` and `DIRECT_URL` are set in the Vercel project (Settings → Environment Variables) for runtime.
 
 ## Project structure
 
@@ -147,6 +159,7 @@ PrintHub uses ERPNext for finance, inventory, HR and payroll.
 - **URL:** http://localhost:8080  
 - **Username:** administrator  
 - **Password:** admin123  
+- **Do NOT use these defaults in production.**
 
 ### Troubleshooting
 
