@@ -35,11 +35,13 @@ type ThreeDConsumable = {
   kind: string;
   name: string;
   specification: string | null;
+  brand: string | null;
   quantity: number;
   lowStockThreshold: number;
   location: string | null;
   costPerKgKes: number | null;
   unitCostKes: number | null;
+  notes: string | null;
 };
 
 const TOP_TABS = [
