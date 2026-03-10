@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const materials = await prisma.printingMedium.findMany({
     where: { isActive: true, slug: { not: null } },

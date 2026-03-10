@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 /** Default card images by slug when category has no image (theme-appropriate Unsplash) */
 const DEFAULT_IMAGES: Record<string, string> = {
   "large-format":
