@@ -27,7 +27,7 @@ export default async function LegalPageEditPage({
         items={[
           { label: "Content", href: "/admin/content/legal" },
           { label: "Legal Pages", href: "/admin/content/legal" },
-          { label: page.title },
+          { label: page.title ?? slug },
         ]}
       />
       <div className="flex items-center gap-4">
