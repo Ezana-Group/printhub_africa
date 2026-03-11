@@ -25,11 +25,26 @@ export default async function AdminCustomerDetailPage({
       addresses: { select: { id: true, label: true, street: true, city: true } },
       corporateAccount: { select: { companyName: true, kraPin: true } },
       printQuotes: { orderBy: { createdAt: "desc" }, take: 50 },
+      quotes: { orderBy: { createdAt: "desc" }, take: 50 },
       uploadedFiles: { orderBy: { createdAt: "desc" }, take: 50 },
       auditLogs: { orderBy: { timestamp: "desc" }, take: 100 },
     },
   });
   if (!user) notFound();
+
+  const quotesByEmail = await prisma.quote.findMany({
+    where: {
+      customerEmail: { equals: user.email, mode: "insensitive" },
+      customerId: null,
+      id: { notIn: user.quotes.map((q) => q.id) },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  });
+  const allGetAQuoteQuotes = [
+    ...user.quotes.map((q) => ({ ...q, source: "account" as const })),
+    ...quotesByEmail.map((q) => ({ ...q, source: "email_match" as const })),
+  ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 50);
 
   const totalSpent = user.orders.reduce(
     (sum, o) =>
@@ -95,6 +110,15 @@ export default async function AdminCustomerDetailPage({
       estimatedCost: q.estimatedCost != null ? Number(q.estimatedCost) : null,
       createdAt: q.createdAt,
       validUntil: q.validUntil,
+    })),
+    getAQuoteQuotes: allGetAQuoteQuotes.map((q) => ({
+      id: q.id,
+      quoteNumber: q.quoteNumber,
+      type: q.type,
+      status: q.status,
+      quotedAmount: q.quotedAmount != null ? Number(q.quotedAmount) : null,
+      createdAt: q.createdAt,
+      projectName: q.projectName,
     })),
     uploads: user.uploadedFiles.map((u) => ({
       id: u.id,

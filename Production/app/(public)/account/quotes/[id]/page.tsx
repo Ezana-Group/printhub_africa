@@ -25,10 +25,22 @@ export default async function AccountQuoteDetailPage({
   if (!session?.user?.id) redirect("/login");
   const { id } = await params;
 
-  const [quote, business] = await Promise.all([
-    prisma.quote.findFirst({ where: { id, customerId: session.user.id } }),
+  const userId = session.user.id as string;
+  const userEmail = (session.user.email as string) ?? "";
+  const [quoteByAccount, quoteByEmail, business] = await Promise.all([
+    prisma.quote.findFirst({ where: { id, customerId: userId } }),
+    userEmail
+      ? prisma.quote.findFirst({
+          where: {
+            id,
+            customerId: null,
+            customerEmail: { equals: userEmail, mode: "insensitive" },
+          },
+        })
+      : Promise.resolve(null),
     getBusinessPublic(),
   ]);
+  const quote = quoteByAccount ?? quoteByEmail ?? null;
 
   if (!quote) notFound();
   const businessName = business.businessName;
