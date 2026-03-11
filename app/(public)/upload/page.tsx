@@ -81,7 +81,7 @@ export default function UploadPage() {
                 maxSizeMB={500}
                 maxFiles={5}
                 label="Upload your 3D model files"
-                description="STL, OBJ, 3MF, STEP · Max 500MB per file · Up to 5 files"
+                hint="STL, OBJ, 3MF, STEP · Max 500MB per file · Up to 5 files"
                 onUploadComplete={setUploaded3d}
               />
               <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-500">
@@ -109,7 +109,7 @@ export default function UploadPage() {
                 maxSizeMB={500}
                 maxFiles={3}
                 label="Upload your print file"
-                description="AI, PDF, PSD, EPS, PNG (300dpi+), SVG, TIFF · Max 500MB"
+                hint="AI, PDF, PSD, EPS, PNG (300dpi+), SVG, TIFF · Max 500MB"
                 onUploadComplete={setUploadedLf}
               />
               <div className="mt-4 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">

@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Upload,
   FileUp,
   Layout,
   Box,
@@ -25,6 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import { CustomerPrintCalculator } from "@/components/calculators/CustomerPrintCalculator";
 import { CustomerLFCalculator } from "@/components/calculators/CustomerLFCalculator";
+import { FileUploader, type UploadedFileResult } from "@/components/upload/FileUploader";
 
 type ServiceType = "design_and_print" | "large_format" | "3d_print";
 
@@ -58,10 +58,6 @@ const BUDGET_OPTIONS = [
   "Not sure yet",
 ];
 
-const LARGE_FORMAT_ACCEPT = ".ai,.pdf,.psd,.eps,.png,.jpg,.jpeg,.svg";
-const THREED_ACCEPT = ".stl,.obj,.fbx,.3mf,.step";
-const REFERENCE_ACCEPT = "image/jpeg,image/png,image/webp,.pdf";
-
 type ThreeDOptions = {
   materials: { id: string; slug: string; name: string; pricePerGram: number }[];
   turnaround: { code: string; name: string; surchargePercent: number }[];
@@ -71,11 +67,8 @@ type ThreeDOptions = {
 
 export default function GetAQuotePage() {
   const [serviceType, setServiceType] = useState<ServiceType>("design_and_print");
-  const [files, setFiles] = useState<File[]>([]);
-  const [referenceFiles, setReferenceFiles] = useState<File[]>([]);
-  const [referenceUrls, setReferenceUrls] = useState<string[]>([]);
-  const [refDragOver, setRefDragOver] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
+  const [referenceUploadedFiles, setReferenceUploadedFiles] = useState<UploadedFileResult[]>([]);
+  const [designUploadedFiles, setDesignUploadedFiles] = useState<UploadedFileResult[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [optionsLoading, setOptionsLoading] = useState(true);
@@ -92,7 +85,7 @@ export default function GetAQuotePage() {
   const [ideaDescription, setIdeaDescription] = useState("");
   const [preferredColours, setPreferredColours] = useState("");
   const [hasBrandLogo, setHasBrandLogo] = useState<boolean | null>(null);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoFile, setLogoFile] = useState<UploadedFileResult | null>(null);
   const [useCase, setUseCase] = useState("");
   const [quantityNeeded, setQuantityNeeded] = useState<number | "">(1);
   const [budgetRange, setBudgetRange] = useState("");
@@ -116,10 +109,6 @@ export default function GetAQuotePage() {
   const [postProcessing3d] = useState(false);
   const [selectedMaterialName3d, setSelectedMaterialName3d] = useState<string | null>(null);
   const [selectedColor3d, setSelectedColor3d] = useState<string | null>(null);
-
-  const accept = serviceType === "large_format" ? LARGE_FORMAT_ACCEPT : THREED_ACCEPT;
-  const maxFiles = 5;
-  const maxSizeMb = 500;
 
   const fetchThreeDOptions = useCallback(async () => {
     try {
@@ -148,70 +137,6 @@ export default function GetAQuotePage() {
     fetchThreeDOptions().finally(() => setOptionsLoading(false));
   }, [serviceType, fetchThreeDOptions]);
 
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(false);
-    const list = Array.from(e.dataTransfer.files).filter((f) => f.size <= maxSizeMb * 1024 * 1024);
-    setFiles((prev) => [...prev, ...list].slice(0, maxFiles));
-  };
-
-  const onDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragOver(true);
-  };
-
-  const onDragLeave = () => setDragOver(false);
-
-  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const list = Array.from(e.target.files ?? []).filter((f) => f.size <= maxSizeMb * 1024 * 1024);
-    setFiles((prev) => [...prev, ...list].slice(0, maxFiles));
-    e.target.value = "";
-  };
-
-  const removeFile = (index: number) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const onReferenceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const list = Array.from(e.target.files ?? []).slice(0, 5);
-    setReferenceFiles(list);
-  };
-
-  const onRefDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setRefDragOver(false);
-    const list = Array.from(e.dataTransfer.files ?? []).slice(0, 5);
-    setReferenceFiles((prev) => [...prev, ...list].slice(0, 5));
-  };
-  const onRefDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setRefDragOver(true);
-  };
-  const onRefDragLeave = () => setRefDragOver(false);
-
-  const removeReference = (index: number) => {
-    setReferenceFiles((prev) => prev.filter((_, i) => i !== index));
-    setReferenceUrls((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  async function uploadFilesForQuote(filesToUpload: File[]): Promise<{ urls: string[]; filesMeta: { url: string; originalName: string; sizeBytes: number; uploadedAt: string }[] }> {
-    const urls: string[] = [];
-    const filesMeta: { url: string; originalName: string; sizeBytes: number; uploadedAt: string }[] = [];
-    for (const file of filesToUpload) {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/quotes/upload", { method: "POST", body: fd });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error ?? "Upload failed");
-      }
-      const data = await res.json();
-      if (data.urls?.length) urls.push(...data.urls);
-      if (Array.isArray(data.filesMeta)) filesMeta.push(...data.filesMeta);
-    }
-    return { urls, filesMeta };
-  }
-
   async function handleIdeaSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setErrorMsg("");
@@ -227,18 +152,10 @@ export default function GetAQuotePage() {
     }
     setStatus("loading");
     try {
-      let allRefUrls = [...referenceUrls];
-      let allFilesMeta: { url: string; originalName: string; sizeBytes: number; uploadedAt: string }[] = [];
-      if (referenceFiles.length > 0) {
-        const uploaded = await uploadFilesForQuote(referenceFiles);
-        allRefUrls = [...allRefUrls, ...uploaded.urls];
-        allFilesMeta = [...allFilesMeta, ...uploaded.filesMeta];
-      }
-      if (logoFile) {
-        const uploaded = await uploadFilesForQuote([logoFile]);
-        allRefUrls = [...allRefUrls, ...uploaded.urls];
-        allFilesMeta = [...allFilesMeta, ...uploaded.filesMeta];
-      }
+      const uploadIds = [
+        ...referenceUploadedFiles.map((f) => f.uploadId),
+        ...(logoFile ? [logoFile.uploadId] : []),
+      ];
 
       const projectTypeFinal = projectType === "other" ? projectTypeOther : projectType;
       const res = await fetch("/api/quotes", {
@@ -252,8 +169,8 @@ export default function GetAQuotePage() {
           preferredContact: preferredResponse,
           projectName: projectName.trim() || undefined,
           description: ideaDescription.trim(),
-          referenceFiles: allRefUrls,
-          referenceFilesMeta: allFilesMeta.length > 0 ? allFilesMeta : undefined,
+          referenceFiles: [],
+          uploadIds: uploadIds.length > 0 ? uploadIds : undefined,
           specifications: {
             projectType: projectTypeFinal || undefined,
             preferredColours: preferredColours.trim() || undefined,
@@ -288,13 +205,7 @@ export default function GetAQuotePage() {
     const formData = new FormData(e.currentTarget);
     const instructions = formData.get("instructions") as string;
     try {
-      let fileUrls: string[] = [];
-      let filesMeta: { url: string; originalName: string; sizeBytes: number; uploadedAt: string }[] = [];
-      if (files.length > 0) {
-        const uploaded = await uploadFilesForQuote(files);
-        fileUrls = uploaded.urls;
-        filesMeta = uploaded.filesMeta;
-      }
+      const uploadIds = designUploadedFiles.map((f) => f.uploadId);
       const res = await fetch("/api/quotes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -305,8 +216,8 @@ export default function GetAQuotePage() {
           customerPhone: (formData.get("phone") as string)?.trim() || undefined,
           projectName: (formData.get("projectName") as string)?.trim() || undefined,
           description: instructions || undefined,
-          referenceFiles: fileUrls,
-          referenceFilesMeta: filesMeta.length > 0 ? filesMeta : undefined,
+          referenceFiles: [],
+          uploadIds: uploadIds.length > 0 ? uploadIds : undefined,
           specifications: {
             ...(serviceType === "large_format"
               ? {
@@ -533,41 +444,15 @@ export default function GetAQuotePage() {
                         </div>
                         <div>
                           <Label className="text-slate-700">Reference images or inspiration</Label>
-                          <div
-                            onDrop={onRefDrop}
-                            onDragOver={onRefDragOver}
-                            onDragLeave={onRefDragLeave}
-                            onClick={() => document.getElementById("ref-file-input")?.click()}
-                            className={cn(
-                              "mt-1.5 rounded-lg border-2 border-dashed p-6 text-center cursor-pointer transition-colors",
-                              refDragOver ? "border-orange-400 bg-[#FFF5F2]" : "border-gray-200 hover:border-orange-300 hover:bg-slate-50/50"
-                            )}
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(e) => e.key === "Enter" && document.getElementById("ref-file-input")?.click()}
-                          >
-                            <Upload className="mx-auto h-8 w-8 text-slate-400" />
-                            <p className="mt-2 text-sm text-slate-600">Drop images or click to browse</p>
-                            <p className="text-xs text-slate-400 mt-0.5">JPG, PNG, PDF · 5 max</p>
-                            <input
-                              id="ref-file-input"
-                              type="file"
-                              accept={REFERENCE_ACCEPT}
-                              multiple
-                              className="sr-only"
-                              onChange={onReferenceChange}
-                            />
-                          </div>
-                          {referenceFiles.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              {referenceFiles.map((f, i) => (
-                                <span key={i} className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-1.5 text-sm">
-                                  <span className="truncate max-w-[120px]">{f.name}</span>
-                                  <button type="button" onClick={() => removeReference(i)} className="text-red-600 hover:underline shrink-0">Remove</button>
-                                </span>
-                              ))}
-                            </div>
-                          )}
+                          <FileUploader
+                            context="CUSTOMER_QUOTE"
+                            accept={["image/jpeg", "image/png", "image/webp", "application/pdf"]}
+                            maxSizeMB={20}
+                            maxFiles={5}
+                            label="Reference images or inspiration"
+                            hint="Upload photos, sketches, or anything that shows what you have in mind"
+                            onUploadComplete={setReferenceUploadedFiles}
+                          />
                         </div>
                       </div>
                       {/* Right column */}
@@ -585,43 +470,55 @@ export default function GetAQuotePage() {
                         </div>
                         <div>
                           <Label className="text-slate-700">Do you have a brand/logo already?</Label>
-                          <div className="mt-2 flex gap-2">
+                          <div className="mt-2 flex gap-2 mb-4">
                             <button
                               type="button"
                               onClick={() => setHasBrandLogo(true)}
                               className={cn(
-                                "rounded-full px-4 py-2 text-sm font-medium transition-all",
+                                "rounded-full px-5 py-2 text-sm font-medium transition-all",
                                 hasBrandLogo === true
-                                  ? "bg-orange-500 text-white"
-                                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                  ? "bg-[#FF4D00] text-white"
+                                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                               )}
                             >
                               Yes
                             </button>
                             <button
                               type="button"
-                              onClick={() => setHasBrandLogo(false)}
+                              onClick={() => {
+                                setHasBrandLogo(false);
+                                setLogoFile(null);
+                              }}
                               className={cn(
-                                "rounded-full px-4 py-2 text-sm font-medium transition-all",
+                                "rounded-full px-5 py-2 text-sm font-medium transition-all",
                                 hasBrandLogo === false
-                                  ? "bg-orange-500 text-white"
-                                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                  ? "bg-[#FF4D00] text-white"
+                                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                               )}
                             >
                               No
                             </button>
                           </div>
+
                           {hasBrandLogo === true && (
-                            <label className="mt-2 inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 cursor-pointer">
-                              <Upload className="h-4 w-4" />
-                              Upload logo file
-                              <input
-                                type="file"
-                                accept=".ai,.pdf,.eps,.png,.jpg,.jpeg,.svg"
-                                className="sr-only"
-                                onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
-                              />
-                            </label>
+                            <FileUploader
+                              key="logo-upload"
+                              context="CUSTOMER_QUOTE"
+                              accept={["image/jpeg", "image/png", "image/svg+xml", "image/webp"]}
+                              maxSizeMB={10}
+                              maxFiles={1}
+                              label="Upload your logo"
+                              hint="PNG or SVG with transparent background preferred"
+                              onUploadComplete={(files) => setLogoFile(files[0] ?? null)}
+                              onRemove={() => setLogoFile(null)}
+                            />
+                          )}
+
+                          {hasBrandLogo === false && (
+                            <p className="text-sm text-gray-500 bg-gray-50 rounded-xl px-4 py-3">
+                              No problem — our design team can help create a logo or work with your
+                              brand guidelines. Tell us more in the description.
+                            </p>
                           )}
                         </div>
                         <div>
@@ -837,34 +734,41 @@ export default function GetAQuotePage() {
                           </CardTitle>
                           <CardDescription>Drag and drop or click to browse</CardDescription>
                         </CardHeader>
-                        <CardContent className="p-0">
-                          <div
-                            onDrop={onDrop}
-                            onDragOver={onDragOver}
-                            onDragLeave={onDragLeave}
-                            className={`flex flex-col items-center justify-center border-t border-slate-200 border-2 border-dashed m-4 mt-0 rounded-xl p-6 md:p-8 transition-colors cursor-pointer ${dragOver ? "border-primary bg-primary/5" : "border-slate-200 bg-slate-50/30"}`}
-                            onClick={() => document.getElementById("file-upload")?.click()}
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(e) => e.key === "Enter" && document.getElementById("file-upload")?.click()}
-                          >
-                            <Upload className="h-6 w-6 text-slate-500" />
-                            <p className="mt-3 text-sm font-medium text-slate-700">Drag and drop or click to browse</p>
-                            <p className="mt-0.5 text-xs text-slate-500">
-                              {serviceType === "large_format" ? "AI, PDF, PSD, EPS, PNG, JPG, SVG" : "STL, OBJ, FBX, 3MF, STEP"} · Up to {maxFiles} files, {maxSizeMb}MB each
-                            </p>
-                            <input type="file" accept={accept} multiple onChange={onFileChange} className="sr-only" id="file-upload" />
-                          </div>
-                          {files.length > 0 && (
-                            <ul className="border-t border-slate-200 p-4 space-y-2">
-                              {files.map((f, i) => (
-                                <li key={i} className="flex items-center justify-between gap-3 rounded-xl bg-slate-100/80 px-3 py-2.5 text-sm">
-                                  <span className="truncate font-medium text-slate-800">{f.name}</span>
-                                  <span className="text-slate-500 shrink-0">{(f.size / 1024).toFixed(1)} KB</span>
-                                  <button type="button" onClick={(e) => { e.stopPropagation(); removeFile(i); }} className="shrink-0 text-destructive hover:underline font-medium">Remove</button>
-                                </li>
-                              ))}
-                            </ul>
+                        <CardContent>
+                          {serviceType === "large_format" ? (
+                            <FileUploader
+                              context="CUSTOMER_LARGE_FORMAT"
+                              accept={[
+                                "application/pdf",
+                                "image/png",
+                                "image/jpeg",
+                                "image/tiff",
+                                "image/svg+xml",
+                                "application/postscript",
+                                "image/vnd.adobe.photoshop",
+                                "application/dxf",
+                              ]}
+                              maxSizeMB={500}
+                              maxFiles={3}
+                              label="Upload your print file"
+                              hint="AI, PDF, PSD, EPS, PNG (300dpi+), SVG, TIFF · Up to 3 files"
+                              onUploadComplete={setDesignUploadedFiles}
+                            />
+                          ) : (
+                            <FileUploader
+                              context="CUSTOMER_3D_PRINT"
+                              accept={[
+                                "model/stl",
+                                "model/obj",
+                                "application/octet-stream",
+                                "application/sla",
+                              ]}
+                              maxSizeMB={500}
+                              maxFiles={5}
+                              label="Upload your 3D model"
+                              hint="STL, OBJ, 3MF, STEP · Up to 5 files · Max 500MB each"
+                              onUploadComplete={setDesignUploadedFiles}
+                            />
                           )}
                         </CardContent>
                       </Card>

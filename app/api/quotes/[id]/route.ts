@@ -86,7 +86,11 @@ export async function PATCH(
   });
   if (!quote) return NextResponse.json({ error: "Quote not found" }, { status: 404 });
 
-  const isOwner = session.user.id === quote.customerId;
+  const isOwner =
+    session.user.id === quote.customerId ||
+    (quote.customerId === null &&
+      session.user.email &&
+      quote.customerEmail?.toLowerCase() === (session.user.email as string).toLowerCase());
 
   const raw = await req.json();
 

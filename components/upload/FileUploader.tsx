@@ -1,24 +1,19 @@
 "use client";
 
-import { useCallback, useState, useRef } from "react";
-import { Upload, X, Check, AlertCircle, File, Image, Box } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
+import {
+  Upload,
+  X,
+  CheckCircle,
+  AlertCircle,
+  Loader2,
+  FileText,
+  FileImage,
+  Box,
+  File,
+} from "lucide-react";
 
-export interface FileUploaderProps {
-  context: string;
-  accept: string[];
-  maxSizeMB: number;
-  maxFiles?: number;
-  label?: string;
-  description?: string;
-  quoteId?: string;
-  orderId?: string;
-  guestEmail?: string;
-  onUploadComplete?: (files: UploadedFileResult[]) => void;
-  onUploadError?: (error: string) => void;
-  showPreview?: boolean;
-  disabled?: boolean;
-  className?: string;
-}
+// ── TYPES ────────────────────────────────────────────────────────
 
 export interface UploadedFileResult {
   uploadId: string;
@@ -26,135 +21,112 @@ export interface UploadedFileResult {
   originalName: string;
   sizeBytes: number;
   mimeType: string;
-  url?: string;
+  previewUrl?: string;
+  publicUrl?: string;
 }
 
-type FileState = {
-  file: File;
+export interface FileUploaderProps {
+  context: string;
+  accept: string[];
+  maxSizeMB?: number;
+  maxFiles?: number;
+  label?: string;
+  hint?: string;
+  description?: string;
+  disabled?: boolean;
+  className?: string;
+  quoteId?: string;
+  orderId?: string;
+  guestEmail?: string;
+  onUploadComplete?: (files: UploadedFileResult[]) => void;
+  onUploadError?: (error: string) => void;
+  onRemove?: (uploadId: string) => void;
+}
+
+type UploadState = "idle" | "uploading" | "done" | "error";
+
+interface FileEntry {
   id: string;
-  status: "pending" | "uploading" | "confirming" | "done" | "error";
+  file: File;
+  state: UploadState;
   progress: number;
   error?: string;
   result?: UploadedFileResult;
-};
+}
 
-function formatBytes(bytes: number) {
+// ── HELPERS ──────────────────────────────────────────────────────
+
+function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function uploadWithProgress(
-  url: string,
-  file: File,
-  onProgress: (pct: number) => void
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("PUT", url);
-    xhr.setRequestHeader("Content-Type", file.type || "application/octet-stream");
-
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) onProgress(e.loaded / e.total);
-    };
-
-    xhr.onload = () =>
-      xhr.status < 300 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`));
-    xhr.onerror = () => reject(new Error("Network error during upload"));
-
-    xhr.send(file);
-  });
+function getFileIcon(mimeType: string, filename: string) {
+  if (mimeType.startsWith("image/")) return FileImage;
+  if (filename.match(/\.(stl|obj|3mf|step|stp)$/i)) return Box;
+  if (mimeType === "application/pdf") return FileText;
+  return File;
 }
 
-function FileRow({
-  fileState,
-  onRemove,
-}: {
-  fileState: FileState;
-  onRemove: () => void;
-}) {
-  const f = fileState;
-  const icon =
-    f.file.type.startsWith("image/") ? Image :
-    /\.(stl|obj|3mf|step)$/i.test(f.file.name) ? Box : File;
-
-  const Icon = icon;
-
-  return (
-    <div className="flex items-center gap-3 rounded-lg border bg-slate-50 p-3">
-      <Icon className="h-5 w-5 shrink-0 text-slate-400" />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{f.file.name}</p>
-        <p className="text-xs text-slate-500">{formatBytes(f.file.size)}</p>
-        {(f.status === "uploading" || f.status === "confirming") && (
-          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
-            <div
-              className="h-full rounded-full bg-primary transition-all duration-200"
-              style={{ width: `${f.progress}%` }}
-            />
-          </div>
-        )}
-        <p
-          className={`mt-0.5 text-xs ${
-            f.status === "done"
-              ? "text-green-600"
-              : f.status === "error"
-                ? "text-red-500"
-                : "text-slate-500"
-          }`}
-        >
-          {f.status === "uploading" && `Uploading... ${Math.round(f.progress)}%`}
-          {f.status === "confirming" && "Finishing..."}
-          {f.status === "done" && "Uploaded successfully"}
-          {f.status === "error" && (f.error ?? "Upload failed")}
-        </p>
-      </div>
-      <div className="flex shrink-0 items-center gap-1">
-        {f.status === "done" && <Check className="h-5 w-5 text-green-500" />}
-        {f.status === "error" && <AlertCircle className="h-5 w-5 text-red-400" />}
-        {(f.status === "done" || f.status === "error") && (
-          <button
-            type="button"
-            onClick={onRemove}
-            className="rounded p-1 text-slate-400 hover:text-slate-600"
-            aria-label="Remove"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
-      </div>
-    </div>
-  );
+function isImageType(mimeType: string): boolean {
+  return mimeType.startsWith("image/") && mimeType !== "image/svg+xml";
 }
+
+function humanAccept(accept: string[]): string {
+  return accept
+    .map((t) => t.split("/")[1]?.toUpperCase() ?? t)
+    .filter(Boolean)
+    .join(", ");
+}
+
+// ── MAIN COMPONENT ───────────────────────────────────────────────
 
 export function FileUploader({
   context,
   accept,
-  maxSizeMB,
+  maxSizeMB = 50,
   maxFiles = 1,
   label,
+  hint,
   description,
+  disabled = false,
+  className = "",
   quoteId,
   orderId,
   guestEmail,
   onUploadComplete,
   onUploadError,
-  disabled = false,
-  className,
+  onRemove,
 }: FileUploaderProps) {
-  const [files, setFiles] = useState<FileState[]>([]);
+  const [entries, setEntries] = useState<FileEntry[]>([]);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const validateFile = useCallback(
+  const hintText = hint ?? description;
+  const doneCount = entries.filter((e) => e.state === "done").length;
+  const canAddMore = doneCount < maxFiles;
+
+  const validate = useCallback(
     (file: File): string | null => {
-      const allowed = accept.includes(file.type) || accept.includes("*/*");
-      if (!allowed) {
-        const exts = accept.map((t) => t.split("/")[1]).join(", ");
-        return `File type not allowed. Accepted: ${exts}`;
+      if (accept.length > 0 && !accept.includes("*/*")) {
+        const ext = "." + (file.name.split(".").pop()?.toLowerCase() ?? "");
+        const mimeOk = accept.includes(file.type);
+        const extMap: Record<string, string[]> = {
+          "model/stl": [".stl"],
+          "application/octet-stream": [".stl", ".obj", ".3mf", ".step"],
+          "image/vnd.adobe.photoshop": [".psd"],
+          "application/postscript": [".ai", ".eps"],
+          "application/dxf": [".dxf"],
+        };
+        const extOk = accept.some((t) => extMap[t]?.includes(ext));
+        if (!mimeOk && !extOk) {
+          const readable = humanAccept(accept);
+          return `File type not supported. Please upload: ${readable}`;
+        }
       }
       if (file.size > maxSizeMB * 1024 * 1024) {
-        return `File too large. Max size: ${maxSizeMB}MB`;
+        return `File too large (${formatBytes(file.size)}). Max size is ${maxSizeMB}MB`;
       }
       return null;
     },
@@ -162,78 +134,102 @@ export function FileUploader({
   );
 
   const uploadFile = useCallback(
-    async (file: File, fileId: string) => {
-      const updateFile = (updates: Partial<FileState>) =>
-        setFiles((prev) =>
-          prev.map((f) => (f.id === fileId ? { ...f, ...updates } : f))
+    async (entry: FileEntry) => {
+      const update = (patch: Partial<FileEntry>) =>
+        setEntries((prev) =>
+          prev.map((e) => (e.id === entry.id ? { ...e, ...patch } : e))
         );
 
       try {
-        updateFile({ status: "uploading", progress: 5 });
-
         const presignRes = await fetch("/api/upload/presign", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            filename: file.name,
-            mimeType: file.type || "application/octet-stream",
-            sizeBytes: file.size,
+            filename: entry.file.name,
+            mimeType: entry.file.type || "application/octet-stream",
+            sizeBytes: entry.file.size,
             context,
             quoteId: quoteId ?? undefined,
             orderId: orderId ?? undefined,
             guestEmail: guestEmail ?? undefined,
           }),
         });
-
         if (!presignRes.ok) {
           const err = await presignRes.json().catch(() => ({}));
-          throw new Error(err.error ?? "Failed to get upload URL");
+          throw new Error((err as { error?: string }).error ?? "Could not start upload");
         }
+        const {
+          uploadId,
+          presignedUrl,
+          storageKey,
+          bucket,
+        } = (await presignRes.json()) as {
+          uploadId: string;
+          presignedUrl: string;
+          storageKey: string;
+          bucket?: "private" | "public";
+        };
 
-        const { uploadId, presignedUrl, storageKey } = await presignRes.json();
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("PUT", presignedUrl);
+          xhr.setRequestHeader(
+            "Content-Type",
+            entry.file.type || "application/octet-stream"
+          );
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              update({ progress: Math.round((e.loaded / e.total) * 95) });
+            }
+          };
+          xhr.onload = () =>
+            xhr.status < 300
+              ? resolve()
+              : reject(new Error(`Upload error (${xhr.status})`));
+          xhr.onerror = () =>
+            reject(new Error("Network error — check your connection"));
+          xhr.send(entry.file);
+        });
 
-        await uploadWithProgress(presignedUrl, file, (progress) =>
-          updateFile({ progress: 5 + progress * 90 })
-        );
-
-        updateFile({ status: "confirming", progress: 97 });
+        update({ progress: 98 });
 
         const confirmRes = await fetch("/api/upload/confirm", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ uploadId, storageKey }),
         });
+        if (!confirmRes.ok) throw new Error("Upload confirmation failed");
 
-        if (!confirmRes.ok) {
-          const err = await confirmRes.json().catch(() => ({}));
-          throw new Error(err.error ?? "Upload confirmation failed");
-        }
-
-        const data = await confirmRes.json();
         const result: UploadedFileResult = {
-          uploadId: data.file.id,
-          storageKey: data.file.storageKey,
-          originalName: file.name,
-          sizeBytes: file.size,
-          mimeType: file.type || "application/octet-stream",
-          url: data.file.url ?? undefined,
+          uploadId,
+          storageKey,
+          originalName: entry.file.name,
+          sizeBytes: entry.file.size,
+          mimeType: entry.file.type || "application/octet-stream",
+          previewUrl: isImageType(entry.file.type)
+            ? URL.createObjectURL(entry.file)
+            : undefined,
+          publicUrl:
+            bucket === "public" && process.env.NEXT_PUBLIC_R2_PUBLIC_URL
+              ? `${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/${storageKey}`
+              : undefined,
         };
 
-        updateFile({ status: "done", progress: 100, result });
+        update({ state: "done", progress: 100, result });
 
-        setFiles((prev) => {
-          const next = prev.map((f) =>
-            f.id === fileId ? { ...f, status: "done" as const, progress: 100, result } : f
+        setEntries((prev) => {
+          const next = prev.map((e) =>
+            e.id === entry.id ? { ...e, state: "done" as const, progress: 100, result } : e
           );
           const allDone = next
-            .filter((f) => f.status === "done" && f.result)
-            .map((f) => f.result!);
+            .filter((e) => e.state === "done" && e.result)
+            .map((e) => e.result!);
           onUploadComplete?.(allDone);
           return next;
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : "Upload failed";
-        updateFile({ status: "error", error: message });
+        update({ state: "error", error: message });
         onUploadError?.(message);
       }
     },
@@ -241,74 +237,142 @@ export function FileUploader({
   );
 
   const handleFiles = useCallback(
-    (newFiles: FileList | File[]) => {
-      const arr = Array.from(newFiles);
-      const doneCount = files.filter((f) => f.status === "done").length;
-      const remaining = Math.max(0, maxFiles - doneCount);
-      const toAdd = arr.slice(0, remaining);
+    (files: FileList | File[]) => {
+      if (disabled) return;
+      const arr = Array.from(files);
+      const currentEntries = entries;
+      const slots = maxFiles - currentEntries.filter((e) => e.state === "done").length;
+      const batch = arr.slice(0, Math.max(0, slots));
 
-      const newStates: FileState[] = toAdd.map((file) => {
-        const id = crypto.randomUUID();
-        const error = validateFile(file);
+      const newEntries: FileEntry[] = batch.map((file) => {
+        const error = validate(file);
         return {
+          id: crypto.randomUUID(),
           file,
-          id,
-          status: error ? "error" : "pending",
+          state: error ? "error" : "uploading",
           progress: 0,
           error: error ?? undefined,
         };
       });
 
-      setFiles((prev) => [...prev, ...newStates]);
+      setEntries((prev) => [...prev, ...newEntries]);
 
-      newStates
-        .filter((f) => f.status === "pending")
-        .forEach((f) => uploadFile(f.file, f.id));
+      newEntries
+        .filter((e) => e.state === "uploading")
+        .forEach((e) => uploadFile(e));
     },
-    [files, maxFiles, uploadFile, validateFile]
+    [entries, maxFiles, disabled, validate, uploadFile]
   );
 
-  const removeFile = useCallback((id: string) => {
-    setFiles((prev) => prev.filter((f) => f.id !== id));
-  }, []);
+  const removeEntry = useCallback(
+    (id: string) => {
+      const entry = entries.find((e) => e.id === id);
+      if (entry?.result?.uploadId) onRemove?.(entry.result.uploadId);
+      if (entry?.result?.previewUrl) URL.revokeObjectURL(entry.result.previewUrl);
+      setEntries((prev) => prev.filter((e) => e.id !== id));
+      if (inputRef.current) inputRef.current.value = "";
+    },
+    [entries, onRemove]
+  );
 
-  const descriptionText =
-    description ??
-    `Max ${maxSizeMB}MB · ${accept.map((t) => t.split("/")[1]).join(", ").toUpperCase()}`;
+  const retryEntry = useCallback(
+    (id: string) => {
+      const entry = entries.find((e) => e.id === id);
+      if (!entry) return;
+      setEntries((prev) =>
+        prev.map((e) =>
+          e.id === id ? { ...e, state: "uploading" as const, progress: 0, error: undefined } : e
+        )
+      );
+      uploadFile({ ...entry, state: "uploading", progress: 0, error: undefined });
+    },
+    [entries, uploadFile]
+  );
 
   return (
-    <div className={className}>
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => !disabled && inputRef.current?.click()}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragging(false);
-          if (!disabled && e.dataTransfer.files?.length)
-            handleFiles(e.dataTransfer.files);
-        }}
-        onKeyDown={(e) =>
-          e.key === "Enter" && !disabled && inputRef.current?.click()
-        }
-        className={`cursor-pointer rounded-xl border-2 border-dashed p-6 text-center transition ${
-          dragging ? "border-primary bg-primary/5" : "border-slate-200 hover:border-slate-300"
-        } ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
-      >
-        <Upload className="mx-auto mb-3 h-10 w-10 text-slate-300" />
-        <p className="font-medium text-slate-700">
-          {label ?? "Drop files here or click to browse"}
-        </p>
-        <p className="mt-1 text-sm text-slate-500">{descriptionText}</p>
-        {maxFiles > 1 && (
-          <p className="mt-1 text-xs text-slate-400">Up to {maxFiles} files</p>
-        )}
-      </div>
+    <div className={`space-y-2 ${className}`}>
+      {label && (
+        <p className="text-sm font-medium text-gray-700">{label}</p>
+      )}
+      {hintText && (
+        <p className="text-xs text-gray-500">{hintText}</p>
+      )}
+
+      {canAddMore && (
+        <div
+          role="button"
+          tabIndex={disabled ? undefined : 0}
+          onClick={() => !disabled && inputRef.current?.click()}
+          onKeyDown={(e) =>
+            e.key === "Enter" && !disabled && inputRef.current?.click()
+          }
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (!disabled) setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragging(false);
+            if (!disabled && e.dataTransfer.files?.length)
+              handleFiles(e.dataTransfer.files);
+          }}
+          className={[
+            "border-2 border-dashed rounded-xl p-6 text-center transition cursor-pointer",
+            dragging ? "border-[#FF4D00] bg-orange-50 scale-[1.01]" : "",
+            disabled
+              ? "border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed"
+              : "border-gray-300 hover:border-[#FF4D00] hover:bg-orange-50",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          <div
+            className={`w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2 transition ${
+              dragging ? "bg-orange-100" : "bg-gray-100"
+            }`}
+          >
+            <Upload
+              className={`w-5 h-5 transition ${
+                dragging ? "text-[#FF4D00]" : "text-gray-400"
+              }`}
+            />
+          </div>
+          <p
+            className={`text-sm font-medium transition ${
+              dragging ? "text-[#FF4D00]" : "text-gray-600"
+            }`}
+          >
+            {dragging
+              ? "Drop to upload"
+              : maxFiles > 1
+                ? "Drop files here or click to browse"
+                : "Drop file here or click to browse"}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            {humanAccept(accept)} · Max {maxSizeMB}MB
+            {maxFiles > 1 && ` · Up to ${maxFiles} files`}
+          </p>
+          {maxFiles > 1 && doneCount > 0 && (
+            <p className="text-xs text-gray-400 mt-0.5">
+              {doneCount} of {maxFiles} uploaded
+            </p>
+          )}
+        </div>
+      )}
+
+      {entries.length > 0 && (
+        <div className="space-y-2">
+          {entries.map((entry) => (
+            <FileEntryRow
+              key={entry.id}
+              entry={entry}
+              onRemove={removeEntry}
+              onRetry={retryEntry}
+            />
+          ))}
+        </div>
+      )}
 
       <input
         ref={inputRef}
@@ -323,12 +387,137 @@ export function FileUploader({
           e.target.value = "";
         }}
       />
+    </div>
+  );
+}
 
-      {files.length > 0 && (
-        <div className="mt-3 space-y-2">
-          {files.map((f) => (
-            <FileRow key={f.id} fileState={f} onRemove={() => removeFile(f.id)} />
-          ))}
+// ── FILE ENTRY ROW ───────────────────────────────────────────────
+
+function FileEntryRow({
+  entry,
+  onRemove,
+  onRetry,
+}: {
+  entry: FileEntry;
+  onRemove: (id: string) => void;
+  onRetry: (id: string) => void;
+}) {
+  const Icon = getFileIcon(entry.file.type, entry.file.name);
+  const hasPreview = entry.state === "done" && entry.result?.previewUrl;
+
+  return (
+    <div
+      className={[
+        "rounded-xl border overflow-hidden transition",
+        entry.state === "done" ? "border-green-200 bg-green-50" : "",
+        entry.state === "uploading" ? "border-blue-200 bg-blue-50" : "",
+        entry.state === "error" ? "border-red-200 bg-red-50" : "",
+        entry.state === "idle" ? "border-gray-200 bg-gray-50" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <div className="flex items-center gap-3 p-3">
+        <div className="w-12 h-12 rounded-lg overflow-hidden bg-white border border-gray-100 flex items-center justify-center flex-shrink-0">
+          {hasPreview && entry.result?.previewUrl ? (
+            <img
+              src={entry.result.previewUrl}
+              alt={entry.file.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <Icon
+              className={`w-6 h-6 ${
+                entry.state === "error"
+                  ? "text-red-400"
+                  : entry.state === "done"
+                    ? "text-green-500"
+                    : entry.state === "uploading"
+                      ? "text-blue-400"
+                      : "text-gray-400"
+              }`}
+            />
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-gray-800 truncate">
+            {entry.file.name}
+          </p>
+          <p className="text-xs text-gray-500">
+            {formatBytes(entry.file.size)}
+          </p>
+
+          {entry.state === "uploading" && (
+            <div className="mt-1.5">
+              <div className="flex justify-between mb-0.5">
+                <span className="text-xs text-blue-600">Uploading...</span>
+                <span className="text-xs text-blue-600 font-medium">
+                  {entry.progress}%
+                </span>
+              </div>
+              <div className="w-full bg-blue-100 rounded-full h-1.5">
+                <div
+                  className="bg-[#FF4D00] h-1.5 rounded-full transition-all duration-200"
+                  style={{ width: `${entry.progress}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {entry.state === "done" && (
+            <div className="flex items-center gap-1 mt-0.5">
+              <CheckCircle className="w-3 h-3 text-green-600 flex-shrink-0" />
+              <span className="text-xs text-green-700 font-medium">
+                Uploaded successfully
+              </span>
+            </div>
+          )}
+
+          {entry.state === "error" && entry.error && (
+            <p className="text-xs text-red-600 mt-0.5 leading-snug">
+              {entry.error}
+            </p>
+          )}
+        </div>
+
+        <div className="flex-shrink-0 flex items-center gap-1">
+          {entry.state === "uploading" && (
+            <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
+          )}
+
+          {entry.state === "error" && (
+            <button
+              type="button"
+              onClick={() => onRetry(entry.id)}
+              className="text-xs text-red-600 hover:text-red-800 font-medium px-2 py-1 rounded hover:bg-red-100 transition mr-1"
+            >
+              Retry
+            </button>
+          )}
+
+          {(entry.state === "done" || entry.state === "error") && (
+            <button
+              type="button"
+              onClick={() => onRemove(entry.id)}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition"
+              title={entry.state === "done" ? "Remove file" : "Dismiss"}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {hasPreview && entry.result?.previewUrl && (
+        <div className="px-3 pb-3">
+          <div className="relative w-full h-32 rounded-lg overflow-hidden bg-white border border-green-100">
+            <img
+              src={entry.result.previewUrl}
+              alt={entry.file.name}
+              className="w-full h-full object-contain"
+            />
+          </div>
         </div>
       )}
     </div>

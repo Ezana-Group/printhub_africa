@@ -17,6 +17,7 @@ export async function GET(
 
   const file = await prisma.uploadedFile.findUnique({
     where: { id },
+    include: { quote: { select: { customerId: true, customerEmail: true } } },
   });
 
   if (!file) {
@@ -27,7 +28,17 @@ export async function GET(
   const role = (session?.user as { role?: string })?.role ?? "";
   const isAdmin = role === "ADMIN" || role === "SUPER_ADMIN" || role === "STAFF";
 
-  if (!isOwner && !isAdmin) {
+  // Allow access if file belongs to a quote owned by this customer (or guest email)
+  const isQuoteOwner =
+    file.quote &&
+    session?.user &&
+    (file.quote.customerId === session.user.id ||
+      (file.quote.customerId === null &&
+        session.user.email &&
+        file.quote.customerEmail?.toLowerCase() ===
+          (session.user.email as string).toLowerCase()));
+
+  if (!isOwner && !isAdmin && !isQuoteOwner) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 

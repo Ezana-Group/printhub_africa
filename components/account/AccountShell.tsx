@@ -17,13 +17,19 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { href: "/account", label: "Dashboard", icon: LayoutDashboard },
   { href: "/account/orders", label: "My Orders", icon: Package },
-  { href: "/account/quotes", label: "My Quotes", icon: FileText },
+  { href: "/account/quotes", label: "My Quotes", icon: FileText, badgeKey: "quotes" },
   { href: "/account/uploads", label: "My Uploads", icon: Upload },
   { href: "/account/addresses", label: "Addresses", icon: MapPin },
   { href: "/account/settings", label: "Settings", icon: Settings },
 ];
 
-export function AccountShell({ children }: { children: React.ReactNode }) {
+export function AccountShell({
+  children,
+  quotedCount = 0,
+}: {
+  children: React.ReactNode;
+  quotedCount?: number;
+}) {
   const pathname = usePathname();
 
   const isActive = (href: string) => {
@@ -48,6 +54,7 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
         <nav className="p-4 space-y-0.5" aria-label="Account navigation">
           {NAV.map((item) => {
             const active = isActive(item.href);
+            const badge = item.badgeKey === "quotes" ? quotedCount : null;
             return (
               <Link
                 key={item.href}
@@ -61,6 +68,11 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
               >
                 <item.icon className="h-5 w-5 shrink-0" />
                 {item.label}
+                {badge != null && badge > 0 && (
+                  <span className="ml-auto bg-[#E8440A] text-white text-xs font-bold min-w-[1.25rem] h-5 px-1.5 rounded-full flex items-center justify-center">
+                    {badge}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -88,16 +100,24 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
         <div className="flex items-center justify-around h-16">
           {NAV.map((item) => {
             const active = isActive(item.href);
+            const badge = item.badgeKey === "quotes" ? quotedCount : null;
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-0.5 py-2 px-4 min-w-[64px] rounded-lg text-xs font-medium transition-colors",
+                  "flex flex-col items-center justify-center gap-0.5 py-2 px-4 min-w-[64px] rounded-lg text-xs font-medium transition-colors relative",
                   active ? "text-[#E8440A]" : "text-slate-500"
                 )}
               >
-                <item.icon className="h-5 w-5" />
+                <span className="relative inline-block">
+                  <item.icon className="h-5 w-5" />
+                  {badge != null && badge > 0 && (
+                    <span className="absolute -top-1 -right-2 bg-[#E8440A] text-white text-[10px] font-bold min-w-[14px] h-3.5 rounded-full flex items-center justify-center px-1">
+                      {badge}
+                    </span>
+                  )}
+                </span>
                 <span>{item.label}</span>
               </Link>
             );

@@ -741,7 +741,7 @@ export default function CheckoutPage() {
                         maxFiles={1}
                         orderId={placedOrderId}
                         label="Upload transfer screenshot or receipt"
-                        description="JPEG, PNG, or PDF · Max 10MB"
+                        hint="Screenshot or PDF of your M-Pesa or bank transfer confirmation"
                       />
                       <Button
                         className="w-full bg-primary hover:bg-primary/90"
