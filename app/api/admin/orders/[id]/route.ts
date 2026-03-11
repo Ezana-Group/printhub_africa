@@ -63,7 +63,7 @@ export async function PATCH(
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
-  const { status, trackingNumber, carrier, cancelReason, timelineMessage } = parsed.data;
+  const { status, trackingNumber, cancelReason, timelineMessage } = parsed.data;
   try {
     const order = await prisma.order.findUnique({ where: { id } });
     if (!order) {

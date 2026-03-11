@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   AlertCircle,
@@ -192,7 +193,7 @@ export function OrderDetailClient({ orderId, initialOrder }: { orderId: string; 
   const [carrier, setCarrier] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [resendStkLoading, setResendStkLoading] = useState(false);
-  const [waitingForPayment, setWaitingForPayment] = useState(false);
+  const [, setWaitingForPayment] = useState(false);
 
   const fetchOrder = useCallback(async () => {
     const res = await fetch(`/api/admin/orders/${orderId}`);
@@ -423,7 +424,7 @@ export function OrderDetailClient({ orderId, initialOrder }: { orderId: string; 
                   >
                     <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                       {imageUrl ? (
-                        <img src={String(imageUrl)} alt="" className="w-full h-full object-cover" />
+                        <Image src={String(imageUrl)} alt="" width={64} height={64} className="w-full h-full object-cover" />
                       ) : (
                         <Package className="w-6 h-6 text-gray-300 m-auto block mt-4" />
                       )}

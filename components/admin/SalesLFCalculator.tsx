@@ -93,8 +93,8 @@ export function SalesLFCalculator({
     clearQuoteDraft();
   }, [initialDraft]);
 
-  const materials = rates?.materials ?? [];
-  const laminations = rates?.laminations ?? [];
+  const materials = useMemo(() => rates?.materials ?? [], [rates?.materials]);
+  const laminations = useMemo(() => rates?.laminations ?? [], [rates?.laminations]);
 
   useEffect(() => {
     fetch("/api/settings/business-public")

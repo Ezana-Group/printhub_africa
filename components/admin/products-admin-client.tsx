@@ -3,6 +3,7 @@
 import { useMemo, useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   type ColumnDef,
   type SortingState,
@@ -247,7 +248,7 @@ export function ProductsAdminClient({
           return (
             <div className="h-12 w-12 rounded-md bg-[#F3F4F6] overflow-hidden shrink-0 flex items-center justify-center">
               {src ? (
-                <img src={src} alt="" className="h-full w-full object-cover" />
+                <Image src={src} alt="" width={48} height={48} className="h-full w-full object-cover" />
               ) : (
                 <Box className="h-5 w-5 text-[#9CA3AF]" />
               )}

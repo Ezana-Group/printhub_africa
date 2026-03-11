@@ -51,8 +51,8 @@ export function AdminLFCalculator() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyFilter, setHistoryFilter] = useState("");
 
-  const materials = rates?.materials ?? [];
-  const laminations = rates?.laminations ?? [];
+  const materials = useMemo(() => rates?.materials ?? [], [rates?.materials]);
+  const laminations = useMemo(() => rates?.laminations ?? [], [rates?.laminations]);
 
   useEffect(() => {
     if (materials.length && !materialCode) setMaterialCode(materials[0].code);
@@ -173,7 +173,7 @@ export function AdminLFCalculator() {
         }
       })
       .catch(() => setLfPrinters([]));
-  }, []);
+  }, [selectedPrinterId]);
 
   const handleSaveToHistory = async () => {
     if (!breakdown || !mat) return;

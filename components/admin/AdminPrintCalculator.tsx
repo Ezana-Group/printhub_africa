@@ -131,7 +131,7 @@ export function AdminPrintCalculator() {
         }
       })
       .catch(() => setPrinterOptions([]));
-  }, []);
+  }, [selectedPrinterId]);
 
   useEffect(() => {
     if (materialTypes.length && !materialType) {
@@ -148,7 +148,7 @@ export function AdminPrintCalculator() {
       const first = byMaterialType[materialType]?.[0]?.color;
       setColorChoice(first ? (COLOUR_PILLS.find((p) => colorMatches(first, p.id))?.id ?? "") : COLOUR_PILLS[0]?.id ?? "");
     }
-  }, [materialType, availableColorsForType, byMaterialType]);
+  }, [materialType, availableColorsForType, byMaterialType, colorChoice]);
 
   const job: PrintJob = useMemo(
     () => ({
