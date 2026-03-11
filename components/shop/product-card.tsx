@@ -40,7 +40,17 @@ export function ProductCard({ id, name, slug, image, basePrice, comparePrice, ca
         {image ? (
           <Image src={image} alt={name} fill className="object-cover transition group-hover:scale-105" sizes="(max-width:768px) 100vw, 33vw" />
         ) : (
-          <div className="flex h-full items-center justify-center text-slate-400">No image</div>
+          <Image
+            src={
+              name.toLowerCase().includes("banner")
+                ? "/images/products/vinyl-banner.webp"
+                : "/images/products/3d-keyholder.webp"
+            }
+            alt={name}
+            fill
+            className="object-cover opacity-60"
+            sizes="(max-width:768px) 100vw, 33vw"
+          />
         )}
         {category && (
           <span className="absolute left-2 top-2 rounded-lg bg-white/90 px-2 py-0.5 text-xs font-medium text-slate-700">

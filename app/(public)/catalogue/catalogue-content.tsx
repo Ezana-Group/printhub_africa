@@ -37,6 +37,17 @@ interface CatalogueItemSummary {
   isPopular: boolean;
 }
 
+const CATEGORY_IMAGES: Record<string, string> = {
+  "home-decor": "/images/catalogue/category-home-decor.webp",
+  "phone-tech": "/images/catalogue/category-phone-tech.webp",
+  "toys-games": "/images/catalogue/category-toys.webp",
+  tools: "/images/catalogue/category-tools.webp",
+  jewellery: "/images/catalogue/category-jewellery.webp",
+  education: "/images/catalogue/category-education.webp",
+  "office-desk": "/images/catalogue/category-office.webp",
+  "kenya-collection": "/images/catalogue/category-kenya.webp",
+};
+
 const SORT_OPTIONS = [
   { value: "featured", label: "Featured" },
   { value: "newest", label: "New Arrivals" },
@@ -131,16 +142,22 @@ export function CatalogueContent() {
               <Link
                 key={cat.id}
                 href={category === cat.slug ? "/catalogue" : `/catalogue?category=${encodeURIComponent(cat.slug)}`}
-                className={`relative aspect-[4/3] rounded-2xl overflow-hidden border-2 transition ${
+                className={`group relative aspect-[4/3] rounded-2xl overflow-hidden border-2 transition ${
                   category === cat.slug ? "border-primary" : "border-slate-200 hover:border-orange-400"
                 }`}
               >
-                {cat.imageUrl ? (
-                  <Image src={cat.imageUrl} alt={cat.name} fill className="object-cover" sizes="(max-width:768px) 50vw, 20vw" />
+                {(cat.imageUrl || CATEGORY_IMAGES[cat.slug]) ? (
+                  <Image
+                    src={cat.imageUrl || CATEGORY_IMAGES[cat.slug] || "/images/products/product-placeholder.webp"}
+                    alt={cat.name}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    sizes="(max-width:768px) 50vw, 20vw"
+                  />
                 ) : (
                   <div className="absolute inset-0 bg-slate-200" />
                 )}
-                <div className="absolute inset-0 bg-black/50" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                 <div className="absolute inset-0 flex flex-col justify-end p-3">
                   <span className="font-semibold text-white">{cat.name}</span>
                   <span className="text-xs text-white/80">{cat.itemCount} items</span>

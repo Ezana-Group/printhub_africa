@@ -12,18 +12,14 @@ import {
 } from "@/components/services";
 import { getBusinessPublic } from "@/lib/business-public";
 
-// Theme-appropriate: 3D printing, FDM/resin, workshop (dark + orange brand)
-const HERO_IMAGE =
-  "https://images.unsplash.com/photo-1612815154858-60aa4c59eaa6?w=1600&q=85&auto=format";
-const WHAT_IS_IMAGE =
-  "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&q=85&auto=format";
-const FILE_REQ_IMAGE =
-  "https://images.unsplash.com/photo-1581093450021-4a7360e9a6b5?w=700&q=85&auto=format";
-const CTA_BG_IMAGE =
-  "https://images.unsplash.com/photo-1612815154858-60aa4c59eaa6?w=1600&q=75&auto=format";
+// Local images (WebP) — 3D printing hero and sections
+const HERO_IMAGE = "/images/services/3d-printing-hero.webp";
+const WHAT_IS_IMAGE = "/images/services/3d-objects.webp";
+const FILE_REQ_IMAGE = "/images/services/3d-nozzle.webp";
+const CTA_BG_IMAGE = "/images/services/3d-printing-hero.webp";
 
-const FDM_IMAGE = "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=500&q=80&auto=format";
-const RESIN_IMAGE = "https://images.unsplash.com/photo-1559304787-952b5a5c7c8f?w=500&q=80&auto=format";
+const FDM_IMAGE = "/images/services/3d-nozzle.webp";
+const RESIN_IMAGE = "/images/services/3d-objects.webp";
 
 export type Material3D = {
   title: string;
@@ -44,7 +40,7 @@ const MATERIALS_3D: Material3D[] = [
     title: "PLA (Polylactic Acid)",
     badge: "Most popular",
     badgeColor: "#22c55e",
-    imageSrc: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=80&auto=format",
+    imageSrc: "/images/services/3d-objects.webp",
     imageAlt: "PLA filament 3D printing",
     description:
       "The most popular 3D printing material. Biodegradable, easy to print, and available in a huge range of colours. Perfect for prototypes, display models, gifts, and non-functional parts.",
@@ -63,7 +59,7 @@ const MATERIALS_3D: Material3D[] = [
     title: "PLA+ (Enhanced PLA)",
     badge: "Step up",
     badgeColor: "#0d9488",
-    imageSrc: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=80&auto=format",
+    imageSrc: "/images/services/3d-objects.webp",
     imageAlt: "PLA+ filament",
     description:
       "A step up from standard PLA — tougher, less brittle, and with a slightly higher temperature resistance. Same ease of printing as PLA but with better impact resistance.",
@@ -81,7 +77,7 @@ const MATERIALS_3D: Material3D[] = [
     title: "PETG (Polyethylene Terephthalate Glycol)",
     badge: "Versatile",
     badgeColor: "#2563eb",
-    imageSrc: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=400&q=80&auto=format",
+    imageSrc: "/images/services/3d-nozzle.webp",
     imageAlt: "PETG 3D printing",
     description:
       "The middle ground between PLA and ABS. Strong, slightly flexible, chemically resistant, and safer to print than ABS (no fumes). PETG is moisture-resistant — ideal for outdoor or humid environments.",
@@ -100,7 +96,7 @@ const MATERIALS_3D: Material3D[] = [
     title: "ABS (Acrylonitrile Butadiene Styrene)",
     badge: "Engineering",
     badgeColor: "var(--brand-orange)",
-    imageSrc: "https://images.unsplash.com/photo-1565043666747-69f6646db940?w=400&q=80&auto=format",
+    imageSrc: "/images/services/3d-prototype.webp",
     imageAlt: "ABS engineering parts",
     description:
       "The engineering workhorse. Tough, heat-resistant, and machinable. ABS can be post-processed with acetone vapour for an ultra-smooth surface finish. Slightly more challenging to print — we've mastered it.",
@@ -118,7 +114,7 @@ const MATERIALS_3D: Material3D[] = [
     title: "TPU (Thermoplastic Polyurethane)",
     badge: "Flexible",
     badgeColor: "#7c3aed",
-    imageSrc: "https://images.unsplash.com/photo-1559304787-952b5a5c7c8f?w=400&q=80&auto=format",
+    imageSrc: "/images/services/3d-objects.webp",
     imageAlt: "TPU flexible 3D print",
     description:
       "The rubber of 3D printing. Flexible, shock-absorbing, and wear-resistant. TPU can be stretched, compressed, and bent repeatedly without breaking.",
@@ -136,7 +132,7 @@ const MATERIALS_3D: Material3D[] = [
     title: "Resin (Standard MSLA)",
     badge: "Detail",
     badgeColor: "#ca8a04",
-    imageSrc: "https://images.unsplash.com/photo-1612815154858-60aa4c59eaa6?w=400&q=80&auto=format",
+    imageSrc: "/images/services/3d-printing-hero.webp",
     imageAlt: "Resin 3D printing",
     description:
       "For when detail is everything. Resin printing produces incredibly smooth surfaces with layer lines almost invisible to the naked eye. The go-to material for jewellery, medical, dental, and collectibles.",
@@ -155,7 +151,7 @@ const MATERIALS_3D: Material3D[] = [
     title: "Nylon (PA12)",
     badge: "Industrial",
     badgeColor: "#6b7280",
-    imageSrc: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=80&auto=format",
+    imageSrc: "/images/services/3d-objects.webp",
     imageAlt: "Nylon 3D printing",
     description:
       "Industrial-grade strength and flexibility combined. Nylon is tough, fatigue-resistant, and slightly flexible — ideal for functional parts that need to flex without breaking. Excellent chemical resistance.",
@@ -175,7 +171,7 @@ const APPLICATIONS_3D = [
   {
     number: "01",
     title: "Prototyping & Product Development",
-    imageSrc: "https://images.unsplash.com/photo-1581093450021-4a7360e9a6b5?w=600&q=80&auto=format",
+    imageSrc: "/images/services/3d-prototype.webp",
     imageAlt: "3D printed product prototype",
     copy: "Before you spend millions on tooling or manufacturing, 3D print your prototype. Test form, fit, and function in days — not weeks. Iterate fast, fail cheap, succeed with confidence. Perfect for: startups, inventors, product designers, engineers.",
     imageLeft: true,
@@ -183,7 +179,7 @@ const APPLICATIONS_3D = [
   {
     number: "02",
     title: "Architecture & Real Estate",
-    imageSrc: "https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=600&q=80&auto=format",
+    imageSrc: "/images/services/3d-objects.webp",
     imageAlt: "3D printed architectural model",
     copy: "Architectural scale models, building presentations, and interior design mockups that make your project real before ground is broken. Impress clients, win pitches, and communicate your vision precisely.",
     imageLeft: false,
@@ -191,7 +187,7 @@ const APPLICATIONS_3D = [
   {
     number: "03",
     title: "Jewellery & Fashion",
-    imageSrc: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=600&q=80&auto=format",
+    imageSrc: "/images/catalogue/category-jewellery.webp",
     imageAlt: "3D printed jewellery and accessories",
     copy: "Custom rings, pendants, bracelets, and fashion accessories in resin or wax-castable material for lost-wax casting in gold or silver. Work with our team to go from sketch to castable model.",
     imageLeft: true,
@@ -199,7 +195,7 @@ const APPLICATIONS_3D = [
   {
     number: "04",
     title: "Education & Research",
-    imageSrc: "https://images.unsplash.com/photo-1564325724739-bae0bd08762c?w=600&q=80&auto=format",
+    imageSrc: "/images/catalogue/category-education.webp",
     imageAlt: "3D printed educational models",
     copy: "Universities, schools, and research institutions across Kenya use PrintHub for anatomical models, scientific apparatus, historical artefact reproductions, and teaching aids. Special institutional pricing available.",
     imageLeft: false,
@@ -207,7 +203,7 @@ const APPLICATIONS_3D = [
   {
     number: "05",
     title: "Medical & Healthcare",
-    imageSrc: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&q=80&auto=format",
+    imageSrc: "/images/services/3d-objects.webp",
     imageAlt: "3D printed medical model",
     copy: "Patient-specific anatomical models for surgical planning, medical device prototypes, prosthetic components, and orthotic devices. We work with hospitals and clinics across Nairobi and beyond. Note: Medical devices must be verified by qualified medical professionals.",
     imageLeft: true,
@@ -215,7 +211,7 @@ const APPLICATIONS_3D = [
   {
     number: "06",
     title: "Consumer Products & Gifts",
-    imageSrc: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80&auto=format",
+    imageSrc: "/images/products/product-placeholder.webp",
     imageAlt: "Custom 3D printed consumer products and gifts",
     copy: "Custom gifts, personalised homeware, phone cases, cable organisers, plant pots, trophy toppers, keyring charms, and branded giveaways. One unit minimum — we can print a single custom piece just for you.",
     imageLeft: false,
@@ -223,7 +219,7 @@ const APPLICATIONS_3D = [
   {
     number: "07",
     title: "Industrial & Engineering",
-    imageSrc: "https://images.unsplash.com/photo-1565043666747-69f6646db940?w=600&q=80&auto=format",
+    imageSrc: "/images/services/3d-prototype.webp",
     imageAlt: "3D printed industrial engineering parts",
     copy: "Jigs and fixtures, tooling aids, replacement parts, manifolds, brackets, and custom machinery components. Functional prints in ABS, PETG, and Nylon built to your engineering tolerances.",
     imageLeft: true,
@@ -231,7 +227,7 @@ const APPLICATIONS_3D = [
   {
     number: "08",
     title: "Art, Sculpture & Culture",
-    imageSrc: "https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&q=80&auto=format",
+    imageSrc: "/images/products/3d-figurine.webp",
     imageAlt: "3D printed art and sculpture",
     copy: "Artists, sculptors, and cultural institutions trust PrintHub to produce exhibition pieces, heritage reproductions, interactive installations, and large-scale sculptures. We've reproduced artefacts for Kenya's top museums.",
     imageLeft: false,

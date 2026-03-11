@@ -1,7 +1,7 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Printer, Box } from "lucide-react";
 
 const SERVICES = [
   {
@@ -10,7 +10,8 @@ const SERVICES = [
     description: "Banners, billboards, vehicle wraps, canvas, signage, and more.",
     bullets: ["Vinyl & flex banners", "Vehicle wraps & branding", "Canvas prints", "Event backdrops"],
     cta: "Explore Large Format",
-    icon: Printer,
+    image: "/images/services/large-format-hero.webp",
+    alt: "Large format printing — banners, signage, vehicle wraps",
   },
   {
     title: "3D Printing",
@@ -18,7 +19,8 @@ const SERVICES = [
     description: "From prototypes to finished products. Multiple materials and finishes.",
     bullets: ["FDM & resin printing", "Custom designs", "Ready-made products", "Industrial & consumer"],
     cta: "Explore 3D Printing",
-    icon: Box,
+    image: "/images/services/3d-printing-hero.webp",
+    alt: "3D printing — FDM and resin printing Kenya",
   },
 ];
 
@@ -38,8 +40,15 @@ export function ServicesOverview() {
               key={service.href}
               className="overflow-hidden border-0 bg-white rounded-3xl shadow-lg shadow-slate-200/60 hover:shadow-xl hover:shadow-slate-200/80 transition-all duration-300 group hover:-translate-y-1"
             >
-              <div className="aspect-[5/3] bg-gradient-to-br from-slate-100 to-slate-200 group-hover:from-primary/10 group-hover:to-primary/5 transition-colors flex items-center justify-center">
-                <service.icon className="h-16 w-16 text-slate-500 group-hover:text-primary transition-colors" />
+              <div className="relative aspect-[5/3] rounded-t-3xl overflow-hidden">
+                <Image
+                  src={service.image}
+                  alt={service.alt}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
               </div>
               <CardContent className="p-8">
                 <h3 className="font-display text-xl font-bold text-slate-900">{service.title}</h3>

@@ -33,6 +33,18 @@ export const metadata: Metadata = {
     title: "PrintHub | Printing the Future, Made in Kenya",
     description: "Large format & 3D printing. Shop online or upload your design.",
     locale: "en_KE",
+    images: [
+      {
+        url: "/images/og/default-og.webp",
+        width: 1200,
+        height: 630,
+        alt: "PrintHub — Large Format & 3D Printing Kenya",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: ["/images/og/default-og.webp"],
   },
 };
 

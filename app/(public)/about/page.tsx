@@ -15,13 +15,12 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       title: `About ${business.businessName}`,
       description: description,
-      images: ["/og-about.jpg"],
+      images: ["/images/og/default-og.webp"],
     },
   };
 }
 
-const STORY_IMAGE =
-  "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800";
+const STORY_IMAGE = "/images/about/production-floor.webp";
 
 export default async function AboutPage() {
   const business = await getBusinessPublic();
@@ -102,7 +101,7 @@ export default async function AboutPage() {
             <div className="relative aspect-[4/3] rounded overflow-hidden border-l-4 border-primary">
               <Image
                 src={STORY_IMAGE}
-                alt="PrintHub production floor — printer in action"
+                alt="PrintHub production floor — Nairobi"
                 fill
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, 400px"
@@ -131,7 +130,8 @@ export default async function AboutPage() {
                 subtitle: "Printing",
                 desc: "Banners, vehicle wraps, signage, canvas, wallpaper and floor graphics. Any size. Any substrate.",
                 cta: "Explore service",
-                href: "/services/large-format",
+                href: "/services/large-format-printing",
+                image: "/images/services/large-format-hero.webp",
               },
               {
                 num: "02",
@@ -140,6 +140,7 @@ export default async function AboutPage() {
                 desc: "FDM and resin printing for prototypes, products, architecture, jewellery and engineering parts.",
                 cta: "Explore service",
                 href: "/services/3d-printing",
+                image: "/images/services/3d-printing-hero.webp",
               },
               {
                 num: "03",
@@ -148,6 +149,7 @@ export default async function AboutPage() {
                 desc: "Ready-made and custom printed products shipped across Kenya.",
                 cta: "Browse shop",
                 href: "/shop",
+                image: "/images/services/banner-outdoor.webp",
               },
             ].map((card) => (
               <ServiceCard key={card.num} {...card} />
@@ -257,8 +259,11 @@ export default async function AboutPage() {
       </section>
 
       {/* SECTION 6 — LOCATION & CONTACT CTA */}
-      <section className="bg-primary py-20 md:py-28 px-4 md:px-6 lg:px-8">
-        <div className="container max-w-6xl mx-auto">
+      <section className="relative bg-primary py-20 md:py-28 px-4 md:px-6 lg:px-8 overflow-hidden">
+        <div className="absolute inset-0">
+          <Image src="/images/about/nairobi.webp" alt="" fill className="object-cover opacity-20" sizes="100vw" />
+        </div>
+        <div className="container max-w-6xl mx-auto relative z-10">
           <h2 className="font-display text-3xl md:text-[48px] font-bold text-black leading-tight mb-4">
             Come See Us in
             <br />
@@ -320,6 +325,7 @@ function ServiceCard({
   desc,
   cta,
   href,
+  image,
 }: {
   num: string;
   title: string;
@@ -327,22 +333,30 @@ function ServiceCard({
   desc: string;
   cta: string;
   href: string;
+  image?: string;
 }) {
   return (
     <Link
       href={href}
-      className="group block bg-[#1A1A1A] border border-white/[0.07] rounded-lg p-6 md:p-8 transition-all duration-400 hover:border-primary/40 hover:-translate-y-1 relative overflow-hidden"
+      className="group block bg-[#1A1A1A] border border-white/[0.07] rounded-lg overflow-hidden transition-all duration-400 hover:border-primary/40 hover:-translate-y-1 relative"
     >
-      <span
-        className="absolute top-4 right-4 font-display text-[80px] font-bold text-white/[0.08] leading-none"
-        aria-hidden
-      >
-        {num}
-      </span>
-      <div className="relative">
-        <div className="w-10 h-10 mb-4 flex items-center justify-center">
-          <PrinterIcon className="w-8 h-8 text-white/80" />
+      {image && (
+        <div className="relative h-36 w-full overflow-hidden">
+          <Image src={image} alt="" fill className="object-cover opacity-80 group-hover:opacity-90 transition-opacity" sizes="(max-width: 768px) 100vw, 33vw" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#1A1A1A] to-transparent" />
         </div>
+      )}
+      <div className="relative p-6 md:p-8">
+        <span
+          className="absolute top-4 right-4 font-display text-[80px] font-bold text-white/[0.08] leading-none"
+          aria-hidden
+        >
+          {num}
+        </span>
+        <div className="relative">
+          <div className="w-10 h-10 mb-4 flex items-center justify-center">
+            <PrinterIcon className="w-8 h-8 text-white/80" />
+          </div>
         <span className="font-mono text-primary text-sm">{num}</span>
         <h3 className="font-display text-xl md:text-2xl font-bold text-white mt-1">
           {title}
@@ -357,8 +371,9 @@ function ServiceCard({
         <span className="inline-block mt-4 text-primary font-medium text-sm group-hover:underline">
           {cta} →
         </span>
+        </div>
+        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-400" />
       </div>
-      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-400" />
     </Link>
   );
 }

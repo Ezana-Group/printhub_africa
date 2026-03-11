@@ -1,27 +1,35 @@
 import Link from "next/link";
-import { FileUp, Calculator, CreditCard, Truck } from "lucide-react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 
 const STEPS = [
   {
-    icon: FileUp,
+    number: "01",
     title: "Choose or upload",
     description: "Pick a service or upload your own design",
+    image: "/images/how-it-works/step1-design.webp",
+    alt: "Designer working on creative project",
   },
   {
-    icon: Calculator,
+    number: "02",
     title: "Get a quote",
     description: "Instant estimate or custom quote from our team",
+    image: "/images/how-it-works/step2-quote.webp",
+    alt: "Getting an online quote",
   },
   {
-    icon: CreditCard,
+    number: "03",
     title: "Pay securely",
     description: "M-Pesa, card, or bank transfer",
+    image: "/images/how-it-works/step3-payment.webp",
+    alt: "Secure mobile payment",
   },
   {
-    icon: Truck,
+    number: "04",
     title: "We print & deliver",
     description: "Nationwide delivery across Kenya",
+    image: "/images/how-it-works/step4-delivery.webp",
+    alt: "Package delivered to customer",
   },
 ];
 
@@ -37,14 +45,23 @@ export function HowItWorks() {
         </p>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 max-w-6xl mx-auto">
           {STEPS.map((step, i) => (
-            <div key={i} className="relative text-center">
-              <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary mb-5 shadow-inner">
-                <step.icon className="h-7 w-7" />
+            <div key={step.number} className="flex flex-col items-center text-center">
+              <div className="relative w-full h-40 rounded-xl overflow-hidden mb-4">
+                <Image
+                  src={step.image}
+                  alt={step.alt}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 50vw, 25vw"
+                />
+                <div className="absolute top-3 left-3 bg-primary text-white text-sm font-mono font-bold px-2 py-1 rounded">
+                  {step.number}
+                </div>
               </div>
               <p className="font-display font-semibold text-slate-900">{step.title}</p>
               <p className="text-sm text-slate-600 mt-1">{step.description}</p>
               {i < STEPS.length - 1 && (
-                <div className="hidden lg:block absolute top-7 left-[55%] w-[90%] h-px bg-slate-200" />
+                <div className="hidden lg:block absolute top-24 left-[55%] w-[90%] h-px bg-slate-200" />
               )}
             </div>
           ))}

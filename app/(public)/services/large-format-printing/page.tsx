@@ -13,15 +13,11 @@ import { LargeFormatServiceGrid } from "@/components/services/LargeFormatService
 import { Button } from "@/components/ui/button";
 import { getBusinessPublic } from "@/lib/business-public";
 
-// Theme-appropriate: large format / print shop / signage (dark + orange brand)
-const HERO_IMAGE =
-  "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1600&q=85&auto=format";
-const CAPABILITIES_IMAGE =
-  "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&q=85&auto=format";
-const APPLICATIONS_IMAGE_1 =
-  "https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=800&q=85&auto=format";
-const APPLICATIONS_IMAGE_2 =
-  "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=500&q=85&auto=format";
+// Local images (WebP) — large format / print shop / signage
+const HERO_IMAGE = "/images/services/large-format-hero.webp";
+const CAPABILITIES_IMAGE = "/images/services/large-format-hero.webp";
+const APPLICATIONS_IMAGE_1 = "/images/services/event-backdrop.webp";
+const APPLICATIONS_IMAGE_2 = "/images/services/rollup-banner.webp";
 
 const SERVICE_CARDS = [
   {
@@ -137,7 +133,7 @@ const SERVICE_CARDS = [
 const LARGE_FORMAT_MATERIALS = [
   {
     title: "Outdoor Vinyl (Calendared)",
-    imageSrc: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80&auto=format",
+    imageSrc: "/images/services/banner-outdoor.webp",
     imageAlt: "Outdoor vinyl banner material",
     description:
       "Best for outdoor banners, building signage, short-to-medium term applications. UV and water resistant. Cost-effective for large runs.",
@@ -149,7 +145,7 @@ const LARGE_FORMAT_MATERIALS = [
   },
   {
     title: "Cast Vinyl (Premium Outdoor)",
-    imageSrc: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&q=80&auto=format",
+    imageSrc: "/images/services/vehicle-wrap.webp",
     imageAlt: "Cast vinyl for vehicle wraps",
     description:
       "Best for vehicle wraps, curved surfaces, long-term outdoor signage. Conforms to complex curves without lifting or wrinkling.",
@@ -161,7 +157,7 @@ const LARGE_FORMAT_MATERIALS = [
   },
   {
     title: "Backlit Film",
-    imageSrc: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=400&q=80&auto=format",
+    imageSrc: "/images/services/event-backdrop.webp",
     imageAlt: "Backlit film for lightboxes",
     description:
       "Best for lightboxes, illuminated signage, airport displays, retail. Produces vivid, saturated colours when backlit.",
@@ -173,7 +169,7 @@ const LARGE_FORMAT_MATERIALS = [
   },
   {
     title: "Canvas",
-    imageSrc: "https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=400&q=80&auto=format",
+    imageSrc: "/images/services/large-format-hero.webp",
     imageAlt: "Gallery-quality canvas print",
     description:
       "Best for art reproduction, wall décor, hotel/restaurant branding, gifts. Available with gallery wrap stretcher frame or flat for framing.",
@@ -185,7 +181,7 @@ const LARGE_FORMAT_MATERIALS = [
   },
   {
     title: "Mesh Banner",
-    imageSrc: "https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=400&q=80&auto=format",
+    imageSrc: "/images/services/banner-outdoor.webp",
     imageAlt: "Mesh banner for construction",
     description:
       "Best for construction hoardings, scaffolding, outdoor fencing, sports events. Ideal for high-wind locations. Reduces structural load by 50%.",
@@ -197,7 +193,7 @@ const LARGE_FORMAT_MATERIALS = [
   },
   {
     title: "Fabric / Dye-Sub Textile",
-    imageSrc: "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=400&q=80&auto=format",
+    imageSrc: "/images/services/event-backdrop.webp",
     imageAlt: "Dye-sublimation fabric printing",
     description:
       "Best for exhibition stands, event backdrops, hospitality, table throws, flags. Lightweight, washable, reusable. Colours embedded in fibres.",
