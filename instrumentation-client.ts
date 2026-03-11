@@ -8,6 +8,5 @@ if (dsn) {
     tracesSampleRate: process.env.NODE_ENV === "development" ? 1.0 : 0.1,
     debug: false,
     environment: process.env.NODE_ENV,
-    telemetry: false,
   });
 }
