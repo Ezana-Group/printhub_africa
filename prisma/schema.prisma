@@ -32,14 +32,10 @@ model User {
   preferredLanguage   String?   @default("en")
   failedLoginAttempts Int       @default(0)
   lockedUntil         DateTime?
-  // Staff invite & danger zone
+  // Staff invite
   inviteToken         String?
   inviteTokenExpiry   DateTime?
   status              String?   @default("ACTIVE") // ACTIVE | INVITE_PENDING | DEACTIVATED
-  isAnonymised        Boolean   @default(false)
-  anonymisedAt        DateTime?
-  totpSecret           String?   // 2FA for staff
-  dateOfBirth         DateTime?
 
   accounts         Account[]
   sessions         Session[]
@@ -47,22 +43,16 @@ model User {
   orders           Order[]
   productReviews   ProductReview[]
   uploadedFiles    UploadedFile[]
-  printQuotes       PrintQuote[]
-  quotes            Quote[]
-  couponUsages      CouponUsage[]
-  wishlists         Wishlist[]
-  notifications     Notification[]
-  corporateAccount  CorporateAccount?
-  staff             Staff?
-  supportTickets    SupportTicket[]
-  ticketMessages    TicketMessage[]
-  auditLogs         AuditLog[]
-  threeDConsumableMovements ThreeDConsumableMovement[]
-  permissions       UserPermission[]
-  referralCode      ReferralCode?
-  notificationPrefs UserNotificationPrefs?
-  savedAddresses    SavedAddress[]
-  loyaltyAccount    LoyaltyAccount?
+  printQuotes      PrintQuote[]
+  quotes           Quote[]
+  couponUsages     CouponUsage[]
+  wishlists        Wishlist[]
+  notifications    Notification[]
+  corporateAccount CorporateAccount?
+  staff            Staff?
+  supportTickets   SupportTicket[]
+  ticketMessages   TicketMessage[]
+  auditLogs        AuditLog[]
 }
 
 model Address {
@@ -438,7 +428,6 @@ enum OrderStatus {
   PROCESSING
   PRINTING
   QUALITY_CHECK
-  READY_FOR_COLLECTION
   SHIPPED
   DELIVERED
   CANCELLED
@@ -450,7 +439,6 @@ enum OrderType {
   CUSTOM_PRINT  // legacy; prefer 3D_PRINT for new orders
   LARGE_FORMAT
   THREE_D_PRINT // 3D print jobs (custom FDM/resin)
-  POD           // Print-on-Demand catalogue
   QUOTE
 }
 
@@ -472,13 +460,34 @@ model Order {
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
-  items              OrderItem[]
-  timeline           OrderTimeline[]
-  trackingEvents     OrderTrackingEvent[]
-  shippingAddress    ShippingAddress?
-  payments           Payment[]
-  refunds            Refund[]
-  invoices           Invoice[]
+  // Cancellation
+  cancelledAt   DateTime?
+  cancelReason  String?
+
+  // Manual payment (admin-confirmed outside system)
+  manualPaymentRef    String?
+  manualPaymentNotes String?
+  manualPaymentBy    String?
+
+  // Payment link for recovery (valid 24h)
+  paymentLinkToken    String?
+  paymentLinkExpiresAt DateTime?
+
+  // Last M-Pesa failure reason (from callback resultDesc)
+  mpesaFailureReason String?
+
+  // Fulfilment
+  trackingNumber String?
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+  paidAt         DateTime?
+
+  items           OrderItem[]
+  timeline        OrderTimeline[]
+  shippingAddress ShippingAddress?
+  payments        Payment[]
+  refunds         Refund[]
+  invoices        Invoice[]
 }
 
 model OrderItem {
@@ -487,12 +496,10 @@ model OrderItem {
   order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId      String?
   product        Product? @relation(fields: [productId], references: [id])
-  catalogueItemId String?
-  catalogueItem   CatalogueItem? @relation(fields: [catalogueItemId], references: [id])
   variantId      String?
   quantity       Int
   unitPrice      Decimal  @db.Decimal(12, 2)
-  customizations Json?    // for POD: { materialCode, materialName, colourHex, colourName, stlFileRef?, weightGrams?, printTimeHours? }
+  customizations Json?
   uploadedFileId String?
   instructions   String?
   createdAt      DateTime @default(now())
@@ -502,7 +509,6 @@ model OrderItem {
   productVariantId String?
 
   @@index([orderId])
-  @@index([catalogueItemId])
 }
 
 model OrderTimeline {
@@ -619,44 +625,85 @@ enum UploadedFileType {
   STL
   OBJ
   FBX
+  THREE_MF
+  STEP
   AI
   PDF
   PSD
-  PNG
-  JPEG
+  EPS
   SVG
   DXF
   DWG
+  PNG
+  JPEG
+  WEBP
+  TIFF
+  DOCX
+  XLSX
+  OTHER
 }
 
 enum UploadedFileStatus {
+  UPLOADING
   UPLOADED
+  VIRUS_SCANNING
+  CLEAN
+  INFECTED
   REVIEWING
   APPROVED
   REJECTED
   PROCESSING
+  EXPIRED
+}
+
+enum UploadContext {
+  CUSTOMER_3D_PRINT
+  CUSTOMER_LARGE_FORMAT
+  CUSTOMER_QUOTE
+  CUSTOMER_GENERAL
+  CUSTOMER_PAYMENT_PROOF
+  ADMIN_CATALOGUE_STL
+  ADMIN_CATALOGUE_PHOTO
+  ADMIN_PRODUCT_IMAGE
+  ADMIN_CATEGORY_IMAGE
+  ADMIN_LOGO
+  ADMIN_OG_IMAGE
+  USER_AVATAR
+  STAFF_AVATAR
 }
 
 model UploadedFile {
-  id           String             @id @default(cuid())
-  userId       String
-  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orderId      String?
-  filename     String
-  originalName String
-  mimeType     String
-  size         Int
-  url          String
-  thumbnailUrl String?
-  fileType     UploadedFileType
-  status       UploadedFileStatus @default(UPLOADED)
-  reviewedBy   String?
-  reviewNotes  String?
-  printVolume  Float? // cm³ for 3D
-  printWeight  Float? // grams
-  printTime    Float? // hours
-  dimensions   Json?
-  createdAt    DateTime           @default(now())
+  id               String             @id @default(cuid())
+  userId           String?
+  user             User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  orderId          String?
+  quoteId          String?
+  quote            Quote?             @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  uploadedByAdmin  Boolean            @default(false)
+  filename         String
+  originalName     String
+  storageKey       String?            // R2 key
+  bucket           String?            // "private" | "public"
+  folder           String?
+  mimeType         String
+  size             Int
+  url              String?            // public CDN URL when bucket=public
+  ext              String?
+  uploadContext    UploadContext?
+  thumbnailUrl     String?
+  fileType         UploadedFileType
+  status           UploadedFileStatus @default(UPLOADED)
+  virusScanStatus  String?            // "pending" | "clean" | "infected" | "error"
+  virusScanAt      DateTime?
+  reviewedBy       String?
+  reviewNotes      String?
+  rejectionReason  String?
+  printVolume      Float?
+  printWeight      Float?
+  printTime        Float?
+  dimensions       Json?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
 
   printQuotes PrintQuote[]
 }
@@ -745,6 +792,8 @@ model Quote {
   referralSource    String?           // UTM / marketing
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
+
+  uploadedFiles     UploadedFile[]
 
   @@index([customerId])
   @@index([assignedStaffId])
@@ -1111,11 +1160,9 @@ model ThreeDConsumable {
   id                String   @id @default(cuid())
   kind              String   // FILAMENT, RESIN, OTHER
   name              String   // e.g. "PLA", "Resin 1L", "Nozzle 0.4mm"
-  specification     String?  // e.g. "Red 1kg", "Clear" (colour/spec name)
-  colourHex         String?  // hex for swatch e.g. "#dc2626"
+  specification     String?  // e.g. "Red 1kg", "Clear"
   brand             String?  // optional e.g. "eSUN"
-  quantity          Int      @default(0)   // number of spools (FILAMENT)
-  weightPerSpoolKg  Float?   // kg per spool – FILAMENT; for total weight calc
+  quantity          Int      @default(0)
   lowStockThreshold Int      @default(2)
   location          String?
   costPerKgKes      Float?   // cost per kg (KES) – FILAMENT; used by 3D calculator
@@ -1123,28 +1170,6 @@ model ThreeDConsumable {
   notes             String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
-
-  movements ThreeDConsumableMovement[]
-}
-
-// Stock movement history for 3D consumables (filament receive, consume, adjust)
-model ThreeDConsumableMovement {
-  id            String   @id @default(cuid())
-  consumableId  String
-  consumable    ThreeDConsumable @relation(fields: [consumableId], references: [id], onDelete: Cascade)
-  type          String   // RECEIVED | CONSUMED | ADJUSTMENT | RESERVED | RELEASED
-  quantity      Int      // delta: positive = in, negative = out
-  costPerKgKes  Float?   // optional: cost at time of receive (FILAMENT)
-  supplier      String?
-  reference     String?  // PO number, job ref, etc.
-  notes         String?  @db.Text
-  performedById String?
-  performedBy   User?    @relation(fields: [performedById], references: [id])
-  createdAt     DateTime @default(now())
-
-  @@index([consumableId])
-  @@index([createdAt])
-  @@index([performedById])
 }
 
 // ============== STAFF & ADMIN ==============
@@ -1171,16 +1196,9 @@ model AuditLog {
   after     Json?
   ipAddress String?
   timestamp DateTime @default(now())
-  category  String?  // ORDER|PRODUCT|SETTINGS|SECURITY|FINANCE|INVENTORY|CUSTOMER|STAFF|DANGER|GENERAL
-  target    String?
-  targetId  String?
-  details   String?
-  userAgent String?
 
   @@index([userId])
   @@index([entity, entityId])
-  @@index([category])
-  @@index([timestamp])
 }
 
 model SupportTicket {
@@ -1209,593 +1227,4 @@ model TicketMessage {
   createdAt   DateTime      @default(now())
 
   @@index([ticketId])
-}
-
-// ============== LEGAL PAGES & CMS ==============
-model LegalPage {
-  id          String   @id @default(cuid())
-  slug        String   @unique
-  title       String
-  content     String   @db.Text
-  lastUpdated DateTime @default(now())
-  updatedBy   String?
-  version     Int      @default(1)
-  isPublished Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  history LegalPageHistory[]
-}
-
-model LegalPageHistory {
-  id          String    @id @default(cuid())
-  legalPageId String
-  legalPage   LegalPage @relation(fields: [legalPageId], references: [id], onDelete: Cascade)
-  content     String    @db.Text
-  version     Int
-  savedAt     DateTime  @default(now())
-  savedBy     String?
-  changeNote  String?
-
-  @@index([legalPageId])
-}
-
-model FaqCategory {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  icon      String?
-  sortOrder Int      @default(0)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  faqs Faq[]
-}
-
-model Faq {
-  id         String      @id @default(cuid())
-  categoryId String
-  category   FaqCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  question   String
-  answer     String      @db.Text
-  sortOrder  Int         @default(0)
-  isActive   Boolean     @default(true)
-  isPopular  Boolean     @default(false)
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
-  updatedBy  String?
-
-  @@index([categoryId])
-}
-
-model OrderTrackingEvent {
-  id          String   @id @default(cuid())
-  orderId     String
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  status      String
-  title       String
-  description String?
-  isPublic    Boolean  @default(true)
-  location    String?
-  courierRef  String?
-  createdAt   DateTime @default(now())
-  createdBy   String?
-
-  @@index([orderId])
-}
-
-model Courier {
-  id          String   @id @default(cuid())
-  name        String
-  trackingUrl String?
-  logo        String?
-  phone       String?
-  isActive    Boolean  @default(true)
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-// ============== CAREERS ==============
-enum JobType {
-  FULL_TIME
-  PART_TIME
-  CONTRACT
-  INTERNSHIP
-  ATTACHMENT
-}
-
-enum JobStatus {
-  DRAFT
-  PUBLISHED
-  PAUSED
-  CLOSED
-  FILLED
-}
-
-enum ApplicationStatus {
-  NEW
-  REVIEWING
-  SHORTLISTED
-  INTERVIEW_SCHEDULED
-  INTERVIEWED
-  OFFER_MADE
-  HIRED
-  REJECTED
-  WITHDRAWN
-}
-
-model JobListing {
-  id                   String           @id @default(cuid())
-  title                String
-  slug                 String           @unique
-  department           String           // Production | Design | Sales | Operations | Tech
-  type                 JobType
-  location             String           @default("Nairobi, Kenya")
-  isRemote             Boolean          @default(false)
-  description          String          @db.Text
-  responsibilities     String           @db.Text
-  requirements         String           @db.Text
-  niceToHave           String?          @db.Text
-  salaryMin            Int?             // KES per month
-  salaryMax            Int?             // KES per month
-  showSalary           Boolean          @default(false)
-  benefits             String[]         @default([])
-  applicationDeadline  DateTime?
-  status               JobStatus        @default(DRAFT)
-  isFeatured           Boolean          @default(false)
-  sortOrder            Int              @default(0)
-  metaTitle            String?
-  metaDescription      String?
-  customQuestions      Json?            // [{ id, question, type, required, options? }]
-  applications         JobApplication[]
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
-  createdBy            String?
-  publishedAt          DateTime?
-
-  @@index([status])
-  @@index([slug])
-}
-
-model JobApplication {
-  id               String             @id @default(cuid())
-  jobListingId     String
-  jobListing       JobListing         @relation(fields: [jobListingId], references: [id], onDelete: Cascade)
-  firstName        String
-  lastName         String
-  email            String
-  phone            String
-  location         String?
-  coverLetter      String             @db.Text
-  linkedinUrl      String?
-  portfolioUrl     String?
-  cvFileUrl        String             // R2 key or full URL
-  cvFileName       String
-  answers          Json?
-  source           String?
-  referredBy       String?
-  status           ApplicationStatus  @default(NEW)
-  internalNotes    String?            @db.Text
-  reviewedBy       String?
-  reviewedAt       DateTime?
-  interviewDate    DateTime?
-  interviewNotes   String?            @db.Text
-  rejectionReason  String?            @db.Text
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-
-  @@index([jobListingId])
-  @@index([status])
-}
-
-// ============== SETTINGS (SEO, Loyalty, Referral, Discounts, etc.) ==============
-model SeoSettings {
-  id                       String    @id @default("default")
-  siteName                 String    @default("PrintHub")
-  siteTagline              String?
-  metaTitleTemplate        String    @default("{page_title} | PrintHub Kenya")
-  defaultMetaDescription   String?
-  googleVerification       String?
-  bingVerification         String?
-  canonicalDomain          String    @default("https://printhub.africa")
-  twitterHandle            String?
-  twitterCardType          String    @default("summary_large_image")
-  defaultOgImageUrl        String?
-  robotsTxt                String?
-  sitemapIncludePages      Boolean   @default(true)
-  sitemapIncludeProducts   Boolean   @default(true)
-  sitemapIncludeBlog       Boolean   @default(true)
-  sitemapIncludeCategories Boolean   @default(true)
-  sitemapLastGenerated     DateTime?
-  updatedAt                DateTime  @updatedAt
-}
-
-model LoyaltySettings {
-  id                     String   @id @default("default")
-  enabled                Boolean  @default(false)
-  programmeName          String   @default("PrintHub Points")
-  pointsCurrencyPlural   String   @default("Points")
-  pointsCurrencySingular String   @default("Point")
-  pointsPerKesSpent      Float    @default(1)
-  kesPerPointSpent       Float    @default(100)
-  pointsRounding         String   @default("down")
-  pointsValueKes         Float    @default(0.50)
-  minRedemptionPoints    Int      @default(200)
-  maxDiscountPct         Float    @default(20)
-  pointsExpiryMonths     Int      @default(24)
-  tiersEnabled           Boolean  @default(false)
-  bonusRules             Json     @default("[]")
-  tiers                  Json     @default("[]")
-  updatedAt              DateTime @updatedAt
-}
-
-model LoyaltyAccount {
-  id             String   @id @default(cuid())
-  userId         String   @unique
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  pointsBalance  Int      @default(0)
-  pointsEarned   Int      @default(0)
-  pointsRedeemed Int     @default(0)
-  tier           String   @default("BRONZE")
-  lastActivity   DateTime @default(now())
-  createdAt      DateTime @default(now())
-  transactions   LoyaltyTransaction[]
-
-  @@index([userId])
-}
-
-model LoyaltyTransaction {
-  id          String         @id @default(cuid())
-  accountId   String
-  account     LoyaltyAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  type        String         // EARN | REDEEM | EXPIRE | BONUS | ADJUST
-  points      Int
-  description String
-  orderId     String?
-  createdAt   DateTime       @default(now())
-
-  @@index([accountId])
-}
-
-model ReferralSettings {
-  id                   String   @id @default("default")
-  enabled              Boolean  @default(false)
-  referrerRewardType   String   @default("CREDIT")   // CREDIT | POINTS
-  referrerRewardKes    Float    @default(300)
-  referrerRewardPoints Int      @default(100)
-  refereeRewardType    String   @default("PERCENT")  // PERCENT | FIXED
-  refereeRewardPct     Float    @default(10)
-  refereeRewardKes     Float    @default(200)
-  minRefereeOrderKes   Float    @default(1000)
-  maxReferralsPerMonth Int      @default(20)
-  rewardGrantedOn      String   @default("PAYMENT_CLEARED")
-  updatedAt            DateTime @updatedAt
-}
-
-model ReferralCode {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  code      String   @unique
-  uses      Int      @default(0)
-  earnings  Float    @default(0)
-  createdAt DateTime @default(now())
-
-  @@index([userId])
-}
-
-model DiscountSettings {
-  id                    String   @id @default("default")
-  allowCouponStacking   Boolean  @default(false)
-  allowCouponOnSale     Boolean  @default(false)
-  maxDiscountPct        Float    @default(30)
-  maxDiscountKes        Float    @default(5000)
-  autoApplyBestCoupon   Boolean  @default(false)
-  saleBadgeMinPct       Float    @default(10)
-  hotBadgeOrdersPerWeek Int     @default(10)
-  newBadgeDays          Int      @default(30)
-  volumeDiscountTiers   Json     @default("[]")
-  applyVolumeToShop     Boolean  @default(true)
-  applyVolumeToLF       Boolean  @default(true)
-  applyVolumeTo3D       Boolean  @default(true)
-  updatedAt             DateTime @updatedAt
-}
-
-model UserPermission {
-  id         String  @id @default(cuid())
-  userId     String
-  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  permission String
-  granted    Boolean
-  @@unique([userId, permission])
-  @@index([userId])
-}
-
-model UserNotificationPrefs {
-  id                   String  @id @default(cuid())
-  userId               String  @unique
-  user                 User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  emailOrderConfirmed  Boolean @default(true)
-  emailOrderShipped    Boolean @default(true)
-  emailOrderDelivered  Boolean @default(true)
-  emailOrderCancelled  Boolean @default(true)
-  smsOrderConfirmed    Boolean @default(false)
-  smsOrderShipped      Boolean @default(true)
-  whatsappOrderUpdates Boolean @default(false)
-  emailQuoteReady      Boolean @default(true)
-  emailQuoteExpiring   Boolean @default(true)
-  emailMarketing       Boolean @default(false)
-  emailLoyaltyUpdates  Boolean @default(true)
-  emailNewsletterWkly  Boolean @default(false)
-  emailLowStock        Boolean @default(true)
-  emailNewApplication  Boolean @default(true)
-  emailDailyDigest     Boolean @default(false)
-}
-
-model SavedAddress {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  label         String   @default("Home")
-  recipientName String?
-  phone         String?
-  line1         String
-  line2         String?
-  city          String
-  county        String
-  isDefault     Boolean  @default(false)
-  createdAt     DateTime @default(now())
-
-  @@index([userId])
-}
-
-model SystemSettings {
-  id                      String    @id @default("default")
-  quoteCounter            Int       @default(0)
-  pendingFactoryReset     Boolean   @default(false)
-  factoryResetExecuteAt   DateTime?
-  factoryResetInitiatedBy  String?
-  updatedAt               DateTime  @updatedAt
-}
-
-model BusinessSettings {
-  id                   String   @id @default("default")
-  // Identity (invoices, site branding)
-  businessName         String?  // e.g. PrintHub
-  tradingName          String?  // e.g. PrintHub (An Ezana Group Company)
-  tagline              String?
-  website              String?
-  favicon              String?
-  // Contact & location (site footer, about, contact)
-  primaryPhone         String?
-  whatsapp             String?
-  primaryEmail         String?
-  supportEmail         String?
-  financeEmail         String?
-  address1             String?
-  address2             String?
-  city                 String?
-  county               String?
-  country              String?
-  googleMapsUrl        String?
-  businessHours        String?  // e.g. Mon–Fri 8am–6pm | Sat 9am–3pm
-  // Social (footer, about)
-  socialFacebook       String?
-  socialInstagram      String?
-  socialTwitter        String?
-  socialLinkedIn       String?
-  socialTikTok         String?
-  socialYouTube        String?
-  // Payments & invoices (admin only)
-  mpesaEnabled         Boolean  @default(true)
-  pesapalEnabled       Boolean  @default(false)
-  flutterwaveEnabled   Boolean  @default(false)
-  stripeEnabled        Boolean  @default(false)
-  invoicePrefix       String   @default("INV")
-  invoiceNotes         String?
-  invoiceFooter        String?
-  vatOnInvoices        Boolean  @default(true)
-  paymentTermsDays    Int      @default(30)
-  updatedAt            DateTime @updatedAt
-}
-
-model ShippingSettings {
-  id                         String   @id @default("default")
-  freeShippingEnabled        Boolean  @default(false)
-  freeShippingThresholdKes   Float?
-  expressEnabled             Boolean  @default(false)
-  clickCollectEnabled        Boolean  @default(false)
-  updatedAt                  DateTime @updatedAt
-}
-
-model DeliveryZone {
-  id        String   @id @default(cuid())
-  name      String
-  counties  String[] // Kenya counties
-  feeKes    Float
-  minDays   Int      @default(3)
-  maxDays   Int      @default(5)
-  isActive  Boolean  @default(true)
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-// ============== PRINT-ON-DEMAND CATALOGUE ==============
-enum CatalogueLicense {
-  CC0
-  CC_BY
-  CC_BY_SA
-  PARTNERSHIP
-  ORIGINAL
-}
-
-enum CatalogueStatus {
-  DRAFT
-  PENDING_REVIEW
-  LIVE
-  PAUSED
-  RETIRED
-}
-
-enum PrintDifficulty {
-  STANDARD
-  MODERATE
-  ADVANCED
-}
-
-enum CatalogueSourceType {
-  MANUAL
-  PRINTABLES
-  THINGIVERSE
-  PARTNER
-  ORIGINAL
-}
-
-enum ImportStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  FLAGGED
-}
-
-model CatalogueCategory {
-  id          String           @id @default(cuid())
-  name        String
-  slug        String           @unique
-  description String?
-  imageUrl    String?
-  icon        String?
-  sortOrder   Int              @default(0)
-  isActive    Boolean          @default(true)
-  items       CatalogueItem[]
-  createdAt   DateTime         @default(now())
-}
-
-model CatalogueDesigner {
-  id              String           @id @default(cuid())
-  name            String
-  username        String?
-  platform        String?
-  profileUrl      String?
-  licenseDefault  CatalogueLicense @default(CC_BY)
-  isPartner       Boolean          @default(false)
-  revenueSharePct Float?
-  paymentMethod   String?
-  paymentDetails  String?
-  totalEarnedKes  Float            @default(0)
-  items           CatalogueItem[]
-  createdAt       DateTime        @default(now())
-}
-
-model CatalogueItem {
-  id                String              @id @default(cuid())
-  name              String
-  slug              String              @unique
-  description       String              @db.Text
-  shortDescription  String?
-
-  categoryId        String
-  category          CatalogueCategory   @relation(fields: [categoryId], references: [id])
-  tags              String[]
-
-  designerId        String?
-  designer          CatalogueDesigner?  @relation(fields: [designerId], references: [id])
-  sourceUrl         String?
-  licenseType       CatalogueLicense
-  designerCredit    String?
-
-  stlFileUrl        String?
-  stlFileName       String?
-  stlFileSizeBytes  Int?
-
-  weightGrams       Float?
-  printTimeHours    Float?
-  supportsRequired  Boolean             @default(false)
-  printDifficulty   PrintDifficulty     @default(STANDARD)
-  buildVolumeX      Float?
-  buildVolumeY      Float?
-  buildVolumeZ      Float?
-
-  availableMaterials CatalogueItemMaterial[]
-  photos            CatalogueItemPhoto[]
-
-  basePriceKes      Float?
-  priceOverrideKes  Float?
-  minQuantity       Int                 @default(1)
-  maxQuantity       Int                 @default(50)
-
-  status            CatalogueStatus     @default(PENDING_REVIEW)
-  isFeatured        Boolean             @default(false)
-  isNewArrival      Boolean             @default(false)
-  isStaffPick       Boolean             @default(false)
-  isPopular         Boolean             @default(false)
-  sortOrder         Int                 @default(0)
-
-  sourceType        CatalogueSourceType @default(MANUAL)
-  externalId        String?
-
-  metaTitle         String?
-  metaDescription   String?
-
-  addedBy           String?
-  approvedBy        String?
-  approvedAt        DateTime?
-  rejectedBy        String?
-  rejectionReason   String?
-  internalNotes     String?             @db.Text
-
-  orders            OrderItem[]
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-
-  @@index([categoryId])
-  @@index([status])
-  @@index([slug])
-}
-
-model CatalogueItemMaterial {
-  id               String        @id @default(cuid())
-  catalogueItemId  String
-  catalogueItem    CatalogueItem @relation(fields: [catalogueItemId], references: [id], onDelete: Cascade)
-  materialCode    String
-  materialName     String
-  availableColours String[]
-  priceModifierKes Float         @default(0)
-  isDefault        Boolean       @default(false)
-  isAvailable      Boolean       @default(true)
-
-  @@index([catalogueItemId])
-}
-
-model CatalogueItemPhoto {
-  id              String        @id @default(cuid())
-  catalogueItemId String
-  catalogueItem   CatalogueItem @relation(fields: [catalogueItemId], references: [id], onDelete: Cascade)
-  url             String
-  altText         String?
-  isPrimary       Boolean       @default(false)
-  sortOrder       Int           @default(0)
-
-  @@index([catalogueItemId])
-}
-
-model CatalogueImportQueue {
-  id              String    @id @default(cuid())
-  externalId      String
-  platform        String
-  name            String
-  designerName    String?
-  licenseType     String?
-  previewImageUrl String?
-  sourceUrl       String
-  rawData         Json
-  status          ImportStatus @default(PENDING)
-  reviewedBy      String?
-  reviewedAt      DateTime?
-  rejectionReason String?
-  importedItemId  String?
-  createdAt       DateTime  @default(now())
 }
