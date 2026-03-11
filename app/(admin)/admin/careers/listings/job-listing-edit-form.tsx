@@ -41,7 +41,9 @@ export function JobListingEditForm({ listing }: { listing: JobListing }) {
   const [salaryMin, setSalaryMin] = useState(listing.salaryMin?.toString() ?? "");
   const [salaryMax, setSalaryMax] = useState(listing.salaryMax?.toString() ?? "");
   const [showSalary, setShowSalary] = useState(listing.showSalary);
-  const [benefits, setBenefits] = useState<string[]>(listing.benefits);
+  const [benefits, setBenefits] = useState<string[]>(
+    Array.isArray(listing.benefits) ? listing.benefits.filter((b): b is string => typeof b === "string") : []
+  );
   const [benefitInput, setBenefitInput] = useState("");
   const [applicationDeadline, setApplicationDeadline] = useState(
     listing.applicationDeadline

@@ -428,6 +428,7 @@ enum OrderStatus {
   PROCESSING
   PRINTING
   QUALITY_CHECK
+  READY_FOR_COLLECTION
   SHIPPED
   DELIVERED
   CANCELLED
@@ -482,12 +483,13 @@ model Order {
   deliveredAt    DateTime?
   paidAt         DateTime?
 
-  items           OrderItem[]
-  timeline        OrderTimeline[]
-  shippingAddress ShippingAddress?
-  payments        Payment[]
-  refunds         Refund[]
-  invoices        Invoice[]
+  items              OrderItem[]
+  timeline           OrderTimeline[]
+  trackingEvents     OrderTrackingEvent[]
+  shippingAddress    ShippingAddress?
+  payments           Payment[]
+  refunds            Refund[]
+  invoices           Invoice[]
 }
 
 model OrderItem {
@@ -519,6 +521,22 @@ model OrderTimeline {
   message   String?
   timestamp DateTime @default(now())
   updatedBy String?
+
+  @@index([orderId])
+}
+
+model OrderTrackingEvent {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status     String
+  title      String
+  description String?
+  isPublic   Boolean  @default(true)
+  location   String?
+  courierRef String?
+  createdBy  String?
+  createdAt  DateTime @default(now())
 
   @@index([orderId])
 }
@@ -1229,6 +1247,269 @@ model TicketMessage {
   createdAt   DateTime      @default(now())
 
   @@index([ticketId])
+}
+
+// ============== SETTINGS (single-row per id) ==============
+model BusinessSettings {
+  id                   String    @id // "default"
+  businessName         String?
+  tradingName          String?
+  tagline              String?
+  website              String?
+  favicon              String?
+  primaryPhone         String?
+  whatsapp             String?
+  primaryEmail         String?
+  supportEmail         String?
+  financeEmail         String?
+  address1             String?
+  address2             String?
+  city                 String?
+  county               String?
+  country              String?
+  googleMapsUrl        String?
+  businessHours        String?
+  socialFacebook       String?
+  socialInstagram      String?
+  socialTwitter        String?
+  socialLinkedIn       String?
+  socialTikTok         String?
+  socialYouTube        String?
+  invoicePrefix        String?
+  invoiceNotes         String?
+  invoiceFooter        String?
+  vatOnInvoices        Boolean?
+  paymentTermsDays     Int?
+  mpesaEnabled         Boolean?
+  pesapalEnabled       Boolean?
+  flutterwaveEnabled   Boolean?
+  stripeEnabled        Boolean?
+  updatedAt            DateTime  @updatedAt
+}
+
+model SeoSettings {
+  id             String   @id // "default"
+  siteName       String?
+  titleTemplate  String?
+  defaultTitle   String?
+  defaultDescription String?
+  ogImageUrl     String?
+  twitterHandle  String?
+  sitemapGeneratedAt DateTime?
+  updatedAt      DateTime @updatedAt
+}
+
+model ShippingSettings {
+  id                     String   @id // "default"
+  freeShippingEnabled    Boolean? @default(false)
+  freeShippingThresholdKes Int?
+  expressEnabled         Boolean? @default(false)
+  clickCollectEnabled    Boolean? @default(false)
+  updatedAt              DateTime @updatedAt
+}
+
+model LoyaltySettings {
+  id          String   @id // "default"
+  bonusRules  Json?    // array of { id, name, type, value, enabled }
+  tiers       Json?    // array of { name, minPoints, maxPoints, earnMultiplier, perks }
+  updatedAt   DateTime @updatedAt
+}
+
+model ReferralSettings {
+  id        String   @id // "default"
+  updatedAt DateTime @updatedAt
+}
+
+model DiscountSettings {
+  id                  String   @id // "default"
+  volumeDiscountTiers Json?    // array of { minQty, maxQty, discountPct }
+  updatedAt           DateTime @updatedAt
+}
+
+model SystemSettings {
+  id                      String    @id // "default"
+  pendingFactoryReset     Boolean?  @default(false)
+  factoryResetExecuteAt   DateTime?
+  factoryResetInitiatedBy String?
+  quoteCounter            Int?      @default(0)
+  updatedAt               DateTime  @updatedAt
+}
+
+// ============== FAQ ==============
+model FaqCategory {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  icon      String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+
+  faqs Faq[]
+
+  @@index([slug])
+}
+
+model Faq {
+  id         String      @id @default(cuid())
+  categoryId String
+  category   FaqCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  question   String
+  answer     String
+  isPopular  Boolean     @default(false)
+  sortOrder  Int         @default(0)
+  isActive   Boolean     @default(true)
+
+  @@index([categoryId])
+}
+
+// ============== LEGAL PAGES ==============
+model LegalPage {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String?
+  content     String   @default("")
+  version     Int      @default(1)
+  lastUpdated DateTime?
+  updatedBy   String?
+  isPublished Boolean  @default(false)
+
+  history LegalPageHistory[]
+
+  @@index([slug])
+}
+
+model LegalPageHistory {
+  id          String    @id @default(cuid())
+  legalPageId String
+  legalPage   LegalPage @relation(fields: [legalPageId], references: [id], onDelete: Cascade)
+  content     String
+  version     Int
+  savedBy     String?
+  changeNote  String?
+  createdAt   DateTime  @default(now())
+
+  @@index([legalPageId])
+}
+
+// ============== CATALOGUE (Print-on-Demand) ==============
+enum CatalogueStatus {
+  DRAFT
+  PENDING_REVIEW
+  LIVE
+  PAUSED
+  RETIRED
+}
+
+enum CatalogueSourceType {
+  MANUAL
+  PRINTABLES
+  THINGIVERSE
+  PARTNER
+  ORIGINAL
+}
+
+enum CatalogueLicense {
+  CC0
+  CC_BY
+  CC_BY_SA
+  PARTNERSHIP
+  ORIGINAL
+}
+
+model CatalogueCategory {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  icon      String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+
+  items CatalogueItem[]
+
+  @@index([slug])
+}
+
+model CatalogueDesigner {
+  id     String   @id @default(cuid())
+  name   String
+  slug   String?  @unique
+
+  items CatalogueItem[]
+}
+
+model CatalogueItem {
+  id               String             @id @default(cuid())
+  name             String
+  slug             String             @unique
+  shortDescription String?
+  description      String?
+  categoryId       String
+  category         CatalogueCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  designerId       String?
+  designer         CatalogueDesigner? @relation(fields: [designerId], references: [id])
+  tags             String[]
+  sourceUrl        String?
+  licenseType      CatalogueLicense   @default(CC_BY)
+  designerCredit   String?
+  sourceType       CatalogueSourceType @default(MANUAL)
+  status           CatalogueStatus    @default(DRAFT)
+  minQuantity      Int                @default(1)
+  maxQuantity      Int                @default(50)
+  isFeatured       Boolean            @default(false)
+  isNewArrival     Boolean            @default(false)
+  isStaffPick      Boolean            @default(false)
+  sortOrder        Int                @default(0)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  photos            CatalogueItemPhoto[]
+  availableMaterials CatalogueItemMaterial[]
+
+  @@index([categoryId])
+  @@index([status])
+  @@index([slug])
+}
+
+model CatalogueItemPhoto {
+  id             String        @id @default(cuid())
+  catalogueItemId String
+  catalogueItem  CatalogueItem @relation(fields: [catalogueItemId], references: [id], onDelete: Cascade)
+  url            String
+  isPrimary      Boolean       @default(false)
+  sortOrder      Int           @default(0)
+
+  @@index([catalogueItemId])
+}
+
+model CatalogueItemMaterial {
+  id                String        @id @default(cuid())
+  catalogueItemId   String
+  catalogueItem     CatalogueItem @relation(fields: [catalogueItemId], references: [id], onDelete: Cascade)
+  materialCode      String
+  materialName      String
+  priceModifierKes  Float?        @default(0)
+  isDefault         Boolean       @default(false)
+  isAvailable       Boolean       @default(true)
+
+  @@index([catalogueItemId])
+}
+
+enum ImportStatus {
+  PENDING
+  PROCESSING
+  DONE
+  FAILED
+}
+
+model CatalogueImportQueue {
+  id        String       @id @default(cuid())
+  status    ImportStatus @default(PENDING)
+  sourceUrl String?
+  stlStorageKey String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([status])
 }
 
 // ============== CAREERS ==============
