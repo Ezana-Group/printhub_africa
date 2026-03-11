@@ -10,10 +10,28 @@ export async function GET() {
     return NextResponse.json({ error: "Sign in to view your quotes." }, { status: 401 });
   }
 
-  const quotes = await prisma.quote.findMany({
-    where: { customerId: session.user.id },
-    orderBy: { createdAt: "desc" },
-  });
+  const userId = session.user.id as string;
+  const userEmail = (session.user.email as string) ?? "";
+  const [linkedQuotes, guestQuotes] = await Promise.all([
+    prisma.quote.findMany({
+      where: { customerId: userId },
+      orderBy: { createdAt: "desc" },
+    }),
+    userEmail
+      ? prisma.quote.findMany({
+          where: {
+            customerId: null,
+            customerEmail: { equals: userEmail, mode: "insensitive" },
+          },
+          orderBy: { createdAt: "desc" },
+        })
+      : [],
+  ]);
+  const seenIds = new Set(linkedQuotes.map((q) => q.id));
+  const guestOnly = guestQuotes.filter((q) => !seenIds.has(q.id));
+  const quotes = [...linkedQuotes, ...guestOnly].sort(
+    (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+  );
 
   const serialized = quotes.map((q) => ({
     id: q.id,

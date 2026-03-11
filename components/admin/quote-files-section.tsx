@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, Image as ImageIcon, Box, Download } from "lucide-react";
@@ -122,8 +123,8 @@ export function QuoteFilesSection({
                       Uploaded {uploadedStr}
                     </p>
                     {isImg && (
-                      <div className="mt-2 rounded overflow-hidden bg-muted aspect-video max-h-24">
-                        <img src={url} alt={name} className="object-contain w-full h-full" />
+                      <div className="mt-2 rounded overflow-hidden bg-muted aspect-video max-h-24 relative">
+                        <Image src={url} alt={name} fill className="object-contain" unoptimized />
                       </div>
                     )}
                     <Button

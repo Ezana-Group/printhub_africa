@@ -34,6 +34,16 @@ type QuoteRow = {
   validUntil: Date | null;
 };
 
+type GetAQuoteRow = {
+  id: string;
+  quoteNumber: string;
+  type: string;
+  status: string;
+  quotedAmount: number | null;
+  createdAt: Date;
+  projectName: string | null;
+};
+
 type UploadRow = {
   id: string;
   originalName: string;
@@ -67,6 +77,7 @@ export type CustomerDetailData = {
   addresses: { id: string; label: string; street: string; city: string }[];
   corporateAccount: { companyName: string; kraPin: string | null } | null;
   quotes: QuoteRow[];
+  getAQuoteQuotes: GetAQuoteRow[];
   uploads: UploadRow[];
   auditLogs: AuditRow[];
 };
@@ -77,6 +88,23 @@ const QUOTE_STATUS_LABELS: Record<string, string> = {
   ACCEPTED: "Accepted",
   EXPIRED: "Expired",
   REJECTED: "Rejected",
+};
+
+const GET_A_QUOTE_STATUS_LABELS: Record<string, string> = {
+  new: "New",
+  reviewing: "Under review",
+  quoted: "Quoted",
+  accepted: "Accepted",
+  rejected: "Rejected",
+  in_production: "In production",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
+const QUOTE_TYPE_LABELS: Record<string, string> = {
+  large_format: "Large Format",
+  three_d_print: "3D Print",
+  design_and_print: "I have an idea",
 };
 
 export function CustomerDetailClient({ data }: { data: CustomerDetailData }) {
@@ -322,32 +350,74 @@ export function CustomerDetailClient({ data }: { data: CustomerDetailData }) {
         {activeTab === "quotes" && (
           <Card className="bg-white border-[#E5E7EB]">
             <CardContent className="p-0">
-              {data.quotes.length === 0 ? (
+              {data.getAQuoteQuotes.length === 0 && data.quotes.length === 0 ? (
                 <p className="py-12 text-center text-[#6B7280]">No quotes yet</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-[#F3F4F6] border-b border-[#E5E7EB]">
-                      <tr>
-                        <th className="text-left px-4 py-3 text-[12px] font-semibold text-[#6B7280] uppercase">Quote #</th>
-                        <th className="text-left px-4 py-3 text-[12px] font-semibold text-[#6B7280] uppercase">Amount</th>
-                        <th className="text-left px-4 py-3 text-[12px] font-semibold text-[#6B7280] uppercase">Status</th>
-                        <th className="text-left px-4 py-3 text-[12px] font-semibold text-[#6B7280] uppercase">Created</th>
-                        <th className="text-left px-4 py-3 text-[12px] font-semibold text-[#6B7280] uppercase">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {data.quotes.map((q) => (
-                        <tr key={q.id} className="border-b border-[#E5E7EB] hover:bg-[#F9FAFB]">
-                          <td className="px-4 py-3 font-mono">{q.id.slice(-8)}</td>
-                          <td className="px-4 py-3">{q.estimatedCost != null ? formatPrice(q.estimatedCost) : "—"}</td>
-                          <td className="px-4 py-3"><Badge variant="secondary">{QUOTE_STATUS_LABELS[q.status] ?? q.status}</Badge></td>
-                          <td className="px-4 py-3 text-[#6B7280]">{formatDateForDisplay(q.createdAt)}</td>
-                          <td className="px-4 py-3"><Button variant="ghost" size="sm">View</Button></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="space-y-6 p-4">
+                  {data.getAQuoteQuotes.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-[#374151] mb-2">Quote requests (Get a Quote / I have an idea)</h3>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-[#F3F4F6] border-b border-[#E5E7EB]">
+                            <tr>
+                              <th className="text-left px-4 py-3 text-[12px] font-semibold text-[#6B7280] uppercase">Quote #</th>
+                              <th className="text-left px-4 py-3 text-[12px] font-semibold text-[#6B7280] uppercase">Type</th>
+                              <th className="text-left px-4 py-3 text-[12px] font-semibold text-[#6B7280] uppercase">Amount</th>
+                              <th className="text-left px-4 py-3 text-[12px] font-semibold text-[#6B7280] uppercase">Status</th>
+                              <th className="text-left px-4 py-3 text-[12px] font-semibold text-[#6B7280] uppercase">Created</th>
+                              <th className="text-left px-4 py-3 text-[12px] font-semibold text-[#6B7280] uppercase">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {data.getAQuoteQuotes.map((q) => (
+                              <tr key={q.id} className="border-b border-[#E5E7EB] hover:bg-[#F9FAFB]">
+                                <td className="px-4 py-3 font-mono font-medium">{q.quoteNumber}</td>
+                                <td className="px-4 py-3 text-[#6B7280]">{QUOTE_TYPE_LABELS[q.type] ?? q.type}</td>
+                                <td className="px-4 py-3">{q.quotedAmount != null ? formatPrice(q.quotedAmount) : "—"}</td>
+                                <td className="px-4 py-3"><Badge variant="secondary">{GET_A_QUOTE_STATUS_LABELS[q.status] ?? q.status.replace("_", " ")}</Badge></td>
+                                <td className="px-4 py-3 text-[#6B7280]">{formatDateForDisplay(q.createdAt)}</td>
+                                <td className="px-4 py-3">
+                                  <Button variant="ghost" size="sm" asChild>
+                                    <Link href={`/admin/quotes/${q.id}`}>View</Link>
+                                  </Button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {data.quotes.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-[#374151] mb-2">Print quotes</h3>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-[#F3F4F6] border-b border-[#E5E7EB]">
+                            <tr>
+                              <th className="text-left px-4 py-3 text-[12px] font-semibold text-[#6B7280] uppercase">Quote #</th>
+                              <th className="text-left px-4 py-3 text-[12px] font-semibold text-[#6B7280] uppercase">Amount</th>
+                              <th className="text-left px-4 py-3 text-[12px] font-semibold text-[#6B7280] uppercase">Status</th>
+                              <th className="text-left px-4 py-3 text-[12px] font-semibold text-[#6B7280] uppercase">Created</th>
+                              <th className="text-left px-4 py-3 text-[12px] font-semibold text-[#6B7280] uppercase">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {data.quotes.map((q) => (
+                              <tr key={q.id} className="border-b border-[#E5E7EB] hover:bg-[#F9FAFB]">
+                                <td className="px-4 py-3 font-mono">{q.id.slice(-8)}</td>
+                                <td className="px-4 py-3">{q.estimatedCost != null ? formatPrice(q.estimatedCost) : "—"}</td>
+                                <td className="px-4 py-3"><Badge variant="secondary">{QUOTE_STATUS_LABELS[q.status] ?? q.status}</Badge></td>
+                                <td className="px-4 py-3 text-[#6B7280]">{formatDateForDisplay(q.createdAt)}</td>
+                                <td className="px-4 py-3"><Button variant="ghost" size="sm">View</Button></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
