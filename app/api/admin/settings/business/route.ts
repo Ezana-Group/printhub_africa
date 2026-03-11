@@ -27,7 +27,7 @@ export async function GET(req: Request) {
   return NextResponse.json(s);
 }
 
-export async function PATCH(req: Request) {
+async function updateBusinessSettings(req: Request) {
   const auth = await requireRole(req, "ADMIN");
   if (auth instanceof NextResponse) return auth;
   const body = patchSchema.safeParse(await req.json().catch(() => ({})));
@@ -39,4 +39,13 @@ export async function PATCH(req: Request) {
   });
   await writeAudit({ userId: auth.userId, action: "BUSINESS_SETTINGS_UPDATED", category: "SETTINGS", request: req });
   return NextResponse.json({ success: true });
+}
+
+export async function PATCH(req: Request) {
+  return updateBusinessSettings(req);
+}
+
+/** Allow POST so older/deployed clients that still send POST get 200 instead of 405. */
+export async function POST(req: Request) {
+  return updateBusinessSettings(req);
 }
