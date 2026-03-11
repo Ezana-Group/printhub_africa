@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { capturePaymentFailure, capturePaymentSuccess } from "@/lib/sentry-events";
 
 interface CallbackBody {
   Body: {
@@ -64,6 +65,12 @@ export async function POST(req: Request) {
         data: { status: "CONFIRMED" },
       }),
     ]);
+    capturePaymentSuccess({
+      orderId: mpesa.payment.orderId,
+      orderNumber: mpesa.payment.order.orderNumber,
+      amount,
+      mpesaRef: receipt,
+    });
   } else {
     await prisma.mpesaTransaction.update({
       where: { id: mpesa.id },
@@ -76,6 +83,13 @@ export async function POST(req: Request) {
     await prisma.order.update({
       where: { id: mpesa.payment.orderId },
       data: { mpesaFailureReason: stk.ResultDesc },
+    });
+    capturePaymentFailure({
+      orderId: mpesa.payment.orderId,
+      orderNumber: mpesa.payment.order.orderNumber,
+      amount: Number(mpesa.payment.amount),
+      phone: mpesa.phoneNumber,
+      reason: stk.ResultDesc,
     });
   }
 
