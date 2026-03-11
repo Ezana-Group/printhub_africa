@@ -34,6 +34,7 @@ if (!rawPassword || rawPassword.length < 8) {
   console.error("SUPER_ADMIN_PASSWORD must be set and at least 8 characters.");
   process.exit(1);
 }
+const password: string = rawPassword;
 
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({
@@ -42,7 +43,7 @@ const prisma = new PrismaClient({
 });
 
 async function main() {
-  const passwordHash = await bcrypt.hash(rawPassword, 12);
+  const passwordHash = await bcrypt.hash(password, 12);
 
   const admin = await prisma.user.upsert({
     where: { email },
