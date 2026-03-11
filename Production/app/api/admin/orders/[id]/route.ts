@@ -42,13 +42,6 @@ export async function GET(
         include: {
           product: { select: { name: true, images: true, sku: true } },
           productVariant: { select: { name: true, sku: true, attributes: true, image: true } },
-          catalogueItem: {
-            select: {
-              name: true,
-              sku: true,
-              photos: { take: 1, select: { url: true } },
-            },
-          },
         },
       },
       user: { select: { id: true, name: true, email: true, phone: true } },

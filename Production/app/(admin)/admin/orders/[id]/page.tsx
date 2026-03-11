@@ -18,13 +18,6 @@ export default async function AdminOrderDetailPage({
         include: {
           product: { select: { name: true, images: true, sku: true } },
           productVariant: { select: { name: true, sku: true, attributes: true, image: true } },
-          catalogueItem: {
-            select: {
-              name: true,
-              sku: true,
-              photos: { take: 1, select: { url: true } },
-            },
-          },
         },
       },
       user: { select: { id: true, name: true, email: true, phone: true } },
@@ -52,13 +45,6 @@ export default async function AdminOrderDetailPage({
     items: order.items.map((i) => ({
       ...i,
       unitPrice: i.unitPrice.toString(),
-      catalogueItem: i.catalogueItem
-        ? {
-            name: i.catalogueItem.name,
-            sku: i.catalogueItem.sku,
-            photos: i.catalogueItem.photos,
-          }
-        : null,
     })),
     payments: order.payments.map((p) => ({
       ...p,
