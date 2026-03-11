@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,30 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Spool, Package, MoreHorizontal, Pencil, PackagePlus, Trash2, Plus, Minus, Loader2, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
+import {
+  Spool,
+  Package,
+  MoreHorizontal,
+  Pencil,
+  PackagePlus,
+  Trash2,
+  Plus,
+  Minus,
+  Loader2,
+  ChevronDown,
+  ChevronRight,
+  Search,
+  ClipboardList,
+  Download,
+  MapPin,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const MATERIAL_OPTIONS = ["PLA", "PLA+", "PETG", "ABS", "TPU", "ASA", "Nylon", "Resin", "Other"] as const;
@@ -54,19 +77,41 @@ const PRESET_COLOURS = [
   { name: "Pink", hex: "#ec4899" },
 ];
 
-type ThreeDConsumable = {
+const MATERIAL_BADGE: Record<string, string> = {
+  "PLA+": "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+  PETG: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
+  ABS: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
+  TPU: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300",
+  PLA: "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
+  Resin: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+  Nylon: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+  ASA: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300",
+  Other: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+};
+
+const FILTER_MATERIALS = ["All", "PLA", "PLA+", "PETG", "ABS", "TPU", "Resin", "Nylon"] as const;
+const FILTER_STATUS = ["All", "In Stock", "Low Stock", "Out of Stock"] as const;
+
+type FilamentRow = {
   id: string;
   kind: string;
   name: string;
   specification: string | null;
+  colourHex: string | null;
   brand: string | null;
   quantity: number;
+  weightPerSpoolKg: number | null;
   lowStockThreshold: number;
   location: string | null;
   costPerKgKes: number | null;
   unitCostKes: number | null;
   notes: string | null;
+  totalWeightKg?: number;
+  totalValueKes?: number;
+  stockStatus?: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK";
 };
+
+type ThreeDConsumable = FilamentRow & { kind: string };
 
 const TAB_CONFIG = [
   { id: "filament" as const, label: "Filament", icon: Spool },
@@ -109,8 +154,60 @@ export function Inventory3DSection({
   const [otherLoading, setOtherLoading] = useState(false);
   const [otherError, setOtherError] = useState("");
 
-  const filamentItems = consumables.filter((c) => c.kind === "FILAMENT");
+  const filamentItems = consumables.filter((c) => c.kind === "FILAMENT") as FilamentRow[];
   const otherItems = consumables.filter((c) => c.kind !== "FILAMENT");
+
+  const filteredFilaments = useMemo(() => {
+    let list = filamentItems;
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          (c.specification?.toLowerCase().includes(q)) ||
+          (c.brand?.toLowerCase().includes(q))
+      );
+    }
+    if (materialFilter !== "All") {
+      list = list.filter((c) => c.name === materialFilter);
+    }
+    if (statusFilter !== "All") {
+      const status = statusFilter === "In Stock" ? "IN_STOCK" : statusFilter === "Low Stock" ? "LOW_STOCK" : "OUT_OF_STOCK";
+      list = list.filter((c) => c.stockStatus === status);
+    }
+    if (brandFilter !== "All") {
+      list = list.filter((c) => (c.brand ?? "") === brandFilter);
+    }
+    return list;
+  }, [filamentItems, searchQuery, materialFilter, statusFilter, brandFilter]);
+
+  const filamentsByMaterial = useMemo(() => {
+    const map = new Map<string, FilamentRow[]>();
+    for (const c of filteredFilaments) {
+      const key = c.name;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(c);
+    }
+    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [filteredFilaments]);
+
+  const summary = useMemo(() => {
+    const items = filamentItems;
+    const count = items.length;
+    const totalSpools = items.reduce((s, c) => s + c.quantity, 0);
+    const totalKg = items.reduce((s, c) => s + (c.totalWeightKg ?? c.quantity * (c.weightPerSpoolKg ?? 1)), 0);
+    const totalValue = items.reduce((s, c) => s + (c.totalValueKes ?? 0), 0);
+    const lowStockCount = items.filter((c) => c.stockStatus === "LOW_STOCK" || c.stockStatus === "OUT_OF_STOCK").length;
+    return { count, totalSpools, totalKg, totalValue, lowStockCount };
+  }, [filamentItems]);
+
+  const uniqueBrands = useMemo(() => {
+    const set = new Set<string>();
+    filamentItems.forEach((c) => {
+      if (c.brand?.trim()) set.add(c.brand.trim());
+    });
+    return ["All", ...Array.from(set).sort()];
+  }, [filamentItems]);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [editFilament, setEditFilament] = useState<ThreeDConsumable | null>(null);
@@ -121,6 +218,109 @@ export function Inventory3DSection({
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
   }, []);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [materialFilter, setMaterialFilter] = useState<string>("All");
+  const [statusFilter, setStatusFilter] = useState<string>("All");
+  const [brandFilter, setBrandFilter] = useState<string>("All");
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set();
+    try {
+      const s = localStorage.getItem("filament-group-collapsed");
+      return s ? new Set(JSON.parse(s)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+  const toggleGroup = useCallback((material: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(material)) next.delete(material);
+      else next.add(material);
+      try {
+        localStorage.setItem("filament-group-collapsed", JSON.stringify([...next]));
+      } catch {}
+      return next;
+    });
+  }, []);
+
+  const [addStockTarget, setAddStockTarget] = useState<ThreeDConsumable | null>(null);
+  const [movementsTarget, setMovementsTarget] = useState<ThreeDConsumable | null>(null);
+  const [movementsList, setMovementsList] = useState<Array<{ id: string; type: string; quantity: number; performedBy: string; reference: string | null; createdAt: string }>>([]);
+  const [movementsLoading, setMovementsLoading] = useState(false);
+
+  const [addStockSpools, setAddStockSpools] = useState<number>(1);
+  const [addStockCostPerKg, setAddStockCostPerKg] = useState<number | "">("");
+  const [addStockSupplier, setAddStockSupplier] = useState("");
+  const [addStockReference, setAddStockReference] = useState("");
+  const [addStockNotes, setAddStockNotes] = useState("");
+  const [addStockSaving, setAddStockSaving] = useState(false);
+  const [bulkLocationOpen, setBulkLocationOpen] = useState(false);
+  const [bulkLocationValue, setBulkLocationValue] = useState("");
+  const [bulkLocationSaving, setBulkLocationSaving] = useState(false);
+
+  const openAddStockModal = useCallback((c: ThreeDConsumable) => {
+    setAddStockTarget(c);
+    setAddStockSpools(1);
+    setAddStockCostPerKg(c.costPerKgKes ?? "");
+    setAddStockSupplier("");
+    setAddStockReference("");
+    setAddStockNotes("");
+  }, []);
+
+  const handleAddStockSubmit = useCallback(async () => {
+    if (!addStockTarget) return;
+    const qty = Math.max(0, addStockSpools);
+    if (qty === 0) return;
+    setAddStockSaving(true);
+    try {
+      const res = await fetch(`/api/admin/3d-consumables/${addStockTarget.id}/movements`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "RECEIVED",
+          quantity: qty,
+          costPerKgKes: addStockCostPerKg === "" ? null : Number(addStockCostPerKg),
+          supplier: addStockSupplier.trim() || null,
+          reference: addStockReference.trim() || null,
+          notes: addStockNotes.trim() || null,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        showToast(typeof data.error === "string" ? data.error : "Failed to add stock");
+        return;
+      }
+      setAddStockTarget(null);
+      showToast("Stock added");
+      refresh();
+    } finally {
+      setAddStockSaving(false);
+    }
+  }, [addStockTarget, addStockSpools, addStockCostPerKg, addStockSupplier, addStockReference, addStockNotes, refresh, showToast]);
+
+  const handleBulkSetLocation = useCallback(async () => {
+    if (selectedIds.size === 0) return;
+    setBulkLocationSaving(true);
+    try {
+      const location = bulkLocationValue.trim() || null;
+      await Promise.all(
+        Array.from(selectedIds).map((id) =>
+          fetch(`/api/admin/3d-consumables/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ location }),
+          })
+        )
+      );
+      setBulkLocationOpen(false);
+      setBulkLocationValue("");
+      showToast("Location updated");
+      refresh();
+    } finally {
+      setBulkLocationSaving(false);
+    }
+  }, [selectedIds, bulkLocationValue, refresh, showToast]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -192,11 +392,13 @@ export function Inventory3DSection({
     const matMatch = MATERIAL_OPTIONS.includes(c.name as (typeof MATERIAL_OPTIONS)[number]);
     setMaterialOption(matMatch ? c.name : "Other");
     setMaterialOther(matMatch ? "" : c.name);
-    setColourHex("#1f2937");
+    setColourHex(c.colourHex && /^#[0-9A-Fa-f]{6}$/.test(c.colourHex) ? c.colourHex : "#1f2937");
     setColourName(c.specification ?? "");
     setBrand(c.brand ?? "");
-    setWeightPerSpool(1);
-    setWeightCustomKg(1);
+    const w = c.weightPerSpoolKg ?? 1;
+    const wOpt = WEIGHT_OPTIONS.find((o) => o.value === w);
+    setWeightPerSpool(wOpt ? w : "custom");
+    setWeightCustomKg(wOpt ? 1 : w);
     setSpools(c.quantity);
     setFilamentCostPerKg(c.costPerKgKes ?? "");
     setFilamentLocation(c.location ?? "");
@@ -226,8 +428,10 @@ export function Inventory3DSection({
           body: JSON.stringify({
             name: materialNameForApi,
             specification: colourName.trim() || null,
+            colourHex: colourHex.trim() || null,
             brand: brand.trim() || null,
             quantity: Number(spools) || 0,
+            weightPerSpoolKg: weightKg || null,
             lowStockThreshold: Number(filamentThreshold) || 2,
             location: filamentLocation.trim() || null,
             costPerKgKes: filamentCostPerKg === "" ? null : Number(filamentCostPerKg),
@@ -269,8 +473,10 @@ export function Inventory3DSection({
           kind: "FILAMENT",
           name: materialNameForApi,
           specification: colourName.trim() || undefined,
+          colourHex: colourHex.trim() || undefined,
           brand: brand.trim() || undefined,
           quantity: q,
+          weightPerSpoolKg: weightKg || undefined,
           lowStockThreshold: Number(filamentThreshold) || 2,
           location: filamentLocation.trim() || undefined,
           costPerKgKes: costKg,
@@ -316,14 +522,17 @@ export function Inventory3DSection({
     if (delta <= 0) return;
     setAdjustSaving(true);
     try {
-      const newQty =
-        adjustTab === "add"
-          ? adjustFilament.quantity + delta
-          : Math.max(0, adjustFilament.quantity - delta);
-      const res = await fetch(`/api/admin/3d-consumables/${adjustFilament.id}`, {
-        method: "PATCH",
+      const isAdd = adjustTab === "add";
+      const movementQty = isAdd ? delta : -delta;
+      const newQty = isAdd ? adjustFilament.quantity + delta : Math.max(0, adjustFilament.quantity - delta);
+      const res = await fetch(`/api/admin/3d-consumables/${adjustFilament.id}/movements`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ quantity: newQty }),
+        body: JSON.stringify({
+          type: isAdd ? "RECEIVED" : "ADJUSTMENT",
+          quantity: movementQty,
+          notes: adjustReason.trim() || null,
+        }),
       });
       if (!res.ok) {
         setFilamentError("Failed to update stock");
@@ -450,160 +659,242 @@ export function Inventory3DSection({
       <CardContent>
         {subTab === "filament" && (
           <div className="space-y-4">
-            <div className="flex justify-end">
-              <Button type="button" variant="outline" size="sm" onClick={openAddModal}>
-                Add filament
+            {/* Page header: title + primary action */}
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <h2 className="text-lg font-semibold">3D Printing — Filaments</h2>
+              <Button type="button" onClick={openAddModal} className="bg-orange-500 hover:bg-orange-600">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Filament
               </Button>
             </div>
-            {selectedIds.size > 0 && (
-              <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/30 px-4 py-2 text-sm">
-                <span className="font-medium">{selectedIds.size} item(s) selected</span>
+
+            {/* Summary KPI cards */}
+            {filamentItems.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="rounded-lg border bg-card p-3">
+                  <p className="text-xs text-muted-foreground">Filaments in stock</p>
+                  <p className="text-xl font-semibold">{summary.count}</p>
+                </div>
+                <div className="rounded-lg border bg-card p-3">
+                  <p className="text-xs text-muted-foreground">Total spools</p>
+                  <p className="text-xl font-semibold">{summary.totalSpools}</p>
+                </div>
+                <div className="rounded-lg border bg-card p-3">
+                  <p className="text-xs text-muted-foreground">Total weight</p>
+                  <p className="text-xl font-semibold">{summary.totalKg.toFixed(1)} kg</p>
+                </div>
+                <div className="rounded-lg border bg-card p-3">
+                  <p className="text-xs text-muted-foreground">Total value</p>
+                  <p className="text-xl font-semibold">KES {Math.round(summary.totalValue).toLocaleString()}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Low stock warning bar */}
+            {summary.lowStockCount > 0 && (
+              <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-2 text-sm">
+                <span className="text-amber-700 dark:text-amber-400">⚠ {summary.lowStockCount} filament{summary.lowStockCount !== 1 ? "s" : ""} below low stock threshold</span>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="link"
                   size="sm"
-                  onClick={() => {
-                    const first = filamentItems.find((f) => selectedIds.has(f.id));
-                    if (first) openAdjustModal(first);
-                  }}
+                  className="text-amber-800 dark:text-amber-300 h-auto p-0"
+                  onClick={() => setStatusFilter("Low Stock")}
                 >
+                  View
+                </Button>
+              </div>
+            )}
+
+            {/* Search + filters */}
+            {filamentItems.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative flex-1 min-w-[180px]">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by material, colour, brand…"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+                <select
+                  value={materialFilter}
+                  onChange={(e) => setMaterialFilter(e.target.value)}
+                  className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  {FILTER_MATERIALS.map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  {FILTER_STATUS.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+                <select
+                  value={brandFilter}
+                  onChange={(e) => setBrandFilter(e.target.value)}
+                  className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  {uniqueBrands.map((b) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Bulk actions bar */}
+            {selectedIds.size > 0 && (
+              <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/30 px-4 py-2 text-sm">
+                <span className="font-medium">{selectedIds.size} filament{selectedIds.size !== 1 ? "s" : ""} selected</span>
+                <Button type="button" variant="outline" size="sm" onClick={() => { setBulkLocationValue(""); setBulkLocationOpen(true); }}>
+                  <MapPin className="mr-2 h-4 w-4" />
+                  Set Location
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => { const f = filamentItems.find((f) => selectedIds.has(f.id)); if (f) openAddStockModal(f); }}>
+                  <PackagePlus className="mr-2 h-4 w-4" />
+                  Add Stock
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => { const first = filamentItems.find((f) => selectedIds.has(f.id)); if (first) openAdjustModal(first); }}>
                   Adjust stock
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => { const ids = filamentItems.filter((f) => selectedIds.has(f.id)); if (ids.length) { const csv = ["Material,Brand,Colour,Spools,Weight (kg),Cost/kg (KES),Value (KES),Location,Status"]; ids.forEach((c) => { const w = c.totalWeightKg ?? (c.quantity * (c.weightPerSpoolKg ?? 1)); const v = c.totalValueKes ?? w * (c.costPerKgKes ?? 0); csv.push([c.name, c.brand ?? "", c.specification ?? "", c.quantity, w.toFixed(1), (c.costPerKgKes ?? 0).toLocaleString(), Math.round(v).toLocaleString(), c.location ?? "", c.stockStatus ?? ""].join(",")); }); const blob = new Blob([csv.join("\n")], { type: "text/csv" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "filaments-export.csv"; a.click(); URL.revokeObjectURL(a.href); showToast("CSV exported"); } }}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export CSV
                 </Button>
                 <Button type="button" variant="outline" size="sm" className="text-destructive" onClick={() => setBulkDeleteConfirm(true)} disabled={deleteLoading}>
                   Delete selected
                 </Button>
-                <Button type="button" variant="ghost" size="sm" onClick={clearSelection}>
-                  Clear selection
-                </Button>
+                <Button type="button" variant="ghost" size="sm" onClick={clearSelection}>Clear</Button>
               </div>
             )}
-            {filamentItems.length > 0 ? (
-              <div className="overflow-x-auto rounded-lg border">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="w-10 p-4">
-                        <input
-                          type="checkbox"
-                          checked={filamentItems.length > 0 && selectedIds.size === filamentItems.length}
-                          onChange={toggleSelectAll}
-                          className="rounded border-input"
-                        />
-                      </th>
-                      <th className="text-left p-4 font-medium">Material</th>
-                      <th className="text-left p-4 font-medium">Colour / spec</th>
-                      <th className="text-right p-4 font-medium">Quantity</th>
-                      <th className="text-right p-4 font-medium">Cost/kg (KES)</th>
-                      <th className="text-left p-4 font-medium">Location</th>
-                      <th className="text-right p-4 font-medium">Low stock</th>
-                      <th className="w-10 p-4" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filamentItems.map((c) => (
-                      <tr
-                        key={c.id}
-                        className={cn(
-                          "border-b hover:bg-muted/30 cursor-pointer transition-colors",
-                          selectedIds.has(c.id) && "bg-primary/5",
-                          lastAddedId === c.id && "bg-green-100 dark:bg-green-900/20"
-                        )}
-                        onClick={() => openEditModal(c)}
+
+            {/* Table: grouped by material */}
+            {filteredFilaments.length > 0 ? (
+              <div className="space-y-2">
+                {filamentsByMaterial.map(([material, rows]) => {
+                  const isCollapsed = collapsedGroups.has(material);
+                  const groupSpools = rows.reduce((s, c) => s + c.quantity, 0);
+                  const groupKg = rows.reduce((s, c) => s + (c.totalWeightKg ?? c.quantity * (c.weightPerSpoolKg ?? 1)), 0);
+                  const groupValue = rows.reduce((s, c) => s + (c.totalValueKes ?? 0), 0);
+                  return (
+                    <div key={material} className="rounded-lg border overflow-hidden">
+                      <button
+                        type="button"
+                        className="w-full flex items-center gap-2 bg-muted/50 hover:bg-muted/70 px-4 py-2.5 text-left font-medium text-sm"
+                        onClick={() => toggleGroup(material)}
                       >
-                        <td className="p-4" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.has(c.id)}
-                            onChange={() => toggleSelect(c.id)}
-                            className="rounded border-input"
-                          />
-                        </td>
-                        <td className="p-4 font-medium">{c.name}</td>
-                        <td className="p-4">{c.specification ?? "—"}</td>
-                        <td
-                          className="p-4 text-right"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setInlineEdit({ id: c.id, field: "quantity", value: String(c.quantity) });
-                          }}
-                        >
-                          {inlineEdit?.id === c.id && inlineEdit?.field === "quantity" ? (
-                            <Input
-                              type="number"
-                              min={0}
-                              className="h-8 w-20 text-right"
-                              value={inlineEdit.value}
-                              onChange={(e) => setInlineEdit((prev) => (prev ? { ...prev, value: e.target.value } : null))}
-                              onBlur={() => inlineEdit && handleInlineSave(c.id, "quantity", inlineEdit.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.currentTarget.blur();
-                                }
-                              }}
-                              autoFocus
-                            />
-                          ) : (
-                            <span>{c.quantity}</span>
-                          )}
-                        </td>
-                        <td className="p-4 text-right">
-                          {c.costPerKgKes != null ? Number(c.costPerKgKes).toLocaleString() : "—"}
-                        </td>
-                        <td
-                          className="p-4"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setInlineEdit({ id: c.id, field: "location", value: c.location ?? "" });
-                          }}
-                        >
-                          {inlineEdit?.id === c.id && inlineEdit?.field === "location" ? (
-                            <Input
-                              className="h-8 min-w-[100px]"
-                              value={inlineEdit.value}
-                              onChange={(e) => setInlineEdit((prev) => (prev ? { ...prev, value: e.target.value } : null))}
-                              onBlur={() => inlineEdit && handleInlineSave(c.id, "location", inlineEdit.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") e.currentTarget.blur();
-                              }}
-                              autoFocus
-                            />
-                          ) : (
-                            <span>{c.location ?? "—"}</span>
-                          )}
-                        </td>
-                        <td className="p-4 text-right">{c.lowStockThreshold}</td>
-                        <td className="p-4" onClick={(e) => e.stopPropagation()}>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => openEditModal(c)}>
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Edit filament
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => openAdjustModal(c)}>
-                                <PackagePlus className="mr-2 h-4 w-4" />
-                                Adjust stock
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(c)}>
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete filament
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        {material} — {rows.length} {rows.length === 1 ? "entry" : "entries"} · {groupSpools} spools · {groupKg.toFixed(1)} kg · KES {Math.round(groupValue).toLocaleString()}
+                      </button>
+                      {!isCollapsed && (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b bg-muted/30">
+                                <th className="w-10 p-3"><input type="checkbox" checked={rows.every((c) => selectedIds.has(c.id))} onChange={() => rows.forEach((c) => toggleSelect(c.id))} className="rounded border-input" /></th>
+                                <th className="w-12 p-3 font-medium">Colour</th>
+                                <th className="p-3 font-medium">Material</th>
+                                <th className="p-3 font-medium w-[120px]">Brand</th>
+                                <th className="p-3 font-medium w-[100px]">Colour/Spec</th>
+                                <th className="p-3 font-medium text-right">Stock</th>
+                                <th className="p-3 font-medium text-right">Cost/kg</th>
+                                <th className="p-3 font-medium text-right">Value</th>
+                                <th className="p-3 font-medium">Location</th>
+                                <th className="p-3 font-medium">Status</th>
+                                <th className="w-10 p-3" />
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {rows.map((c) => {
+                                const weightKg = c.totalWeightKg ?? c.quantity * (c.weightPerSpoolKg ?? 1);
+                                const status = c.stockStatus ?? (c.quantity === 0 ? "OUT_OF_STOCK" : c.quantity <= c.lowStockThreshold ? "LOW_STOCK" : "IN_STOCK");
+                                const statusLabel = status === "OUT_OF_STOCK" ? "Out of Stock" : status === "LOW_STOCK" ? "Low Stock" : "In Stock";
+                                const statusClass = status === "OUT_OF_STOCK" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" : status === "LOW_STOCK" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+                                const matClass = MATERIAL_BADGE[c.name] ?? MATERIAL_BADGE.Other;
+                                const hex = c.colourHex && /^#[0-9A-Fa-f]{6}$/.test(c.colourHex) ? c.colourHex : "#6b7280";
+                                return (
+                                  <tr
+                                    key={c.id}
+                                    className={cn(
+                                      "border-b hover:bg-muted/20 cursor-pointer transition-colors",
+                                      selectedIds.has(c.id) && "bg-primary/5",
+                                      lastAddedId === c.id && "bg-green-100 dark:bg-green-900/20"
+                                    )}
+                                    onClick={() => openEditModal(c)}
+                                  >
+                                    <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                                      <input type="checkbox" checked={selectedIds.has(c.id)} onChange={() => toggleSelect(c.id)} className="rounded border-input" />
+                                    </td>
+                                    <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                                      <span
+                                        className="inline-block w-5 h-5 rounded-full shrink-0 border border-black/10"
+                                        style={{ backgroundColor: hex }}
+                                        title={hex}
+                                      />
+                                    </td>
+                                    <td className="p-3">
+                                      <Badge variant="secondary" className={cn("font-normal", matClass)}>{c.name}</Badge>
+                                    </td>
+                                    <td className="p-3 text-muted-foreground">{c.brand ?? "—"}</td>
+                                    <td className="p-3">{c.specification ?? "—"}</td>
+                                    <td className="p-3 text-right">
+                                      <span>{c.quantity} spool{c.quantity !== 1 ? "s" : ""}</span>
+                                      <span className="block text-xs text-muted-foreground">{weightKg.toFixed(1)} kg</span>
+                                    </td>
+                                    <td className="p-3 text-right">{c.costPerKgKes != null ? `KES ${Number(c.costPerKgKes).toLocaleString()}` : "—"}</td>
+                                    <td className="p-3 text-right text-muted-foreground">{c.totalValueKes != null ? `KES ${Math.round(c.totalValueKes).toLocaleString()}` : "—"}</td>
+                                    <td
+                                      className="p-3"
+                                      onClick={(e) => { e.stopPropagation(); setInlineEdit({ id: c.id, field: "location", value: c.location ?? "" }); }}
+                                    >
+                                      {inlineEdit?.id === c.id && inlineEdit?.field === "location" ? (
+                                        <div className="flex items-center gap-1">
+                                          <Input className="h-8 min-w-[80px]" value={inlineEdit.value} onChange={(e) => setInlineEdit((p) => (p ? { ...p, value: e.target.value } : null))} onBlur={() => inlineEdit && handleInlineSave(c.id, "location", inlineEdit.value)} onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()} autoFocus />
+                                        </div>
+                                      ) : c.location?.trim() ? (
+                                        <span>{c.location}</span>
+                                      ) : (
+                                        <button type="button" className="text-muted-foreground hover:text-foreground text-xs underline">+ Add location</button>
+                                      )}
+                                    </td>
+                                    <td className="p-3">
+                                      <span title={`Threshold: ${c.lowStockThreshold} spools`} className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-medium", statusClass)}>{statusLabel}</span>
+                                    </td>
+                                    <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                          <DropdownMenuItem onClick={() => openAddStockModal(c)}><PackagePlus className="mr-2 h-4 w-4" /> Add Stock</DropdownMenuItem>
+                                          <DropdownMenuItem onClick={() => openAdjustModal(c)}><Minus className="mr-2 h-4 w-4" /> Use / Adjust</DropdownMenuItem>
+                                          <DropdownMenuItem onClick={() => openEditModal(c)}><Pencil className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                                          <DropdownMenuItem onClick={async () => { setMovementsTarget(c); setMovementsList([]); setMovementsLoading(true); try { const r = await fetch(`/api/admin/3d-consumables/${c.id}/movements`); const data = await r.json(); setMovementsList(Array.isArray(data) ? data : []); } finally { setMovementsLoading(false); } }}><ClipboardList className="mr-2 h-4 w-4" /> View Movements</DropdownMenuItem>
+                                          <DropdownMenuItem className="text-destructive" onClick={() => setDeleteTarget(c)}><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
+            ) : filamentItems.length > 0 ? (
+              <p className="py-6 text-center text-sm text-muted-foreground">No filaments match the current filters.</p>
             ) : (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                No filament entries yet. Use &quot;Add filament&quot; above.
-              </p>
+              <p className="py-6 text-center text-sm text-muted-foreground">No filament entries yet. Use &quot;Add Filament&quot; above.</p>
             )}
 
             {/* Add / Edit filament modal */}
@@ -900,6 +1191,10 @@ export function Inventory3DSection({
                           aria-label={`Quantity to ${adjustTab === "add" ? "add" : "remove"} (spools)`}
                         />
                       </div>
+                      <div>
+                        <Label htmlFor="adjust-reason">Reason / notes (optional)</Label>
+                        <Input id="adjust-reason" value={adjustReason} onChange={(e) => setAdjustReason(e.target.value)} placeholder="e.g. Damaged spool, received delivery" className="mt-1" />
+                      </div>
                       <p className="text-sm text-muted-foreground">
                         New stock will be: <strong>{newStockAfterAdjust} spools</strong>
                       </p>
@@ -917,13 +1212,118 @@ export function Inventory3DSection({
               </DialogContent>
             </Dialog>
 
+            {/* Add Stock modal */}
+            <Dialog open={!!addStockTarget} onOpenChange={(open) => !open && setAddStockTarget(null)}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Add Stock — {addStockTarget ? `${addStockTarget.name} ${addStockTarget.specification ?? ""}`.trim() : ""}</DialogTitle>
+                </DialogHeader>
+                {addStockTarget && (
+                  <>
+                    <div className="space-y-4 py-2">
+                      <div>
+                        <Label>Spools received</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Button type="button" variant="outline" size="icon" className="h-9 w-9" onClick={() => setAddStockSpools((s) => Math.max(0, s - 1))}>−</Button>
+                          <Input type="number" min={0} value={addStockSpools} onChange={(e) => setAddStockSpools(Math.max(0, parseInt(e.target.value, 10) || 0))} className="w-20 text-center" />
+                          <Button type="button" variant="outline" size="icon" className="h-9 w-9" onClick={() => setAddStockSpools((s) => s + 1)}>+</Button>
+                        </div>
+                      </div>
+                      <div>
+                        <Label>Cost per kg (KES)</Label>
+                        <Input type="number" min={0} value={addStockCostPerKg === "" ? "" : addStockCostPerKg} onChange={(e) => setAddStockCostPerKg(e.target.value === "" ? "" : Math.max(0, parseFloat(e.target.value) || 0))} className="mt-1" placeholder="e.g. 3000" />
+                        <p className="text-xs text-muted-foreground mt-1">Update cost? Current: KES {(addStockTarget.costPerKgKes ?? 0).toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <Label>Supplier (optional)</Label>
+                        <Input value={addStockSupplier} onChange={(e) => setAddStockSupplier(e.target.value)} placeholder="e.g. eSUN" className="mt-1" />
+                      </div>
+                      <div>
+                        <Label>Reference / PO # (optional)</Label>
+                        <Input value={addStockReference} onChange={(e) => setAddStockReference(e.target.value)} placeholder="PO-2026-001" className="mt-1" />
+                      </div>
+                      <div>
+                        <Label>Notes (optional)</Label>
+                        <Input value={addStockNotes} onChange={(e) => setAddStockNotes(e.target.value)} placeholder="Optional notes" className="mt-1" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        New total after adding: <strong>{addStockTarget.quantity + addStockSpools} spools</strong> ({(addStockTarget.quantity + addStockSpools) * (addStockTarget.weightPerSpoolKg ?? 1)} kg)
+                      </p>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setAddStockTarget(null)}>Cancel</Button>
+                      <Button onClick={handleAddStockSubmit} disabled={addStockSaving || addStockSpools <= 0} className="bg-orange-500 hover:bg-orange-600">
+                        {addStockSaving ? "Adding…" : "Add Stock"}
+                      </Button>
+                    </DialogFooter>
+                  </>
+                )}
+              </DialogContent>
+            </Dialog>
+
+            {/* View Movements sheet */}
+            <Sheet open={!!movementsTarget} onOpenChange={(open) => !open && setMovementsTarget(null)}>
+              <SheetContent className="sm:max-w-lg overflow-y-auto">
+                <SheetHeader>
+                  <SheetTitle>Stock Movements — {movementsTarget ? `${movementsTarget.name} ${movementsTarget.specification ?? ""}`.trim() : ""}</SheetTitle>
+                </SheetHeader>
+                <div className="mt-4">
+                  {movementsLoading ? (
+                    <p className="text-sm text-muted-foreground">Loading…</p>
+                  ) : movementsList.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No movements yet.</p>
+                  ) : (
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-2 font-medium">Date</th>
+                          <th className="text-left py-2 font-medium">Type</th>
+                          <th className="text-right py-2 font-medium">Qty</th>
+                          <th className="text-left py-2 font-medium">By</th>
+                          <th className="text-left py-2 font-medium">Reference</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {movementsList.map((m) => (
+                          <tr key={m.id} className="border-b">
+                            <td className="py-2">{new Date(m.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</td>
+                            <td className="py-2">{m.type}</td>
+                            <td className="py-2 text-right">{m.quantity > 0 ? `+${m.quantity}` : m.quantity}</td>
+                            <td className="py-2">{m.performedBy}</td>
+                            <td className="py-2 text-muted-foreground">{m.reference ?? "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
+
+            {/* Bulk Set Location modal */}
+            <Dialog open={bulkLocationOpen} onOpenChange={setBulkLocationOpen}>
+              <DialogContent className="max-w-sm">
+                <DialogHeader>
+                  <DialogTitle>Set location for {selectedIds.size} filament{selectedIds.size !== 1 ? "s" : ""}</DialogTitle>
+                </DialogHeader>
+                <div className="py-2">
+                  <Label>Location</Label>
+                  <Input value={bulkLocationValue} onChange={(e) => setBulkLocationValue(e.target.value)} placeholder="e.g. Shelf A3" className="mt-1" />
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setBulkLocationOpen(false)}>Cancel</Button>
+                  <Button onClick={handleBulkSetLocation} disabled={bulkLocationSaving}>{bulkLocationSaving ? "Saving…" : "Save"}</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
             {/* Delete confirmation */}
             <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Delete {deleteTarget ? `${deleteTarget.name} ${deleteTarget.specification ?? ""}`.trim() : "filament"}?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will permanently remove this filament from inventory. Current stock: {deleteTarget?.quantity ?? 0} spools — make sure this is intentional.
+                    This will remove {deleteTarget ? `${deleteTarget.name} ${deleteTarget.specification ?? ""}`.trim() : "this filament"} from inventory. Any reserved stock will be released.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

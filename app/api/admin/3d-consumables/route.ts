@@ -12,14 +12,35 @@ const createSchema = z.object({
   kind: z.enum(KINDS),
   name: z.string().min(1).max(200),
   specification: z.string().max(200).optional(),
+  colourHex: z.string().max(20).optional(),
   brand: z.string().max(200).optional(),
   quantity: z.number().int().min(0),
+  weightPerSpoolKg: z.number().min(0).optional().nullable(),
   lowStockThreshold: z.number().int().min(0).optional(),
   location: z.string().max(200).optional(),
   costPerKgKes: z.number().min(0).optional(),
   unitCostKes: z.number().min(0).optional(),
   notes: z.string().max(2000).optional(),
 });
+
+function computeFilamentFields(c: {
+  quantity: number;
+  lowStockThreshold: number;
+  costPerKgKes: number | null;
+  weightPerSpoolKg: number | null;
+}) {
+  const weightKg = c.weightPerSpoolKg ?? 1;
+  const totalWeightKg = c.quantity * weightKg;
+  const costKg = c.costPerKgKes ?? 0;
+  const totalValueKes = totalWeightKg * costKg;
+  const status =
+    c.quantity === 0
+      ? "OUT_OF_STOCK"
+      : c.quantity <= c.lowStockThreshold
+        ? "LOW_STOCK"
+        : "IN_STOCK";
+  return { totalWeightKg, totalValueKes, stockStatus: status };
+}
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -31,7 +52,38 @@ export async function GET() {
     const items = await prisma.threeDConsumable.findMany({
       orderBy: [{ kind: "asc" }, { name: "asc" }],
     });
-    return NextResponse.json(items);
+    const serialized = items.map((c) => {
+      const row: Record<string, unknown> = {
+        id: c.id,
+        kind: c.kind,
+        name: c.name,
+        specification: c.specification,
+        colourHex: c.colourHex,
+        brand: c.brand,
+        quantity: c.quantity,
+        weightPerSpoolKg: c.weightPerSpoolKg,
+        lowStockThreshold: c.lowStockThreshold,
+        location: c.location,
+        costPerKgKes: c.costPerKgKes,
+        unitCostKes: c.unitCostKes,
+        notes: c.notes,
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+      };
+      if (c.kind === "FILAMENT") {
+        const { totalWeightKg, totalValueKes, stockStatus } = computeFilamentFields({
+          quantity: c.quantity,
+          lowStockThreshold: c.lowStockThreshold,
+          costPerKgKes: c.costPerKgKes,
+          weightPerSpoolKg: c.weightPerSpoolKg,
+        });
+        row.totalWeightKg = totalWeightKg;
+        row.totalValueKes = totalValueKes;
+        row.stockStatus = stockStatus;
+      }
+      return row;
+    });
+    return NextResponse.json(serialized);
   } catch (e) {
     console.error("3D consumables list error:", e);
     return NextResponse.json(
@@ -56,8 +108,10 @@ export async function POST(req: Request) {
     kind,
     name,
     specification,
+    colourHex,
     brand,
     quantity,
+    weightPerSpoolKg,
     lowStockThreshold = 2,
     location,
     costPerKgKes,
@@ -78,8 +132,10 @@ export async function POST(req: Request) {
         kind,
         name,
         specification: specification || null,
+        colourHex: colourHex?.trim() || null,
         brand: brand?.trim() || null,
         quantity,
+        weightPerSpoolKg: kind === "FILAMENT" ? (weightPerSpoolKg ?? 1) : null,
         lowStockThreshold,
         location: location || null,
         costPerKgKes: kind === "FILAMENT" ? (costPerKgKes ?? 0) : costPerKgKes ?? null,
@@ -87,7 +143,19 @@ export async function POST(req: Request) {
         notes: notes?.trim() || null,
       },
     });
-    return NextResponse.json(item);
+    const row = item as Record<string, unknown>;
+    if (item.kind === "FILAMENT") {
+      const { totalWeightKg, totalValueKes, stockStatus } = computeFilamentFields({
+        quantity: item.quantity,
+        lowStockThreshold: item.lowStockThreshold,
+        costPerKgKes: item.costPerKgKes,
+        weightPerSpoolKg: item.weightPerSpoolKg,
+      });
+      row.totalWeightKg = totalWeightKg;
+      row.totalValueKes = totalValueKes;
+      row.stockStatus = stockStatus;
+    }
+    return NextResponse.json(row);
   } catch (e) {
     console.error("3D consumable create error:", e);
     return NextResponse.json(

@@ -208,3 +208,115 @@ export async function sendQuoteInProductionEmail(email: string, quoteNumber: str
     `,
   });
 }
+
+// ============== CAREERS ==============
+
+export async function sendCareerApplicationConfirmationEmail(
+  email: string,
+  firstName: string,
+  jobTitle: string,
+  applicationRef: string
+) {
+  return sendEmail({
+    to: email,
+    subject: `Application received — ${jobTitle} at PrintHub`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
+        <h2 style="color: #FF4D00;">PrintHub</h2>
+        <p>Hi ${firstName},</p>
+        <p>Thanks for applying for the <strong>${jobTitle}</strong> position at PrintHub.</p>
+        <p>We've received your application and our team will review it carefully. You'll hear back from us within 5 business days.</p>
+        <p>Your application reference: <strong>${applicationRef}</strong></p>
+        <p>Best,<br>The PrintHub Team<br>printhub.africa</p>
+      </div>
+    `,
+  });
+}
+
+export async function sendCareerApplicationNotificationToAdmin(
+  adminEmail: string,
+  jobTitle: string,
+  applicantName: string,
+  applicantEmail: string,
+  applicantPhone: string,
+  appliedAt: string,
+  applicationId: string
+) {
+  const viewUrl = `${baseUrl}/admin/careers/applications/${applicationId}`;
+  return sendEmail({
+    to: adminEmail,
+    subject: `New application: ${jobTitle} — ${applicantName}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
+        <h2 style="color: #FF4D00;">New job application</h2>
+        <p><strong>Role:</strong> ${jobTitle}</p>
+        <p><strong>Applicant:</strong> ${applicantName}</p>
+        <p><strong>Email:</strong> ${applicantEmail}</p>
+        <p><strong>Phone:</strong> ${applicantPhone}</p>
+        <p><strong>Applied:</strong> ${appliedAt}</p>
+        <p><a href="${viewUrl}" style="color: #FF4D00; font-weight: bold;">View Application →</a></p>
+        <p style="color: #6B6B6B; font-size: 12px;">PrintHub Admin | printhub.africa</p>
+      </div>
+    `,
+  });
+}
+
+export async function sendCareerStatusShortlistedEmail(
+  email: string,
+  firstName: string,
+  jobTitle: string
+) {
+  return sendEmail({
+    to: email,
+    subject: `You've been shortlisted — ${jobTitle} at PrintHub`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
+        <h2 style="color: #FF4D00;">PrintHub</h2>
+        <p>Hi ${firstName},</p>
+        <p>Good news! We've reviewed your application for the <strong>${jobTitle}</strong> position and would like to move forward.</p>
+        <p>Our team will be in touch to schedule an interview.</p>
+        <p>Best,<br>The PrintHub Team<br>printhub.africa</p>
+      </div>
+    `,
+  });
+}
+
+export async function sendCareerStatusRejectedEmail(
+  email: string,
+  firstName: string,
+  jobTitle: string
+) {
+  return sendEmail({
+    to: email,
+    subject: `Your application — ${jobTitle} at PrintHub`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
+        <h2 style="color: #FF4D00;">PrintHub</h2>
+        <p>Hi ${firstName},</p>
+        <p>Thank you for your interest in the <strong>${jobTitle}</strong> position.</p>
+        <p>After careful consideration, we won't be moving forward with your application at this time. We'll keep your details on file and encourage you to apply for future roles.</p>
+        <p>Best,<br>The PrintHub Team<br>printhub.africa</p>
+      </div>
+    `,
+  });
+}
+
+export async function sendCareerOfferMadeEmail(
+  email: string,
+  firstName: string,
+  jobTitle: string
+) {
+  return sendEmail({
+    to: email,
+    subject: `An offer from PrintHub — ${jobTitle}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
+        <h2 style="color: #FF4D00;">PrintHub</h2>
+        <p>Hi ${firstName},</p>
+        <p>We're delighted to offer you the <strong>${jobTitle}</strong> position.</p>
+        <p>Please check your email for the formal offer letter.</p>
+        <p>Best,<br>The PrintHub Team<br>printhub.africa</p>
+      </div>
+    `,
+  });
+}

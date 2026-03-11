@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { createTrackingEvent } from "@/lib/tracking";
 
 interface CallbackBody {
   Body: {
@@ -44,6 +45,7 @@ export async function POST(req: Request) {
     const amount = Number(getVal("Amount") ?? 0);
     const date = String(getVal("TransactionDate") ?? "");
 
+    const orderId = mpesa.payment.orderId;
     await prisma.$transaction([
       prisma.mpesaTransaction.update({
         where: { id: mpesa.id },
@@ -60,10 +62,11 @@ export async function POST(req: Request) {
         data: { status: "COMPLETED", providerTransactionId: receipt, paidAt: new Date() },
       }),
       prisma.order.update({
-        where: { id: mpesa.payment.orderId },
+        where: { id: orderId },
         data: { status: "CONFIRMED" },
       }),
     ]);
+    await createTrackingEvent(orderId, "CONFIRMED");
   } else {
     await prisma.mpesaTransaction.update({
       where: { id: mpesa.id },

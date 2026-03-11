@@ -1,12 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { TableToolbar, type FilterConfig } from "@/components/admin/ui/TableToolbar";
+import { TablePagination } from "@/components/admin/ui/TablePagination";
+import { TableEmptyState } from "@/components/admin/ui/TableEmptyState";
+import { useTableUrlState } from "@/hooks/useTableUrlState";
 import type { LFStockItemSerialized } from "@/components/admin/inventory-tabs";
+import { Search, Package, Plus, MoreHorizontal } from "lucide-react";
 
 const CATEGORIES = [
   { value: "SUBSTRATE_ROLL", label: "Substrate (roll)" },
@@ -14,6 +25,13 @@ const CATEGORIES = [
   { value: "FINISHING", label: "Finishing (eyelets, tape, etc.)" },
   { value: "INK", label: "Ink" },
 ];
+
+const CATEGORY_BADGE: Record<string, string> = {
+  FINISHING: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
+  LAMINATION: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+  SUBSTRATE_ROLL: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+  INK: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+};
 
 const UNIT_TYPES = [
   { value: "ROLL_LM", label: "Roll (per linear metre)" },
@@ -26,6 +44,12 @@ function formatKes(n: number) {
   return `KES ${n.toLocaleString()}`;
 }
 
+function unitSuffix(unitType: string): string {
+  if (unitType === "ROLL_LM") return "/lm";
+  if (unitType === "BOTTLE_ML") return "/bottle";
+  return "/unit";
+}
+
 export function LargeFormatInventorySection({
   lfStockItems: initialItems,
 }: {
@@ -33,10 +57,70 @@ export function LargeFormatInventorySection({
 }) {
   const router = useRouter();
   const [items, setItems] = useState<LFStockItemSerialized[]>(initialItems);
+  const url = useTableUrlState({ defaultPerPage: 25 });
 
   useEffect(() => {
     setItems(initialItems);
   }, [initialItems]);
+
+  const categoryFilter = url.get("category", "");
+  const stockStatusFilter = url.get("stockStatus", "");
+
+  const filteredAndSorted = useMemo(() => {
+    let list = [...items];
+    const q = url.q.toLowerCase().trim();
+    if (q) {
+      list = list.filter((i) => i.name.toLowerCase().includes(q) || i.code.toLowerCase().includes(q));
+    }
+    if (categoryFilter) list = list.filter((i) => i.category === categoryFilter);
+    if (stockStatusFilter === "out") list = list.filter((i) => i.quantityOnHand <= 0);
+    else if (stockStatusFilter === "low") list = list.filter((i) => i.lowStockThreshold > 0 && i.quantityOnHand > 0 && i.quantityOnHand <= i.lowStockThreshold);
+    else if (stockStatusFilter === "in") list = list.filter((i) => i.lowStockThreshold <= 0 || i.quantityOnHand > i.lowStockThreshold);
+    const field = url.sort || "code";
+    const dir = url.dir === "desc" ? -1 : 1;
+    list.sort((a, b) => {
+      if (field === "code") return dir * a.code.localeCompare(b.code);
+      if (field === "name") return dir * a.name.localeCompare(b.name);
+      if (field === "category") return dir * a.category.localeCompare(b.category);
+      if (field === "quantityOnHand") return dir * (a.quantityOnHand - b.quantityOnHand);
+      if (field === "averageCostKes") return dir * (a.averageCostKes - b.averageCostKes);
+      return 0;
+    });
+    return list;
+  }, [items, url.q, categoryFilter, stockStatusFilter, url.sort, url.dir]);
+
+  const paginated = useMemo(() => {
+    const start = (url.page - 1) * url.perPage;
+    return filteredAndSorted.slice(start, start + url.perPage);
+  }, [filteredAndSorted, url.page, url.perPage]);
+
+  const filters: FilterConfig[] = useMemo(
+    () => [
+      {
+        key: "category",
+        label: "Category",
+        options: [{ value: "", label: "All" }, ...CATEGORIES.map((c) => ({ value: c.value, label: c.label }))],
+        value: categoryFilter,
+        onChange: (v) => url.set({ category: v || undefined, page: 1 }),
+      },
+      {
+        key: "stockStatus",
+        label: "Stock status",
+        options: [
+          { value: "", label: "All" },
+          { value: "in", label: "In Stock" },
+          { value: "low", label: "Low Stock" },
+          { value: "out", label: "Out of Stock" },
+        ],
+        value: stockStatusFilter,
+        onChange: (v) => url.set({ stockStatus: v || undefined, page: 1 }),
+      },
+    ],
+    [categoryFilter, stockStatusFilter, url]
+  );
+
+  const hasActiveFilters = url.q !== "" || categoryFilter !== "" || stockStatusFilter !== "";
+
   const [showAddForm, setShowAddForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -179,14 +263,37 @@ export function LargeFormatInventorySection({
         </div>
         <Button
           type="button"
-          variant="outline"
           size="sm"
+          className="bg-orange-500 hover:bg-orange-600"
           onClick={() => setShowAddForm((v) => !v)}
         >
-          {showAddForm ? "Cancel" : "Add item"}
+          <Plus className="mr-2 h-4 w-4" />
+          {showAddForm ? "Cancel" : "Add Item"}
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
+        {items.length > 0 && (
+          <TableToolbar
+            searchPlaceholder="Search by name or code..."
+            searchValue={url.q}
+            onSearch={url.setSearch}
+            filters={filters}
+            sortOptions={[
+              { label: "Code", value: "code" },
+              { label: "Name", value: "name" },
+              { label: "Category", value: "category" },
+              { label: "Qty on hand", value: "quantityOnHand" },
+              { label: "Avg cost", value: "averageCostKes" },
+            ]}
+            currentSort={url.sort || "code"}
+            currentSortDir={url.dir}
+            onSortChange={url.setSort}
+            totalCount={items.length}
+            filteredCount={filteredAndSorted.length}
+            onClearFilters={url.clearFilters}
+            hasActiveFilters={hasActiveFilters}
+          />
+        )}
         {showAddForm && (
           <form
             onSubmit={handleAddItem}
@@ -324,119 +431,143 @@ export function LargeFormatInventorySection({
           </form>
         )}
 
-        {items.length > 0 ? (
-          <div className="overflow-x-auto rounded-lg border">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="text-left p-4 font-medium">Code</th>
-                  <th className="text-left p-4 font-medium">Name</th>
-                  <th className="text-left p-4 font-medium">Category</th>
-                  <th className="text-right p-4 font-medium">Qty on hand</th>
-                  <th className="text-right p-4 font-medium">Avg cost</th>
-                  <th className="text-right p-4 font-medium">Last purchase</th>
-                  <th className="text-left p-4 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((i) => (
-                  <tr
-                    key={i.id}
-                    className={`border-b hover:bg-muted/30 ${
-                      i.lowStockThreshold > 0 && i.quantityOnHand <= i.lowStockThreshold
-                        ? "bg-amber-50"
-                        : ""
-                    }`}
-                  >
-                    <td className="p-4 font-mono text-xs">{i.code}</td>
-                    <td className="p-4 font-medium">{i.name}</td>
-                    <td className="p-4 text-muted-foreground">{i.category.replace("_", " ")}</td>
-                    <td className="p-4 text-right">
-                      {i.quantityOnHand}
-                      {i.unitType === "ROLL_LM" && " lm"}
-                      {i.lowStockThreshold > 0 && i.quantityOnHand <= i.lowStockThreshold && (
-                        <span className="text-amber-600 ml-1">low</span>
-                      )}
-                    </td>
-                    <td className="p-4 text-right">{formatKes(i.averageCostKes)}</td>
-                    <td className="p-4 text-right">
-                      {i.lastPurchasePriceKes != null
-                        ? formatKes(i.lastPurchasePriceKes)
-                        : "—"}
-                    </td>
-                    <td className="p-4">
-                      {receiveItemCode === i.code ? (
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Input
-                            type="number"
-                            min={0.01}
-                            placeholder="Qty"
-                            value={receiveQty === "" ? "" : receiveQty}
-                            onChange={(e) =>
-                              setReceiveQty(
-                                e.target.value === ""
-                                  ? ""
-                                  : parseFloat(e.target.value) || 0
-                              )
-                            }
-                            className="w-20 h-8 text-sm"
-                          />
-                          <Input
-                            type="number"
-                            min={0}
-                            placeholder="Price/unit"
-                            value={receivePrice === "" ? "" : receivePrice}
-                            onChange={(e) =>
-                              setReceivePrice(
-                                e.target.value === ""
-                                  ? ""
-                                  : parseFloat(e.target.value) || 0
-                              )
-                            }
-                            className="w-24 h-8 text-sm"
-                          />
-                          <Button
-                            size="sm"
-                            onClick={() => handleReceive(i.code)}
-                            disabled={receiveLoading || Number(receiveQty) <= 0}
-                          >
-                            {receiveLoading ? "Saving…" : "Save"}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
-                              setReceiveItemCode(null);
-                              setReceiveQty("");
-                              setReceivePrice("");
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setReceiveItemCode(i.code);
-                            setReceiveQty("");
-                            setReceivePrice("");
-                          }}
-                        >
-                          Receive stock
-                        </Button>
-                      )}
-                    </td>
+        {filteredAndSorted.length > 0 ? (
+          <>
+            <div className="overflow-x-auto rounded-lg border">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 z-10 bg-background">
+                  <tr className="border-b bg-muted/50">
+                    <th className="text-left p-4 font-medium">Code</th>
+                    <th className="text-left p-4 font-medium">Name</th>
+                    <th className="text-left p-4 font-medium">Category</th>
+                    <th className="text-right p-4 font-medium">Qty on hand</th>
+                    <th className="text-right p-4 font-medium">Avg cost</th>
+                    <th className="text-right p-4 font-medium">Last purchase</th>
+                    <th className="text-left p-4 font-medium">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {paginated.map((i) => {
+                    const isLow = i.lowStockThreshold > 0 && i.quantityOnHand > 0 && i.quantityOnHand <= i.lowStockThreshold;
+                    const isOut = i.quantityOnHand <= 0;
+                    const qtyTitle = i.lowStockThreshold > 0
+                      ? isOut
+                        ? "Out of stock"
+                        : isLow
+                          ? `Threshold: ${i.lowStockThreshold} — LOW STOCK`
+                          : `Threshold: ${i.lowStockThreshold} — above threshold`
+                      : "No threshold set";
+                    const qtyColor = isOut ? "text-red-600 font-medium" : isLow ? "text-amber-600" : "text-green-700 dark:text-green-400";
+                    return (
+                      <tr
+                        key={i.id}
+                        className={`border-b hover:bg-muted/30 ${isLow ? "bg-amber-50/50 dark:bg-amber-950/20" : ""}`}
+                      >
+                        <td className="p-4">
+                          <span className="font-mono text-xs bg-muted px-2 py-0.5 rounded">{i.code}</span>
+                        </td>
+                        <td className="p-4 font-medium">{i.name}</td>
+                        <td className="p-4">
+                          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${CATEGORY_BADGE[i.category] ?? "bg-muted text-muted-foreground"}`}>
+                            {i.category.replace(/_/g, " ")}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right" title={qtyTitle}>
+                          <span className={qtyColor}>
+                            {i.quantityOnHand}
+                            {i.unitType === "ROLL_LM" ? " lm" : ""}
+                            {isLow && " (low)"}
+                            {isOut && " — Out of Stock"}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right text-muted-foreground">
+                          {formatKes(i.averageCostKes)}{unitSuffix(i.unitType)}
+                        </td>
+                        <td className="p-4 text-right text-muted-foreground" title={i.lastReceivedAt == null ? "No stock received yet. Use 'Receive stock' to log first receipt." : undefined}>
+                          {i.lastPurchasePriceKes != null ? formatKes(i.lastPurchasePriceKes) : "—"}
+                        </td>
+                        <td className="p-4">
+                          {receiveItemCode === i.code ? (
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Input
+                                type="number"
+                                min={0.01}
+                                placeholder="Qty"
+                                value={receiveQty === "" ? "" : receiveQty}
+                                onChange={(e) => setReceiveQty(e.target.value === "" ? "" : parseFloat(e.target.value) || 0)}
+                                className="w-20 h-8 text-sm"
+                              />
+                              <Input
+                                type="number"
+                                min={0}
+                                placeholder="Price/unit"
+                                value={receivePrice === "" ? "" : receivePrice}
+                                onChange={(e) => setReceivePrice(e.target.value === "" ? "" : parseFloat(e.target.value) || 0)}
+                                className="w-24 h-8 text-sm"
+                              />
+                              <Button size="sm" onClick={() => handleReceive(i.code)} disabled={receiveLoading || Number(receiveQty) <= 0}>
+                                {receiveLoading ? "Saving…" : "Save"}
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => { setReceiveItemCode(null); setReceiveQty(""); setReceivePrice(""); }}>
+                                Cancel
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => { setReceiveItemCode(i.code); setReceiveQty(""); setReceivePrice(""); }}
+                              >
+                                Receive stock
+                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button size="icon" variant="ghost" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => { setReceiveItemCode(i.code); setReceiveQty(""); setReceivePrice(""); }}>
+                                    Receive stock
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem disabled>Edit (coming soon)</DropdownMenuItem>
+                                  <DropdownMenuItem disabled>View movements (coming soon)</DropdownMenuItem>
+                                  <DropdownMenuItem disabled>Set threshold (coming soon)</DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <TablePagination
+              totalCount={filteredAndSorted.length}
+              page={url.page}
+              perPage={url.perPage}
+              onPageChange={url.setPage}
+              onPerPageChange={url.setPerPage}
+              perPageOptions={[10, 25, 50, 100]}
+            />
+          </>
+        ) : items.length > 0 ? (
+          <TableEmptyState
+            icon={Search}
+            title="No items match your filters"
+            description="Try adjusting your search or filters."
+            actionLabel="Clear filters"
+            onAction={url.clearFilters}
+          />
         ) : (
-          <p className="py-8 text-center text-muted-foreground text-sm">
-            No large format items yet. Click &quot;Add item&quot; to add materials you use for your printing services (e.g. vinyl rolls, lamination, eyelets). These are separate from shop products.
-          </p>
+          <TableEmptyState
+            icon={Package}
+            title="No large format items yet"
+            description="Click Add Item to add materials you use for printing services (e.g. vinyl rolls, lamination, eyelets)."
+            actionLabel="Add Item"
+            onAction={() => setShowAddForm(true)}
+          />
         )}
       </CardContent>
     </Card>

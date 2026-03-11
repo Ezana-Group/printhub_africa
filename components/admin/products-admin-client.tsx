@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -13,7 +13,6 @@ import {
 } from "@tanstack/react-table";
 import { AdminBreadcrumbs } from "@/components/admin/admin-breadcrumbs";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -24,16 +23,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  type SelectOption,
-} from "@/components/ui/select";
 import { formatPrice } from "@/lib/utils";
 import {
   getProductTypeLabel,
   getProductTypeDotColor,
 } from "@/lib/admin-utils";
 import { ProductFormSheet } from "@/components/admin/product-form-sheet";
+import { TableToolbar, type FilterConfig, type SortOption } from "@/components/admin/ui/TableToolbar";
+import { TablePagination } from "@/components/admin/ui/TablePagination";
+import { TableEmptyState } from "@/components/admin/ui/TableEmptyState";
+import { useTableUrlState } from "@/hooks/useTableUrlState";
 import {
   MoreHorizontal,
   Search,
@@ -44,6 +43,7 @@ import {
   Archive,
   Trash2,
   Box,
+  Download,
 } from "lucide-react";
 
 type ProductType = "READYMADE_3D" | "LARGE_FORMAT" | "CUSTOM";
@@ -86,34 +86,24 @@ export function ProductsAdminClient({
   categories: { id: string; name: string; slug: string }[];
 }) {
   const router = useRouter();
-  const [search, setSearch] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const url = useTableUrlState({ defaultPerPage: 25 });
+  const categoryFilter = url.get("category", "");
+  const typeFilter = url.get("type", "");
+  const statusFilter = url.get("status", "");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductRow | null>(null);
 
-  const categoryOptions: SelectOption[] = useMemo(
-    () => [{ value: "", label: "All categories" }, ...categories.map((c) => ({ value: c.id, label: c.name }))],
-    [categories]
-  );
-  const typeOptions: SelectOption[] = [
-    { value: "", label: "All types" },
-    { value: "READYMADE_3D", label: "Ready-made 3D" },
-    { value: "LARGE_FORMAT", label: "Large Format" },
-    { value: "CUSTOM", label: "3D Service" },
-  ];
-  const statusOptions: SelectOption[] = [
-    { value: "", label: "All" },
-    { value: "active", label: "Active" },
-    { value: "inactive", label: "Inactive" },
-  ];
+  useEffect(() => {
+    const field = url.sort || "name";
+    const dir = url.dir === "desc";
+    setSorting([{ id: field, desc: dir }]);
+  }, [url.sort, url.dir]);
 
   const filteredAndSorted = useMemo(() => {
     let list = [...initialProducts];
-    const q = search.toLowerCase().trim();
+    const q = url.q.toLowerCase().trim();
     if (q) {
       list = list.filter(
         (p) =>
@@ -126,21 +116,69 @@ export function ProductsAdminClient({
     if (typeFilter) list = list.filter((p) => p.productType === typeFilter);
     if (statusFilter === "active") list = list.filter((p) => p.isActive);
     if (statusFilter === "inactive") list = list.filter((p) => !p.isActive);
-    if (sorting.length) {
-      const [s] = sorting;
-      const key = s.id as keyof ProductRow;
-      const dir = s.desc ? -1 : 1;
-      list.sort((a, b) => {
-        const av = a[key];
-        const bv = b[key];
-        if (typeof av === "string" && typeof bv === "string") return dir * av.localeCompare(bv);
-        if (typeof av === "number" && typeof bv === "number") return dir * (av - bv);
-        if (av instanceof Date && bv instanceof Date) return dir * (av.getTime() - bv.getTime());
-        return 0;
-      });
-    }
+    const field = (url.sort || "name") as keyof ProductRow;
+    const dir = url.dir === "desc" ? -1 : 1;
+    list.sort((a, b) => {
+      const av = a[field];
+      const bv = b[field];
+      if (typeof av === "string" && typeof bv === "string") return dir * av.localeCompare(bv);
+      if (typeof av === "number" && typeof bv === "number") return dir * (av - bv);
+      if (av instanceof Date && bv instanceof Date) return dir * (av.getTime() - bv.getTime());
+      return 0;
+    });
     return list;
-  }, [initialProducts, search, categoryFilter, typeFilter, statusFilter, sorting]);
+  }, [initialProducts, url.q, categoryFilter, typeFilter, statusFilter, url.sort, url.dir]);
+
+  const paginatedRows = useMemo(() => {
+    const start = (url.page - 1) * url.perPage;
+    return filteredAndSorted.slice(start, start + url.perPage);
+  }, [filteredAndSorted, url.page, url.perPage]);
+
+  const sortOptions: SortOption[] = useMemo(
+    () => [
+      { label: "Name", value: "name" },
+      { label: "Price", value: "basePrice" },
+      { label: "Stock", value: "stock" },
+      { label: "Date created", value: "createdAt" },
+    ],
+    []
+  );
+
+  const filters: FilterConfig[] = useMemo(
+    () => [
+      {
+        key: "category",
+        label: "Category",
+        options: [{ value: "", label: "All categories" }, ...categories.map((c) => ({ value: c.id, label: c.name }))],
+        value: categoryFilter,
+        onChange: (v) => url.set({ category: v || undefined, page: 1 }),
+      },
+      {
+        key: "type",
+        label: "Type",
+        options: [
+          { value: "", label: "All types" },
+          { value: "READYMADE_3D", label: "Ready-made 3D" },
+          { value: "LARGE_FORMAT", label: "Large Format" },
+          { value: "CUSTOM", label: "3D Service" },
+        ],
+        value: typeFilter,
+        onChange: (v) => url.set({ type: v || undefined, page: 1 }),
+      },
+      {
+        key: "status",
+        label: "Status",
+        options: [
+          { value: "", label: "All status" },
+          { value: "active", label: "Active" },
+          { value: "inactive", label: "Inactive" },
+        ],
+        value: statusFilter,
+        onChange: (v) => url.set({ status: v || undefined, page: 1 }),
+      },
+    ],
+    [categories, categoryFilter, typeFilter, statusFilter, url]
+  );
 
   const toggleActive = useCallback(
     async (id: string, isActive: boolean) => {
@@ -166,12 +204,19 @@ export function ProductsAdminClient({
           <input
             type="checkbox"
             className="h-4 w-4 rounded border-input"
-            checked={table.getIsAllPageRowsSelected()}
+            checked={paginatedRows.length > 0 && paginatedRows.every((p) => selected.has(p.id))}
             onChange={(e) => {
-              if (e.target.checked) setSelected(new Set(filteredAndSorted.map((p) => p.id)));
-              else setSelected(new Set());
+              if (e.target.checked) {
+                const next = new Set(selected);
+                paginatedRows.forEach((p) => next.add(p.id));
+                setSelected(next);
+              } else {
+                const next = new Set(selected);
+                paginatedRows.forEach((p) => next.delete(p.id));
+                setSelected(next);
+              }
             }}
-            aria-label="Select all"
+            aria-label="Select all on page"
           />
         ),
         cell: ({ row }) => (
@@ -356,11 +401,11 @@ export function ProductsAdminClient({
         size: 56,
       },
     ],
-    [selected, filteredAndSorted, toggleActive, router]
+    [selected, paginatedRows, toggleActive, router]
   );
 
   const table = useReactTable({
-    data: filteredAndSorted,
+    data: paginatedRows,
     columns,
     state: { sorting },
     onSortingChange: setSorting,
@@ -373,16 +418,13 @@ export function ProductsAdminClient({
     setSheetOpen(true);
   };
 
+  const hasActiveFilters = url.q !== "" || categoryFilter !== "" || typeFilter !== "" || statusFilter !== "";
+
   return (
     <div className="px-4 py-4 md:px-8 md:py-6">
       <AdminBreadcrumbs items={[{ label: "Products" }]} />
       <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-[24px] font-bold text-[#111]">Products</h1>
-          <p className="text-[13px] text-[#6B7280] mt-0.5">
-            Showing {filteredAndSorted.length} of {initialProducts.length} products
-          </p>
-        </div>
+        <h1 className="text-[24px] font-bold text-[#111]">Products</h1>
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -402,51 +444,35 @@ export function ProductsAdminClient({
         </div>
       </div>
 
-      <div className="mt-6 flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6B7280]" />
-          <Input
-            placeholder="Search products..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9"
-          />
-        </div>
-        <Select
-          options={categoryOptions}
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          className="w-[180px] h-9"
-        />
-        <Select
-          options={typeOptions}
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-          className="w-[160px] h-9"
-        />
-        <Select
-          options={statusOptions}
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="w-[120px] h-9"
+      <div className="mt-6">
+        <TableToolbar
+          searchPlaceholder="Search products..."
+          searchValue={url.q}
+          onSearch={url.setSearch}
+          filters={filters}
+          sortOptions={sortOptions}
+          currentSort={url.sort || "name"}
+          currentSortDir={url.dir}
+          onSortChange={url.setSort}
+          totalCount={initialProducts.length}
+          filteredCount={filteredAndSorted.length}
+          actions={null}
+          onClearFilters={url.clearFilters}
+          hasActiveFilters={hasActiveFilters}
         />
       </div>
 
-      <Card className="mt-6 border-[#E5E7EB] bg-white">
+      <Card className="mt-4 border-[#E5E7EB] bg-white">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             {filteredAndSorted.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 px-4">
-                <Box className="h-12 w-12 text-[#9CA3AF] mb-4" />
-                <p className="text-base font-medium text-[#111]">No products found</p>
-                <p className="text-sm text-[#6B7280] mt-1 text-center max-w-sm">
-                  Add your first product or adjust your search filters.
-                </p>
-                <Button onClick={handleAddProduct} className="mt-4 bg-primary">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Product
-                </Button>
-              </div>
+              <TableEmptyState
+                icon={Search}
+                title={hasActiveFilters ? "No products match your search" : "No products yet"}
+                description={hasActiveFilters ? "Try adjusting your filters or search terms." : "Add your first product to get started."}
+                actionLabel={hasActiveFilters ? "Clear filters" : "Add Product"}
+                onAction={hasActiveFilters ? url.clearFilters : handleAddProduct}
+              />
             ) : (
               <table className="w-full text-sm">
                 <thead className="sticky top-0 z-10 bg-[#F3F4F6] border-b border-[#E5E7EB]">
@@ -485,6 +511,16 @@ export function ProductsAdminClient({
               </table>
             )}
           </div>
+          {filteredAndSorted.length > 0 && (
+            <TablePagination
+              totalCount={filteredAndSorted.length}
+              page={url.page}
+              perPage={url.perPage}
+              onPageChange={url.setPage}
+              onPerPageChange={url.setPerPage}
+              perPageOptions={[10, 25, 50, 100]}
+            />
+          )}
         </CardContent>
       </Card>
 
@@ -527,6 +563,26 @@ export function ProductsAdminClient({
               }}
             >
               Set Inactive
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const rows = initialProducts.filter((p) => selected.has(p.id));
+                const csv = ["Name,SKU,Category,Type,Price,Stock,Status"];
+                rows.forEach((p) => {
+                  csv.push([p.name, p.sku ?? "", p.category.name, p.productType, p.basePrice, p.stock, p.isActive ? "Active" : "Inactive"].map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","));
+                });
+                const blob = new Blob([csv.join("\n")], { type: "text/csv" });
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(blob);
+                a.download = "products-export.csv";
+                a.click();
+                URL.revokeObjectURL(a.href);
+              }}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export
             </Button>
             <Button
               variant="destructive"

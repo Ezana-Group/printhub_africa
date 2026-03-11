@@ -29,7 +29,7 @@ const FOOTER_COLUMNS: { title: string; links: FooterLink[] }[] = [
     links: [
       { label: "About Us", href: "/about" },
       { label: "Contact Us", href: "#", openContact: true },
-      { label: "Careers", href: "#", openContact: true },
+      { label: "Careers", href: "/careers" },
     ],
   },
   {
@@ -128,10 +128,13 @@ export function Footer() {
             </p>
           </div>
           <div className="mt-6 flex flex-wrap gap-6 text-xs text-slate-500">
-            <Link href="/privacy" className="hover:text-slate-400 transition-colors">Privacy Policy</Link>
-            <Link href="/terms" className="hover:text-slate-400 transition-colors">Terms of Service</Link>
-            <Link href="/cookies" className="hover:text-slate-400 transition-colors">Cookie Policy</Link>
+            <Link href="/privacy-policy" className="hover:text-slate-400 transition-colors">Privacy Policy</Link>
+            <Link href="/terms-of-service" className="hover:text-slate-400 transition-colors">Terms of Service</Link>
+            <Link href="/cookie-policy" className="hover:text-slate-400 transition-colors">Cookie Policy</Link>
             <Link href="/refund-policy" className="hover:text-slate-400 transition-colors">Refund Policy</Link>
+            <button type="button" id="cookie-settings-trigger" className="hover:text-slate-400 transition-colors">
+              Cookie Settings
+            </button>
           </div>
         </div>
       </footer>

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
 import { OrderActions } from "@/components/admin/order-actions";
+import { OrderTrackingCard } from "@/components/admin/order-tracking-card";
 
 export default async function AdminOrderDetailPage({
   params,
@@ -24,6 +25,7 @@ export default async function AdminOrderDetailPage({
       payments: true,
       refunds: true,
       timeline: { orderBy: { timestamp: "desc" } },
+      trackingEvents: { orderBy: { createdAt: "desc" } },
     },
   });
 
@@ -47,6 +49,12 @@ export default async function AdminOrderDetailPage({
         currentStatus={order.status}
         orderTotal={Number(order.total)}
         totalPaid={totalPaid}
+      />
+
+      <OrderTrackingCard
+        orderId={id}
+        orderNumber={order.orderNumber}
+        events={order.trackingEvents}
       />
 
       <div className="grid md:grid-cols-2 gap-6">

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SettingsSaveButton } from "@/components/settings/settings-save-button";
 import { SettingsSwitch } from "@/components/settings/settings-switch";
+import { CouriersSection } from "@/components/admin/couriers-section";
 
 export default async function AdminSettingsShippingPage() {
   await requireAdminSettings();
@@ -78,15 +79,9 @@ export default async function AdminSettingsShippingPage() {
       </SectionCard>
       <SectionCard
         title="Courier Partners"
-        description="Primary and secondary courier, tracking URL."
+        description="Couriers used for order delivery. Tracking URL can use {trackingNumber} as placeholder. Shown to customers on the track page."
       >
-        <div className="grid gap-2">
-          <Label>Primary courier</Label>
-          <Input name="primaryCourier" placeholder="e.g. G4S, Wells Fargo" />
-          <Label>Tracking URL (use &#123;trackingNumber&#125; as placeholder)</Label>
-          <Input name="trackingUrl" placeholder="https://courier.co.ke/track/{trackingNumber}" />
-        </div>
-        <Button type="button" variant="outline" size="sm" className="mt-2">Test Tracking Link</Button>
+        <CouriersSection />
       </SectionCard>
       <SettingsSaveButton formId="settings-shipping" action="/api/admin/settings/shipping" />
       </form>

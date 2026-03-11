@@ -15,10 +15,10 @@ export default async function AdminOrdersPage({
   await requireAdminSection("/admin/orders");
   const { tab } = await searchParams;
 
-  const [orders, typeCounts] = await Promise.all([
+  const [orders, typeCounts, allForKpis] = await Promise.all([
     prisma.order.findMany({
       orderBy: { createdAt: "desc" },
-      take: 100,
+      take: 500,
       where:
         tab === "shop"
           ? { type: SHOP_TYPE }
@@ -36,6 +36,9 @@ export default async function AdminOrdersPage({
       by: ["type"],
       _count: { id: true },
     }),
+    prisma.order.findMany({
+      select: { id: true, total: true, status: true, createdAt: true, payments: { take: 1, orderBy: { createdAt: "desc" }, select: { status: true } } },
+    }),
   ]);
 
   const countByType = Object.fromEntries(typeCounts.map((r) => [r.type, r._count.id]));
@@ -46,6 +49,16 @@ export default async function AdminOrdersPage({
     (countByType["CUSTOM_PRINT"] ?? 0);
   const quotesCount = countByType["QUOTE"] ?? 0;
   const allCount = Object.values(countByType).reduce((a, b) => a + b, 0);
+
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const revenue = allForKpis
+    .filter((o) => o.payments[0]?.status === "COMPLETED")
+    .reduce((s, o) => s + Number(o.total), 0);
+  const pendingCount = allForKpis.filter((o) => o.status === "PENDING").length;
+  const thisMonthRevenue = allForKpis
+    .filter((o) => o.createdAt >= startOfMonth && o.payments[0]?.status === "COMPLETED")
+    .reduce((s, o) => s + Number(o.total), 0);
 
   const ordersSerialized = orders.map((o) => ({
     id: o.id,
@@ -70,6 +83,7 @@ export default async function AdminOrdersPage({
         <OrdersListClient
           orders={ordersSerialized}
           counts={{ all: allCount, shop: shopCount, printJobs: printJobsCount, quotes: quotesCount }}
+          kpis={{ totalOrders: allCount, revenue, pending: pendingCount, thisMonthRevenue }}
         />
       </Suspense>
     </div>

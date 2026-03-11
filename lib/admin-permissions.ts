@@ -36,6 +36,10 @@ export const ROUTE_TO_PERMISSION: Record<string, PermissionKey | string> = {
   "/admin/staff": "staff_manage",   // not in PERMISSION_KEYS → only ADMIN/SUPER_ADMIN
   "/admin/reports": "orders_view",
   "/admin/settings": "settings_manage", // not in PERMISSION_KEYS → only ADMIN/SUPER_ADMIN
+  "/admin/content": "content_manage",    // not in PERMISSION_KEYS → only ADMIN/SUPER_ADMIN
+  "/admin/content/legal": "content_manage",
+  "/admin/content/faq": "content_manage",
+  "/admin/careers": "careers_manage",     // not in PERMISSION_KEYS → only ADMIN/SUPER_ADMIN
 };
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];

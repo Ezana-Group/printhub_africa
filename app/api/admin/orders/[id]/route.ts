@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { requireAdminApi } from "@/lib/admin-api-guard";
+import { createTrackingEvent } from "@/lib/tracking";
+import { awardLoyaltyPoints } from "@/lib/loyalty";
 
 const ORDER_STATUSES = [
   "PENDING",
@@ -11,9 +11,11 @@ const ORDER_STATUSES = [
   "PROCESSING",
   "PRINTING",
   "QUALITY_CHECK",
+  "READY_FOR_COLLECTION",
   "SHIPPED",
   "DELIVERED",
   "CANCELLED",
+  "REFUNDED",
 ] as const;
 
 const updateSchema = z.object({
@@ -53,6 +55,12 @@ export async function PATCH(
           updatedBy: session.user?.email ?? session.user?.id ?? undefined,
         },
       });
+      await createTrackingEvent(id, status, {
+        createdBy: session.user?.id ?? undefined,
+      });
+      if (status === "DELIVERED") {
+        awardLoyaltyPoints(id).catch((e) => console.error("Loyalty award failed:", e));
+      }
     }
     if (timelineMessage != null && timelineMessage.trim()) {
       await prisma.orderTimeline.create({
@@ -66,7 +74,10 @@ export async function PATCH(
     }
     const updated = await prisma.order.findUnique({
       where: { id },
-      include: { timeline: { orderBy: { timestamp: "desc" } } },
+      include: {
+        timeline: { orderBy: { timestamp: "desc" } },
+        trackingEvents: { orderBy: { createdAt: "desc" } },
+      },
     });
     return NextResponse.json({ order: updated });
   } catch (e) {

@@ -36,6 +36,23 @@ export default async function AdminInventoryPage() {
     }),
     prisma.threeDConsumable.findMany({
       orderBy: [{ kind: "asc" }, { name: "asc" }],
+      select: {
+        id: true,
+        kind: true,
+        name: true,
+        specification: true,
+        colourHex: true,
+        brand: true,
+        quantity: true,
+        weightPerSpoolKg: true,
+        lowStockThreshold: true,
+        location: true,
+        costPerKgKes: true,
+        unitCostKes: true,
+        notes: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     }),
     prismaClient.inventoryHardwareItem.findMany({
       orderBy: [{ category: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
@@ -71,19 +88,52 @@ export default async function AdminInventoryPage() {
     purchasePriceKes: m.purchasePriceKes ?? null,
   }));
 
-  const consumablesSerialized = (consumables as Array<{ id: string; kind: string; name: string; specification: string | null; brand: string | null; quantity: number; lowStockThreshold: number; location: string | null; costPerKgKes?: number | null; unitCostKes?: number | null; notes: string | null }>).map((c) => ({
-    id: c.id,
-    kind: c.kind,
-    name: c.name,
-    specification: c.specification,
-    brand: c.brand ?? null,
-    quantity: c.quantity,
-    lowStockThreshold: c.lowStockThreshold,
-    location: c.location,
-    costPerKgKes: c.costPerKgKes ?? null,
-    unitCostKes: c.unitCostKes ?? null,
-    notes: c.notes ?? null,
-  }));
+  const consumablesSerialized = (
+    consumables as Array<{
+      id: string;
+      kind: string;
+      name: string;
+      specification: string | null;
+      colourHex: string | null;
+      brand: string | null;
+      quantity: number;
+      weightPerSpoolKg: number | null;
+      lowStockThreshold: number;
+      location: string | null;
+      costPerKgKes: number | null;
+      unitCostKes: number | null;
+      notes: string | null;
+    }>
+  ).map((c) => {
+    const row = {
+      id: c.id,
+      kind: c.kind,
+      name: c.name,
+      specification: c.specification,
+      colourHex: c.colourHex ?? null,
+      brand: c.brand ?? null,
+      quantity: c.quantity,
+      weightPerSpoolKg: c.weightPerSpoolKg ?? null,
+      lowStockThreshold: c.lowStockThreshold,
+      location: c.location,
+      costPerKgKes: c.costPerKgKes ?? null,
+      unitCostKes: c.unitCostKes ?? null,
+      notes: c.notes ?? null,
+    };
+    if (c.kind === "FILAMENT") {
+      const weightKg = c.weightPerSpoolKg ?? 1;
+      (row as Record<string, unknown>).totalWeightKg = c.quantity * weightKg;
+      (row as Record<string, unknown>).totalValueKes =
+        (c.quantity * weightKg) * (c.costPerKgKes ?? 0);
+      (row as Record<string, unknown>).stockStatus =
+        c.quantity === 0
+          ? "OUT_OF_STOCK"
+          : c.quantity <= c.lowStockThreshold
+            ? "LOW_STOCK"
+            : "IN_STOCK";
+    }
+    return row;
+  });
 
   const hardwareSerialized = hardwareItems.map((i: HardwareRow) => ({
     id: i.id,

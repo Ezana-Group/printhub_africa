@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ensureUniqueOrderNumber, calculateTax } from "@/lib/order-utils";
+import { createTrackingEvent } from "@/lib/tracking";
 import { z } from "zod";
 
 const createOrderSchema = z.object({
@@ -77,6 +78,8 @@ export async function POST(req: Request) {
       shippingAddress: true,
     },
   });
+
+  await createTrackingEvent(order.id, "PENDING");
 
   return NextResponse.json({ order });
 }

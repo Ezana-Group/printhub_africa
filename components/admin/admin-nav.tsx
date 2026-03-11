@@ -19,6 +19,9 @@ import {
   ListTodo,
   Handshake,
   TrendingUp,
+  HelpCircle,
+  Scale,
+  Briefcase,
 } from "lucide-react";
 import { canAccessRoute } from "@/lib/admin-permissions";
 import { cn } from "@/lib/utils";
@@ -69,10 +72,18 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: "CONTENT",
+    items: [
+      { href: "/admin/content/legal", label: "Legal Pages", icon: Scale },
+      { href: "/admin/content/faq", label: "FAQ Manager", icon: HelpCircle },
+    ],
+  },
+  {
     label: "ADMIN",
     items: [
       { href: "/admin/staff", label: "Staff", icon: UserCog },
       { href: "/admin/reports", label: "Reports", icon: BarChart3 },
+      { href: "/admin/careers", label: "Careers", icon: Briefcase },
       { href: "/admin/settings", label: "Settings", icon: Settings },
     ],
   },

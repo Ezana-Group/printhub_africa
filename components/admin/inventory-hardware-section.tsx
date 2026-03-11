@@ -1,11 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { TableToolbar, type FilterConfig } from "@/components/admin/ui/TableToolbar";
+import { TableEmptyState } from "@/components/admin/ui/TableEmptyState";
+import { useTableUrlState } from "@/hooks/useTableUrlState";
+import { Search, Wrench, Puzzle, Plus, MoreHorizontal } from "lucide-react";
 
 export type HardwareItemSerialized = {
   id: string;
@@ -70,6 +80,15 @@ function formatKes(n: number) {
   return `KES ${n.toLocaleString()}`;
 }
 
+function costPerHourKes(i: HardwareItemSerialized): number | null {
+  const lifespan = i.lifespanHours ?? 0;
+  if (lifespan <= 0) return null;
+  const maintenance = i.maintenancePerYearKes ?? i.annualMaintenanceKes ?? 0;
+  const maintenancePerHr = maintenance / 8760;
+  const depreciationPerHr = i.priceKes / lifespan;
+  return depreciationPerHr + maintenancePerHr;
+}
+
 export function InventoryHardwareSection({
   category,
   title,
@@ -85,6 +104,70 @@ export function InventoryHardwareSection({
 }) {
   const router = useRouter();
   const [items, setItems] = useState<HardwareItemSerialized[]>(initialItems);
+  const url = useTableUrlState({ defaultPerPage: 25 });
+  const typeFilter = url.get("type", "");
+  const subTypeFilter = url.get("subType", "");
+  const statusFilter = url.get("status", "");
+
+  const filteredList = useMemo(() => {
+    return items.filter((i) => i.category === category);
+  }, [items, category]);
+
+  const filteredAndSorted = useMemo(() => {
+    let list = [...filteredList];
+    const q = url.q.toLowerCase().trim();
+    if (q) list = list.filter((i) => i.name.toLowerCase().includes(q) || (i.model?.toLowerCase().includes(q)));
+    if (category === "HARDWARE") {
+      if (typeFilter === "3D") list = list.filter((i) => i.hardwareType === "THREE_D_PRINTER");
+      else if (typeFilter === "LF") list = list.filter((i) => i.hardwareType === "LARGE_FORMAT_PRINTER");
+      if (subTypeFilter) list = list.filter((i) => (i.printerSubType ?? "") === subTypeFilter);
+      if (statusFilter === "active") list = list.filter((i) => i.isActive);
+      else if (statusFilter === "inactive") list = list.filter((i) => !i.isActive);
+    }
+    const field = url.sort || "name";
+    const dir = url.dir === "desc" ? -1 : 1;
+    list.sort((a, b) => {
+      if (field === "name") return dir * a.name.localeCompare(b.name);
+      if (field === "priceKes") return dir * (a.priceKes - b.priceKes);
+      if (field === "lifespanHours") return dir * ((a.lifespanHours ?? 0) - (b.lifespanHours ?? 0));
+      return 0;
+    });
+    return list;
+  }, [filteredList, url.q, typeFilter, subTypeFilter, statusFilter, category, url.sort, url.dir]);
+
+  const filters: FilterConfig[] = useMemo(() => {
+    const f: FilterConfig[] = [];
+    if (category === "HARDWARE") {
+      f.push(
+        {
+          key: "type",
+          label: "Type",
+          options: [
+            { value: "", label: "All" },
+            { value: "3D", label: "3D Printer" },
+            { value: "LF", label: "Large Format" },
+          ],
+          value: typeFilter,
+          onChange: (v) => url.set({ type: v || undefined, page: 1 }),
+        },
+        {
+          key: "status",
+          label: "Status",
+          options: [
+            { value: "", label: "All" },
+            { value: "active", label: "Active" },
+            { value: "inactive", label: "Inactive" },
+          ],
+          value: statusFilter,
+          onChange: (v) => url.set({ status: v || undefined, page: 1 }),
+        }
+      );
+    }
+    return f;
+  }, [category, typeFilter, statusFilter, url]);
+
+  const hasActiveFilters = url.q !== "" || typeFilter !== "" || subTypeFilter !== "" || statusFilter !== "";
+
   const [showAddForm, setShowAddForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -200,7 +283,7 @@ export function InventoryHardwareSection({
     }
   };
 
-  const filtered = items.filter((i) => i.category === category && i.isActive);
+  const addButtonLabel = category === "HARDWARE" ? "Add Hardware" : category === "MAINTENANCE" ? "Add maintenance" : "Add Accessory";
 
   return (
     <Card>
@@ -211,11 +294,12 @@ export function InventoryHardwareSection({
         </div>
         <Button
           type="button"
-          variant="outline"
           size="sm"
+          className="bg-orange-500 hover:bg-orange-600"
           onClick={() => setShowAddForm((v) => !v)}
         >
-          {showAddForm ? "Cancel" : "Add item"}
+          <Plus className="mr-2 h-4 w-4" />
+          {showAddForm ? "Cancel" : addButtonLabel}
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -491,54 +575,86 @@ export function InventoryHardwareSection({
             </Button>
           </form>
         )}
+        {filteredList.length > 0 && (
+          <TableToolbar
+            searchPlaceholder="Search hardware..."
+            searchValue={url.q}
+            onSearch={url.setSearch}
+            filters={filters}
+            sortOptions={[{ label: "Name", value: "name" }, { label: "Price", value: "priceKes" }, { label: "Lifespan", value: "lifespanHours" }]}
+            currentSort={url.sort || "name"}
+            currentSortDir={url.dir}
+            onSortChange={url.setSort}
+            totalCount={filteredList.length}
+            filteredCount={filteredAndSorted.length}
+            onClearFilters={url.clearFilters}
+            hasActiveFilters={hasActiveFilters}
+          />
+        )}
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="text-left p-2 font-medium">Name</th>
-                {category === "HARDWARE" && (
-                  <>
-                    <th className="text-left p-2 font-medium">Type</th>
-                    <th className="text-left p-2 font-medium">Sub-type</th>
-                    <th className="text-left p-2 font-medium">Location</th>
-                    <th className="text-right p-2 font-medium">Lifespan (hrs)</th>
-                    <th className="text-right p-2 font-medium">Maintenance/yr (KES)</th>
-                    <th className="text-right p-2 font-medium">Power (W)</th>
-                  </>
-                )}
-                {(category === "MAINTENANCE" || category === "PRINTER_ACCESSORIES") && (
-                  <>
-                    <th className="text-left p-2 font-medium">Printer</th>
-                    <th className="text-right p-2 font-medium">Time (hrs)</th>
-                  </>
-                )}
-                <th className="text-right p-2 font-medium">Price</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((i) => (
-                <tr key={i.id} className="border-b hover:bg-muted/30">
-                  <td className="p-2 font-medium">{i.name}</td>
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 z-10 bg-background">
+                <tr className="border-b bg-muted/50">
+                  <th className="text-left p-2 font-medium">Name</th>
                   {category === "HARDWARE" && (
                     <>
-                      <td className="p-2 text-muted-foreground">
-                        {i.hardwareType === "LARGE_FORMAT_PRINTER"
-                          ? "Large format printer"
-                          : i.hardwareType === "THREE_D_PRINTER"
-                            ? "3D printer"
+                      <th className="text-left p-2 font-medium">Type</th>
+                      <th className="text-left p-2 font-medium">Sub-type</th>
+                      <th className="text-left p-2 font-medium">Status</th>
+                      <th className="text-left p-2 font-medium">Location</th>
+                      <th className="text-right p-2 font-medium">Lifespan (hrs)</th>
+                      <th className="text-right p-2 font-medium">Cost/hr</th>
+                      <th className="text-right p-2 font-medium">Maintenance/yr (KES)</th>
+                      <th className="text-right p-2 font-medium">Power (W)</th>
+                    </>
+                  )}
+                  {(category === "MAINTENANCE" || category === "PRINTER_ACCESSORIES") && (
+                    <>
+                      <th className="text-left p-2 font-medium">Printer</th>
+                      <th className="text-right p-2 font-medium">Time (hrs)</th>
+                    </>
+                  )}
+                  <th className="text-right p-2 font-medium">Price</th>
+                  {category === "HARDWARE" && <th className="w-10 p-2" />}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAndSorted.map((i) => (
+                  <tr key={i.id} className="border-b hover:bg-muted/30">
+                    <td className="p-2 font-medium">{i.name}</td>
+                    {category === "HARDWARE" && (
+                      <>
+                        <td className="p-2 text-muted-foreground">
+                          {i.hardwareType === "LARGE_FORMAT_PRINTER"
+                            ? "Large format"
+                            : i.hardwareType === "THREE_D_PRINTER"
+                              ? "3D printer"
+                              : "—"}
+                        </td>
+                        <td className="p-2 text-muted-foreground">{formatSubType(i.printerSubType ?? null)}</td>
+                        <td className="p-2">
+                          <span className={i.isActive ? "text-green-600 dark:text-green-400 font-medium" : "text-muted-foreground"}>
+                            {i.isActive ? "Active" : "Inactive"}
+                          </span>
+                        </td>
+                        <td className="p-2 text-muted-foreground">{i.location ?? "—"}</td>
+                        <td className="p-2 text-right">
+                          {i.lifespanHours != null ? i.lifespanHours.toLocaleString() : "—"}
+                        </td>
+                        <td className="p-2 text-right text-muted-foreground">
+                          {costPerHourKes(i) != null ? `KES ${Math.round(costPerHourKes(i)!).toLocaleString()}/hr` : "—"}
+                        </td>
+                        <td className="p-2 text-right">
+                          {i.annualMaintenanceKes != null || i.maintenancePerYearKes != null
+                            ? formatKes(i.annualMaintenanceKes ?? i.maintenancePerYearKes ?? 0)
                             : "—"}
-                      </td>
-                      <td className="p-2 text-muted-foreground">{formatSubType(i.printerSubType ?? null)}</td>
-                      <td className="p-2 text-muted-foreground">{i.location ?? "—"}</td>
-                      <td className="p-2 text-right">
-                        {i.lifespanHours != null ? i.lifespanHours.toLocaleString() : "—"}
-                      </td>
-                      <td className="p-2 text-right">
-                        {i.annualMaintenanceKes != null || i.maintenancePerYearKes != null
-                          ? formatKes(i.annualMaintenanceKes ?? i.maintenancePerYearKes ?? 0)
-                          : "—"}
-                      </td>
-                      <td className="p-2 text-right">{i.powerWatts != null ? i.powerWatts : "—"}</td>
+                        </td>
+                        <td
+                          className="p-2 text-right"
+                          title={i.hardwareType === "THREE_D_PRINTER" && (i.powerWatts ?? 0) > 1000 ? "⚠ Power consumption seems high for this printer type. Typical Bambu Lab X1C uses ~400W. Edit to correct." : undefined}
+                        >
+                          {i.powerWatts != null ? i.powerWatts : "—"}
+                        </td>
                     </>
                   )}
                   {(category === "MAINTENANCE" || category === "PRINTER_ACCESSORIES") && (
@@ -548,15 +664,50 @@ export function InventoryHardwareSection({
                     </>
                   )}
                   <td className="p-2 text-right">{formatKes(i.priceKes)}</td>
+                  {category === "HARDWARE" && (
+                    <td className="p-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="icon" variant="ghost" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>Edit (coming soon)</DropdownMenuItem>
+                          <DropdownMenuItem>Log Maintenance (coming soon)</DropdownMenuItem>
+                          <DropdownMenuItem>View History (coming soon)</DropdownMenuItem>
+                          <DropdownMenuItem>Delete (coming soon)</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        {filtered.length === 0 && (
-          <p className="text-sm text-muted-foreground py-4 text-center">
-            No items yet. Add one above to get started.
-          </p>
+        {filteredAndSorted.length === 0 && (
+          <TableEmptyState
+            icon={category === "MAINTENANCE" ? Wrench : category === "PRINTER_ACCESSORIES" ? Puzzle : Search}
+            title={
+              category === "MAINTENANCE"
+                ? "No maintenance logs yet"
+                : category === "PRINTER_ACCESSORIES"
+                  ? "No accessories added yet"
+                  : hasActiveFilters
+                    ? "No items match your filters"
+                    : "No items yet"
+            }
+            description={
+              category === "MAINTENANCE"
+                ? "Log your first maintenance event from a hardware item."
+                : category === "PRINTER_ACCESSORIES"
+                  ? undefined
+                  : hasActiveFilters
+                    ? "Try adjusting your search or filters."
+                    : "Add one above to get started."
+            }
+            actionLabel={hasActiveFilters ? "Clear filters" : category === "PRINTER_ACCESSORIES" ? "Add Accessory" : "Add item"}
+            onAction={hasActiveFilters ? url.clearFilters : () => setShowAddForm(true)}
+          />
         )}
       </CardContent>
     </Card>

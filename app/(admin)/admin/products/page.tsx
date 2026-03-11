@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import { ProductsAdminClient } from "@/components/admin/products-admin-client";
 import { requireAdminSection } from "@/lib/admin-route-guard";
@@ -40,9 +41,11 @@ export default async function AdminProductsPage() {
   }));
 
   return (
-    <ProductsAdminClient
-      products={rows}
-      categories={categories}
-    />
+    <Suspense fallback={<div className="p-6 animate-pulse">Loading products…</div>}>
+      <ProductsAdminClient
+        products={rows}
+        categories={categories}
+      />
+    </Suspense>
   );
 }

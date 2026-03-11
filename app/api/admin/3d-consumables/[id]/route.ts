@@ -9,8 +9,10 @@ const ADMIN_ROLES = ["STAFF", "ADMIN", "SUPER_ADMIN"];
 const patchSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   specification: z.string().max(200).optional().nullable(),
+  colourHex: z.string().max(20).optional().nullable(),
   brand: z.string().max(200).optional().nullable(),
   quantity: z.number().int().min(0).optional(),
+  weightPerSpoolKg: z.number().min(0).optional().nullable(),
   lowStockThreshold: z.number().int().min(0).optional(),
   location: z.string().max(200).optional().nullable(),
   costPerKgKes: z.number().min(0).optional().nullable(),
@@ -43,7 +45,19 @@ export async function PATCH(
       where: { id },
       data,
     });
-    return NextResponse.json(item);
+    const row = { ...item } as Record<string, unknown>;
+    if (item.kind === "FILAMENT") {
+      const weightKg = item.weightPerSpoolKg ?? 1;
+      row.totalWeightKg = item.quantity * weightKg;
+      row.totalValueKes = row.totalWeightKg as number * (item.costPerKgKes ?? 0);
+      row.stockStatus =
+        item.quantity === 0
+          ? "OUT_OF_STOCK"
+          : item.quantity <= item.lowStockThreshold
+            ? "LOW_STOCK"
+            : "IN_STOCK";
+    }
+    return NextResponse.json(row);
   } catch (e) {
     console.error("3D consumable PATCH error:", e);
     return NextResponse.json(

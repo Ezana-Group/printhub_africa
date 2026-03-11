@@ -13,9 +13,11 @@ const STATUSES = [
   "PROCESSING",
   "PRINTING",
   "QUALITY_CHECK",
+  "READY_FOR_COLLECTION",
   "SHIPPED",
   "DELIVERED",
   "CANCELLED",
+  "REFUNDED",
 ] as const;
 
 interface OrderActionsProps {

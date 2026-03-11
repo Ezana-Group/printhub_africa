@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import {
   AlertDialog,
@@ -15,6 +15,10 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { CategoryFormSheet } from "@/components/admin/category-form-sheet";
 import type { CategoryForForm } from "@/components/admin/category-form-sheet";
+import { TableToolbar, type FilterConfig } from "@/components/admin/ui/TableToolbar";
+import { TableEmptyState } from "@/components/admin/ui/TableEmptyState";
+import { useTableUrlState } from "@/hooks/useTableUrlState";
+import { Search, Camera, Copy } from "lucide-react";
 
 type CategoryRow = {
   id: string;
@@ -136,6 +140,69 @@ export function AdminCategoriesClient({
     }
   };
 
+  const url = useTableUrlState({ defaultPerPage: 50 });
+  const parentFilter = url.get("parent", "");
+  const statusFilter = url.get("status", "");
+  const sortField = url.get("sort", "name");
+  const sortDir = url.dir === "desc" ? -1 : 1;
+
+  const filteredAndSorted = useMemo(() => {
+    let list = [...categories];
+    const q = url.q.toLowerCase().trim();
+    if (q) {
+      list = list.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.slug.toLowerCase().includes(q) ||
+          (c.description?.toLowerCase().includes(q))
+      );
+    }
+    if (parentFilter === "top") list = list.filter((c) => !c.parentId);
+    else if (parentFilter) list = list.filter((c) => c.parentId === parentFilter);
+    if (statusFilter === "active") list = list.filter((c) => c.isActive);
+    if (statusFilter === "inactive") list = list.filter((c) => !c.isActive);
+    list.sort((a, b) => {
+      if (sortField === "name") return sortDir * a.name.localeCompare(b.name);
+      if (sortField === "products") return sortDir * (a._count.products - b._count.products);
+      if (sortField === "sortOrder") return sortDir * (a.sortOrder - b.sortOrder);
+      return 0;
+    });
+    return list;
+  }, [categories, url.q, parentFilter, statusFilter, sortField, sortDir]);
+
+  const parentFilterOptions = useMemo(() => {
+    const opts = [{ value: "", label: "All parents" }, { value: "top", label: "Top level" }];
+    const parents = categories.filter((c) => !c.parentId);
+    parents.forEach((p) => opts.push({ value: p.id, label: p.name }));
+    return opts;
+  }, [categories]);
+
+  const filters: FilterConfig[] = useMemo(
+    () => [
+      {
+        key: "parent",
+        label: "Parent",
+        options: parentFilterOptions,
+        value: parentFilter,
+        onChange: (v) => url.set({ parent: v || undefined, page: 1 }),
+      },
+      {
+        key: "status",
+        label: "Status",
+        options: [
+          { value: "", label: "All status" },
+          { value: "active", label: "Active" },
+          { value: "inactive", label: "Inactive" },
+        ],
+        value: statusFilter,
+        onChange: (v) => url.set({ status: v || undefined, page: 1 }),
+      },
+    ],
+    [parentFilterOptions, parentFilter, statusFilter, url]
+  );
+
+  const hasActiveFilters = url.q !== "" || parentFilter !== "" || statusFilter !== "";
+
   const topLevel = categories.filter((c) => !c.parentId);
   const childrenByParent = categories.reduce<Record<string, CategoryRow[]>>((acc, c) => {
     if (c.parentId) {
@@ -144,6 +211,12 @@ export function AdminCategoriesClient({
     }
     return acc;
   }, {});
+
+  const copySlug = useCallback((slug: string) => {
+    const base = typeof window !== "undefined" ? window.location.origin : "https://printhub.africa";
+    const path = `/shop/${slug}`;
+    void navigator.clipboard.writeText(`${base}${path}`);
+  }, []);
 
   return (
     <>
@@ -158,27 +231,51 @@ export function AdminCategoriesClient({
           <Button onClick={handleAdd}>Add category</Button>
         </div>
 
-        <div className="flex gap-2">
-          <Button
-            variant={viewMode === "table" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setViewMode("table")}
-          >
-            Table view
-          </Button>
-          <Button
-            variant={viewMode === "tree" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setViewMode("tree")}
-          >
-            Tree view
-          </Button>
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex gap-2">
+            <Button
+              variant={viewMode === "table" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("table")}
+            >
+              Table view
+            </Button>
+            <Button
+              variant={viewMode === "tree" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("tree")}
+            >
+              Tree view
+            </Button>
+          </div>
+          {viewMode === "table" && (
+            <div className="flex-1 min-w-[280px]">
+              <TableToolbar
+                searchPlaceholder="Search categories..."
+                searchValue={url.q}
+                onSearch={url.setSearch}
+                filters={filters}
+                sortOptions={[
+                  { label: "Name", value: "name" },
+                  { label: "Products", value: "products" },
+                  { label: "Sort order", value: "sortOrder" },
+                ]}
+                currentSort={sortField}
+                currentSortDir={url.dir}
+                onSortChange={url.setSort}
+                totalCount={categories.length}
+                filteredCount={filteredAndSorted.length}
+                onClearFilters={url.clearFilters}
+                hasActiveFilters={hasActiveFilters}
+              />
+            </div>
+          )}
         </div>
 
         {viewMode === "table" ? (
           <div className="overflow-x-auto rounded-lg border">
             <table className="w-full text-sm">
-              <thead>
+              <thead className="sticky top-0 z-10 bg-background">
                 <tr className="border-b bg-muted/50">
                   <th className="text-left p-3 font-medium w-12">Image</th>
                   <th className="text-left p-3 font-medium">Name</th>
@@ -191,10 +288,13 @@ export function AdminCategoriesClient({
                 </tr>
               </thead>
               <tbody>
-                {categories.map((cat) => (
-                  <tr key={cat.id} className="border-b hover:bg-muted/30">
-                    <td className="p-3">
-                      <div className="relative h-10 w-10 overflow-hidden rounded bg-muted">
+                {filteredAndSorted.map((cat) => (
+                  <tr key={cat.id} className="border-b hover:bg-muted/30 cursor-pointer" onClick={() => handleEdit(cat)}>
+                    <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                      <div
+                        className="relative h-10 w-10 overflow-hidden rounded bg-muted flex items-center justify-center"
+                        title={cat.image ? undefined : "Click Edit to add a category image"}
+                      >
                         {cat.image ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
                           <img
@@ -203,13 +303,11 @@ export function AdminCategoriesClient({
                             className="h-full w-full object-cover"
                           />
                         ) : (
-                          <span className="flex h-full items-center justify-center text-xs text-muted-foreground">
-                            —
-                          </span>
+                          <Camera className="h-5 w-5 text-muted-foreground/60" />
                         )}
                       </div>
                     </td>
-                    <td className="p-3">
+                    <td className="p-3" onClick={(e) => e.stopPropagation()}>
                       <div className="font-medium">{cat.name}</div>
                       {cat.description && (
                         <div className="text-xs text-muted-foreground line-clamp-1 max-w-[200px]">
@@ -217,19 +315,31 @@ export function AdminCategoriesClient({
                         </div>
                       )}
                     </td>
-                    <td className="p-3 text-muted-foreground">
-                      {cat.parent ? cat.parent.name : "—"}
+                    <td className="p-3 text-muted-foreground">{cat.parent ? cat.parent.name : "—"}</td>
+                    <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                      <span className="font-mono text-xs">{cat.slug}</span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copySlug(cat.slug);
+                        }}
+                        className="ml-1.5 inline-flex text-muted-foreground hover:text-foreground"
+                        title={`printhub.africa/shop/${cat.slug}`}
+                        aria-label="Copy URL"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
                     </td>
-                    <td className="p-3 font-mono text-xs">{cat.slug}</td>
-                    <td className="p-3">
+                    <td className="p-3" onClick={(e) => e.stopPropagation()}>
                       <Link
-                        href={`/admin/products?category=${cat.slug}`}
-                        className="text-primary hover:underline"
+                        href={`/admin/products?category=${cat.id}`}
+                        className={cat._count.products === 0 ? "text-amber-600 hover:underline" : "text-primary hover:underline"}
                       >
                         {cat._count.products}
                       </Link>
                     </td>
-                    <td className="p-3">
+                    <td className="p-3" onClick={(e) => e.stopPropagation()}>
                       <Switch
                         checked={cat.isActive}
                         onCheckedChange={(checked) => handleStatusToggle(cat, checked)}
@@ -237,13 +347,13 @@ export function AdminCategoriesClient({
                       />
                     </td>
                     <td className="p-3 text-muted-foreground">{cat.sortOrder}</td>
-                    <td className="p-3">
+                    <td className="p-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-2">
                         <Button
                           variant="ghost"
                           size="sm"
                           className="h-8 text-primary"
-                          onClick={() => handleEdit(cat)}
+                          onClick={(e) => { e.stopPropagation(); handleEdit(cat); }}
                         >
                           Edit
                         </Button>
@@ -251,7 +361,7 @@ export function AdminCategoriesClient({
                           variant="ghost"
                           size="sm"
                           className="h-8 text-destructive hover:text-destructive"
-                          onClick={() => setDeleteTarget(cat)}
+                          onClick={(e) => { e.stopPropagation(); setDeleteTarget(cat); }}
                         >
                           Delete
                         </Button>
@@ -261,10 +371,14 @@ export function AdminCategoriesClient({
                 ))}
               </tbody>
             </table>
-            {categories.length === 0 && (
-              <p className="p-8 text-center text-muted-foreground">
-                No categories. Add one above or run db:seed.
-              </p>
+            {filteredAndSorted.length === 0 && (
+              <TableEmptyState
+                icon={Search}
+                title={hasActiveFilters ? `No categories match your search` : "No categories yet"}
+                description={hasActiveFilters ? "Try adjusting your filters or search terms." : "Add a category above or run db:seed."}
+                actionLabel={hasActiveFilters ? "Clear filters" : "Add category"}
+                onAction={hasActiveFilters ? url.clearFilters : handleAdd}
+              />
             )}
           </div>
         ) : (

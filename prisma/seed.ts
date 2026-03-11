@@ -588,6 +588,223 @@ async function main() {
   });
   console.log("Seed coupon WELCOME10 created");
 
+  // Legal pages (full content from legal-content.ts)
+  const { getLegalContent } = await import("./legal-content");
+  const legalPages = [
+    { slug: "privacy-policy", title: "Privacy Policy" },
+    { slug: "terms-of-service", title: "Terms of Service" },
+    { slug: "cookie-policy", title: "Cookie Policy" },
+    { slug: "refund-policy", title: "Refund & Returns Policy" },
+  ];
+  for (const page of legalPages) {
+    await prisma.legalPage.upsert({
+      where: { slug: page.slug },
+      update: {},
+      create: {
+        slug: page.slug,
+        title: page.title,
+        content: getLegalContent(page.slug as "privacy-policy" | "terms-of-service" | "cookie-policy" | "refund-policy"),
+        lastUpdated: new Date(),
+        isPublished: true,
+      },
+    });
+  }
+  console.log("Legal pages seeded");
+
+  // FAQ categories
+  const faqCategories = [
+    { name: "Ordering & Quotes", slug: "ordering", icon: "ShoppingCart", sortOrder: 1 },
+    { name: "Payments", slug: "payments", icon: "CreditCard", sortOrder: 2 },
+    { name: "Files & Designs", slug: "files", icon: "FileUp", sortOrder: 3 },
+    { name: "Production", slug: "production", icon: "Printer", sortOrder: 4 },
+    { name: "Delivery", slug: "delivery", icon: "Truck", sortOrder: 5 },
+    { name: "Returns & Refunds", slug: "refunds", icon: "RotateCcw", sortOrder: 6 },
+    { name: "3D Printing", slug: "3d", icon: "Box", sortOrder: 7 },
+    { name: "Large Format", slug: "lf", icon: "Maximize", sortOrder: 8 },
+    { name: "Corporate Accounts", slug: "corporate", icon: "Building2", sortOrder: 9 },
+  ];
+  for (const cat of faqCategories) {
+    await prisma.faqCategory.upsert({
+      where: { slug: cat.slug },
+      update: {},
+      create: { ...cat, isActive: true },
+    });
+  }
+  console.log("FAQ categories seeded");
+
+  // FAQs (need category IDs)
+  const orderingCat = await prisma.faqCategory.findUnique({ where: { slug: "ordering" } });
+  const paymentsCat = await prisma.faqCategory.findUnique({ where: { slug: "payments" } });
+  const filesCat = await prisma.faqCategory.findUnique({ where: { slug: "files" } });
+  const deliveryCat = await prisma.faqCategory.findUnique({ where: { slug: "delivery" } });
+  const refundsCat = await prisma.faqCategory.findUnique({ where: { slug: "refunds" } });
+  const threeDCat = await prisma.faqCategory.findUnique({ where: { slug: "3d" } });
+  const lfCat = await prisma.faqCategory.findUnique({ where: { slug: "lf" } });
+  const corporateCat = await prisma.faqCategory.findUnique({ where: { slug: "corporate" } });
+
+  const faqs: { categoryId: string; question: string; answer: string; isPopular: boolean; sortOrder: number }[] = [];
+  if (orderingCat) {
+    faqs.push(
+      { categoryId: orderingCat.id, question: "How do I get a quote for large format printing?", answer: '<p>You can get an instant estimate using our <a href="/quote">online quote calculator</a>. Select your material, enter dimensions, quantity and finishing options — you\'ll see a price range immediately. For complex or large jobs, upload your file and our team will confirm the final price within 2 business hours.</p>', isPopular: true, sortOrder: 1 },
+      { categoryId: orderingCat.id, question: "How long does it take to get my order?", answer: "<p>Standard turnaround is <strong>2–5 business days</strong> from file approval and payment. Express 24-hour service is available for most items at an additional charge.</p><p>Delivery adds 1–2 days for Nairobi, 2–5 days for other counties.</p>", isPopular: true, sortOrder: 2 },
+      { categoryId: orderingCat.id, question: "Can I order in small quantities?", answer: "<p>Yes — our minimum order value is KES 500. There is no minimum quantity for custom prints. We print from 1 piece upwards, though larger quantities reduce your cost per unit.</p>", isPopular: false, sortOrder: 3 },
+      { categoryId: orderingCat.id, question: "Do you offer design services?", answer: "<p>Yes. Our design team can create or adapt artwork for your print job. Design fees start from KES 1,500 and are quoted based on complexity. Contact us with your brief for a design quote.</p>", isPopular: false, sortOrder: 4 },
+    );
+  }
+  if (paymentsCat) {
+    faqs.push(
+      { categoryId: paymentsCat.id, question: "How do I pay?", answer: "<p>We accept:</p><ul><li><strong>M-Pesa</strong> — our Paybill number is shown at checkout</li><li><strong>Visa / Mastercard</strong> — via Pesapal (secure online payment)</li><li><strong>Bank transfer</strong> — for orders above KES 10,000</li></ul><p>Payment is required before production begins.</p>", isPopular: true, sortOrder: 1 },
+      { categoryId: paymentsCat.id, question: "Do you offer credit or payment plans?", answer: '<p>Corporate clients with approved accounts can access NET-30 payment terms. <a href="/account/settings/corporate">Apply for a corporate account</a> — approval takes 2 business days.</p><p>We do not currently offer payment plans for individual customers.</p>', isPopular: false, sortOrder: 2 },
+      { categoryId: paymentsCat.id, question: "Will I get a VAT invoice?", answer: "<p>Yes. A VAT invoice (16% Kenya VAT) is generated automatically for every order and sent to your email. You can also download invoices from your account at any time. Corporate clients requiring invoices with KRA PIN should ensure their PIN is added to their account profile.</p>", isPopular: false, sortOrder: 3 },
+    );
+  }
+  if (filesCat) {
+    faqs.push(
+      { categoryId: filesCat.id, question: "What file formats do you accept?", answer: "<p><strong>For large format printing:</strong> AI, PDF (print-ready), PSD, PNG or JPG at 300dpi minimum. Vector files (AI, PDF) are preferred for sharp results.</p><p><strong>For 3D printing:</strong> STL, OBJ, FBX, STEP, 3MF.</p><p>Maximum file size: 500MB per file.</p>", isPopular: true, sortOrder: 1 },
+      { categoryId: filesCat.id, question: "My file has low resolution — can you still print it?", answer: "<p>We can print low-resolution files but quality may be affected — particularly for close-up viewing. We review all files before printing and will contact you if we have concerns. For large format prints viewed from a distance, lower resolution is often acceptable.</p>", isPopular: false, sortOrder: 2 },
+      { categoryId: filesCat.id, question: "How do I set up my file for printing?", answer: "<p>For best results:</p><ul><li>Set document to actual print size (or scale 1:10 for very large prints)</li><li>Use CMYK colour mode (not RGB)</li><li>Add 3mm bleed on all sides</li><li>Keep text and important elements 5mm from the edge</li><li>Embed or outline all fonts</li><li>Export as print-ready PDF (PDF/X-4 preferred)</li></ul><p>We'll review your file and let you know if anything needs adjustment.</p>", isPopular: false, sortOrder: 3 },
+    );
+  }
+  if (deliveryCat) {
+    faqs.push(
+      { categoryId: deliveryCat.id, question: "Do you deliver to my county?", answer: "<p>Yes — we deliver to all 47 counties in Kenya. Delivery fees and estimated times vary by location and are calculated at checkout.</p>", isPopular: true, sortOrder: 1 },
+      { categoryId: deliveryCat.id, question: "Can I collect my order?", answer: "<p>Yes. Click & Collect is free from our Nairobi location. Select \"Collection\" at checkout. We'll SMS and email you when your order is ready. Collection is available Mon–Fri 8am–6pm, Saturday 9am–3pm.</p>", isPopular: false, sortOrder: 2 },
+      { categoryId: deliveryCat.id, question: "How do I track my order?", answer: '<p>Once your order is shipped, you\'ll receive an SMS and email with a tracking link. You can also track at any time at <a href="/track">printhub.africa/track</a> using your order number.</p>', isPopular: true, sortOrder: 3 },
+    );
+  }
+  if (refundsCat) {
+    faqs.push(
+      { categoryId: refundsCat.id, question: "What if my order is wrong or damaged?", answer: "<p>Contact us within <strong>48 hours of delivery</strong> at support@printhub.africa with photos of the issue and your order number. We'll assess and either reprint or refund — typically resolved within 5 business days.</p>", isPopular: true, sortOrder: 1 },
+      { categoryId: refundsCat.id, question: "Can I cancel my order?", answer: "<p>You can cancel before production starts for a full refund (less payment processing fees). Once production has started, a 50% refund applies. Once complete, we cannot cancel. Contact us immediately at support@printhub.africa if you need to cancel.</p>", isPopular: false, sortOrder: 2 },
+    );
+  }
+  if (threeDCat) {
+    faqs.push(
+      { categoryId: threeDCat.id, question: "What materials can you 3D print in?", answer: "<p>We currently offer: PLA+, PETG, ABS, TPU (flexible), and Standard Resin. Each has different properties — PLA+ is great for general use, PETG is more durable, ABS is heat-resistant, TPU is flexible. Contact us if you need a specific material not listed.</p>", isPopular: true, sortOrder: 1 },
+      { categoryId: threeDCat.id, question: "How do I know how much my 3D print will cost?", answer: '<p>Use our <a href="/quote">3D print quote calculator</a>. Enter your estimated weight (grams) and print time (hours) for an instant estimate. Upload your STL file and we\'ll calculate weight and time automatically. Final price is confirmed after our team reviews your file.</p>', isPopular: true, sortOrder: 2 },
+      { categoryId: threeDCat.id, question: "What is the maximum build size?", answer: "<p>Our FDM printer (Bambu Lab X1C) has a build volume of 256×256×256mm. For larger objects, we can print in sections and assemble. Contact us to discuss large prints.</p>", isPopular: false, sortOrder: 3 },
+    );
+  }
+  if (lfCat) {
+    faqs.push(
+      { categoryId: lfCat.id, question: "What is the maximum width you can print?", answer: "<p>Our large format printer handles up to 1.52 metres wide. Length is virtually unlimited (roll-fed). For widths above 1.52m, we can print in panels and join seamlessly.</p>", isPopular: false, sortOrder: 1 },
+      { categoryId: lfCat.id, question: "Do you do vehicle wraps?", answer: "<p>Yes. We print full and partial vehicle wraps using premium cast vinyl. Bring your vehicle to our Nairobi location for installation. Contact us for a vehicle wrap quote — we'll need photos and your vehicle make/model.</p>", isPopular: true, sortOrder: 2 },
+    );
+  }
+  if (corporateCat) {
+    faqs.push(
+      { categoryId: corporateCat.id, question: "How do I apply for a corporate account?", answer: '<p>Go to <a href="/account/settings/corporate">Account → Corporate Account</a> and submit your company details and KRA PIN. We review applications within 2 business days. Approved accounts get NET-30 payment terms.</p>', isPopular: true, sortOrder: 1 },
+    );
+  }
+
+  for (const faq of faqs) {
+    const existing = await prisma.faq.findFirst({
+      where: { categoryId: faq.categoryId, question: faq.question },
+    });
+    if (!existing) {
+      await prisma.faq.create({
+        data: { ...faq, isActive: true },
+      });
+    }
+  }
+  console.log("FAQs seeded");
+
+  // Careers — sample job listings
+  const jobListings = [
+    {
+      title: "Print Technician (Large Format)",
+      slug: "print-technician-large-format",
+      department: "Production",
+      type: "FULL_TIME" as const,
+      location: "Nairobi, Kenya",
+      isRemote: false,
+      description:
+        "Join our production team to operate and maintain our large format printers. You'll work with Roland and Mimaki equipment, prepare substrates, and ensure quality output. Full training provided for the right candidate.",
+      responsibilities:
+        "• Operate large format printers (Roland, Mimaki)\n• Prepare and load substrates\n• Perform quality checks\n• Basic maintenance and troubleshooting\n• Meet production deadlines",
+      requirements:
+        "• Keen attention to detail\n• Ability to follow SOPs\n• Physical ability to handle rolls and sheets\n• Basic numeracy and record-keeping",
+      niceToHave: "Previous experience in print or signage. Familiarity with RIP software.",
+      benefits: ["Medical cover", "Pension", "Transport allowance", "Training"],
+      status: "PUBLISHED",
+      isFeatured: true,
+      sortOrder: 0,
+      applicationDeadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    },
+    {
+      title: "Sales Representative",
+      slug: "sales-representative",
+      department: "Sales",
+      type: "FULL_TIME" as const,
+      location: "Nairobi, Kenya",
+      isRemote: false,
+      description:
+        "We're looking for a sales representative to grow our B2B and walk-in client base. You'll handle quotes, follow-ups, and customer relationships for large format and 3D print jobs.",
+      responsibilities:
+        "• Respond to quote requests and prepare proposals\n• Follow up with leads and existing clients\n• Achieve monthly sales targets\n• Maintain CRM and order pipeline",
+      requirements:
+        "• 1+ years in sales or customer-facing role\n• Good communication in English (and Swahili a plus)\n• Comfort with numbers and basic pricing",
+      niceToHave: "Experience in print, advertising, or creative services.",
+      benefits: ["Medical cover", "Performance bonus", "Transport allowance"],
+      status: "PUBLISHED",
+      isFeatured: false,
+      sortOrder: 1,
+      applicationDeadline: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
+    },
+  ];
+  for (const job of jobListings) {
+    const existing = await prisma.jobListing.findUnique({ where: { slug: job.slug } });
+    if (!existing) {
+      await prisma.jobListing.create({
+        data: {
+          ...job,
+          publishedAt: job.status === "PUBLISHED" ? new Date() : null,
+        },
+      });
+    }
+  }
+  console.log("Careers job listings seeded");
+
+  // Settings defaults (SEO, Loyalty, Referral, Discounts, System, Business, Shipping)
+  const defaultBonusRules = [
+    { id: "first_order", name: "First order bonus", type: "FIXED_POINTS", value: 50, enabled: true },
+    { id: "birthday", name: "Birthday month multiplier", type: "MULTIPLIER", value: 2, enabled: true },
+    { id: "review", name: "Approved review", type: "FIXED_POINTS", value: 20, enabled: true },
+    { id: "referral_referee", name: "Referred friend's 1st order", type: "FIXED_POINTS", value: 100, enabled: true },
+    { id: "referral_referrer", name: "Successful referral", type: "FIXED_POINTS", value: 50, enabled: true },
+  ];
+  const defaultTiers = [
+    { name: "Bronze", minPoints: 0, maxPoints: 999, earnMultiplier: 1, perks: [] },
+    { name: "Silver", minPoints: 1000, maxPoints: 4999, earnMultiplier: 1.25, perks: [] },
+    { name: "Gold", minPoints: 5000, maxPoints: 19999, earnMultiplier: 1.5, perks: ["Free standard delivery"] },
+    { name: "Platinum", minPoints: 20000, maxPoints: null, earnMultiplier: 2, perks: ["Free express delivery", "Priority queue"] },
+  ];
+  const defaultVolumeTiers = [
+    { minQty: 2, maxQty: 4, discountPct: 5 },
+    { minQty: 5, maxQty: 9, discountPct: 10 },
+    { minQty: 10, maxQty: 19, discountPct: 15 },
+    { minQty: 20, maxQty: 49, discountPct: 20 },
+    { minQty: 50, maxQty: null, discountPct: 25 },
+  ];
+
+  const settingsToSeed = [
+    ["seoSettings", { id: "default" }],
+    ["loyaltySettings", { id: "default", bonusRules: defaultBonusRules, tiers: defaultTiers }],
+    ["referralSettings", { id: "default" }],
+    ["discountSettings", { id: "default", volumeDiscountTiers: defaultVolumeTiers }],
+    ["systemSettings", { id: "default" }],
+    ["businessSettings", { id: "default" }],
+    ["shippingSettings", { id: "default" }],
+  ] as const;
+  for (const [model, data] of settingsToSeed) {
+    await (prisma as Record<string, { upsert: (arg: { where: { id: string }; update: object; create: object }) => Promise<unknown> }>)[model].upsert({
+      where: { id: "default" },
+      update: {},
+      create: data as object,
+    });
+  }
+  console.log("Settings defaults (SEO, Loyalty, Referral, Discounts, System, Business, Shipping) seeded");
+
   console.log("Seed completed.");
 }
 

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { AdminCategoriesClient } from "@/components/admin/admin-categories-client";
@@ -39,11 +40,13 @@ export default async function AdminCategoriesPage({
         <span className="text-foreground">Categories</span>
       </nav>
 
-      <AdminCategoriesClient
-        initialCategories={categories}
-        parentOptions={parentOptions}
-        initialEditId={editId ?? null}
-      />
+      <Suspense fallback={<div className="animate-pulse py-8">Loading…</div>}>
+        <AdminCategoriesClient
+          initialCategories={categories}
+          parentOptions={parentOptions}
+          initialEditId={editId ?? null}
+        />
+      </Suspense>
     </div>
   );
 }

@@ -32,6 +32,8 @@ export const authOptions: NextAuthOptions = {
           where: { email: credentials.email },
         });
         if (!user?.passwordHash) return null;
+        if (user.status === "DEACTIVATED") return null;
+        if (user.status === "INVITE_PENDING") return null;
 
         if (user.lockedUntil && user.lockedUntil > new Date()) {
           throw new Error("Account locked. Try again after 15 minutes.");
