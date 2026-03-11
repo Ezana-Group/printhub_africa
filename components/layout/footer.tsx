@@ -22,8 +22,10 @@ const DEFAULT_SOCIAL = [
   { label: "LinkedIn", href: "https://linkedin.com/company/printhub-africa", Icon: Linkedin },
 ];
 
+type SocialIcon = React.ComponentType<{ className?: string }>;
+
 function socialLinksFromBusiness(b: BusinessPublic) {
-  const out: { label: string; href: string; Icon: typeof Instagram }[] = [];
+  const out: { label: string; href: string; Icon: SocialIcon }[] = [];
   if (b.socialInstagram) out.push({ label: "Instagram", href: b.socialInstagram, Icon: Instagram });
   if (b.socialFacebook) out.push({ label: "Facebook", href: b.socialFacebook, Icon: Facebook });
   if (b.socialTwitter) out.push({ label: "X", href: b.socialTwitter, Icon: X });
