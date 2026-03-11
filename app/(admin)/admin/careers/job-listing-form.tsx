@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,6 +40,15 @@ export function JobListingForm({
   const [department, setDepartment] = useState("Production");
   const [type, setType] = useState("FULL_TIME");
   const [location, setLocation] = useState("Nairobi, Kenya");
+  useEffect(() => {
+    fetch("/api/settings/business-public")
+      .then((r) => r.json())
+      .then((d) => {
+        const loc = [d?.city, d?.country].filter(Boolean).join(", ");
+        if (loc) setLocation(loc);
+      })
+      .catch(() => {});
+  }, []);
   const [isRemote, setIsRemote] = useState(false);
   const [description, setDescription] = useState("");
   const [responsibilities, setResponsibilities] = useState("");

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { getBusinessPublic } from "@/lib/business-public";
 import type { Metadata } from "next";
 
 const LEGAL_SLUGS = ["privacy-policy", "terms-of-service", "cookie-policy", "refund-policy"] as const;
@@ -25,14 +26,16 @@ async function getLegalPage(slug: string) {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { legalSlug } = await params;
+  const business = await getBusinessPublic();
+  const site = business.website?.replace(/^https?:\/\//, "") ?? "printhub.africa";
   if (!LEGAL_SLUGS.includes(legalSlug as (typeof LEGAL_SLUGS)[number])) {
-    return { title: "Not Found | PrintHub" };
+    return { title: `Not Found | ${business.businessName}` };
   }
   const page = await getLegalPage(legalSlug);
-  if (!page) return { title: "PrintHub" };
+  if (!page) return { title: business.businessName };
   return {
-    title: `${page.title} | PrintHub`,
-    description: `PrintHub ${page.title} — printhub.africa`,
+    title: `${page.title} | ${business.businessName}`,
+    description: `${business.businessName} ${page.title} — ${site}`,
     robots: "noindex",
   };
 }

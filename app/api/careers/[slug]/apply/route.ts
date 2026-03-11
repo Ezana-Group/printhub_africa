@@ -8,6 +8,7 @@ import {
   sendCareerApplicationConfirmationEmail,
   sendCareerApplicationNotificationToAdmin,
 } from "@/lib/email";
+import { getBusinessPublic } from "@/lib/business-public";
 
 const MAX_CV_MB = 5;
 
@@ -147,7 +148,8 @@ export async function POST(
       ref
     ).catch((e) => console.error("Career confirmation email error:", e));
 
-    const adminEmail = process.env.CAREERS_NOTIFICATION_EMAIL ?? process.env.FROM_EMAIL ?? "admin@printhub.africa";
+    const business = await getBusinessPublic();
+    const adminEmail = process.env.CAREERS_NOTIFICATION_EMAIL ?? process.env.FROM_EMAIL ?? business.primaryEmail ?? "admin@printhub.africa";
     const toEmail = adminEmail.includes("<") ? adminEmail.replace(/^[^<]*<([^>]+)>.*$/, "$1") : adminEmail;
     await sendCareerApplicationNotificationToAdmin(
       toEmail,

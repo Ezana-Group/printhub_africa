@@ -4,6 +4,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { getBusinessPublic } from "@/lib/business-public";
 
 export const TRACKING_EVENTS: Record<
   string,
@@ -58,7 +59,7 @@ export const TRACKING_EVENTS: Record<
   READY_FOR_COLLECTION: {
     title: "Ready for Collection",
     description:
-      "Your order is ready! Come collect it from our Nairobi location.",
+      "Your order is ready! Come collect it from our {{city}} location.",
     isPublic: true,
     sendSms: true,
     sendEmail: true,
@@ -74,7 +75,7 @@ export const TRACKING_EVENTS: Record<
   DELIVERED: {
     title: "Delivered",
     description:
-      "Your order has been delivered. Thank you for choosing PrintHub!",
+      "Your order has been delivered. Thank you for choosing {{businessName}}!",
     isPublic: true,
     sendSms: true,
     sendEmail: true,
@@ -126,12 +127,18 @@ export async function createTrackingEvent(
   const template = TRACKING_EVENTS[status];
   if (!template) return;
 
+  const business = await getBusinessPublic();
+  let description = options?.description ?? template.description;
+  description = description
+    .replace(/\{\{city\}\}/g, business.city || "facility")
+    .replace(/\{\{businessName\}\}/g, business.businessName);
+
   await prisma.orderTrackingEvent.create({
     data: {
       orderId,
       status,
       title: template.title,
-      description: options?.description ?? template.description,
+      description,
       isPublic: options?.isPublic ?? template.isPublic,
       location: options?.location ?? null,
       courierRef: options?.courierRef ?? null,

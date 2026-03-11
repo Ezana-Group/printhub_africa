@@ -357,18 +357,21 @@ const FAQ_ITEMS = [
   },
 ];
 
-export const metadata: Metadata = {
-  title: "Large Format Printing Nairobi | Banners, Wraps & Signage | PrintHub",
-  description:
-    "Professional large format printing in Nairobi. Banners, vehicle wraps, billboards, canvas prints & more. Fast turnaround. Nationwide delivery across Kenya. PrintHub — An Ezana Group Company.",
-  openGraph: {
-    title: "Large Format Printing Nairobi | PrintHub",
-    description:
-      "Banners, vehicle wraps, billboards, canvas. Fast turnaround. Nationwide delivery. PrintHub — An Ezana Group Company.",
-    url: "/services/large-format-printing",
-  },
-  alternates: { canonical: "/services/large-format-printing" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const business = await getBusinessPublic();
+  const city = business.city || "Kenya";
+  const name = business.businessName;
+  return {
+    title: `Large Format Printing ${city} | Banners, Wraps & Signage | ${name}`,
+    description: `Professional large format printing in ${city}. Banners, vehicle wraps, billboards, canvas prints & more. Fast turnaround. Nationwide delivery across Kenya. ${name}.`,
+    openGraph: {
+      title: `Large Format Printing ${city} | ${name}`,
+      description: `Banners, vehicle wraps, billboards, canvas. Fast turnaround. Nationwide delivery. ${name}.`,
+      url: "/services/large-format-printing",
+    },
+    alternates: { canonical: "/services/large-format-printing" },
+  };
+}
 
 export default async function LargeFormatPrintingPage() {
   const business = await getBusinessPublic();
@@ -385,7 +388,7 @@ export default async function LargeFormatPrintingPage() {
         </ol>
       </nav>
       <ServiceHero
-        label="LARGE FORMAT PRINTING — NAIROBI, KENYA"
+        label={`LARGE FORMAT PRINTING — ${[business.city, business.country].filter(Boolean).join(", ").toUpperCase() || "KENYA"}`}
         title={
           <>
             Big Ideas.
@@ -393,9 +396,9 @@ export default async function LargeFormatPrintingPage() {
             Bigger Prints.
           </>
         }
-        subtitle="From a single rollup banner to a full building wrap — PrintHub delivers large format prints that command attention. Professional quality, fast turnaround, delivered across Kenya."
+        subtitle={`From a single rollup banner to a full building wrap — ${business.businessName} delivers large format prints that command attention. Professional quality, fast turnaround, delivered across Kenya.`}
         imageSrc={HERO_IMAGE}
-        imageAlt="Creative design and large format print output at PrintHub Nairobi"
+        imageAlt={`Creative design and large format print output at ${business.businessName} ${business.city || ""}`.trim()}
         ctaPrimary="Get a Free Quote →"
         ctaPrimaryHref="/get-a-quote"
         ctaSecondary="See Our Work ↓"
@@ -443,7 +446,7 @@ export default async function LargeFormatPrintingPage() {
                 Every Scale.
               </h2>
               <p className="mt-6 text-white/70 leading-relaxed">
-                Our Nairobi print facility runs Roland and Mimaki wide-format printers — the same equipment used by top print houses across Africa. We print at up to 1,200 DPI resolution, ensuring photographic-quality output even on the largest formats.
+                Our {business.city || "Kenya"} print facility runs Roland and Mimaki wide-format printers — the same equipment used by top print houses across Africa. We print at up to 1,200 DPI resolution, ensuring photographic-quality output even on the largest formats.
               </p>
               <p className="mt-4 text-white/70 leading-relaxed">
                 Every job is colour-calibrated using ICC profiles, so what you see on screen is what you get in print. We use eco-solvent and UV-curable inks that are weather-resistant, fade-resistant, and safe for indoor environments.
@@ -461,7 +464,7 @@ export default async function LargeFormatPrintingPage() {
             <div className="relative aspect-[4/3] rounded-2xl overflow-hidden">
               <Image
                 src={CAPABILITIES_IMAGE}
-                alt="PrintHub wide-format printer producing a high-resolution banner in Nairobi"
+                alt={`${business.businessName} wide-format printer producing a high-resolution banner in ${business.city || "Kenya"}`}
                 fill
                 sizes="(max-width: 768px) 100vw, 50vw"
                 className="object-cover"
@@ -771,7 +774,7 @@ export default async function LargeFormatPrintingPage() {
             "@type": "Service",
             name: "Large Format Printing",
             description:
-              "Professional large format printing in Nairobi. Banners, vehicle wraps, billboards, canvas prints, signage. Fast turnaround. Nationwide delivery across Kenya.",
+              `Professional large format printing in ${business.city || "Kenya"}. Banners, vehicle wraps, billboards, canvas prints, signage. Fast turnaround. Nationwide delivery across Kenya.`,
             provider: {
               "@type": "Organization",
               name: business.businessName,

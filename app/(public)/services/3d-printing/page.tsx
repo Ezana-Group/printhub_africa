@@ -390,18 +390,21 @@ const FAQ_3D = [
   },
 ];
 
-export const metadata: Metadata = {
-  title: "3D Printing Nairobi | FDM & Resin Printing | PrintHub Kenya",
-  description:
-    "3D printing services in Nairobi, Kenya. FDM and resin printing for prototypes, consumer products, engineering parts & more. Upload your STL file and get a quote in 2 hours. PrintHub.",
-  openGraph: {
-    title: "3D Printing Nairobi | PrintHub Kenya",
-    description:
-      "FDM and resin 3D printing. Upload your STL and get a quote in 2 hours. Delivered across Kenya.",
-    url: "/services/3d-printing",
-  },
-  alternates: { canonical: "/services/3d-printing" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const business = await getBusinessPublic();
+  const city = business.city || "Kenya";
+  const name = business.businessName;
+  return {
+    title: `3D Printing ${city} | FDM & Resin Printing | ${name} Kenya`,
+    description: `3D printing services in ${city}, Kenya. FDM and resin printing for prototypes, consumer products, engineering parts & more. Upload your STL file and get a quote in 2 hours. ${name}.`,
+    openGraph: {
+      title: `3D Printing ${city} | ${name} Kenya`,
+      description: "FDM and resin 3D printing. Upload your STL and get a quote in 2 hours. Delivered across Kenya.",
+      url: "/services/3d-printing",
+    },
+    alternates: { canonical: "/services/3d-printing" },
+  };
+}
 
 export default async function ThreeDPrintingPage() {
   const business = await getBusinessPublic();
@@ -418,7 +421,7 @@ export default async function ThreeDPrintingPage() {
         </ol>
       </nav>
       <ServiceHero
-        label="3D PRINTING — NAIROBI, KENYA"
+        label={`3D PRINTING — ${[business.city, business.country].filter(Boolean).join(", ").toUpperCase() || "KENYA"}`}
         title={
           <>
             Print the
@@ -426,9 +429,9 @@ export default async function ThreeDPrintingPage() {
             Impossible.
           </>
         }
-        subtitle="From architectural prototypes to custom consumer products — PrintHub's 3D printing service turns your digital files into physical reality. FDM and resin printing available. Delivered across Kenya."
+        subtitle={`From architectural prototypes to custom consumer products — ${business.businessName}'s 3D printing service turns your digital files into physical reality. FDM and resin printing available. Delivered across Kenya.`}
         imageSrc={HERO_IMAGE}
-        imageAlt="3D printer in action at PrintHub Nairobi"
+        imageAlt={`3D printer in action at ${business.businessName} ${business.city || ""}`.trim()}
         ctaPrimary="Upload Your Model →"
         ctaPrimaryHref="/get-a-quote"
         ctaSecondary="Explore Materials ↓"
@@ -450,7 +453,7 @@ export default async function ThreeDPrintingPage() {
               3D printing — also called additive manufacturing — builds physical objects layer by layer from a digital 3D model file. Unlike traditional manufacturing that cuts material away, 3D printing adds material only where needed, making it ideal for complex geometries, custom one-offs, and rapid prototyping.
             </p>
             <p className="mt-4 text-[var(--text-secondary)] leading-relaxed">
-              At PrintHub, we operate FDM (Fused Deposition Modelling) and MSLA resin printers — covering everything from functional engineering parts to ultra-detailed artistic models. You bring the idea. We bring it to life.
+              At {business.businessName}, we operate FDM (Fused Deposition Modelling) and MSLA resin printers — covering everything from functional engineering parts to ultra-detailed artistic models. You bring the idea. We bring it to life.
             </p>
             <div className="mt-10 grid sm:grid-cols-2 gap-6">
               <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -476,7 +479,7 @@ export default async function ThreeDPrintingPage() {
           <div className="relative aspect-[4/5] rounded-2xl overflow-hidden">
             <Image
               src={WHAT_IS_IMAGE}
-              alt="FDM 3D printer producing a part at PrintHub Nairobi"
+              alt={`FDM 3D printer producing a part at ${business.businessName} ${business.city || "Kenya"}`}
               fill
               sizes="(max-width: 768px) 100vw, 50vw"
               className="object-cover"
@@ -590,7 +593,7 @@ export default async function ThreeDPrintingPage() {
           <div className="relative aspect-[4/3] rounded-2xl overflow-hidden">
             <Image
               src={FILE_REQ_IMAGE}
-              alt="3D model being sliced in slicer software for PrintHub 3D printing Nairobi"
+              alt={`3D model being sliced in slicer software for ${business.businessName} 3D printing ${business.city || "Kenya"}`}
               fill
               sizes="(max-width: 768px) 100vw, 50vw"
               className="object-cover"
@@ -686,7 +689,7 @@ export default async function ThreeDPrintingPage() {
             "@type": "Service",
             name: "3D Printing",
             description:
-              "3D printing services in Nairobi, Kenya. FDM and resin printing for prototypes, consumer products, engineering parts. Upload your STL and get a quote in 2 hours.",
+              `3D printing services in ${business.city || "Kenya"}, Kenya. FDM and resin printing for prototypes, consumer products, engineering parts. Upload your STL and get a quote in 2 hours.`,
             provider: {
               "@type": "Organization",
               name: business.businessName,

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
+import { getBusinessPublic } from "@/lib/business-public";
 
 const bodySchema = z.object({
   type: z.enum(["large_format", "3d_print"]),
@@ -45,14 +46,16 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const to = process.env.CONTACT_EMAIL ?? process.env.FROM_EMAIL ?? "hello@printhub.africa";
+    const business = await getBusinessPublic();
+    const to = process.env.CONTACT_EMAIL ?? process.env.FROM_EMAIL ?? business.primaryEmail ?? "hello@printhub.africa";
+    const footer = [business.businessName, business.city, business.country].filter(Boolean).join(" · ") || "PrintHub · Kenya";
     const typeLabel = data.type === "large_format" ? "Large Format Quote" : "3D Print Quote";
     await sendEmail({
-      to: to.includes("@") ? to : "hello@printhub.africa",
+      to: to.includes("@") ? to : business.primaryEmail ?? "hello@printhub.africa",
       subject: `[Quote Request] ${typeLabel} – ${data.name}`,
       html: `
         <div style="font-family: sans-serif; max-width: 560px;">
-          <h2 style="color: #FF4D00;">PrintHub – Quote request</h2>
+          <h2 style="color: #FF4D00;">${business.businessName} – Quote request</h2>
           <p><strong>Type:</strong> ${typeLabel}</p>
           <p><strong>From:</strong> ${data.name} &lt;${data.email}&gt;</p>
           ${data.phone ? `<p><strong>Phone:</strong> ${data.phone}</p>` : ""}
@@ -61,7 +64,7 @@ export async function POST(req: NextRequest) {
           ${data.material ? `<p><strong>Material:</strong> ${data.material}</p>` : ""}
           ${data.quantity ? `<p><strong>Quantity:</strong> ${data.quantity}</p>` : ""}
           ${data.message ? `<p><strong>Message:</strong><br/>${data.message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>` : ""}
-          <p style="color: #6B6B6B; font-size: 12px;">PrintHub · Nairobi, Kenya</p>
+          <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
         </div>
       `,
     });

@@ -6,21 +6,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-function SupportEmailFallback() {
-  const [email, setEmail] = useState<string>("support@printhub.africa");
+function useBusinessPublic() {
+  const [data, setData] = useState<{ supportEmail?: string; city?: string; country?: string }>({});
   useEffect(() => {
     fetch("/api/settings/business-public")
       .then((r) => r.json())
-      .then((d) => {
-        if (d?.supportEmail) setEmail(d.supportEmail);
-      })
+      .then(setData)
       .catch(() => {});
   }, []);
+  return data;
+}
+
+function SupportEmailFallback() {
+  const { supportEmail } = useBusinessPublic();
+  const email = supportEmail ?? "support@printhub.africa";
   return <a href={`mailto:${email}`} className="text-primary hover:underline">{email}</a>;
 }
 
 export function SecuritySettingsClient() {
   const [passwordSaved, setPasswordSaved] = useState(false);
+  const { city, country } = useBusinessPublic();
+  const sessionLocation = [city, country].filter(Boolean).join(", ") || "Nairobi, Kenya";
 
   return (
     <div className="space-y-6">
@@ -79,7 +85,7 @@ export function SecuritySettingsClient() {
       >
         <ul className="space-y-3 text-sm">
           <li className="flex items-center justify-between gap-4 py-2 border-b">
-            <span>Chrome on Windows · Nairobi, Kenya · Active now</span>
+            <span>Chrome on Windows · {sessionLocation} · Active now</span>
             <Button type="button" variant="ghost" size="sm">
               Sign out this device
             </Button>
