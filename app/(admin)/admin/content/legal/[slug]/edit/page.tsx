@@ -17,7 +17,7 @@ export default async function LegalPageEditPage({
 
   const history = await prisma.legalPageHistory.findMany({
     where: { legalPageId: page.id },
-    orderBy: { savedAt: "desc" },
+    orderBy: { createdAt: "desc" },
     take: 20,
   });
 
@@ -48,7 +48,7 @@ export default async function LegalPageEditPage({
         history={history.map((h) => ({
           id: h.id,
           version: h.version,
-          savedAt: h.savedAt,
+          savedAt: h.createdAt,
           savedBy: h.savedBy,
           changeNote: h.changeNote,
         }))}

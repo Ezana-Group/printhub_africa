@@ -16,7 +16,7 @@ export default async function LegalPageHistoryPage({
 
   const history = await prisma.legalPageHistory.findMany({
     where: { legalPageId: page.id },
-    orderBy: { savedAt: "desc" },
+    orderBy: { createdAt: "desc" },
   });
 
   return (
@@ -45,7 +45,7 @@ export default async function LegalPageHistoryPage({
             className="rounded-lg border p-4 text-sm"
           >
             <p className="font-medium">
-              v{h.version} · {new Date(h.savedAt).toLocaleString()}
+              v{h.version} · {new Date(h.createdAt).toLocaleString()}
             </p>
             {h.changeNote && (
               <p className="text-muted-foreground mt-1">{h.changeNote}</p>

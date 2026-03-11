@@ -32,7 +32,7 @@ export async function GET(
 
   const history = await prisma.legalPageHistory.findMany({
     where: { legalPageId: page.id },
-    orderBy: { savedAt: "desc" },
+    orderBy: { createdAt: "desc" },
   });
 
   return NextResponse.json({ history });
