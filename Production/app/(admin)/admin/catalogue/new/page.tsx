@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSection } from "@/lib/admin-route-guard";
-import { CatalogueItemForm } from "@/components/admin/catalogue-item-form";
+import { CatalogueItemForm } from "../../../../../components/admin/catalogue-item-form";
 import { Button } from "@/components/ui/button";
 
 export default async function NewCatalogueItemPage() {
