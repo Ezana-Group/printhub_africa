@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { ensureUniqueOrderNumber, calculateTax } from "@/lib/order-utils";
+import { ensureUniqueOrderNumber } from "@/lib/order-utils";
 import { createTrackingEvent } from "@/lib/tracking";
+import { calculateCartTotals } from "@/lib/cart-calculations";
 import { z } from "zod";
 
 const createOrderSchema = z.object({
@@ -27,6 +28,8 @@ const createOrderSchema = z.object({
     postalCode: z.string().optional(),
     deliveryMethod: z.string().optional(),
   }),
+  shippingCost: z.number().min(0).optional(),
+  discount: z.number().min(0).optional(),
   notes: z.string().optional(),
 });
 
@@ -36,13 +39,18 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
-  const { items, shippingAddress, notes } = parsed.data;
+  const { items, shippingAddress, shippingCost: reqShipping = 0, discount: reqDiscount = 0, notes } = parsed.data;
 
-  const subtotal = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
-  const tax = calculateTax(subtotal);
-  const shippingCost = 0; // TODO: calculate by county
-  const discount = 0;
-  const total = subtotal + tax + shippingCost - discount;
+  // Prices are VAT-inclusive — use same calculation as cart/checkout
+  const { subtotalInclVat, vatAmount, total } = calculateCartTotals(
+    items.map((i) => ({ unitPrice: i.unitPrice, quantity: i.quantity })),
+    reqShipping,
+    reqDiscount
+  );
+  const subtotal = subtotalInclVat;
+  const tax = vatAmount;
+  const shippingCost = reqShipping;
+  const discount = reqDiscount;
 
   const orderNumber = await ensureUniqueOrderNumber();
 

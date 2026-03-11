@@ -20,7 +20,7 @@ export function Hero() {
         <p className="mt-6 text-lg md:text-xl text-slate-300 max-w-xl mx-auto">
           From Nairobi to all of Kenya — banners, signage, vehicle wraps, and custom 3D prints.
         </p>
-        <div className="mt-10 flex flex-wrap gap-4 justify-center">
+        <div className="mt-10 flex flex-wrap gap-4 justify-center items-center">
           <Button
             asChild
             size="lg"
@@ -30,20 +30,17 @@ export function Hero() {
           </Button>
           <Button
             asChild
-            variant="outline"
             size="lg"
-            className="rounded-2xl px-8 h-12 text-base font-semibold border-2 border-white/60 bg-transparent text-white hover:bg-white/10 hover:text-white hover:border-white/80"
+            className="rounded-2xl px-8 h-12 text-base font-semibold border-2 border-white bg-transparent text-white hover:bg-white hover:text-[#0A0A0A]"
           >
-            <Link href="/get-a-quote">Get a Quote</Link>
+            <Link href="/services">Explore Services</Link>
           </Button>
-          <Button
-            asChild
-            variant="ghost"
-            size="lg"
-            className="rounded-2xl px-8 h-12 text-base text-slate-300 hover:text-white hover:bg-white/5"
+          <Link
+            href="/get-a-quote"
+            className="text-base font-semibold text-slate-300 hover:text-white transition-colors"
           >
-            <Link href="/get-a-quote">Get a Free Quote</Link>
-          </Button>
+            Get a Free Quote →
+          </Link>
         </div>
         <div className="mt-16 flex flex-wrap justify-center gap-x-10 gap-y-2 text-sm text-slate-400">
           <span className="flex items-center gap-2">

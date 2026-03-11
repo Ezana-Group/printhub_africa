@@ -7,19 +7,20 @@ import { useCartStore } from "@/store/cart-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatPrice } from "@/lib/utils";
-import { VAT_RATE } from "@/lib/constants";
+import { calculateCartTotals } from "@/lib/cart-calculations";
 
 export default function CartPage() {
-  const { items, updateQuantity, removeItem, total, clearCart, appliedCoupon, setAppliedCoupon } = useCartStore();
+  const { items, updateQuantity, removeItem, clearCart, appliedCoupon, setAppliedCoupon } = useCartStore();
   const [couponInput, setCouponInput] = useState("");
   const [couponError, setCouponError] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
 
-  const subtotal = total();
-  const discount = appliedCoupon?.discountAmount ?? 0;
-  const subtotalAfterDiscount = Math.max(0, subtotal - discount);
-  const vat = subtotalAfterDiscount * VAT_RATE;
-  const totalWithVat = subtotalAfterDiscount + vat;
+  const totals = calculateCartTotals(
+    items.map((i) => ({ unitPrice: i.unitPrice, quantity: i.quantity })),
+    0,
+    appliedCoupon?.discountAmount ?? 0
+  );
+  const { subtotalInclVat, vatAmount, total: totalWithVat, vatNote } = totals;
 
   const handleApplyCoupon = async () => {
     const code = couponInput.trim();
@@ -33,7 +34,7 @@ export default function CartPage() {
       const res = await fetch("/api/coupons/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, subtotal }),
+        body: JSON.stringify({ code, subtotal: subtotalInclVat }),
       });
       const data = await res.json();
       if (data.valid && data.discount != null) {
@@ -163,17 +164,17 @@ export default function CartPage() {
           <dl className="mt-6 space-y-2 text-sm">
             <div className="flex justify-between text-slate-600">
               <dt>Subtotal</dt>
-              <dd>{formatPrice(subtotal)}</dd>
+              <dd>{formatPrice(subtotalInclVat)}</dd>
             </div>
-            {discount > 0 && (
+            {totals.discountKes > 0 && (
               <div className="flex justify-between text-green-600">
                 <dt>Discount ({appliedCoupon?.code})</dt>
-                <dd>−{formatPrice(discount)}</dd>
+                <dd>−{formatPrice(totals.discountKes)}</dd>
               </div>
             )}
             <div className="flex justify-between text-slate-600">
-              <dt>VAT (16%)</dt>
-              <dd>{formatPrice(vat)}</dd>
+              <dt>VAT (16%, included)</dt>
+              <dd>{formatPrice(vatAmount)}</dd>
             </div>
             <div className="flex justify-between border-t border-slate-200 pt-2 text-base font-semibold text-slate-900">
               <dt>Total</dt>
