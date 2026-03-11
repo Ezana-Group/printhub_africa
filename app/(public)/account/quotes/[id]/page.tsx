@@ -5,6 +5,7 @@ import Link from "next/link";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/utils";
+import { getBusinessPublic } from "@/lib/business-public";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { QuoteAcceptDecline } from "@/components/account/quote-accept-decline";
@@ -24,11 +25,25 @@ export default async function AccountQuoteDetailPage({
   if (!session?.user?.id) redirect("/login");
   const { id } = await params;
 
-  const quote = await prisma.quote.findFirst({
-    where: { id, customerId: session.user.id },
-  });
+  const userId = session.user.id as string;
+  const userEmail = (session.user.email as string) ?? "";
+  const [quoteByAccount, quoteByEmail, business] = await Promise.all([
+    prisma.quote.findFirst({ where: { id, customerId: userId } }),
+    userEmail
+      ? prisma.quote.findFirst({
+          where: {
+            id,
+            customerId: null,
+            customerEmail: { equals: userEmail, mode: "insensitive" },
+          },
+        })
+      : Promise.resolve(null),
+    getBusinessPublic(),
+  ]);
+  const quote = quoteByAccount ?? quoteByEmail ?? null;
 
   if (!quote) notFound();
+  const businessName = business.businessName;
 
   return (
     <div className="space-y-6">
@@ -78,7 +93,7 @@ export default async function AccountQuoteDetailPage({
       {quote.status === "quoted" && quote.quotedAmount != null && (
         <Card>
           <CardHeader>
-            <h2 className="font-semibold">Quote from PrintHub</h2>
+            <h2 className="font-semibold">Quote from {businessName}</h2>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-2xl font-bold text-slate-900">
