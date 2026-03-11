@@ -42,11 +42,21 @@ type FaqCategory = {
   }>;
 };
 
+const DEFAULT_WHATSAPP = "254700000000";
+
 export function FaqPageClient({
   categories: initialCategories,
+  supportEmail = "support@printhub.africa",
+  primaryPhone = null,
+  whatsapp = null,
 }: {
   categories: FaqCategory[];
+  supportEmail?: string;
+  primaryPhone?: string | null;
+  whatsapp?: string | null;
 }) {
+  const waDigits = (whatsapp ?? primaryPhone ?? DEFAULT_WHATSAPP).replace(/\D/g, "") || DEFAULT_WHATSAPP;
+  const telDigits = (primaryPhone ?? whatsapp ?? DEFAULT_WHATSAPP).replace(/\D/g, "") || DEFAULT_WHATSAPP;
   const [search, setSearch] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
 
@@ -154,7 +164,7 @@ export function FaqPageClient({
         <p className="font-medium text-slate-900">Still have questions?</p>
         <div className="mt-3 flex flex-wrap gap-3">
           <a
-            href="https://wa.me/254700000000"
+            href={`https://wa.me/${waDigits}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700"
@@ -163,14 +173,14 @@ export function FaqPageClient({
             WhatsApp Us
           </a>
           <a
-            href="mailto:support@printhub.africa"
+            href={`mailto:${supportEmail}`}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50"
           >
             <Mail className="h-4 w-4" />
             Email Support
           </a>
           <a
-            href="tel:+254700000000"
+            href={`tel:+${telDigits}`}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50"
           >
             <Phone className="h-4 w-4" />

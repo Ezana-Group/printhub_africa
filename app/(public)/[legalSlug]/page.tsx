@@ -82,7 +82,7 @@ export default async function LegalPage({ params }: Props) {
             })}
           </p>
           <div
-            className="prose prose-slate mt-8 max-w-none prose-headings:font-display prose-a:text-primary prose-a:no-underline hover:prose-a:underline"
+            className="prose prose-slate mt-8 max-w-none prose-headings:font-display prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-table:border-collapse prose-table:w-full prose-th:border prose-th:border-slate-200 prose-th:bg-slate-50 prose-th:px-4 prose-th:py-3 prose-th:text-left prose-td:border prose-td:border-slate-200 prose-td:px-4 prose-td:py-3"
             dangerouslySetInnerHTML={{ __html: page.content }}
           />
         </article>

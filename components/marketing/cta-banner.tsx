@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-export function CTABanner() {
+const DEFAULT_WHATSAPP = "254700000000";
+
+export function CTABanner({ whatsapp }: { whatsapp?: string | null } = {}) {
+  const digits = (whatsapp ?? DEFAULT_WHATSAPP).replace(/\D/g, "") || DEFAULT_WHATSAPP;
+  const waHref = `https://wa.me/${digits}`;
   return (
     <section className="py-20 md:py-24 bg-slate-900 text-white">
       <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8 text-center">
@@ -26,7 +30,7 @@ export function CTABanner() {
             className="rounded-2xl px-8 h-12 border-2 border-white/60 bg-transparent text-white hover:bg-white/10 hover:border-white/80"
           >
             <a
-              href="https://wa.me/254700000000"
+              href={waHref}
               target="_blank"
               rel="noopener noreferrer"
             >

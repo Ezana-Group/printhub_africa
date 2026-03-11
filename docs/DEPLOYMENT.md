@@ -1,6 +1,6 @@
 # PrintHub — Complete deployment guide
 
-Step-by-step guide to deploy PrintHub on **Vercel** with **Neon** (PostgreSQL), **Cloudflare R2** (file storage), **Resend** (email), **M-Pesa Daraja**, and **Google OAuth**. Includes database migrations and all required environment variables.
+Step-by-step guide to deploy PrintHub on **Vercel** with **Neon** (PostgreSQL), **Cloudflare R2** (file storage), **Resend** (email), **M-Pesa Daraja**, and **auth** (Google, Facebook, Apple, magic-link email). Includes database migrations and all required environment variables.
 
 ---
 
@@ -13,7 +13,7 @@ Step-by-step guide to deploy PrintHub on **Vercel** with **Neon** (PostgreSQL), 
 | 3    | **Cloudflare R2** | File storage (uploads) → R2 credentials + bucket |
 | 4    | **Resend**     | Transactional email → API key + verified domain |
 | 5    | **M-Pesa Daraja** | STK Push payments → consumer key/secret, shortcode, passkey, callback URL |
-| 6    | **Google OAuth**  | “Sign in with Google” → Client ID + Secret + redirect URI |
+| 6    | **Auth**          | Sign-in options: Google, Facebook, Apple (OAuth), magic-link email (Resend) |
 | 7    | **Migrations** | Run `prisma migrate deploy` against production DB after first deploy |
 
 Use **test.ovid.co.ke** for test; use **printhub.africa** (or your domain) for production. Set `NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` to the deployed URL for each environment.
@@ -51,7 +51,7 @@ Optional but recommended for full features:
 - R2_* (or AWS_*) for uploads
 - RESEND_API_KEY, FROM_EMAIL for email
 - MPESA_* for M-Pesa
-- GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET for Google sign-in
+- GOOGLE_*, FACEBOOK_*, APPLE_* for OAuth; magic link uses Resend (no extra env)
 
 ### 2.3 Domain
 
@@ -183,29 +183,50 @@ Register this URL in the Daraja portal if required (sandbox may allow any URL; p
 
 ---
 
-## 7. Google OAuth (Sign in with Google)
+## 7. Auth (sign-in / sign-up)
 
-### 7.1 Google Cloud Console
+PrintHub supports **email + password**, **Google**, **Facebook**, **Apple**, and **magic-link email** (no password). Buttons for each provider appear on login/register only when the matching `NEXT_PUBLIC_*` env var is set. NextAuth callback URLs must match your app domain (e.g. `https://printhub.africa/api/auth/callback/google`).
+
+### 7.1 Google OAuth
 
 1. Go to [console.cloud.google.com](https://console.cloud.google.com).
 2. Create or select a project (e.g. “PrintHub”).
 3. **APIs & Services** → **Credentials** → **Create Credentials** → **OAuth client ID**.
 4. If prompted, configure **OAuth consent screen** (External for public users, add scopes email, profile, openid).
 5. Application type: **Web application**.
-6. **Authorized redirect URIs** — add exactly:
+6. **Authorized redirect URIs** — add:
    - `https://test.ovid.co.ke/api/auth/callback/google` (test)
    - `https://printhub.africa/api/auth/callback/google` (production)
    - `http://localhost:3000/api/auth/callback/google` (local)
-7. Create and copy **Client ID** and **Client Secret**.
+7. Copy **Client ID** and **Client Secret**.
 
-### 7.2 Env vars for Vercel
+**Env vars:** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (same as Client ID; used to show the "Google" button).
 
-| Variable               | Value |
-|------------------------|--------|
-| `GOOGLE_CLIENT_ID`     | From Google Cloud Console |
-| `GOOGLE_CLIENT_SECRET` | From Google Cloud Console |
+### 7.2 Facebook Login
 
-NextAuth will use `NEXTAUTH_URL` to build the callback URL; ensure it matches the redirect URIs you added (e.g. `https://test.ovid.co.ke` or `https://printhub.africa`).
+1. Go to [developers.facebook.com](https://developers.facebook.com) → **My Apps** → create or select an app.
+2. **Add Product** → **Facebook Login** → **Settings**.
+3. **Valid OAuth Redirect URIs** — add:
+   - `https://test.ovid.co.ke/api/auth/callback/facebook`
+   - `https://printhub.africa/api/auth/callback/facebook`
+   - `http://localhost:3000/api/auth/callback/facebook`
+4. **App Review** — request `email` and `public_profile` if needed (basic login often allowed without review).
+5. Copy **App ID** and **App Secret** (Settings → Basic).
+
+**Env vars:** `FACEBOOK_CLIENT_ID` (App ID), `FACEBOOK_CLIENT_SECRET` (App Secret), `NEXT_PUBLIC_FACEBOOK_APP_ID` (same as App ID; used to show the "Facebook" button).
+
+### 7.3 Apple Sign In
+
+1. Go to [developer.apple.com](https://developer.apple.com) → **Certificates, Identifiers & Profiles**.
+2. **Identifiers** → create a **Services ID** (e.g. `com.printhub.africa.auth`) — this is your `APPLE_CLIENT_ID`. Enable **Sign In with Apple**, configure domains and redirect URL (e.g. `https://printhub.africa/api/auth/callback/apple`).
+3. **Keys** → create a key, enable **Sign In with Apple**, link to your App ID. Download the `.p8` key (once only). Note **Key ID** and **Team ID** and **Client ID** (Services ID).
+4. Generate a **client secret JWT** (Apple expects a JWT as the "secret", not a static string). Use a script or a library (e.g. [apple-signin-auth](https://www.npmjs.com/package/apple-signin-auth)) with your Team ID, Key ID, Client ID (Services ID), and the `.p8` private key. The JWT typically expires in 6 months; regenerate and update `APPLE_CLIENT_SECRET` when it expires.
+
+**Env vars:** `APPLE_CLIENT_ID` (Services ID), `APPLE_CLIENT_SECRET` (the JWT), `NEXT_PUBLIC_APPLE_CLIENT_ID` (same; used to show the "Apple" button).
+
+### 7.4 Magic link (email sign-in)
+
+Users can request a "Sign in to PrintHub" link sent to their email (no password). The app uses **Resend** to send the email; no extra env vars are required beyond `RESEND_API_KEY` and `FROM_EMAIL` (see §5). The "Email me a sign-in link" option is always shown on the login page. If Resend is not configured, the send will no-op (with a console warning).
 
 ---
 
@@ -304,12 +325,21 @@ Use this as a single checklist. Add every variable you need to **Vercel → Sett
 | `MPESA_CALLBACK_URL` | Full URL to your callback route |
 | `MPESA_ENV` | `sandbox` or `production` |
 
-### Google OAuth
+### Auth (OAuth + magic link)
 
 | Variable | Description |
 |----------|-------------|
-| `GOOGLE_CLIENT_ID` | OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | OAuth client secret |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Same as Client ID (shows "Google" button) |
+| `FACEBOOK_CLIENT_ID` | Facebook App ID |
+| `FACEBOOK_CLIENT_SECRET` | Facebook App Secret |
+| `NEXT_PUBLIC_FACEBOOK_APP_ID` | Same as App ID (shows "Facebook" button) |
+| `APPLE_CLIENT_ID` | Apple Services ID |
+| `APPLE_CLIENT_SECRET` | Apple client secret JWT (regenerate ~6 months) |
+| `NEXT_PUBLIC_APPLE_CLIENT_ID` | Same (shows "Apple" button) |
+
+Magic link uses Resend (§5); no extra vars. Set only the providers you use.
 
 ### Optional (see .env.example)
 
@@ -331,11 +361,11 @@ Use this as a single checklist. Add every variable you need to **Vercel → Sett
 4. **Optional seed** — Run `prisma db seed` on test DB if needed.
 5. **Resend** — Verify domain, create API key, add `RESEND_*` and `FROM_*` to Vercel; redeploy.
 6. **R2** — Create bucket and API token, add `R2_*` to Vercel; redeploy.
-7. **Google OAuth** — Create client, add redirect URIs, add `GOOGLE_*` to Vercel; redeploy.
+7. **Auth** — Google: create OAuth client, add redirect URIs, add `GOOGLE_*` and `NEXT_PUBLIC_GOOGLE_CLIENT_ID`. Optional: Facebook (`FACEBOOK_*`, `NEXT_PUBLIC_FACEBOOK_APP_ID`), Apple (`APPLE_*`, `NEXT_PUBLIC_APPLE_CLIENT_ID`). Magic link works automatically if Resend is configured. Redeploy.
 8. **M-Pesa** — Create Daraja app (sandbox first), set callback URL, add `MPESA_*` to Vercel; redeploy.
 9. **Domain** — Add domain in Vercel and DNS; ensure `NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` match; redeploy.
 
-After that, test login (email + Google), file upload, M-Pesa flow, and email (e.g. quote received, verification).
+After that, test login (email + password, Google/Facebook/Apple if configured, magic link), file upload, M-Pesa flow, and email (e.g. quote received, verification).
 
 ---
 
@@ -344,7 +374,7 @@ After that, test login (email + Google), file upload, M-Pesa flow, and email (e.
 - **Build fails with Prisma “url/directUrl” error:** Schema must not contain `url`/`directUrl`; they live in `prisma.config.ts`. See README and Prisma 7 upgrade notes.
 - **Invalid URL at build:** Set `NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` in Vercel (and optionally in Build env) so they are non-empty (e.g. `https://test.ovid.co.ke`).
 - **M-Pesa callback not hit:** Ensure `MPESA_CALLBACK_URL` is exact, HTTPS, and reachable from the internet; check Vercel function logs for the callback route.
-- **Google sign-in redirect mismatch:** Redirect URI in Google Cloud must match exactly (including path `/api/auth/callback/google`); `NEXTAUTH_URL` must match the domain.
+- **OAuth redirect mismatch:** Redirect URI in the provider (Google, Facebook, Apple) must match exactly (e.g. `https://yourdomain.com/api/auth/callback/google`). `NEXTAUTH_URL` must match the app domain.
 - **DB connection errors in production:** Use pooled `DATABASE_URL` for runtime; use `DIRECT_URL` only for migrations. Ensure Neon IP allowlist (if any) allows Vercel.
 - **Emails not sending:** Check Resend domain verification and that `FROM_EMAIL` is on that domain; check Vercel logs for Resend errors.
 

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Instagram, Facebook, Linkedin, X } from "lucide-react";
 import { ContactModal } from "@/components/contact/ContactModal";
+import type { BusinessPublic } from "@/lib/business-public";
 
 function TiktokIcon({ className }: { className?: string }) {
   return (
@@ -13,13 +14,23 @@ function TiktokIcon({ className }: { className?: string }) {
   );
 }
 
-const SOCIAL_LINKS = [
+const DEFAULT_SOCIAL = [
   { label: "Instagram", href: "https://instagram.com/printhub.africa", Icon: Instagram },
   { label: "Facebook", href: "https://facebook.com/printhub.africa", Icon: Facebook },
   { label: "X", href: "https://x.com/printhub_africa", Icon: X },
   { label: "TikTok", href: "https://tiktok.com/@printhub.africa", Icon: TiktokIcon },
   { label: "LinkedIn", href: "https://linkedin.com/company/printhub-africa", Icon: Linkedin },
 ];
+
+function socialLinksFromBusiness(b: BusinessPublic) {
+  const out: { label: string; href: string; Icon: typeof Instagram }[] = [];
+  if (b.socialInstagram) out.push({ label: "Instagram", href: b.socialInstagram, Icon: Instagram });
+  if (b.socialFacebook) out.push({ label: "Facebook", href: b.socialFacebook, Icon: Facebook });
+  if (b.socialTwitter) out.push({ label: "X", href: b.socialTwitter, Icon: X });
+  if (b.socialTikTok) out.push({ label: "TikTok", href: b.socialTikTok, Icon: TiktokIcon });
+  if (b.socialLinkedIn) out.push({ label: "LinkedIn", href: b.socialLinkedIn, Icon: Linkedin });
+  return out.length > 0 ? out : DEFAULT_SOCIAL;
+}
 
 type FooterLink = { label: string; href: string; openContact?: boolean };
 
@@ -57,8 +68,9 @@ const FOOTER_COLUMNS: { title: string; links: FooterLink[] }[] = [
   },
 ];
 
-export function Footer() {
+export function Footer({ business }: { business: BusinessPublic }) {
   const [contactOpen, setContactOpen] = useState(false);
+  const socialLinks = socialLinksFromBusiness(business);
 
   return (
     <>
@@ -67,12 +79,12 @@ export function Footer() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-10">
             <div className="col-span-2 md:col-span-1">
               <Link href="/" className="font-display text-lg font-bold text-white">
-                PrintHub
+                {business.businessName}
               </Link>
               <p className="text-sm text-slate-400 mt-2">
-                Printing the Future, Made in Kenya
+                {business.tagline}
               </p>
-              <p className="text-xs text-slate-500 mt-1">An Ezana Group Company</p>
+              <p className="text-xs text-slate-500 mt-1">{business.tradingName}</p>
             </div>
             {FOOTER_COLUMNS.map((col) => (
               <div key={col.title}>
@@ -105,7 +117,7 @@ export function Footer() {
           <div className="mt-12 pt-8 border-t border-slate-800">
             <h3 className="font-semibold text-sm text-white mb-3">Follow us</h3>
             <div className="flex gap-4">
-              {SOCIAL_LINKS.map(({ label, href, Icon }) => (
+              {socialLinks.map(({ label, href, Icon }) => (
                 <a
                   key={label}
                   href={href}
@@ -124,7 +136,7 @@ export function Footer() {
               M-Pesa · Pesapal · Visa · Mastercard · Bank Transfer
             </p>
             <p className="text-xs text-slate-500">
-              © {new Date().getFullYear()} PrintHub · Ezana Group. All rights reserved.
+              © {new Date().getFullYear()} {business.businessName}. All rights reserved.
             </p>
           </div>
           <div className="mt-6 flex flex-wrap gap-6 text-xs text-slate-500">

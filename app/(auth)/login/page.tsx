@@ -52,28 +52,55 @@ function LoginMessagesWithParams({ error }: { error: string }) {
  * Login form is rendered immediately (no Suspense around it) so E2E and WebKit
  * see #email / #password on first paint. Only the URL-dependent messages use Suspense.
  */
+function getCallbackUrl() {
+  if (typeof window === "undefined") return "/login/success";
+  const params = new URLSearchParams(window.location.search);
+  const raw = params.get("callbackUrl");
+  return raw && /^\/(?!\/)/.test(raw) ? raw : "/login/success";
+}
+
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [magicEmail, setMagicEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [magicLoading, setMagicLoading] = useState(false);
   const [error, setError] = useState("");
+  const [magicSent, setMagicSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams();
-    const raw = params.get("callbackUrl");
-    const callbackUrl =
-      raw && /^\/(?!\/)/.test(raw) ? raw : "/login/success";
     await signIn("credentials", {
       email,
       password,
-      callbackUrl,
+      callbackUrl: getCallbackUrl(),
       redirect: true,
     });
     setLoading(false);
   };
+
+  const handleMagicLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!magicEmail.trim()) return;
+    setError("");
+    setMagicLoading(true);
+    setMagicSent(false);
+    const result = await signIn("email", {
+      email: magicEmail.trim(),
+      callbackUrl: getCallbackUrl(),
+      redirect: false,
+    });
+    setMagicLoading(false);
+    if (result?.ok) setMagicSent(true);
+    else if (result?.error) setError(String(result.error));
+  };
+
+  const showGoogle = !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const showFacebook = !!process.env.NEXT_PUBLIC_FACEBOOK_APP_ID;
+  const showApple = !!process.env.NEXT_PUBLIC_APPLE_CLIENT_ID;
+  const showSocial = showGoogle || showFacebook || showApple;
 
   return (
     <Card>
@@ -84,11 +111,16 @@ export default function LoginPage() {
         <CardTitle>Sign in</CardTitle>
         <CardDescription>Enter your email and password</CardDescription>
       </CardHeader>
-      <form onSubmit={handleSubmit}>
+      <form id="login-credentials" onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           <Suspense fallback={null}>
             <LoginMessagesWithParams error={error} />
           </Suspense>
+          {magicSent && (
+            <p className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-md p-2">
+              Check your email for the sign-in link.
+            </p>
+          )}
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -118,25 +150,80 @@ export default function LoginPage() {
             />
           </div>
         </CardContent>
-        <CardFooter className="flex flex-col gap-4">
-          <Button type="submit" className="w-full" disabled={loading}>
+      </form>
+      <CardFooter className="flex flex-col gap-4">
+          <Button type="submit" form="login-credentials" className="w-full" disabled={loading}>
             {loading ? "Signing in…" : "Sign in"}
           </Button>
-          <Button type="button" variant="outline" className="w-full" asChild>
+          {showSocial && (
+            <>
+              <div className="relative w-full">
+                <span className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </span>
+                <span className="relative flex justify-center text-xs uppercase text-muted-foreground">
+                  Or continue with
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-2 w-full">
+                {showGoogle && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="w-full"
+                    onClick={() => signIn("google", { callbackUrl: getCallbackUrl() })}
+                  >
+                    Google
+                  </Button>
+                )}
+                {showFacebook && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="w-full"
+                    onClick={() => signIn("facebook", { callbackUrl: getCallbackUrl() })}
+                  >
+                    Facebook
+                  </Button>
+                )}
+                {showApple && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="w-full"
+                    onClick={() => signIn("apple", { callbackUrl: getCallbackUrl() })}
+                  >
+                    Apple
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+          <div className="relative w-full">
+            <span className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </span>
+            <span className="relative flex justify-center text-xs uppercase text-muted-foreground">
+              Or
+            </span>
+          </div>
+          <form onSubmit={handleMagicLink} className="flex gap-2 w-full">
+            <Input
+              type="email"
+              placeholder="Email me a sign-in link"
+              value={magicEmail}
+              onChange={(e) => setMagicEmail(e.target.value)}
+              className="flex-1"
+              disabled={magicLoading}
+            />
+            <Button type="submit" variant="outline" disabled={magicLoading}>
+              {magicLoading ? "Sending…" : "Send link"}
+            </Button>
+          </form>
+          <Button type="button" variant="ghost" className="w-full" asChild>
             <Link href="/register">Create an account</Link>
           </Button>
-          {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
-            <Button
-              type="button"
-              variant="secondary"
-              className="w-full"
-              onClick={() => signIn("google", { callbackUrl: "/" })}
-            >
-              Continue with Google
-            </Button>
-          )}
         </CardFooter>
-      </form>
     </Card>
   );
 }

@@ -5,8 +5,10 @@ import { FeaturedProducts } from "@/components/marketing/featured-products";
 import { WhyPrintHub } from "@/components/marketing/why-printhub";
 import { PriceCalculatorTeaser } from "@/components/marketing/price-calculator-teaser";
 import { CTABanner } from "@/components/marketing/cta-banner";
+import { getBusinessPublic } from "@/lib/business-public";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const business = await getBusinessPublic();
   return (
     <>
       <Hero />
@@ -15,7 +17,7 @@ export default function HomePage() {
       <FeaturedProducts />
       <PriceCalculatorTeaser />
       <WhyPrintHub />
-      <CTABanner />
+      <CTABanner whatsapp={business.whatsapp} />
     </>
   );
 }

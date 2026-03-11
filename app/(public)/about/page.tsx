@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { AboutHero } from "./about-hero";
+import { getBusinessPublic } from "@/lib/business-public";
 
 export const metadata: Metadata = {
   title: "About PrintHub | Professional Printing in Nairobi, Kenya",
@@ -18,7 +19,10 @@ export const metadata: Metadata = {
 const STORY_IMAGE =
   "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800";
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const business = await getBusinessPublic();
+  const whatsappDigits = (business.whatsapp ?? "").replace(/\D/g, "") || "254700000000";
+  const whatsappHref = `https://wa.me/${whatsappDigits}`;
   return (
     <div className="bg-[#0A0A0A] text-white">
       {/* SECTION 1 — HERO */}
@@ -298,16 +302,18 @@ export default function AboutPage() {
           <div className="grid md:grid-cols-2 gap-12">
             <div className="space-y-4 font-body text-black/90">
               <p className="flex items-center gap-2">
-                <span aria-hidden>📍</span> Nairobi, Kenya
+                <span aria-hidden>📍</span> {[business.city, business.country].filter(Boolean).join(", ") || "Nairobi, Kenya"}
+              </p>
+              {business.primaryPhone && (
+                <p className="flex items-center gap-2">
+                  <span aria-hidden>📞</span> {business.primaryPhone}
+                </p>
+              )}
+              <p className="flex items-center gap-2">
+                <span aria-hidden>✉</span> {business.primaryEmail}
               </p>
               <p className="flex items-center gap-2">
-                <span aria-hidden>📞</span> +254 XXX XXX XXX
-              </p>
-              <p className="flex items-center gap-2">
-                <span aria-hidden>✉</span> hello@printhub.africa
-              </p>
-              <p className="flex items-center gap-2">
-                <span aria-hidden>🕐</span> Mon–Fri 8am–6pm | Sat 9am–3pm
+                <span aria-hidden>🕐</span> {business.businessHours}
               </p>
               <div className="flex flex-wrap gap-3 mt-8">
                 <Link
@@ -317,7 +323,7 @@ export default function AboutPage() {
                   📋 Get a Quote
                 </Link>
                 <a
-                  href="https://wa.me/254700000000"
+                  href={whatsappHref}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 rounded-lg bg-black text-white px-5 py-3 font-medium hover:bg-black/90 transition-colors"

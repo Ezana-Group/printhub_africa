@@ -1,10 +1,11 @@
 "use client";
 
-const WHATSAPP_NUMBER = "254700000000"; // Replace with real PrintHub Kenya number
-const MESSAGE = "Hi PrintHub, I'd like to enquire about your printing services.";
+const DEFAULT_WHATSAPP = "254700000000";
+const MESSAGE = "Hi, I'd like to enquire about your printing services.";
 
-export function WhatsAppFloat() {
-  const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(MESSAGE)}`;
+export function WhatsAppFloat({ whatsapp }: { whatsapp?: string | null }) {
+  const digits = (whatsapp ?? DEFAULT_WHATSAPP).replace(/\D/g, "") || DEFAULT_WHATSAPP;
+  const url = `https://wa.me/${digits}?text=${encodeURIComponent(MESSAGE)}`;
 
   return (
     <a

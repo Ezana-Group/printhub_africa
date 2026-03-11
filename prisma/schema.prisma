@@ -1557,17 +1557,44 @@ model SystemSettings {
 }
 
 model BusinessSettings {
-  id                 String   @id @default("default")
-  mpesaEnabled        Boolean  @default(true)
-  pesapalEnabled      Boolean  @default(false)
-  flutterwaveEnabled  Boolean  @default(false)
-  stripeEnabled       Boolean  @default(false)
+  id                   String   @id @default("default")
+  // Identity (invoices, site branding)
+  businessName         String?  // e.g. PrintHub
+  tradingName          String?  // e.g. PrintHub (An Ezana Group Company)
+  tagline              String?
+  website              String?
+  favicon              String?
+  // Contact & location (site footer, about, contact)
+  primaryPhone         String?
+  whatsapp             String?
+  primaryEmail         String?
+  supportEmail         String?
+  financeEmail         String?
+  address1             String?
+  address2             String?
+  city                 String?
+  county               String?
+  country              String?
+  googleMapsUrl        String?
+  businessHours        String?  // e.g. Mon–Fri 8am–6pm | Sat 9am–3pm
+  // Social (footer, about)
+  socialFacebook       String?
+  socialInstagram      String?
+  socialTwitter        String?
+  socialLinkedIn       String?
+  socialTikTok         String?
+  socialYouTube        String?
+  // Payments & invoices (admin only)
+  mpesaEnabled         Boolean  @default(true)
+  pesapalEnabled       Boolean  @default(false)
+  flutterwaveEnabled   Boolean  @default(false)
+  stripeEnabled        Boolean  @default(false)
   invoicePrefix       String   @default("INV")
-  invoiceNotes        String?
-  invoiceFooter       String?
-  vatOnInvoices       Boolean  @default(true)
+  invoiceNotes         String?
+  invoiceFooter        String?
+  vatOnInvoices        Boolean  @default(true)
   paymentTermsDays    Int      @default(30)
-  updatedAt           DateTime @updatedAt
+  updatedAt            DateTime @updatedAt
 }
 
 model ShippingSettings {

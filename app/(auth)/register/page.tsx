@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -116,6 +117,52 @@ export default function RegisterPage() {
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Creating account…" : "Create account"}
           </Button>
+          {(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
+            process.env.NEXT_PUBLIC_FACEBOOK_APP_ID ||
+            process.env.NEXT_PUBLIC_APPLE_CLIENT_ID) && (
+            <>
+              <div className="relative w-full">
+                <span className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </span>
+                <span className="relative flex justify-center text-xs uppercase text-muted-foreground">
+                  Or continue with
+                </span>
+              </div>
+              <div className="grid grid-cols-1 gap-2 w-full">
+                {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="w-full"
+                    onClick={() => signIn("google", { callbackUrl: "/" })}
+                  >
+                    Google
+                  </Button>
+                )}
+                {process.env.NEXT_PUBLIC_FACEBOOK_APP_ID && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="w-full"
+                    onClick={() => signIn("facebook", { callbackUrl: "/" })}
+                  >
+                    Facebook
+                  </Button>
+                )}
+                {process.env.NEXT_PUBLIC_APPLE_CLIENT_ID && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="w-full"
+                    onClick={() => signIn("apple", { callbackUrl: "/" })}
+                  >
+                    Apple
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
           <Button type="button" variant="ghost" className="w-full" asChild>
             <Link href="/login">Already have an account? Sign in</Link>
           </Button>

@@ -2,8 +2,14 @@ import type { NextAuthOptions } from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
+import FacebookProvider from "next-auth/providers/facebook";
+import AppleProvider from "next-auth/providers/apple";
+import EmailProvider from "next-auth/providers/email";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { sendEmail } from "@/lib/email";
+
+const fromEmail = process.env.FROM_EMAIL ?? "PrintHub <hello@printhub.africa>";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -19,6 +25,41 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID ?? "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+    }),
+    ...(process.env.FACEBOOK_CLIENT_ID && process.env.FACEBOOK_CLIENT_SECRET
+      ? [
+          FacebookProvider({
+            clientId: process.env.FACEBOOK_CLIENT_ID,
+            clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
+          }),
+        ]
+      : []),
+    ...(process.env.APPLE_CLIENT_ID && process.env.APPLE_CLIENT_SECRET
+      ? [
+          AppleProvider({
+            clientId: process.env.APPLE_CLIENT_ID,
+            clientSecret: process.env.APPLE_CLIENT_SECRET,
+          }),
+        ]
+      : []),
+    EmailProvider({
+      from: fromEmail,
+      sendVerificationRequest: async ({ identifier: email, url }) => {
+        await sendEmail({
+          to: email,
+          subject: "Sign in to PrintHub",
+          html: `
+            <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+              <h1 style="color: #FF4D00;">PrintHub</h1>
+              <p>Click the link below to sign in to your account:</p>
+              <p><a href="${url}" style="color: #FF4D00; font-weight: bold;">Sign in to PrintHub</a></p>
+              <p>Or copy this link: ${url}</p>
+              <p>This link expires in 24 hours. If you didn't request it, ignore this email.</p>
+              <p style="color: #6B6B6B; font-size: 12px;">PrintHub · Nairobi, Kenya</p>
+            </div>
+          `,
+        });
+      },
     }),
     CredentialsProvider({
       name: "credentials",

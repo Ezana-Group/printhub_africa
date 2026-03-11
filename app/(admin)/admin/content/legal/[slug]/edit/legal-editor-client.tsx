@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { CheckCircle2, ExternalLink, FileCode2, History, RotateCcw, XCircle } from "lucide-react";
 
 type HistoryItem = {
   id: string;
@@ -37,6 +38,7 @@ export function LegalPageEditorClient({
   const [isPublished, setIsPublished] = useState(initialPublished);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<"saved" | "error" | null>(null);
+  const [tab, setTab] = useState<"edit" | "preview">("edit");
 
   const handleSave = async () => {
     setSaving(true);
@@ -82,100 +84,189 @@ export function LegalPageEditorClient({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Main content area */}
       <div className="lg:col-span-2 space-y-4">
-        <div className="rounded-md border bg-background">
-          <div className="border-b p-2 flex items-center gap-2 text-sm text-muted-foreground">
-            <span>HTML content</span>
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          {/* Tab bar */}
+          <div className="flex border-b border-slate-200 bg-slate-50/80">
+            <button
+              type="button"
+              onClick={() => setTab("edit")}
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors ${
+                tab === "edit"
+                  ? "bg-white text-slate-900 border-b-2 border-primary -mb-px"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <FileCode2 className="h-4 w-4" />
+              Edit HTML
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab("preview")}
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors ${
+                tab === "preview"
+                  ? "bg-white text-slate-900 border-b-2 border-primary -mb-px"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Preview
+            </button>
             <a
               href={`/${slug}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary hover:underline ml-auto"
+              className="flex items-center gap-1.5 px-4 py-3 text-sm text-primary hover:underline ml-auto"
             >
-              Preview ↗
+              Open live page
+              <ExternalLink className="h-3.5 w-3.5" />
             </a>
           </div>
-          <Textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="min-h-[480px] font-mono text-sm rounded-none border-0 focus-visible:ring-0"
-            placeholder="HTML content..."
-          />
+
+          <div className="p-4">
+            {tab === "edit" ? (
+              <>
+                <p className="text-xs text-slate-500 mb-3">
+                  Use HTML for structure: <code className="bg-slate-100 px-1 rounded">&lt;h2&gt;</code>,{" "}
+                  <code className="bg-slate-100 px-1 rounded">&lt;p&gt;</code>,{" "}
+                  <code className="bg-slate-100 px-1 rounded">&lt;ul&gt;</code>,{" "}
+                  <code className="bg-slate-100 px-1 rounded">&lt;table&gt;</code>. Tables will look clean on the live page.
+                </p>
+                <Textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  className="min-h-[420px] font-mono text-sm leading-relaxed rounded-lg border-slate-200 bg-slate-50/50 focus:bg-white placeholder:text-slate-400"
+                  placeholder="<h2>Section title</h2>&#10;<p>Paragraph text...</p>"
+                  spellCheck={false}
+                />
+              </>
+            ) : (
+              <div className="min-h-[420px] rounded-lg border border-slate-200 bg-slate-50/30 p-6 overflow-auto">
+                <div
+                  className="prose prose-slate max-w-none prose-headings:font-display prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-table:border-collapse prose-table:w-full prose-th:border prose-th:border-slate-200 prose-th:bg-slate-50 prose-th:px-4 prose-th:py-3 prose-td:border prose-td:border-slate-200 prose-td:px-4 prose-td:py-3"
+                  dangerouslySetInnerHTML={{ __html: content || "<p class='text-slate-400'>Nothing to preview yet.</p>" }}
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Sidebar */}
       <div className="space-y-6">
-        <div className="rounded-lg border p-4 space-y-4">
-          <h3 className="font-medium">Page settings</h3>
-          <div>
-            <Label>Title</Label>
-            <Input value={title} readOnly className="mt-1 bg-muted" />
-          </div>
-          <div>
-            <Label>Slug</Label>
-            <Input value={slug} readOnly className="mt-1 bg-muted" />
-          </div>
-          <div>
-            <Label>Status</Label>
-            <select
-              value={isPublished ? "published" : "draft"}
-              onChange={(e) => setIsPublished(e.target.value === "published")}
-              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+        {/* Page settings card */}
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="font-semibold text-slate-900 flex items-center gap-2 mb-4">
+            Page settings
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-slate-600">Title</Label>
+              <Input value={title} readOnly className="mt-1.5 bg-slate-50 text-slate-600" />
+            </div>
+            <div>
+              <Label className="text-slate-600">URL slug</Label>
+              <Input value={slug} readOnly className="mt-1.5 bg-slate-50 text-slate-600" />
+            </div>
+            <div>
+              <Label className="text-slate-600">Status</Label>
+              <select
+                value={isPublished ? "published" : "draft"}
+                onChange={(e) => setIsPublished(e.target.value === "published")}
+                className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-primary focus:ring-1 focus:ring-primary"
+              >
+                <option value="published">Published</option>
+                <option value="draft">Draft</option>
+              </select>
+            </div>
+            <div>
+              <Label className="text-slate-600">Last updated</Label>
+              <p className="text-sm text-slate-500 mt-1.5">
+                {new Date(lastUpdated).toLocaleString("en-KE", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}{" "}
+                · v{version}
+              </p>
+            </div>
+            <div>
+              <Label className="text-slate-600">Change note (optional)</Label>
+              <Input
+                value={changeNote}
+                onChange={(e) => setChangeNote(e.target.value)}
+                placeholder="e.g. Updated refund window to 14 days"
+                className="mt-1.5"
+              />
+            </div>
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className="w-full bg-primary hover:bg-primary/90 text-white font-medium"
             >
-              <option value="published">Published</option>
-              <option value="draft">Draft</option>
-            </select>
+              {saving ? "Saving…" : "Save & Publish"}
+            </Button>
+            {message === "saved" && (
+              <p className="flex items-center gap-2 text-sm text-green-600">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                Saved successfully.
+              </p>
+            )}
+            {message === "error" && (
+              <p className="flex items-center gap-2 text-sm text-destructive">
+                <XCircle className="h-4 w-4 shrink-0" />
+                Failed to save. Try again.
+              </p>
+            )}
           </div>
-          <div>
-            <Label>Last updated</Label>
-            <p className="text-sm text-muted-foreground mt-1">
-              {new Date(lastUpdated).toLocaleString()} · v{version}
-            </p>
-          </div>
-          <div>
-            <Label>Change note (optional)</Label>
-            <Input
-              value={changeNote}
-              onChange={(e) => setChangeNote(e.target.value)}
-              placeholder="e.g. Updated refund window to 14 days"
-              className="mt-1"
-            />
-          </div>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Saving…" : "Save & Publish"}
-          </Button>
-          {message === "saved" && (
-            <p className="text-sm text-green-600">Saved successfully.</p>
-          )}
-          {message === "error" && (
-            <p className="text-sm text-destructive">Failed to save.</p>
-          )}
         </div>
-        <div className="rounded-lg border p-4">
-          <h3 className="font-medium mb-3">Version history</h3>
-          <ul className="space-y-2 text-sm">
-            {history.map((h) => (
-              <li key={h.id} className="flex flex-wrap items-center gap-2">
-                <span className="text-muted-foreground">
-                  v{h.version} · {new Date(h.savedAt).toLocaleDateString()}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleRestore(h.id)}
-                  disabled={saving}
+
+        {/* Version history card */}
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="font-semibold text-slate-900 flex items-center gap-2 mb-3">
+            <History className="h-4 w-4" />
+            Version history
+          </h3>
+          {history.length === 0 ? (
+            <p className="text-sm text-slate-500">No previous versions yet.</p>
+          ) : (
+            <ul className="space-y-2">
+              {history.map((h) => (
+                <li
+                  key={h.id}
+                  className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2 text-sm"
                 >
-                  Restore
-                </Button>
-                {h.changeNote && (
-                  <span className="w-full text-muted-foreground text-xs">
-                    {h.changeNote}
+                  <span className="font-medium text-slate-700">v{h.version}</span>
+                  <span className="text-slate-500">
+                    {new Date(h.savedAt).toLocaleDateString("en-KE", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
                   </span>
-                )}
-              </li>
-            ))}
-          </ul>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="ml-auto h-8 gap-1 text-primary hover:text-primary/90"
+                    onClick={() => handleRestore(h.id)}
+                    disabled={saving}
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    Restore
+                  </Button>
+                  {h.changeNote && (
+                    <span className="w-full text-xs text-slate-500 mt-1 pl-1">
+                      {h.changeNote}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     </div>
