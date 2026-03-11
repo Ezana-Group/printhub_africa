@@ -4,22 +4,22 @@ This folder contains **only the files required for the application to run** in p
 
 ## Quick start
 
-1. **Install and build**
+1. **Set environment variables first**  
+   Prisma and the app need `DATABASE_URL` (and other vars). Either:
+   - **Option A:** Copy `.env.example` to `.env` in this folder and fill in values (recommended for a standalone Production deploy), or  
+   - **Option B:** Run commands from the **parent repo root** (where your existing `.env.local` lives) so Prisma and the app see the same env.
+2. **Install and build**
    ```bash
    npm ci
-   ```
-   Set at least `DATABASE_URL` (e.g. copy from `.env.example` and fill, or use a dummy for build: `DATABASE_URL="postgresql://u:p@localhost:5432/db?schema=public"`). Then:
-   ```bash
    npm run build
    ```
-2. **Set environment variables**  
-   Copy `.env.example` to `.env` (or `.env.local`) and fill in your values. Do not commit secrets.
-3. **Database**  
-   Ensure PostgreSQL is running and `DATABASE_URL` is set. To run DB with Docker: `docker compose up -d db`. Then:
+3. **Database (clean slate for launch)**  
+   Ensure PostgreSQL is running and `DATABASE_URL` is set. To run DB with Docker: `docker compose up -d db`. Then apply schema and create **only** the super admin user (no test data):
    ```bash
    npx prisma migrate deploy
-   npx prisma db seed   # optional
+   SUPER_ADMIN_EMAIL=admin@printhub.africa SUPER_ADMIN_PASSWORD="YourSecurePassword" npm run db:seed:production
    ```
+   Use your own email and a strong password. This is the only user in the database; log in at `/login` and start adding real data.
 4. **Run**
    ```bash
    npm run start

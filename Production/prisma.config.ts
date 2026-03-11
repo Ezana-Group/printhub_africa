@@ -3,10 +3,13 @@
 import path from "node:path";
 import { config } from "dotenv";
 
-// Load .env.local first (same order as seed) so migrate/deploy and seed use the same DATABASE_URL
+// Load .env from this folder, then parent (repo root) so both Production-only and full-repo work
 const root = path.resolve(process.cwd());
+const parent = path.resolve(root, "..");
 config({ path: path.join(root, ".env.local") });
 config({ path: path.join(root, ".env") });
+config({ path: path.join(parent, ".env.local") });
+config({ path: path.join(parent, ".env") });
 
 import { defineConfig, env } from "prisma/config";
 
