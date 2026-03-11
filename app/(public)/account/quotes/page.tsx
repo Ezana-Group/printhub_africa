@@ -43,51 +43,54 @@ export default async function QuotesPage() {
 }
 
 async function fetchQuotes(userId: string, userEmail: string) {
-  const [linkedQuotes, guestQuotes] = await Promise.all([
-    prisma.quote.findMany({
-      where: { customerId: userId },
-      include: {
-        uploadedFiles: {
-          select: {
-            id: true,
-            originalName: true,
-            fileType: true,
-            size: true,
-            status: true,
-            createdAt: true,
-          },
-        },
-        assignedStaff: {
-          select: { user: { select: { name: true } } } },
+  const linkedQuotes = await prisma.quote.findMany({
+    where: { customerId: userId },
+    include: {
+      uploadedFiles: {
+        select: {
+          id: true,
+          originalName: true,
+          fileType: true,
+          size: true,
+          status: true,
+          createdAt: true,
         },
       },
-      orderBy: { createdAt: 'desc' },
-    }),
-    userEmail
-      ? prisma.quote.findMany({
-          where: {
-            customerId: null,
-            customerEmail: { equals: userEmail, mode: 'insensitive' },
-          },
-          include: {
-            uploadedFiles: {
-              select: {
-                id: true,
-                originalName: true,
-                fileType: true,
-                size: true,
-                status: true,
-                createdAt: true,
-              },
+      assignedStaff: {
+        select: {
+          user: { select: { name: true } },
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  })
+
+  const guestQuotes = userEmail
+    ? await prisma.quote.findMany({
+        where: {
+          customerId: null,
+          customerEmail: { equals: userEmail, mode: "insensitive" },
+        },
+        include: {
+          uploadedFiles: {
+            select: {
+              id: true,
+              originalName: true,
+              fileType: true,
+              size: true,
+              status: true,
+              createdAt: true,
             },
-            assignedStaff: {
-              select: { user: { select: { name: true } } },
+          },
+          assignedStaff: {
+            select: {
+              user: { select: { name: true } },
             },
           },
-          orderBy: { createdAt: 'desc' },
-        })
-      : [],
-  ])
+        },
+        orderBy: { createdAt: "desc" },
+      })
+    : []
 
   const seenIds = new Set(linkedQuotes.map((q) => q.id))
   const guestOnly = guestQuotes.filter((q) => !seenIds.has(q.id))

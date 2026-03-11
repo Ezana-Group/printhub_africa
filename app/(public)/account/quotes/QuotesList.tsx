@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { formatDistanceToNow, format } from 'date-fns'
 import {
   ChevronDown,
   ChevronUp,
@@ -18,6 +17,27 @@ import {
   Loader2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+
+function formatDistanceToNow(date: Date): string {
+  const now = new Date()
+  const sec = Math.floor((now.getTime() - date.getTime()) / 1000)
+  if (sec < 60) return 'just now'
+  const min = Math.floor(sec / 60)
+  if (min < 60) return `${min} minute${min === 1 ? '' : 's'} ago`
+  const hr = Math.floor(min / 60)
+  if (hr < 24) return `${hr} hour${hr === 1 ? '' : 's'} ago`
+  const d = Math.floor(hr / 24)
+  if (d < 30) return `${d} day${d === 1 ? '' : 's'} ago`
+  const mo = Math.floor(d / 30)
+  return `${mo} month${mo === 1 ? '' : 's'} ago`
+}
+
+function formatDate(date: Date, pattern: 'dd MMM yyyy' | 'EEEE d MMMM yyyy'): string {
+  if (pattern === 'dd MMM yyyy') {
+    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+  return date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+}
 
 // Status config for Quote model: new | reviewing | quoted | accepted | rejected | in_production | completed | cancelled
 const STATUS_CONFIG: Record<
@@ -102,6 +122,8 @@ type QuoteItem = {
   quotedAmount: number | null
   quoteBreakdown: string | null
   quotedAt: string | null
+  acceptedAt?: string | null
+  rejectedAt?: string | null
   validUntil?: string | null
   deadline: string | null
   budgetRange: string | null
@@ -276,9 +298,7 @@ export function QuotesList({ initialQuotes }: { initialQuotes: QuoteItem[] }) {
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
                     Submitted{' '}
-                    {formatDistanceToNow(new Date(quote.createdAt), {
-                      addSuffix: true,
-                    })}
+                    {formatDistanceToNow(new Date(quote.createdAt))}
                     {quote.assignedUser &&
                       ` · Assigned to ${quote.assignedUser.name}`}
                   </p>
@@ -393,7 +413,7 @@ export function QuotesList({ initialQuotes }: { initialQuotes: QuoteItem[] }) {
                     {quote.deadline && (
                       <Row
                         label="Deadline"
-                        value={format(new Date(quote.deadline), 'dd MMM yyyy')}
+                        value={formatDate(new Date(quote.deadline), 'dd MMM yyyy')}
                       />
                     )}
                   </div>
@@ -458,7 +478,7 @@ export function QuotesList({ initialQuotes }: { initialQuotes: QuoteItem[] }) {
                     {quote.quotedAt && (
                       <p className="text-xs text-gray-500 mt-2">
                         Quoted on{' '}
-                        {format(new Date(quote.quotedAt), 'EEEE d MMMM yyyy')}
+                        {formatDate(new Date(quote.quotedAt), 'EEEE d MMMM yyyy')}
                       </p>
                     )}
                   </div>

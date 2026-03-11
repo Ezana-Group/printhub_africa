@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -301,7 +301,7 @@ export default function GetAQuotePage() {
                 type="button"
                 onClick={() => {
                   setServiceType("large_format");
-                  setFiles([]);
+                  setDesignUploadedFiles([]);
                   setStatus("idle");
                   setErrorMsg("");
                 }}
@@ -321,7 +321,7 @@ export default function GetAQuotePage() {
                 type="button"
                 onClick={() => {
                   setServiceType("3d_print");
-                  setFiles([]);
+                  setDesignUploadedFiles([]);
                   setStatus("idle");
                   setErrorMsg("");
                 }}

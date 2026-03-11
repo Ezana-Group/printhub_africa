@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
 import { NextResponse } from 'next/server'
 import { sendStaffQuoteAcceptedEmail } from '@/lib/email'
 
@@ -85,6 +86,9 @@ export async function PATCH(
   }
 
   const { action, reason } = body
+  if (typeof action !== 'string' || !['WITHDRAW', 'ACCEPT', 'REJECT'].includes(action)) {
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+  }
 
   const existing = await prisma.quote.findFirst({
     where: { id },
@@ -105,7 +109,8 @@ export async function PATCH(
     quoted: ['ACCEPT', 'REJECT'],
   }
 
-  if (!allowedActions[existing.status]?.includes(action)) {
+  const allowed = allowedActions[existing.status]
+  if (!allowed?.includes(action)) {
     return NextResponse.json(
       {
         error: `Cannot ${action} a quote with status ${existing.status}`,
@@ -114,12 +119,7 @@ export async function PATCH(
     )
   }
 
-  const updateData: {
-    status: string
-    rejectedAt?: Date
-    rejectionReason?: string
-    acceptedAt?: Date
-  } = { status: existing.status }
+  const updateData: Prisma.QuoteUpdateInput = { status: existing.status }
 
   if (action === 'WITHDRAW') {
     updateData.status = 'cancelled'

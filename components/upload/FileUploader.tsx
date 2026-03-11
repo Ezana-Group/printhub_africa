@@ -5,7 +5,6 @@ import {
   Upload,
   X,
   CheckCircle,
-  AlertCircle,
   Loader2,
   FileText,
   FileImage,
@@ -420,6 +419,7 @@ function FileEntryRow({
       <div className="flex items-center gap-3 p-3">
         <div className="w-12 h-12 rounded-lg overflow-hidden bg-white border border-gray-100 flex items-center justify-center flex-shrink-0">
           {hasPreview && entry.result?.previewUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- blob URL from createObjectURL
             <img
               src={entry.result.previewUrl}
               alt={entry.file.name}
@@ -512,6 +512,7 @@ function FileEntryRow({
       {hasPreview && entry.result?.previewUrl && (
         <div className="px-3 pb-3">
           <div className="relative w-full h-32 rounded-lg overflow-hidden bg-white border border-green-100">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={entry.result.previewUrl}
               alt={entry.file.name}
