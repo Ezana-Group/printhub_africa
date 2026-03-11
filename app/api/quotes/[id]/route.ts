@@ -45,7 +45,11 @@ export async function GET(
     return NextResponse.json({ error: "Quote not found" }, { status: 404 });
   }
 
-  const isOwner = session?.user?.id === quote.customerId;
+  const isOwner =
+    session?.user?.id === quote.customerId ||
+    (quote.customerId === null &&
+      session?.user?.email &&
+      quote.customerEmail.toLowerCase() === (session.user.email as string).toLowerCase());
   if (!isStaff && !isOwner) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }

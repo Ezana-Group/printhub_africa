@@ -137,7 +137,7 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
       const first = byMaterialType[materialType]?.[0]?.color;
       setColorChoice(first ? (COLOUR_PILLS.find((p) => colorMatches(first, p.id))?.id ?? "Natural/Transparent") : COLOUR_PILLS[0].id);
     }
-  }, [materialType, availableColorsForType, byMaterialType]);
+  }, [materialType, availableColorsForType, byMaterialType, colorChoice]);
 
   useEffect(() => {
     if (materialType && colorChoice && availableColorsForType.has(colorChoice) && !inStockForType.has(colorChoice)) {
