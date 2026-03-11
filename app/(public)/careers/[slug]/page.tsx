@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getBusinessPublic } from "@/lib/business-public";
 import { JobStatus } from "@prisma/client";
 import { ApplicationForm } from "./application-form";
 
@@ -9,14 +10,17 @@ type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const job = await prisma.jobListing.findFirst({
-    where: { slug, status: JobStatus.PUBLISHED },
-    select: { title: true, metaTitle: true, metaDescription: true },
-  });
+  const [job, business] = await Promise.all([
+    prisma.jobListing.findFirst({
+      where: { slug, status: JobStatus.PUBLISHED },
+      select: { title: true, metaTitle: true, metaDescription: true },
+    }),
+    getBusinessPublic(),
+  ]);
   if (!job) return { title: "Job Not Found" };
   return {
-    title: job.metaTitle ?? `${job.title} | Careers | PrintHub`,
-    description: job.metaDescription ?? `Apply for ${job.title} at PrintHub, Nairobi.`,
+    title: job.metaTitle ?? `${job.title} | Careers | ${business.businessName}`,
+    description: job.metaDescription ?? `Apply for ${job.title} at ${business.businessName}, ${business.city}.`,
   };
 }
 
@@ -29,7 +33,7 @@ async function getJob(slug: string) {
 
 export default async function JobPage({ params }: Props) {
   const { slug } = await params;
-  const job = await getJob(slug);
+  const [job, business] = await Promise.all([getJob(slug), getBusinessPublic()]);
   if (!job) notFound();
 
   const typeLabel =
@@ -161,7 +165,7 @@ export default async function JobPage({ params }: Props) {
                 <div className="flex gap-2">
                   <a
                     href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(
-                      `${process.env.NEXT_PUBLIC_APP_URL ?? "https://printhub.africa"}/careers/${slug}`
+                      `${process.env.NEXT_PUBLIC_APP_URL ?? (business.website.startsWith("http") ? business.website : `https://${business.website}`)}/careers/${slug}`
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -171,8 +175,8 @@ export default async function JobPage({ params }: Props) {
                     LinkedIn
                   </a>
                   <a
-                    href={`https://wa.me/?text=${encodeURIComponent(
-                      `Check out this role at PrintHub: ${job.title}`
+                    href={`https://wa.me/${(business.whatsapp ?? "").replace(/\D/g, "") || "254700000000"}?text=${encodeURIComponent(
+                      `Check out this role at ${business.businessName}: ${job.title}`
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -185,11 +189,11 @@ export default async function JobPage({ params }: Props) {
               </div>
             </div>
             <div className="bg-[#1A1A1A] border border-white/[0.07] rounded-lg p-6">
-              <h3 className="font-display text-sm text-white">About PrintHub</h3>
+              <h3 className="font-display text-sm text-white">About {business.businessName}</h3>
               <p className="font-body text-xs text-white/60 mt-1">
-                Professional printing studio, Nairobi, Kenya.
+                Professional printing studio, {business.city}, {business.country}.
               </p>
-              <p className="font-body text-xs text-primary mt-2">printhub.africa</p>
+              <p className="font-body text-xs text-primary mt-2">{business.website}</p>
             </div>
           </div>
         </div>

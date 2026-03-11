@@ -1,8 +1,11 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { getBusinessPublic } from "@/lib/business-public";
 import { AddToCartButton } from "./add-to-cart-button";
 import { formatPrice } from "@/lib/utils";
+
+const DEFAULT_WHATSAPP = "254700000000";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -10,6 +13,9 @@ interface Props {
 
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
+  const business = await getBusinessPublic();
+  const whatsappDigits = (business.whatsapp ?? "").replace(/\D/g, "") || DEFAULT_WHATSAPP;
+  const waHref = (text: string) => `https://wa.me/${whatsappDigits}?text=${encodeURIComponent(text)}`;
   let product: Awaited<ReturnType<typeof prisma.product.findFirst>> | null = null;
   try {
     product = await prisma.product.findFirst({
@@ -90,14 +96,14 @@ export default async function ProductPage({ params }: Props) {
           />
 
           <div className="mt-8 flex gap-4">
-            <Link
-              href={`https://wa.me/254700000000?text=${encodeURIComponent(`Hi, I have a question about: ${product.name} (${typeof window !== "undefined" ? window.location.href : ""})`)}`}
+            <a
+              href={waHref(`Hi, I have a question about: ${product.name}`)}
               target="_blank"
               rel="noopener noreferrer"
               className="text-sm font-medium text-green-600 hover:underline"
             >
               Ask on WhatsApp
-            </Link>
+            </a>
           </div>
         </div>
       </div>

@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   ArrowRight,
 } from "lucide-react";
+import { getBusinessPublic } from "@/lib/business-public";
 
 const MAIN_SERVICES = [
   {
@@ -61,14 +62,16 @@ const HOW_IT_WORKS = [
   { icon: Truck, title: "Print & deliver", text: "We produce and deliver nationwide across Kenya." },
 ];
 
-const WHY_US = [
-  { icon: Shield, title: "Kenyan-owned", text: "Proudly based in Nairobi, part of Ezana Group." },
+const WHY_US = (city: string) => [
+  { icon: Shield, title: "Kenyan-owned", text: city ? `Proudly based in ${city}.` : "Proudly Kenyan." },
   { icon: Clock, title: "Fast turnaround", text: "Standard 3–5 days; express 24–48hrs on many orders." },
   { icon: Package, title: "Quality materials", text: "Premium substrates, inks, and filaments." },
   { icon: Truck, title: "Nationwide delivery", text: "Reliable delivery across Kenya." },
 ];
 
-export default function ServicesPage() {
+export default async function ServicesPage() {
+  const business = await getBusinessPublic();
+  const whyUs = WHY_US(business.city ?? "Nairobi");
   return (
     <div className="min-h-screen bg-[#FAFAF8]">
       {/* Hero */}
@@ -180,7 +183,7 @@ export default function ServicesPage() {
             Trusted by businesses and creatives across Kenya for quality, speed, and reliability.
           </p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl">
-            {WHY_US.map((r) => (
+            {whyUs.map((r) => (
               <div
                 key={r.title}
                 className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow"

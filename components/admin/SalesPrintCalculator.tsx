@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { clearQuoteDraft, type QuoteDraft3D } from "@/lib/quote-draft";
 
 const MAX_LINE_ITEMS = 20;
+const DEFAULT_WA = "254700000000";
 
 type MaterialWithColors = import("@/lib/3d-calculator-engine").MaterialRate & { colorOptions?: string[]; baseMaterial?: string; color?: string; quantity?: number };
 type LineItem = {
@@ -68,11 +69,22 @@ export function SalesPrintCalculator({
   const [discountValue, setDiscountValue] = useState<number | "">("");
   const [discountReason, setDiscountReason] = useState("");
   const [clientName, setClientName] = useState("");
+  const [whatsappDigits, setWhatsappDigits] = useState(DEFAULT_WA);
   const [validUntil, setValidUntil] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() + 7);
     return d.toISOString().slice(0, 10);
   });
+
+  useEffect(() => {
+    fetch("/api/settings/business-public")
+      .then((r) => r.json())
+      .then((d) => {
+        const wa = (d?.whatsapp ?? "").replace(/\D/g, "");
+        if (wa) setWhatsappDigits(wa);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!initialDraft || initialDraft.type !== "3d") return;
@@ -722,7 +734,7 @@ export function SalesPrintCalculator({
               </Button>
               <Button size="sm" variant="outline" asChild className="min-w-[140px]">
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent(
+                  href={`https://wa.me/${whatsappDigits}?text=${encodeURIComponent(
                     `PrintHub quote for ${clientName || "customer"}\nValid until: ${validUntil}\nTotal: ${formatKes(finalTotal)}\n\nDetails: ${lines.map((l, i) => `${i + 1}. ${l.description || "Item"} × ${l.quantity} = ${lineResults.find((r) => r.lineId === l.id) ? formatKes(lineResults.find((r) => r.lineId === l.id)!.lineTotal) : "—"}`).join("\n")}`
                   )}`}
                   target="_blank"

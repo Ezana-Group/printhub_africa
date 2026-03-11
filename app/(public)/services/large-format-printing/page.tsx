@@ -11,6 +11,7 @@ import {
 } from "@/components/services";
 import { LargeFormatServiceGrid } from "@/components/services/LargeFormatServiceGrid";
 import { Button } from "@/components/ui/button";
+import { getBusinessPublic } from "@/lib/business-public";
 
 // Theme-appropriate: large format / print shop / signage (dark + orange brand)
 const HERO_IMAGE =
@@ -369,7 +370,9 @@ export const metadata: Metadata = {
   alternates: { canonical: "/services/large-format-printing" },
 };
 
-export default function LargeFormatPrintingPage() {
+export default async function LargeFormatPrintingPage() {
+  const business = await getBusinessPublic();
+  const baseUrl = business.website.startsWith("http") ? business.website : `https://${business.website}`;
   return (
     <main id="main-content" className="bg-[var(--brand-black)]">
       <nav aria-label="Breadcrumb" className="border-b border-white/10 bg-[var(--surface-dark)] px-6 py-3 md:px-12">
@@ -740,14 +743,14 @@ export default function LargeFormatPrintingPage() {
             <span className="text-[var(--brand-black)]">Let&apos;s Print.</span>
           </>
         }
-        subheadline="From concept to delivery, PrintHub handles your large format printing from our Nairobi facility. Fast, precise, and built to last."
+        subheadline={`From concept to delivery, ${business.businessName} handles your large format printing from our ${business.city} facility. Fast, precise, and built to last.`}
         ctaPrimary="Get a Free Quote →"
         ctaPrimaryHref="/get-a-quote"
         ctaSecondary="Upload Your Artwork"
         ctaSecondaryHref="/get-a-quote"
-        quote="Best print quality in Nairobi. Delivered on time, every time."
-        quoteAuthor="Amani K., Marketing Manager, Nairobi"
-        footerNote="An Ezana Group Company · printhub.africa · Nairobi, Kenya"
+        quote={`Best print quality in ${business.city}. Delivered on time, every time.`}
+        quoteAuthor={`Amani K., Marketing Manager, ${business.city}`}
+        footerNote={`${business.tradingName} · ${business.website} · ${business.city}, ${business.country}`}
       />
 
       <div className="bg-[var(--surface-dark)] border-t border-white/10 py-6 px-6 text-center">
@@ -771,8 +774,8 @@ export default function LargeFormatPrintingPage() {
               "Professional large format printing in Nairobi. Banners, vehicle wraps, billboards, canvas prints, signage. Fast turnaround. Nationwide delivery across Kenya.",
             provider: {
               "@type": "Organization",
-              name: "PrintHub",
-              url: "https://printhub.africa",
+              name: business.businessName,
+              url: baseUrl,
             },
             areaServed: "Kenya",
           }),

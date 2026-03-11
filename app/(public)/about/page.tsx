@@ -4,17 +4,21 @@ import Image from "next/image";
 import { AboutHero } from "./about-hero";
 import { getBusinessPublic } from "@/lib/business-public";
 
-export const metadata: Metadata = {
-  title: "About PrintHub | Professional Printing in Nairobi, Kenya",
-  description:
-    "PrintHub is Nairobi's professional large format and 3D printing studio. Fast turnaround, premium materials, nationwide delivery. An Ezana Group Company.",
-  openGraph: {
-    title: "About PrintHub",
-    description:
-      "Nairobi's professional printing studio. Large format, 3D printing, custom merchandise.",
-    images: ["/og-about.jpg"],
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const business = await getBusinessPublic();
+  const location = [business.city, business.country].filter(Boolean).join(", ") || "Kenya";
+  const title = `About ${business.businessName} | Professional Printing in ${location}`;
+  const description = `${business.businessName} is ${business.city ? `${business.city}'s` : "a"} professional large format and 3D printing studio. Fast turnaround, premium materials, nationwide delivery.`;
+  return {
+    title,
+    description,
+    openGraph: {
+      title: `About ${business.businessName}`,
+      description: description,
+      images: ["/og-about.jpg"],
+    },
+  };
+}
 
 const STORY_IMAGE =
   "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800";
@@ -32,7 +36,7 @@ export default async function AboutPage() {
             className="font-mono text-[11px] uppercase tracking-[0.2em] text-primary mb-6"
             style={{ letterSpacing: "0.2em" }}
           >
-            EST. 2023 — NAIROBI, KENYA
+            EST. 2023 — {[business.city, business.country].filter(Boolean).join(", ").toUpperCase() || "KENYA"}
           </p>
           <h1 className="font-display font-extrabold text-[40px] md:text-[72px] leading-[1.1] text-white max-w-4xl">
             We Make Things
@@ -40,7 +44,7 @@ export default async function AboutPage() {
             That Get Noticed.
           </h1>
           <p className="font-body text-base md:text-xl text-white/60 max-w-[560px] mt-6 leading-relaxed">
-            PrintHub is Nairobi&apos;s professional large format and 3D printing
+            {business.businessName} is {business.city ? `${business.city}'s` : "your"} professional large format and 3D printing
             studio. From vehicle wraps to architectural models, we bring ideas to
             life with precision and speed.
           </p>
@@ -83,7 +87,7 @@ export default async function AboutPage() {
                 take for granted.
               </p>
               <p>
-                We started with a single large format printer in Nairobi and a
+                We started with a single large format printer in {business.city || "Kenya"} and a
                 commitment to fast turnaround, honest pricing, and work that
                 genuinely represents our clients&apos; brands.
               </p>
@@ -183,7 +187,7 @@ export default async function AboutPage() {
               {
                 num: "04",
                 title: "Nationwide Delivery",
-                body: "We deliver to all 47 counties. Same-day available in Nairobi.",
+                body: `We deliver to all 47 counties. Same-day available in ${business.city || "major centres"}.`,
               },
               {
                 num: "05",
@@ -213,42 +217,7 @@ export default async function AboutPage() {
         </div>
       </section>
 
-      {/* SECTION 5 — EZANA GROUP */}
-      <section className="bg-[#111111] py-20 md:py-28 px-4 md:px-6 lg:px-8">
-        <div className="container max-w-3xl mx-auto text-center">
-          <p className="font-mono text-xs uppercase tracking-widest text-primary mb-4">
-            PART OF SOMETHING BIGGER
-          </p>
-          <h2 className="font-display text-3xl md:text-[40px] font-bold text-white leading-tight mb-6">
-            An Ezana Group
-            <br />
-            Company.
-          </h2>
-          <p className="font-body text-[17px] text-white/70 leading-relaxed mb-8">
-            PrintHub is a proud member of the Ezana Group — a Kenyan business
-            group building companies that create real value across East Africa.
-          </p>
-          <div className="h-16 bg-white/5 rounded-lg flex items-center justify-center mb-6">
-            <span className="font-display font-bold text-white/60 text-lg">
-              Ezana Group
-            </span>
-          </div>
-          <a
-            href="https://ezanagroup.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary font-medium hover:underline"
-          >
-            ezanagroup.com →
-          </a>
-          <p className="font-body text-[15px] text-white/60 mt-6">
-            The Ezana Group ethos: build businesses that last, create
-            employment, and raise the standard of what&apos;s possible in Kenya.
-          </p>
-        </div>
-      </section>
-
-      {/* SECTION 6 — TEAM (placeholder) */}
+      {/* SECTION 5 — TEAM (placeholder) */}
       <section className="bg-[#0A0A0A] py-20 md:py-28 px-4 md:px-6 lg:px-8">
         <div className="container max-w-6xl mx-auto">
           <p className="font-mono text-xs uppercase tracking-widest text-primary mb-4">
@@ -287,16 +256,16 @@ export default async function AboutPage() {
         </div>
       </section>
 
-      {/* SECTION 7 — LOCATION & CONTACT CTA */}
+      {/* SECTION 6 — LOCATION & CONTACT CTA */}
       <section className="bg-primary py-20 md:py-28 px-4 md:px-6 lg:px-8">
         <div className="container max-w-6xl mx-auto">
           <h2 className="font-display text-3xl md:text-[48px] font-bold text-black leading-tight mb-4">
             Come See Us in
             <br />
-            Nairobi.
+            {business.city || "Kenya"}.
           </h2>
           <p className="font-body text-lg text-black/70 mb-12">
-            We&apos;re based in Nairobi, Kenya. Walk-ins welcome during business
+            We&apos;re based in {[business.city, business.country].filter(Boolean).join(", ") || "Kenya"}. Walk-ins welcome during business
             hours.
           </p>
           <div className="grid md:grid-cols-2 gap-12">

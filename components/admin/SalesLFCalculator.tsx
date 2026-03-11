@@ -16,6 +16,7 @@ import type { QuoteDraftLF } from "@/lib/quote-draft";
 import { clearQuoteDraft } from "@/lib/quote-draft";
 
 const MAX_LINE_ITEMS = 20;
+const DEFAULT_WA = "254700000000";
 
 type LFLineItem = {
   id: string;
@@ -59,6 +60,7 @@ export function SalesLFCalculator({
   const [overridePerLine, setOverridePerLine] = useState(false);
   const [discountKes, setDiscountKes] = useState<number | "">("");
   const [clientName, setClientName] = useState("");
+  const [whatsappDigits, setWhatsappDigits] = useState(DEFAULT_WA);
   const [validUntil, setValidUntil] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() + 7);
@@ -93,6 +95,16 @@ export function SalesLFCalculator({
 
   const materials = rates?.materials ?? [];
   const laminations = rates?.laminations ?? [];
+
+  useEffect(() => {
+    fetch("/api/settings/business-public")
+      .then((r) => r.json())
+      .then((d) => {
+        const wa = (d?.whatsapp ?? "").replace(/\D/g, "");
+        if (wa) setWhatsappDigits(wa);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (materials.length && lines.length > 0 && !lines[0].materialCode) {
@@ -530,7 +542,7 @@ export function SalesLFCalculator({
               className="min-w-[140px]"
             >
               <a
-                href={`https://wa.me/?text=${encodeURIComponent(
+                href={`https://wa.me/${whatsappDigits}?text=${encodeURIComponent(
                   `PrintHub quote for ${clientName || "customer"}\nValid until: ${validUntil}\nTotal: ${formatKes(finalTotal)}\n\nDetails: ${lines.map((l, i) => `${i + 1}. ${l.description || "Item"} ${l.widthCm}×${l.heightCm}cm × ${l.quantity} = ${lineResults.find((r) => r.lineId === l.id) ? formatKes(lineResults.find((r) => r.lineId === l.id)!.lineTotal) : "—"}`).join("\n")}`
                 )}`}
                 target="_blank"

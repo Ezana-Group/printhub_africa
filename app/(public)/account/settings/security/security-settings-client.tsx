@@ -1,10 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SectionCard } from "@/components/settings/section-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
+function SupportEmailFallback() {
+  const [email, setEmail] = useState<string>("support@printhub.africa");
+  useEffect(() => {
+    fetch("/api/settings/business-public")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.supportEmail) setEmail(d.supportEmail);
+      })
+      .catch(() => {});
+  }, []);
+  return <a href={`mailto:${email}`} className="text-primary hover:underline">{email}</a>;
+}
 
 export function SecuritySettingsClient() {
   const [passwordSaved, setPasswordSaved] = useState(false);
@@ -89,7 +102,8 @@ export function SecuritySettingsClient() {
         </Button>
         <p className="text-xs text-muted-foreground">
           If you see activity you don&apos;t recognise, change your password and
-          contact security@printhub.africa
+          contact{" "}
+          <SupportEmailFallback />
         </p>
       </SectionCard>
 

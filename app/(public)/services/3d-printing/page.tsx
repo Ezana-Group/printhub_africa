@@ -10,6 +10,7 @@ import {
   SectionReveal,
   MaterialsSection,
 } from "@/components/services";
+import { getBusinessPublic } from "@/lib/business-public";
 
 // Theme-appropriate: 3D printing, FDM/resin, workshop (dark + orange brand)
 const HERO_IMAGE =
@@ -402,7 +403,9 @@ export const metadata: Metadata = {
   alternates: { canonical: "/services/3d-printing" },
 };
 
-export default function ThreeDPrintingPage() {
+export default async function ThreeDPrintingPage() {
+  const business = await getBusinessPublic();
+  const baseUrl = business.website.startsWith("http") ? business.website : `https://${business.website}`;
   return (
     <main id="main-content" className="bg-[var(--brand-black)]">
       <nav aria-label="Breadcrumb" className="border-b border-white/10 bg-[var(--surface-dark)] px-6 py-3 md:px-12">
@@ -655,15 +658,15 @@ export default function ThreeDPrintingPage() {
             <span className="text-[var(--brand-white)]">Real Results.</span>
           </>
         }
-        subheadline="Upload your STL file and get a quote within 2 business hours. FDM and resin printing. Delivered across Kenya from Nairobi."
+        subheadline={`Upload your STL file and get a quote within 2 business hours. FDM and resin printing. Delivered across Kenya from ${business.city}.`}
         ctaPrimary="Upload Your 3D File →"
         ctaPrimaryHref="/get-a-quote"
         ctaSecondary="Browse Our Materials"
         ctaSecondaryHref="#materials"
         stats="[7] Materials Available  ·  [0.025mm] Finest Layer Height  ·  [2hrs] Quote Turnaround  ·  [47] Counties Delivered"
-        quote="From prototype to product — PrintHub made it happen in 48 hours."
-        quoteAuthor="David M., Product Designer, Nairobi"
-        footerNote="An Ezana Group Company · printhub.africa · Nairobi, Kenya"
+        quote={`From prototype to product — ${business.businessName} made it happen in 48 hours.`}
+        quoteAuthor={`David M., Product Designer, ${business.city}`}
+        footerNote={`${business.tradingName} · ${business.website} · ${business.city}, ${business.country}`}
       />
 
       <div className="bg-[var(--surface-dark)] border-t border-white/10 py-6 px-6 text-center">
@@ -686,8 +689,8 @@ export default function ThreeDPrintingPage() {
               "3D printing services in Nairobi, Kenya. FDM and resin printing for prototypes, consumer products, engineering parts. Upload your STL and get a quote in 2 hours.",
             provider: {
               "@type": "Organization",
-              name: "PrintHub",
-              url: "https://printhub.africa",
+              name: business.businessName,
+              url: baseUrl,
             },
             areaServed: "Kenya",
           }),

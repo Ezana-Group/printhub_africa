@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { getBusinessPublic } from "@/lib/business-public";
 import { JobStatus } from "@prisma/client";
 import { CareersClient } from "./careers-client";
 
-export const metadata: Metadata = {
-  title: "Careers | PrintHub — Build Kenya's Print Industry",
-  description:
-    "Join PrintHub in Nairobi. We're growing and looking for people who take pride in their craft. Open roles in production, design, sales, and more.",
-};
+export async function generateMetadata() {
+  const business = await getBusinessPublic();
+  return {
+    title: `Careers | ${business.businessName} — Build Kenya's Print Industry`,
+    description: `Join ${business.businessName} in ${business.city}. We're growing and looking for people who take pride in their craft. Open roles in production, design, sales, and more.`,
+  };
+}
 
 export const revalidate = 300;
 
@@ -40,7 +43,7 @@ async function getJobs() {
 }
 
 export default async function CareersPage() {
-  const jobs = await getJobs();
+  const [jobs, business] = await Promise.all([getJobs(), getBusinessPublic()]);
   const openCount = jobs.length;
 
   return (
@@ -49,7 +52,7 @@ export default async function CareersPage() {
       <section className="px-4 md:px-6 lg:px-8 pt-24 pb-16 md:pt-28">
         <div className="container max-w-4xl mx-auto">
           <p className="font-mono text-xs uppercase tracking-widest text-primary mb-4">
-            CAREERS AT PRINTHUB
+            CAREERS AT {business.businessName.toUpperCase()}
           </p>
           <h1 className="font-display font-extrabold text-[36px] md:text-[64px] leading-[1.1] text-white">
             Build Kenya&apos;s
@@ -62,7 +65,7 @@ export default async function CareersPage() {
             printing looks like in Kenya.
           </p>
           <div className="font-body text-sm text-white/50 mt-6">
-            {openCount} Open Role{openCount !== 1 ? "s" : ""} · Nairobi, Kenya ·
+            {openCount} Open Role{openCount !== 1 ? "s" : ""} · {business.city}, {business.country} ·
             Hybrid & On-site
           </div>
           <a
@@ -78,7 +81,7 @@ export default async function CareersPage() {
       <section className="bg-[#111111] py-20 px-4 md:px-6 lg:px-8">
         <div className="container max-w-5xl mx-auto">
           <h2 className="font-display text-3xl md:text-[40px] font-bold text-white mb-12">
-            Why Join PrintHub?
+            Why Join {business.businessName}?
           </h2>
           <div className="grid sm:grid-cols-2 gap-8">
             {[

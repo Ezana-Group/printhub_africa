@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Menu, Search, ShoppingCart, User } from "lucide-react";
+import type { BusinessPublic } from "@/lib/business-public";
 import { useCartStore } from "@/store/cart-store";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,8 +46,9 @@ function isActive(href: string, pathname: string, hasChildren?: boolean) {
   return hasChildren ? pathname.startsWith(href) : pathname === href;
 }
 
-export function Header() {
+export function Header({ business }: { business?: BusinessPublic }) {
   const pathname = usePathname();
+  const siteName = business?.businessName ?? "PrintHub";
   const { data: session, status } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -140,9 +142,9 @@ export function Header() {
           className="font-display text-xl font-bold text-slate-900 flex items-center gap-2.5"
         >
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white text-sm font-bold shadow-lg shadow-primary/25">
-            P
+            {siteName.charAt(0)}
           </span>
-          PrintHub
+          {siteName}
         </Link>
 
         <nav className="hidden md:flex items-center gap-1">

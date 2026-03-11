@@ -4,10 +4,12 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { SettingsBusinessClient } from "@/components/admin/settings-business-client";
 
-function toStrMap(obj: Record<string, unknown>): Record<string, string> {
+function toStrMap(row: Record<string, unknown> | null): Record<string, string> {
+  if (!row || typeof row !== "object") return {};
   const out: Record<string, string> = {};
-  for (const [k, v] of Object.entries(obj)) {
-    out[k] = typeof v === "string" ? v : String(v ?? "");
+  for (const [k, v] of Object.entries(row)) {
+    if (k === "updatedAt" || k === "id") continue;
+    out[k] = typeof v === "string" ? v : v === null || v === undefined ? "" : String(v);
   }
   return out;
 }
@@ -18,17 +20,10 @@ export default async function AdminSettingsBusinessPage() {
   const role = (session?.user as { role?: string })?.role ?? "STAFF";
   const canEdit = role === "ADMIN" || role === "SUPER_ADMIN";
 
-  const row = await prisma.pricingConfig.findUnique({
-    where: { key: "adminSettings:business" },
+  const row = await prisma.businessSettings.findUnique({
+    where: { id: "default" },
   });
-  let saved: Record<string, string> = {};
-  if (row?.valueJson) {
-    try {
-      saved = toStrMap(JSON.parse(row.valueJson) as Record<string, unknown>);
-    } catch (err) {
-      console.error("Business settings JSON parse error:", err);
-    }
-  }
+  const saved = toStrMap(row as unknown as Record<string, unknown>);
 
   return (
     <div className="space-y-6">

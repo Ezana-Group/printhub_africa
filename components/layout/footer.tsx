@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Instagram, Facebook, Linkedin, X } from "lucide-react";
+import { Instagram, Facebook, Linkedin, X, Youtube } from "lucide-react";
 import { ContactModal } from "@/components/contact/ContactModal";
 import type { BusinessPublic } from "@/lib/business-public";
 
@@ -14,24 +14,17 @@ function TiktokIcon({ className }: { className?: string }) {
   );
 }
 
-const DEFAULT_SOCIAL = [
-  { label: "Instagram", href: "https://instagram.com/printhub.africa", Icon: Instagram },
-  { label: "Facebook", href: "https://facebook.com/printhub.africa", Icon: Facebook },
-  { label: "X", href: "https://x.com/printhub_africa", Icon: X },
-  { label: "TikTok", href: "https://tiktok.com/@printhub.africa", Icon: TiktokIcon },
-  { label: "LinkedIn", href: "https://linkedin.com/company/printhub-africa", Icon: Linkedin },
-];
-
 type SocialIcon = React.ComponentType<{ className?: string }>;
 
-function socialLinksFromBusiness(b: BusinessPublic) {
+function socialLinksFromBusiness(b: BusinessPublic): { label: string; href: string; Icon: SocialIcon }[] {
   const out: { label: string; href: string; Icon: SocialIcon }[] = [];
   if (b.socialInstagram) out.push({ label: "Instagram", href: b.socialInstagram, Icon: Instagram });
   if (b.socialFacebook) out.push({ label: "Facebook", href: b.socialFacebook, Icon: Facebook });
   if (b.socialTwitter) out.push({ label: "X", href: b.socialTwitter, Icon: X });
   if (b.socialTikTok) out.push({ label: "TikTok", href: b.socialTikTok, Icon: TiktokIcon });
   if (b.socialLinkedIn) out.push({ label: "LinkedIn", href: b.socialLinkedIn, Icon: Linkedin });
-  return out.length > 0 ? out : DEFAULT_SOCIAL;
+  if (b.socialYouTube) out.push({ label: "YouTube", href: b.socialYouTube, Icon: Youtube });
+  return out;
 }
 
 type FooterLink = { label: string; href: string; openContact?: boolean };
@@ -116,23 +109,25 @@ export function Footer({ business }: { business: BusinessPublic }) {
               </div>
             ))}
           </div>
-          <div className="mt-12 pt-8 border-t border-slate-800">
-            <h3 className="font-semibold text-sm text-white mb-3">Follow us</h3>
-            <div className="flex gap-4">
-              {socialLinks.map(({ label, href, Icon }) => (
-                <a
-                  key={label}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center h-10 w-10 rounded-full bg-slate-800 text-slate-300 hover:bg-primary hover:text-white transition-colors"
-                  aria-label={label}
-                >
-                  <Icon className="h-5 w-5" />
-                </a>
-              ))}
+          {socialLinks.length > 0 && (
+            <div className="mt-12 pt-8 border-t border-slate-800">
+              <h3 className="font-semibold text-sm text-white mb-3">Follow us</h3>
+              <div className="flex gap-4">
+                {socialLinks.map(({ label, href, Icon }) => (
+                  <a
+                    key={label}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center h-10 w-10 rounded-full bg-slate-800 text-slate-300 hover:bg-primary hover:text-white transition-colors"
+                    aria-label={label}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </a>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
           <div className="mt-8 pt-8 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-4">
             <p className="text-xs text-slate-500">
               M-Pesa · Pesapal · Visa · Mastercard · Bank Transfer

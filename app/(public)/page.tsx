@@ -16,7 +16,7 @@ export default async function HomePage() {
       <HowItWorks />
       <FeaturedProducts />
       <PriceCalculatorTeaser />
-      <WhyPrintHub />
+      <WhyPrintHub city={business.city} businessName={business.businessName} />
       <CTABanner whatsapp={business.whatsapp} />
     </>
   );

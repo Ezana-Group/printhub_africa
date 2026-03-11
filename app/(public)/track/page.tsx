@@ -1,7 +1,9 @@
 import { Suspense } from "react";
+import { getBusinessPublic } from "@/lib/business-public";
 import { TrackPageClient } from "./track-page-client";
 
-export default function TrackPage() {
+export default async function TrackPage() {
+  const business = await getBusinessPublic();
   return (
     <Suspense
       fallback={
@@ -16,7 +18,7 @@ export default function TrackPage() {
         </div>
       }
     >
-      <TrackPageClient />
+      <TrackPageClient whatsapp={business.whatsapp} />
     </Suspense>
   );
 }

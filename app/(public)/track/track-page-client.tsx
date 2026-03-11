@@ -5,7 +5,11 @@ import { useSearchParams } from "next/navigation";
 import { TrackForm } from "./track-form";
 import { TrackResult } from "./track-result";
 
-export function TrackPageClient() {
+const DEFAULT_WHATSAPP = "254700000000";
+
+export function TrackPageClient({ whatsapp }: { whatsapp?: string | null } = {}) {
+  const digits = (whatsapp ?? DEFAULT_WHATSAPP).replace(/\D/g, "") || DEFAULT_WHATSAPP;
+  const waHref = `https://wa.me/${digits}`;
   const searchParams = useSearchParams();
   const orderParam = searchParams.get("order") ?? "";
   const [result, setResult] = useState<{
@@ -77,7 +81,7 @@ export function TrackPageClient() {
       <p className="mt-8 text-sm text-slate-500">
         Need help?{" "}
         <a
-          href="https://wa.me/254700000000"
+          href={waHref}
           target="_blank"
           rel="noopener noreferrer"
           className="text-primary hover:underline"

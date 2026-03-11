@@ -73,12 +73,15 @@ function getCardConfig(slug: string) {
   );
 }
 
+const DEFAULT_WHATSAPP = "254700000000";
+
 interface ShopLandingProps {
   categories: ShopCategory[];
   featuredProducts: FeaturedProduct[];
+  whatsapp?: string | null;
 }
 
-export function ShopLanding({ categories, featuredProducts }: ShopLandingProps) {
+export function ShopLanding({ categories, featuredProducts, whatsapp: whatsappProp }: ShopLandingProps) {
   const searchParams = useSearchParams();
   const addItem = useCartStore((s) => s.addItem);
   const q = searchParams.get("q")?.trim() ?? "";
@@ -89,10 +92,27 @@ export function ShopLanding({ categories, featuredProducts }: ShopLandingProps) 
     totalPages: number;
   } | null>(null);
   const [productsLoading, setProductsLoading] = useState(false);
+  const [whatsappFromApi, setWhatsappFromApi] = useState<string | null>(null);
+  const [businessLabel, setBusinessLabel] = useState<string>("PrintHub Nairobi");
+  const whatsapp = whatsappProp ?? whatsappFromApi;
+  const waDigits = (whatsapp ?? DEFAULT_WHATSAPP).replace(/\D/g, "") || DEFAULT_WHATSAPP;
+  const waHref = `https://wa.me/${waDigits}`;
 
   useEffect(() => {
     setSearchInput(q);
   }, [q]);
+
+  useEffect(() => {
+    fetch("/api/settings/business-public")
+      .then((r) => r.json())
+      .then((d) => {
+        if (whatsappProp == null && d?.whatsapp != null) setWhatsappFromApi(d.whatsapp);
+        const name = d?.businessName?.trim();
+        const city = d?.city?.trim();
+        if (name || city) setBusinessLabel([name, city].filter(Boolean).join(" ") || "PrintHub Nairobi");
+      })
+      .catch(() => {});
+  }, [whatsappProp]);
 
   const fetchProducts = useCallback(async (query: string, page = 1) => {
     if (!query) return;
@@ -232,7 +252,7 @@ export function ShopLanding({ categories, featuredProducts }: ShopLandingProps) 
                         name={cat.name}
                         description={cat.description}
                         imageUrl={cat.imageUrl ?? ""}
-                        imageAlt={`${cat.name} — PrintHub Nairobi`}
+                        imageAlt={`${cat.name} — ${businessLabel}`}
                         href={config.href}
                         ctaText={config.ctaText}
                         badge={config.badge}
@@ -431,7 +451,7 @@ export function ShopLanding({ categories, featuredProducts }: ShopLandingProps) 
                   className="h-12 rounded-xl bg-[var(--brand-black)] px-6 text-white hover:bg-[var(--brand-black)]/90"
                 >
                   <a
-                    href="https://wa.me/254700000000"
+                    href={waHref}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2"

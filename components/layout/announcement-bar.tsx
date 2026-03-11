@@ -4,17 +4,19 @@ import { useState } from "react";
 import Link from "next/link";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { BusinessPublic } from "@/lib/business-public";
 
-const MESSAGES = [
-  { id: 1, text: "Free delivery on orders over KES 5,000 in Nairobi", href: "/shop" },
+const MESSAGES = (city: string) => [
+  { id: 1, text: `Free delivery on orders over KES 5,000 in ${city || "Nairobi"}`, href: "/shop" },
   { id: 2, text: "48hr turnaround on large format prints", href: "/services/large-format" },
   { id: 3, text: "Upload your design — we'll print it. Get a quote today.", href: "/get-a-quote" },
 ];
 
-export function AnnouncementBar() {
+export function AnnouncementBar({ business }: { business?: BusinessPublic }) {
   const [dismissed, setDismissed] = useState(false);
   const [index] = useState(0);
-  const msg = MESSAGES[index];
+  const location = [business?.city, business?.country].filter(Boolean).join(", ") || "Nairobi, Kenya";
+  const msg = MESSAGES(business?.city ?? "Nairobi")[index];
 
   if (dismissed) return null;
 
@@ -22,7 +24,7 @@ export function AnnouncementBar() {
     <div className="bg-slate-900 text-slate-100 text-center text-sm py-2.5 px-4 relative">
       <div className="flex items-center justify-center gap-2 flex-wrap">
         <span aria-hidden className="text-base">🇰🇪</span>
-        <span className="font-medium">Nairobi, Kenya</span>
+        <span className="font-medium">{location}</span>
         <span className="hidden sm:inline text-slate-500">·</span>
         <Link
           href={msg.href}
