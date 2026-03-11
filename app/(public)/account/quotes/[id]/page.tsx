@@ -5,7 +5,6 @@ import Link from "next/link";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/utils";
-import { getBusinessPublic } from "@/lib/business-public";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { QuoteAcceptDecline } from "@/components/account/quote-accept-decline";
@@ -25,13 +24,13 @@ export default async function AccountQuoteDetailPage({
   if (!session?.user?.id) redirect("/login");
   const { id } = await params;
 
-  const [quote, business] = await Promise.all([
+  const [quote, businessSettings] = await Promise.all([
     prisma.quote.findFirst({ where: { id, customerId: session.user.id } }),
-    getBusinessPublic(),
+    prisma.businessSettings.findUnique({ where: { id: "default" }, select: { businessName: true } }).catch(() => null),
   ]);
 
   if (!quote) notFound();
-  const businessName = business.businessName;
+  const businessName = businessSettings?.businessName ?? "PrintHub";
 
   return (
     <div className="space-y-6">
