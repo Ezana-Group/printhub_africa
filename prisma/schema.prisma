@@ -456,6 +456,28 @@ model Order {
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
+  // Cancellation
+  cancelledAt   DateTime?
+  cancelReason  String?
+
+  // Manual payment (admin-confirmed outside system)
+  manualPaymentRef    String?
+  manualPaymentNotes String?
+  manualPaymentBy    String?
+
+  // Payment link for recovery (valid 24h)
+  paymentLinkToken    String?
+  paymentLinkExpiresAt DateTime?
+
+  // Last M-Pesa failure reason (from callback resultDesc)
+  mpesaFailureReason String?
+
+  // Fulfilment
+  trackingNumber String?
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+  paidAt         DateTime?
+
   items           OrderItem[]
   timeline        OrderTimeline[]
   shippingAddress ShippingAddress?
@@ -599,44 +621,85 @@ enum UploadedFileType {
   STL
   OBJ
   FBX
+  THREE_MF
+  STEP
   AI
   PDF
   PSD
-  PNG
-  JPEG
+  EPS
   SVG
   DXF
   DWG
+  PNG
+  JPEG
+  WEBP
+  TIFF
+  DOCX
+  XLSX
+  OTHER
 }
 
 enum UploadedFileStatus {
+  UPLOADING
   UPLOADED
+  VIRUS_SCANNING
+  CLEAN
+  INFECTED
   REVIEWING
   APPROVED
   REJECTED
   PROCESSING
+  EXPIRED
+}
+
+enum UploadContext {
+  CUSTOMER_3D_PRINT
+  CUSTOMER_LARGE_FORMAT
+  CUSTOMER_QUOTE
+  CUSTOMER_GENERAL
+  CUSTOMER_PAYMENT_PROOF
+  ADMIN_CATALOGUE_STL
+  ADMIN_CATALOGUE_PHOTO
+  ADMIN_PRODUCT_IMAGE
+  ADMIN_CATEGORY_IMAGE
+  ADMIN_LOGO
+  ADMIN_OG_IMAGE
+  USER_AVATAR
+  STAFF_AVATAR
 }
 
 model UploadedFile {
-  id           String             @id @default(cuid())
-  userId       String
-  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orderId      String?
-  filename     String
-  originalName String
-  mimeType     String
-  size         Int
-  url          String
-  thumbnailUrl String?
-  fileType     UploadedFileType
-  status       UploadedFileStatus @default(UPLOADED)
-  reviewedBy   String?
-  reviewNotes  String?
-  printVolume  Float? // cm³ for 3D
-  printWeight  Float? // grams
-  printTime    Float? // hours
-  dimensions   Json?
-  createdAt    DateTime           @default(now())
+  id               String             @id @default(cuid())
+  userId           String?
+  user             User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  orderId          String?
+  quoteId          String?
+  quote            Quote?             @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  uploadedByAdmin  Boolean            @default(false)
+  filename         String
+  originalName     String
+  storageKey       String?            // R2 key
+  bucket           String?            // "private" | "public"
+  folder           String?
+  mimeType         String
+  size             Int
+  url              String?            // public CDN URL when bucket=public
+  ext              String?
+  uploadContext    UploadContext?
+  thumbnailUrl     String?
+  fileType         UploadedFileType
+  status           UploadedFileStatus @default(UPLOADED)
+  virusScanStatus  String?            // "pending" | "clean" | "infected" | "error"
+  virusScanAt      DateTime?
+  reviewedBy       String?
+  reviewNotes      String?
+  rejectionReason  String?
+  printVolume      Float?
+  printWeight      Float?
+  printTime        Float?
+  dimensions       Json?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
 
   printQuotes PrintQuote[]
 }
@@ -725,6 +788,8 @@ model Quote {
   referralSource    String?           // UTM / marketing
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
+
+  uploadedFiles     UploadedFile[]
 
   @@index([customerId])
   @@index([assignedStaffId])

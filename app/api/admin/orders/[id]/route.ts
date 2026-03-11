@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { requireAdminApi } from "@/lib/admin-api-guard";
+import { writeAudit } from "@/lib/audit";
 
 const ORDER_STATUSES = [
   "PENDING",
@@ -18,8 +17,38 @@ const ORDER_STATUSES = [
 
 const updateSchema = z.object({
   status: z.enum(ORDER_STATUSES).optional(),
+  trackingNumber: z.string().max(100).optional(),
+  carrier: z.string().max(50).optional(),
+  cancelReason: z.string().max(200).optional(),
   timelineMessage: z.string().max(500).optional(),
 });
+
+/** GET /api/admin/orders/[id] — full order with items, user, shipping, payments (incl. mpesa) */
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requireAdminApi({ permission: "orders_view" });
+  if (auth instanceof NextResponse) return auth;
+  const { id } = await params;
+  const order = await prisma.order.findUnique({
+    where: { id },
+    include: {
+      items: {
+        include: {
+          product: { select: { name: true, images: true, sku: true } },
+          productVariant: { select: { name: true, sku: true, attributes: true, image: true } },
+        },
+      },
+      user: { select: { id: true, name: true, email: true, phone: true } },
+      shippingAddress: true,
+      payments: { orderBy: { createdAt: "desc" }, include: { mpesaTransaction: true } },
+      timeline: { orderBy: { timestamp: "desc" } },
+    },
+  });
+  if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  return NextResponse.json(order);
+}
 
 export async function PATCH(
   req: NextRequest,
@@ -34,24 +63,52 @@ export async function PATCH(
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
-  const { status, timelineMessage } = parsed.data;
+  const { status, trackingNumber, carrier, cancelReason, timelineMessage } = parsed.data;
   try {
     const order = await prisma.order.findUnique({ where: { id } });
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
+    const updateData: {
+      status?: string;
+      trackingNumber?: string;
+      shippedAt?: Date;
+      deliveredAt?: Date;
+      cancelledAt?: Date;
+      cancelReason?: string;
+    } = {};
     if (status != null) {
+      updateData.status = status;
+      if (status === "SHIPPED") updateData.shippedAt = new Date();
+      if (status === "DELIVERED") updateData.deliveredAt = new Date();
+      if (status === "CANCELLED") {
+        updateData.cancelledAt = new Date();
+        if (cancelReason) updateData.cancelReason = cancelReason;
+      }
+    }
+    if (trackingNumber != null) updateData.trackingNumber = trackingNumber;
+    if (Object.keys(updateData).length > 0) {
       await prisma.order.update({
         where: { id },
-        data: { status },
+        data: updateData,
       });
       await prisma.orderTimeline.create({
         data: {
           orderId: id,
-          status,
-          message: `Status updated to ${status}`,
+          status: status ?? order.status,
+          message: status != null
+            ? `Status updated to ${status}${trackingNumber ? ` · Tracking: ${trackingNumber}` : ""}`
+            : "Updated",
           updatedBy: session.user?.email ?? session.user?.id ?? undefined,
         },
+      });
+      await writeAudit({
+        userId: session.user?.id,
+        action: `ORDER_${status ?? "UPDATE"}`,
+        entity: "Order",
+        entityId: id,
+        details: timelineMessage ?? (trackingNumber ? `Tracking: ${trackingNumber}` : undefined),
+        request: req,
       });
     }
     if (timelineMessage != null && timelineMessage.trim()) {

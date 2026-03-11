@@ -1,0 +1,34 @@
+# Dependencies and build outputs (rebuilt in container)
+node_modules
+.next
+out
+build
+.turbo
+
+# Git and IDE
+.git
+.gitignore
+.cursor
+.vscode
+*.md
+!README.md
+
+# Env files (inject at run time)
+.env
+.env.*
+!.env.example
+!.env.local.example
+
+# Debug and logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+coverage
+*.tsbuildinfo
+next-env.d.ts
+
+# Printhub-specific
+/lib/generated/prisma
+*.log
+terminals

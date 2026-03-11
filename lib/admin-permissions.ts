@@ -27,6 +27,7 @@ export const ROUTE_TO_PERMISSION: Record<string, PermissionKey | string> = {
   "/admin/categories": "products_view",
   "/admin/customers": "orders_view",
   "/admin/quotes": "orders_view",
+  "/admin/uploads": "orders_view",
   "/admin/print-jobs": "orders_view",
   "/admin/production-queue": "orders_view",
   "/admin/corporate-accounts": "orders_view",

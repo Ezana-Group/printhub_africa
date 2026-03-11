@@ -19,6 +19,8 @@ import {
   ListTodo,
   Handshake,
   TrendingUp,
+  Layers,
+  Upload,
 } from "lucide-react";
 import { canAccessRoute } from "@/lib/admin-permissions";
 import { cn } from "@/lib/utils";
@@ -41,6 +43,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
       { href: "/admin/products", label: "Products", icon: Package },
+      { href: "/admin/catalogue", label: "Catalogue", icon: Layers },
       { href: "/admin/categories", label: "Categories", icon: FolderTree },
     ],
   },
@@ -50,6 +53,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/orders?tab=print-jobs", label: "Print Jobs", icon: Printer },
       { href: "/admin/production-queue", label: "Production Queue", icon: ListTodo },
       { href: "/admin/quotes", label: "Quotes & Uploads", icon: FileText, badge: "quotes" },
+      { href: "/admin/uploads", label: "Uploads Queue", icon: Upload },
     ],
   },
   {

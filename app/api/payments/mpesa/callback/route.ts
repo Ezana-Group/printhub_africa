@@ -73,6 +73,10 @@ export async function POST(req: Request) {
       where: { id: mpesa.paymentId },
       data: { status: "FAILED", providerResponse: { ResultCode: stk.ResultCode, ResultDesc: stk.ResultDesc } },
     });
+    await prisma.order.update({
+      where: { id: mpesa.payment.orderId },
+      data: { mpesaFailureReason: stk.ResultDesc },
+    });
   }
 
   return NextResponse.json({ ResultCode: 0, ResultDesc: "Success" });
