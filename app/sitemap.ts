@@ -68,11 +68,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let categoryUrls: MetadataRoute.Sitemap = [];
   if (includeCategories) {
     categoryUrls = await prisma.category
-      .findMany({ where: { isActive: true }, select: { slug: true, updatedAt: true } })
+      .findMany({ where: { isActive: true }, select: { slug: true } })
       .then((rows) =>
         rows.map((r) => ({
           url: `${base}/shop/category/${r.slug}`,
-          lastModified: r.updatedAt,
+          lastModified: new Date(),
           changeFrequency: "monthly" as const,
           priority: 0.6,
         }))

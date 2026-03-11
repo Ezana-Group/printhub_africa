@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ApplicationStatus } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
   const status = searchParams.get("status") as ApplicationStatus | null;
   const search = searchParams.get("search")?.trim();
 
-  const where: { jobListingId?: string; status?: ApplicationStatus; OR?: unknown[] } = {};
+  const where: Prisma.JobApplicationWhereInput = {};
   if (jobId) where.jobListingId = jobId;
   if (status) where.status = status;
   if (search) {

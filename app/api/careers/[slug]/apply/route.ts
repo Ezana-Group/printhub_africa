@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { JobStatus } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { getUploadUrl } from "@/lib/s3";
 import { z } from "zod";
 import {
@@ -22,7 +23,7 @@ const applySchema = z.object({
   source: z.string().optional(),
   referredBy: z.string().optional(),
   consent: z.literal("true"),
-  answers: z.record(z.unknown()).optional(),
+  answers: z.record(z.string(), z.unknown()).optional(),
 });
 
 export async function POST(
@@ -132,7 +133,7 @@ export async function POST(
         portfolioUrl: data.portfolioUrl || null,
         cvFileUrl,
         cvFileName: cvFile.name,
-        answers: data.answers ?? null,
+        answers: data.answers == null ? undefined : (data.answers as Prisma.InputJsonValue),
         source: data.source ?? null,
         referredBy: data.referredBy || null,
       },

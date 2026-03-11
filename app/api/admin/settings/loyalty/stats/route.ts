@@ -18,6 +18,7 @@ export async function GET(req: Request) {
     prisma.loyaltyAccount.groupBy({
       by: ["tier"],
       _count: true,
+      orderBy: { tier: "asc" },
     }),
   ]);
   return NextResponse.json({

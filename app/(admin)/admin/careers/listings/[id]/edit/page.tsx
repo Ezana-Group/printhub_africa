@@ -2,7 +2,7 @@ import { requireAdminSection } from "@/lib/admin-route-guard";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { AdminBreadcrumbs } from "@/components/admin/admin-breadcrumbs";
-import { JobListingEditForm } from "../job-listing-edit-form";
+import { JobListingEditForm } from "../../job-listing-edit-form";
 
 export default async function AdminCareersListingEditPage({
   params,

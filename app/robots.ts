@@ -37,7 +37,7 @@ function parseRobotsTxt(txt: string): MetadataRoute.Robots | null {
   }
   if (rules.length === 0 && !sitemap) return null;
   return {
-    rules: rules.length ? (rules.length === 1 ? rules[0] : rules) : defaultRobots.rules,
+    rules: (rules.length ? (rules.length === 1 ? rules[0] : rules) : defaultRobots.rules) as MetadataRoute.Robots["rules"],
     sitemap: sitemap ?? defaultRobots.sitemap,
   };
 }

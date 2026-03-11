@@ -758,6 +758,7 @@ async function main() {
       await prisma.jobListing.create({
         data: {
           ...job,
+          status: job.status as "DRAFT" | "PUBLISHED" | "PAUSED" | "CLOSED" | "FILLED",
           publishedAt: job.status === "PUBLISHED" ? new Date() : null,
         },
       });
@@ -797,7 +798,7 @@ async function main() {
     ["shippingSettings", { id: "default" }],
   ] as const;
   for (const [model, data] of settingsToSeed) {
-    await (prisma as Record<string, { upsert: (arg: { where: { id: string }; update: object; create: object }) => Promise<unknown> }>)[model].upsert({
+    await (prisma as unknown as Record<string, { upsert: (arg: { where: { id: string }; update: object; create: object }) => Promise<unknown> }>)[model].upsert({
       where: { id: "default" },
       update: {},
       create: data as object,

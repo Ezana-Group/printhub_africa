@@ -3,7 +3,6 @@
  * Uses AuditLog model; category/target/details map to entity/entityId where appropriate.
  */
 import { prisma } from "@/lib/prisma";
-import type { Request } from "next/server";
 
 export type AuditParams = {
   userId?: string;

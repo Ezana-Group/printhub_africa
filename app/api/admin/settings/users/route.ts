@@ -31,7 +31,7 @@ export async function POST(req: Request) {
   if (auth instanceof NextResponse) return auth;
   const body = inviteSchema.safeParse(await req.json().catch(() => ({})));
   if (!body.success) {
-    return NextResponse.json({ error: body.error.flatten().message }, { status: 400 });
+    return NextResponse.json({ error: body.error.message }, { status: 400 });
   }
   const { name, email, role, department, position } = body.data;
   const existing = await prisma.user.findUnique({ where: { email } });

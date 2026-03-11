@@ -113,6 +113,26 @@ type FilamentRow = {
 
 type ThreeDConsumable = FilamentRow & { kind: string };
 
+/** Accepts API shape where some fields may be missing or null; normalized inside. */
+export type ThreeDConsumableInput = {
+  id: string;
+  kind: string;
+  name: string;
+  specification?: string | null;
+  colourHex?: string | null;
+  brand?: string | null;
+  quantity: number;
+  weightPerSpoolKg?: number | null;
+  lowStockThreshold: number;
+  location?: string | null;
+  costPerKgKes?: number | null;
+  unitCostKes?: number | null;
+  notes?: string | null;
+  totalWeightKg?: number | null;
+  totalValueKes?: number | null;
+  stockStatus?: string;
+};
+
 const TAB_CONFIG = [
   { id: "filament" as const, label: "Filament", icon: Spool },
   { id: "other" as const, label: "Other consumables", icon: Package },
@@ -121,8 +141,23 @@ const TAB_CONFIG = [
 export function Inventory3DSection({
   consumables,
 }: {
-  consumables: ThreeDConsumable[];
+  consumables: ThreeDConsumableInput[];
 }) {
+  const normalized = useMemo(
+    () =>
+      consumables.map((c) => ({
+        ...c,
+        specification: c.specification ?? null,
+        colourHex: c.colourHex ?? null,
+        brand: c.brand ?? null,
+        weightPerSpoolKg: c.weightPerSpoolKg ?? null,
+        location: c.location ?? null,
+        costPerKgKes: c.costPerKgKes ?? null,
+        unitCostKes: c.unitCostKes ?? null,
+        notes: c.notes ?? null,
+      })) as ThreeDConsumable[],
+    [consumables]
+  );
   const router = useRouter();
   const [subTab, setSubTab] = useState<"filament" | "other">("filament");
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -154,8 +189,13 @@ export function Inventory3DSection({
   const [otherLoading, setOtherLoading] = useState(false);
   const [otherError, setOtherError] = useState("");
 
-  const filamentItems = consumables.filter((c) => c.kind === "FILAMENT") as FilamentRow[];
-  const otherItems = consumables.filter((c) => c.kind !== "FILAMENT");
+  const filamentItems = normalized.filter((c) => c.kind === "FILAMENT") as FilamentRow[];
+  const otherItems = normalized.filter((c) => c.kind !== "FILAMENT");
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [materialFilter, setMaterialFilter] = useState<string>("All");
+  const [statusFilter, setStatusFilter] = useState<string>("All");
+  const [brandFilter, setBrandFilter] = useState<string>("All");
 
   const filteredFilaments = useMemo(() => {
     let list = filamentItems;
@@ -219,10 +259,6 @@ export function Inventory3DSection({
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [materialFilter, setMaterialFilter] = useState<string>("All");
-  const [statusFilter, setStatusFilter] = useState<string>("All");
-  const [brandFilter, setBrandFilter] = useState<string>("All");
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
     try {
@@ -267,6 +303,8 @@ export function Inventory3DSection({
     setAddStockReference("");
     setAddStockNotes("");
   }, []);
+
+  const refresh = useCallback(() => router.refresh(), [router]);
 
   const handleAddStockSubmit = useCallback(async () => {
     if (!addStockTarget) return;
@@ -335,8 +373,6 @@ export function Inventory3DSection({
     else setSelectedIds(new Set(filamentItems.map((c) => c.id)));
   };
   const clearSelection = () => setSelectedIds(new Set());
-
-  const refresh = useCallback(() => router.refresh(), [router]);
 
   const [inlineEdit, setInlineEdit] = useState<{ id: string; field: "quantity" | "location"; value: string } | null>(null);
   const handleInlineSave = async (id: string, field: "quantity" | "location", value: string) => {

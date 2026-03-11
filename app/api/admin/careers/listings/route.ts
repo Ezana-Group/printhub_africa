@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: parsed.error.flatten().message },
+      { error: parsed.error.message },
       { status: 400 }
     );
   }
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
       sortOrder: data.sortOrder,
       metaTitle: data.metaTitle ?? null,
       metaDescription: data.metaDescription ?? null,
-      customQuestions: data.customQuestions ?? null,
+      customQuestions: data.customQuestions == null ? undefined : data.customQuestions,
       createdBy: (session!.user as { id?: string })?.id ?? null,
       publishedAt: data.status === "PUBLISHED" ? new Date() : null,
     },

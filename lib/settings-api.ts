@@ -1,6 +1,5 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import type { Request } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
@@ -15,7 +14,7 @@ export async function requireRole(
   req: Request,
   role: RoleRequirement
 ): Promise<
-  | { session: { user: { id: string; email?: string; name?: string; role?: string } }; userId: string }
+  | { session: { user: { id: string; email?: string | null; name?: string | null; role?: string } }; userId: string }
   | NextResponse
 > {
   const session = await getServerSession(authOptions);
