@@ -46,7 +46,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { formatPrice } from "@/lib/utils";
 
-type PaymentStatus = "PENDING" | "COMPLETED" | "FAILED" | "REFUNDED";
+type PaymentStatus =
+  | "PENDING"
+  | "PROCESSING"
+  | "AWAITING_CONFIRMATION"
+  | "COMPLETED"
+  | "FAILED"
+  | "REFUNDED"
+  | "CANCELLED";
 
 type OrderItem = {
   id: string;

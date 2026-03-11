@@ -16,7 +16,6 @@ import { KENYA_COUNTIES_CHECKOUT } from "@/lib/constants";
 import { StepIndicator } from "@/components/checkout/step-indicator";
 import { CheckoutOrderSummary } from "@/components/checkout/checkout-order-summary";
 import { Select } from "@/components/ui/select";
-import { FileUploader } from "@/components/upload/FileUploader";
 import { PaymentStep } from "@/components/checkout/PaymentStep";
 
 const PHONE_REGEX = /^\+?254[17]\d{8}$/;

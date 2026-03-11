@@ -18,7 +18,6 @@ import { FileUploader, type UploadedFileResult } from "@/components/upload/FileU
 import { formatPrice } from "@/lib/utils";
 
 const PAYBILL_NUMBER = "522522";
-const TILL_NUMBER = "123456";
 
 export interface PaymentStepOrder {
   id: string;
@@ -48,13 +47,6 @@ export function PaymentStep({
   const [manualRef, setManualRef] = useState("");
   const [proofFile, setProofFile] = useState<UploadedFileResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [copied, setCopied] = useState<string | null>(null);
-
-  const copyToClipboard = (text: string, key: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(key);
-    setTimeout(() => setCopied(null), 2000);
-  };
 
   const sendStkPush = async () => {
     if (!mpesaPhone) return;
@@ -339,7 +331,6 @@ export function PaymentStep({
               <PaybillInstructions
                 orderNumber={order.orderNumber}
                 amount={order.totalKes}
-                proofFile={proofFile}
                 setProofFile={setProofFile}
                 orderId={order.id}
                 onReferenceSubmit={(ref) => {
@@ -369,7 +360,6 @@ export function PaymentStep({
           <PaybillInstructions
             orderNumber={order.orderNumber}
             amount={order.totalKes}
-            proofFile={proofFile}
             setProofFile={setProofFile}
             orderId={order.id}
             onReferenceSubmit={(ref) => {
@@ -480,7 +470,6 @@ export function PaymentStep({
 function PaybillInstructions({
   orderNumber,
   amount,
-  proofFile,
   setProofFile,
   orderId,
   onReferenceSubmit,
@@ -488,7 +477,6 @@ function PaybillInstructions({
 }: {
   orderNumber: string;
   amount: number;
-  proofFile: UploadedFileResult | null;
   setProofFile: (f: UploadedFileResult | null) => void;
   orderId: string;
   onReferenceSubmit: (ref: string) => void;
