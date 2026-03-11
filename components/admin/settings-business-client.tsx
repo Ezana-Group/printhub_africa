@@ -49,7 +49,7 @@ export function SettingsBusinessClient({
 
   const saveFull = useCallback(async () => {
     const res = await fetch("/api/admin/settings/business", {
-      method: "POST",
+      method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });

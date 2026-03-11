@@ -6,11 +6,16 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-// TOTP verification placeholder — replace with real impl if you use 2FA lib
+import { verifySync } from "otplib";
+
 function verifyTotp(secret: string, code: string): boolean {
-  if (!secret || !code) return false;
-  // TODO: use otplib or similar: return speakeasy.totp.verify({ secret, encoding: 'base32', token: code });
-  return true;
+  if (!secret || !code || code.length !== 6) return false;
+  try {
+    const result = verifySync({ secret, token: code });
+    return result.valid;
+  } catch {
+    return false;
+  }
 }
 
 export type DangerConfirmBody = {

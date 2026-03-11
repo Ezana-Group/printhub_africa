@@ -6,17 +6,33 @@ import { SectionCard } from "@/components/settings/section-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface MyAccountFormProps {
   name: string;
   email: string;
+  twoFaEnabled?: boolean;
 }
 
-export function MyAccountForm({ name, email }: MyAccountFormProps) {
+export function MyAccountForm({ name, email, twoFaEnabled = false }: MyAccountFormProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [twoFaOpen, setTwoFaOpen] = useState(false);
+  const [twoFaSecret, setTwoFaSecret] = useState<string | null>(null);
+  const [twoFaOtpauthUrl, setTwoFaOtpauthUrl] = useState<string | null>(null);
+  const [twoFaCode, setTwoFaCode] = useState("");
+  const [twoFaLoading, setTwoFaLoading] = useState(false);
+  const [twoFaError, setTwoFaError] = useState<string | null>(null);
 
   const handleSaveProfile = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -43,6 +59,58 @@ export function MyAccountForm({ name, email }: MyAccountFormProps) {
       setError("Something went wrong");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleEnable2FAClick = async () => {
+    setTwoFaError(null);
+    setTwoFaLoading(true);
+    try {
+      const res = await fetch("/api/admin/settings/my-account/2fa/setup", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setTwoFaError(data.error ?? "Failed to start 2FA setup");
+        return;
+      }
+      setTwoFaSecret(data.secret ?? null);
+      setTwoFaOtpauthUrl(data.otpauthUrl ?? null);
+      setTwoFaCode("");
+      setTwoFaOpen(true);
+    } catch {
+      setTwoFaError("Something went wrong");
+    } finally {
+      setTwoFaLoading(false);
+    }
+  };
+
+  const handle2FAVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!twoFaSecret || twoFaCode.length !== 6) {
+      setTwoFaError("Enter the 6-digit code from your authenticator app");
+      return;
+    }
+    setTwoFaError(null);
+    setTwoFaLoading(true);
+    try {
+      const res = await fetch("/api/admin/settings/my-account/2fa/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: twoFaCode, secret: twoFaSecret }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setTwoFaError(data.error ?? "Verification failed");
+        return;
+      }
+      setTwoFaOpen(false);
+      setTwoFaSecret(null);
+      setTwoFaOtpauthUrl(null);
+      setTwoFaCode("");
+      router.refresh();
+    } catch {
+      setTwoFaError("Something went wrong");
+    } finally {
+      setTwoFaLoading(false);
     }
   };
 
@@ -120,9 +188,74 @@ export function MyAccountForm({ name, email }: MyAccountFormProps) {
         title="Two-Factor Authentication"
         description="Admin accounts require 2FA. Highly recommended for all staff."
       >
-        <p className="text-sm text-muted-foreground">Status: Disabled</p>
-        <Button type="button" variant="outline">Enable 2FA</Button>
+        <p className="text-sm text-muted-foreground">
+          Status: {twoFaEnabled ? "Enabled" : "Disabled"}
+        </p>
+        {!twoFaEnabled && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleEnable2FAClick}
+            disabled={twoFaLoading}
+          >
+            {twoFaLoading ? "Starting…" : "Enable 2FA"}
+          </Button>
+        )}
       </SectionCard>
+
+      <Dialog open={twoFaOpen} onOpenChange={(open) => !twoFaLoading && setTwoFaOpen(open)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enable Two-Factor Authentication</DialogTitle>
+            <DialogDescription>
+              Scan the QR code with your authenticator app (e.g. Google Authenticator), or enter the
+              secret manually. Then enter the 6-digit code below to confirm.
+            </DialogDescription>
+          </DialogHeader>
+          {twoFaOtpauthUrl && (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground font-mono break-all">
+                Secret (manual entry): {twoFaSecret}
+              </p>
+              <p className="text-xs text-muted-foreground break-all">
+                Or use this URL in your app: {twoFaOtpauthUrl}
+              </p>
+            </div>
+          )}
+          <form onSubmit={handle2FAVerify} className="space-y-4">
+            <div className="grid gap-2">
+              <Label htmlFor="twofa-code">Verification code</Label>
+              <Input
+                id="twofa-code"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                placeholder="000000"
+                maxLength={6}
+                value={twoFaCode}
+                onChange={(e) => setTwoFaCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                disabled={twoFaLoading}
+              />
+            </div>
+            {twoFaError && (
+              <p className="text-sm text-destructive font-medium">{twoFaError}</p>
+            )}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setTwoFaOpen(false)}
+                disabled={twoFaLoading}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={twoFaLoading || twoFaCode.length !== 6}>
+                {twoFaLoading ? "Verifying…" : "Verify and enable 2FA"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <SectionCard
         title="PIN (production floor)"
