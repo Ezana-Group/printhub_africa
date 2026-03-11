@@ -41,6 +41,7 @@ export const ROUTE_TO_PERMISSION: Record<string, PermissionKey | string> = {
   "/admin/content/faq": "content_manage",
   "/admin/careers": "careers_manage",     // not in PERMISSION_KEYS → only ADMIN/SUPER_ADMIN
   "/admin/catalogue": "products_view",
+  "/admin/catalogue/new": "products_edit",
   "/admin/catalogue/queue": "products_view",
   "/admin/catalogue/import": "products_edit",
   "/admin/catalogue/categories": "products_view",
