@@ -17,6 +17,8 @@ import {
   CheckCircle,
   XCircle,
   Activity,
+  Download,
+  Store,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +73,8 @@ type Payment = {
   status: PaymentStatus;
   amount: string | number;
   paidAt?: string | null;
+  manualReference?: string | null;
+  proofFileId?: string | null;
   mpesaTransaction?: MpesaTransaction | null;
 };
 
@@ -111,6 +115,9 @@ type Order = {
   items: OrderItem[];
   shippingAddress?: ShippingAddress | null;
   payments: Payment[];
+  paymentMethod?: string | null;
+  paymentStatus?: string | null;
+  pickupCode?: string | null;
   timeline: { id: string; status: string; message?: string | null; timestamp: string; updatedBy?: string | null }[];
 };
 
@@ -145,6 +152,11 @@ function derivePaymentStatus(order: Order): PaymentStatus {
   if (latest?.status === "FAILED") return "FAILED";
   return "PENDING";
 }
+
+const isAwaitingConfirmation = (order: Order) =>
+  order.paymentStatus === "AWAITING_CONFIRMATION";
+const isPayOnPickupPending = (order: Order) =>
+  order.paymentMethod === "CASH_ON_PICKUP" && order.paymentStatus === "PENDING";
 
 function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
   const variant = status === "COMPLETED" ? "default" : status === "FAILED" ? "destructive" : "secondary";
@@ -193,6 +205,7 @@ export function OrderDetailClient({ orderId, initialOrder }: { orderId: string; 
   const [carrier, setCarrier] = useState("");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [resendStkLoading, setResendStkLoading] = useState(false);
+  const [confirmPaymentLoading, setConfirmPaymentLoading] = useState(false);
   const [, setWaitingForPayment] = useState(false);
 
   const fetchOrder = useCallback(async () => {
@@ -318,6 +331,27 @@ export function OrderDetailClient({ orderId, initialOrder }: { orderId: string; 
 
   const cancelOrder = (reason: string) => updateStatus("CANCELLED", { cancelReason: reason });
 
+  const confirmPaymentAction = async (action: "CONFIRM" | "REJECT") => {
+    setConfirmPaymentLoading(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/confirm-payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error?.message ?? "Failed");
+      }
+      await fetchOrder();
+      router.refresh();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setConfirmPaymentLoading(false);
+    }
+  };
+
   const markShipped = () => {
     updateStatus("SHIPPED", { trackingNumber: trackingNumber || undefined });
     setTrackingNumber("");
@@ -395,6 +429,97 @@ export function OrderDetailClient({ orderId, initialOrder }: { orderId: string; 
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {isAwaitingConfirmation(order) && latestPayment && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-6">
+          <div className="flex items-start gap-3 mb-4">
+            <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-semibold text-amber-900">Manual payment pending confirmation</p>
+              <p className="text-sm text-amber-700 mt-0.5">
+                Customer claims to have paid via {order.paymentMethod}. Reference:{" "}
+                <span className="font-mono font-bold">{latestPayment.manualReference ?? "—"}</span>
+              </p>
+            </div>
+          </div>
+          {latestPayment.proofFileId && (
+            <div className="mb-4">
+              <a
+                href={`/api/upload/${latestPayment.proofFileId}/download`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-sm text-blue-600 hover:underline"
+              >
+                <Download className="w-4 h-4" />
+                View payment proof screenshot
+              </a>
+            </div>
+          )}
+          <div className="bg-white rounded-xl p-4 mb-4 text-sm space-y-2">
+            <p className="font-medium text-gray-700">To verify:</p>
+            <ol className="list-inside list-decimal space-y-1 text-gray-600">
+              <li>Log into M-Pesa business portal</li>
+              <li>
+                Search for reference:{" "}
+                <span className="font-mono font-bold">{latestPayment.manualReference ?? "—"}</span>
+              </li>
+              <li>
+                Confirm amount: <span className="font-bold">{formatPrice(totalKes)}</span>
+              </li>
+              <li>
+                Confirm account: <span className="font-mono">{order.orderNumber}</span>
+              </li>
+            </ol>
+          </div>
+          <div className="flex gap-3">
+            <Button
+              size="sm"
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+              disabled={confirmPaymentLoading}
+              onClick={() => confirmPaymentAction("CONFIRM")}
+            >
+              <CheckCircle className="w-4 h-4 mr-2" />
+              Confirm payment received
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
+              disabled={confirmPaymentLoading}
+              onClick={() => confirmPaymentAction("REJECT")}
+            >
+              Reference not found
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {isPayOnPickupPending(order) && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-6">
+          <p className="font-semibold text-amber-900 mb-1">Pay on Pickup order</p>
+          <p className="text-sm text-amber-700 mb-4">
+            Customer pays when they collect. Verify their pickup code before confirming.
+          </p>
+          <div className="bg-white rounded-xl p-4 mb-4">
+            <p className="text-xs text-gray-500 mb-1">Customer pickup code</p>
+            <p className="font-mono text-3xl font-bold text-gray-900 tracking-widest">
+              {order.pickupCode ?? "—"}
+            </p>
+            <p className="mt-1 text-xs text-gray-400">
+              Ask customer to show this code before handing over the order
+            </p>
+          </div>
+          <Button
+            size="sm"
+            className="w-full bg-green-600 hover:bg-green-700 text-white"
+            disabled={confirmPaymentLoading}
+            onClick={() => confirmPaymentAction("CONFIRM")}
+          >
+            <Store className="w-4 h-4 mr-2" />
+            Confirm collected and paid — {formatPrice(totalKes)}
+          </Button>
         </div>
       )}
 

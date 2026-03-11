@@ -48,7 +48,6 @@ export function CatalogueImportForm({ categories }: CatalogueImportFormProps) {
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
 
   const suggestedName = url ? nameFromPrintablesUrl(url) : "";
-  const displayName = nameOverride.trim() || suggestedName || "Imported from Printables";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

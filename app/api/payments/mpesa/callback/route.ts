@@ -58,11 +58,20 @@ export async function POST(req: Request) {
       }),
       prisma.payment.update({
         where: { id: mpesa.paymentId },
-        data: { status: "COMPLETED", providerTransactionId: receipt, paidAt: new Date() },
+        data: {
+          status: "COMPLETED",
+          providerTransactionId: receipt,
+          mpesaReceiptNo: receipt,
+          paidAt: new Date(),
+        },
       }),
       prisma.order.update({
         where: { id: mpesa.payment.orderId },
-        data: { status: "CONFIRMED" },
+        data: {
+          status: "CONFIRMED",
+          paymentStatus: "CONFIRMED",
+          paidAt: new Date(),
+        },
       }),
     ]);
     capturePaymentSuccess({

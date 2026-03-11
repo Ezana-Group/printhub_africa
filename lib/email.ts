@@ -128,6 +128,74 @@ export async function sendOrderConfirmationEmail(
   });
 }
 
+/** Manual payment submitted — we received your reference; team will confirm within 30 min. */
+export async function sendPaymentReceivedEmail(
+  email: string,
+  orderNumber: string,
+  reference: string,
+  method: string
+) {
+  const { businessName, footer } = await getEmailBranding();
+  return sendEmail({
+    to: email,
+    subject: `Payment reference received – Order ${orderNumber}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h1 style="color: #FF4D00;">${businessName}</h1>
+        <p>We received your payment reference <strong>${reference}</strong> for order <strong>${orderNumber}</strong>.</p>
+        <p>Our team will confirm your ${method} payment within 30 minutes (Mon–Fri 8am–6pm).</p>
+        <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
+      </div>
+    `,
+  });
+}
+
+/** Staff could not verify manual payment reference — ask customer to contact. */
+export async function sendPaymentRejectedEmail(
+  email: string,
+  orderNumber: string,
+  reference: string
+) {
+  const { businessName, footer } = await getEmailBranding();
+  const whatsapp = "https://wa.me/254727410320";
+  return sendEmail({
+    to: email,
+    subject: `Payment verification – Order ${orderNumber}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h1 style="color: #FF4D00;">${businessName}</h1>
+        <p>We couldn't verify the payment reference <strong>${reference}</strong> for order <strong>${orderNumber}</strong>.</p>
+        <p>Please contact us on <a href="${whatsapp}" style="color: #FF4D00;">WhatsApp</a> with your M-Pesa receipt so we can complete your order.</p>
+        <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
+      </div>
+    `,
+  });
+}
+
+/** Pay on pickup — order confirmed; pickup code and address sent. */
+export async function sendPickupConfirmationEmail(
+  email: string,
+  orderNumber: string,
+  pickupCode: string,
+  totalKes: number
+) {
+  const { businessName, footer } = await getEmailBranding();
+  return sendEmail({
+    to: email,
+    subject: `Order ${orderNumber} – Pay when you collect`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h1 style="color: #FF4D00;">${businessName}</h1>
+        <p>Your order <strong>${orderNumber}</strong> is confirmed. You'll pay when you collect.</p>
+        <p><strong>Pickup code:</strong> <span style="font-size: 1.2em; letter-spacing: 0.2em;">${pickupCode}</span></p>
+        <p><strong>Amount to pay at collection:</strong> KSh ${totalKes.toLocaleString()}</p>
+        <p>We'll notify you when your order is ready. Bring this code to our Nairobi studio.</p>
+        <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
+      </div>
+    `,
+  });
+}
+
 /** When staff sends a quote to the customer (status → quoted). */
 export async function sendQuoteSentToCustomerEmail(
   email: string,

@@ -17,6 +17,7 @@ import { StepIndicator } from "@/components/checkout/step-indicator";
 import { CheckoutOrderSummary } from "@/components/checkout/checkout-order-summary";
 import { Select } from "@/components/ui/select";
 import { FileUploader } from "@/components/upload/FileUploader";
+import { PaymentStep } from "@/components/checkout/PaymentStep";
 
 const PHONE_REGEX = /^\+?254[17]\d{8}$/;
 
@@ -61,11 +62,10 @@ export default function CheckoutPage() {
   const [password, setPassword] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [placingOrder, setPlacingOrder] = useState(false);
-  const [waitingForPayment, setWaitingForPayment] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
   const [placedOrderNumber, setPlacedOrderNumber] = useState("");
-  const [paymentFailed, setPaymentFailed] = useState(false);
-  const [paymentTimedOut, setPaymentTimedOut] = useState(false);
+  const [savedMpesaNumbers, setSavedMpesaNumbers] = useState<{ id: string; phone: string; label: string | null; isDefault: boolean }[]>([]);
+  const [savedCards, setSavedCards] = useState<{ id: string; last4: string; brand: string; expiryMonth: number; expiryYear: number; holderName?: string | null; isDefault: boolean }[]>([]);
 
   const shippingFee =
     delivery.method === "PICKUP"
@@ -133,8 +133,6 @@ export default function CheckoutPage() {
   const handleCreateOrder = async () => {
     setPlacingOrder(true);
     setError("");
-    setPaymentFailed(false);
-    setPaymentTimedOut(false);
     try {
       const res = await fetch("/api/orders", {
         method: "POST",
@@ -184,26 +182,6 @@ export default function CheckoutPage() {
       setOrderId(data.order.id);
       setPlacedOrderId(data.order.id);
       setPlacedOrderNumber(data.order.orderNumber);
-      // If M-Pesa, trigger STK and show waiting
-      if (payment.method === "MPESA") {
-        const phone = (payment.mpesaPhone || contact.phone || "").trim();
-        const mpesaPhone = normalizePhone(phone);
-        const stkRes = await fetch("/api/payments/mpesa/stkpush", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            orderId: data.order.id,
-            phone: mpesaPhone,
-          }),
-        });
-        const stkData = await stkRes.json();
-        if (!stkRes.ok) {
-          setError(stkData.error ?? "M-Pesa request failed");
-          setPlacingOrder(false);
-          return;
-        }
-        setWaitingForPayment(true);
-      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
     } finally {
@@ -211,110 +189,28 @@ export default function CheckoutPage() {
     }
   };
 
-  // Poll payment status when waiting for M-Pesa
+  // When order is placed, fetch saved payment methods for PaymentStep
   useEffect(() => {
-    if (!waitingForPayment || !placedOrderId) return;
-    const interval = setInterval(async () => {
-      const res = await fetch(`/api/orders/${placedOrderId}/payment-status`);
-      const { status } = await res.json();
-      if (status === "CONFIRMED") {
-        clearInterval(interval);
-        setWaitingForPayment(false);
-        useCartStore.getState().clearCart();
-        resetCheckout();
-        router.push(`/order-confirmation/${placedOrderId}`);
-      } else if (status === "PAYMENT_FAILED") {
-        clearInterval(interval);
-        setWaitingForPayment(false);
-        setPaymentFailed(true);
-      }
-    }, 3000);
-    const timeout = setTimeout(() => {
-      clearInterval(interval);
-      setWaitingForPayment(false);
-      setPaymentTimedOut(true);
-    }, 90000);
-    return () => {
-      clearInterval(interval);
-      clearTimeout(timeout);
-    };
-  }, [waitingForPayment, placedOrderId, router, resetCheckout]);
+    if (!placedOrderId || !session?.user) return;
+    Promise.all([
+      fetch("/api/account/payment-methods/mpesa").then((r) => r.json()),
+      fetch("/api/account/payment-methods/cards").then((r) => r.json()),
+    ]).then(([mpesaData, cardsData]) => {
+      setSavedMpesaNumbers(mpesaData.numbers ?? []);
+      setSavedCards(cardsData.cards ?? []);
+    }).catch(() => {});
+  }, [placedOrderId, session?.user]);
 
-  const handleResendMpesa = async () => {
-    if (!placedOrderId || !contact.phone) return;
-    setError("");
-    const res = await fetch("/api/payments/mpesa/stkpush", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        orderId: placedOrderId,
-        phone: normalizePhone(contact.phone),
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) setError(data.error ?? "Resend failed");
-    else setWaitingForPayment(true);
+  const handlePaymentComplete = () => {
+    useCartStore.getState().clearCart();
+    resetCheckout();
+    router.push(`/order-confirmation/${placedOrderId}`);
   };
 
   if (items.length === 0) {
     return (
       <div className="min-h-[40vh] flex items-center justify-center bg-[#F9FAFB]">
         <p className="text-muted-foreground">Loading…</p>
-      </div>
-    );
-  }
-
-  // M-Pesa waiting screen
-  if (waitingForPayment && placedOrderId) {
-    return (
-      <div className="min-h-[60vh] bg-[#F9FAFB] flex items-center justify-center p-6">
-        <Card className="max-w-md w-full">
-          <CardContent className="pt-6 text-center space-y-4">
-            <div className="text-5xl">📱</div>
-            <h2 className="text-xl font-semibold">Check your phone!</h2>
-            <p className="text-muted-foreground">
-              We&apos;ve sent a payment request to {contact.phone}. Enter your M-Pesa PIN to complete payment.
-            </p>
-            <p className="font-medium">{formatPrice(totals.total)} · {placedOrderNumber}</p>
-            <p className="text-sm text-muted-foreground animate-pulse">Waiting for payment…</p>
-            <div className="flex flex-col gap-2">
-              <Button variant="outline" onClick={handleResendMpesa}>
-                I didn&apos;t receive the prompt — Resend
-              </Button>
-              <Button variant="ghost" onClick={() => setWaitingForPayment(false)}>
-                Cancel payment
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Payment failed / timed out
-  if (paymentFailed || paymentTimedOut) {
-    return (
-      <div className="min-h-[50vh] bg-[#F9FAFB] flex items-center justify-center p-6">
-        <Card className="max-w-md w-full">
-          <CardContent className="pt-6 text-center space-y-4">
-            <p className="text-destructive font-medium">
-              {paymentTimedOut ? "Payment timed out." : "Payment failed."}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {paymentTimedOut
-                ? "You can try again or choose a different payment method."
-                : "Please check your M-Pesa and try again."}
-            </p>
-            <div className="flex gap-2 justify-center flex-wrap">
-              <Button onClick={() => { setPaymentFailed(false); setPaymentTimedOut(false); setStep(3); }}>
-                Try again
-              </Button>
-              <Button variant="outline" asChild>
-                <Link href="/cart">Back to cart</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     );
   }
@@ -648,114 +544,84 @@ export default function CheckoutPage() {
               </Card>
             )}
 
-            {/* Step 4 — Review */}
+            {/* Step 4 — Review & Payment */}
             {step === 4 && (
               <Card>
                 <CardHeader>
-                  <h2 className="font-semibold text-lg">Review your order</h2>
+                  <h2 className="font-semibold text-lg">
+                    {placedOrderId ? "Complete payment" : "Review your order"}
+                  </h2>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div>
-                    <h3 className="font-medium text-sm text-muted-foreground mb-2">Items</h3>
-                    <ul className="space-y-2">
-                      {items.map((item) => (
-                        <li
-                          key={isCatalogueCartItem(item) ? `cat:${item.catalogueItemId}:${item.materialCode}:${item.colourHex}` : `shop:${item.productId}:${item.variantId ?? ""}`}
-                          className="flex justify-between text-sm"
-                        >
-                          <span>{item.name} × {item.quantity}</span>
-                          <span>{formatPrice(item.unitPrice * item.quantity)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <Link href="/cart" className="text-sm text-primary hover:underline mt-1 inline-block">
-                      Edit items →
-                    </Link>
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-sm text-muted-foreground mb-1">Deliver to</h3>
-                    <p className="text-sm">
-                      {contact.firstName} {contact.lastName}<br />
-                      {delivery.street}, {delivery.area}, {delivery.county}<br />
-                      {contact.phone}
-                    </p>
-                    <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setStep(2)}>
-                      Edit →
-                    </Button>
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-sm text-muted-foreground mb-1">Payment</h3>
-                    <p className="text-sm">
-                      {payment.method === "BANK_TRANSFER"
-                        ? "Bank Transfer — upload proof after placing order"
-                        : `M-Pesa — ${payment.mpesaPhone || contact.phone}`}
-                    </p>
-                    <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setStep(3)}>
-                      Edit →
-                    </Button>
-                  </div>
-                  <div className="border-t pt-4 space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span>Subtotal</span>
-                      <span>{formatPrice(totals.subtotalInclVat)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Shipping</span>
-                      <span>{formatPrice(shippingFee)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>VAT (16%, included)</span>
-                      <span>{formatPrice(totals.vatAmount)}</span>
-                    </div>
-                    <div className="flex justify-between font-semibold text-base pt-2">
-                      <span>Total</span>
-                      <span>{formatPrice(totals.total)}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="terms"
-                      checked={termsAccepted}
-                      onChange={(e) => setTermsAccepted(e.target.checked)}
-                      className="rounded border-input"
+                  {placedOrderId ? (
+                    <PaymentStep
+                      order={{
+                        id: placedOrderId,
+                        orderNumber: placedOrderNumber,
+                        totalKes: totals.total,
+                      }}
+                      savedMpesaNumbers={savedMpesaNumbers}
+                      savedCards={savedCards}
+                      onPaymentComplete={handlePaymentComplete}
                     />
-                    <Label htmlFor="terms">I agree to PrintHub&apos;s Terms of Service and Privacy Policy *</Label>
-                  </div>
-
-                  {payment.method === "BANK_TRANSFER" && placedOrderId ? (
-                    <div className="space-y-4">
-                      <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
-                        <p className="font-medium">Order {placedOrderNumber} created.</p>
-                        <p className="mt-1">
-                          Transfer KSh {totals.total.toLocaleString()} to our bank account, then upload your payment proof below.
-                        </p>
-                        <p className="mt-2 text-xs">
-                          Bank: KCB Bank Kenya · Account: 1234567890 · Name: Ezana Group Limited · Reference: {placedOrderNumber}
-                        </p>
-                      </div>
-                      <FileUploader
-                        context="CUSTOMER_PAYMENT_PROOF"
-                        accept={["image/jpeg", "image/png", "application/pdf"]}
-                        maxSizeMB={10}
-                        maxFiles={1}
-                        orderId={placedOrderId}
-                        label="Upload transfer screenshot or receipt"
-                        hint="Screenshot or PDF of your M-Pesa or bank transfer confirmation"
-                      />
-                      <Button
-                        className="w-full bg-primary hover:bg-primary/90"
-                        onClick={() => {
-                          useCartStore.getState().clearCart();
-                          resetCheckout();
-                          router.push(`/order-confirmation/${placedOrderId}`);
-                        }}
-                      >
-                        Done — View order
-                      </Button>
-                    </div>
                   ) : (
                     <>
+                      <div>
+                        <h3 className="font-medium text-sm text-muted-foreground mb-2">Items</h3>
+                        <ul className="space-y-2">
+                          {items.map((item) => (
+                            <li
+                              key={isCatalogueCartItem(item) ? `cat:${item.catalogueItemId}:${item.materialCode}:${item.colourHex}` : `shop:${item.productId}:${item.variantId ?? ""}`}
+                              className="flex justify-between text-sm"
+                            >
+                              <span>{item.name} × {item.quantity}</span>
+                              <span>{formatPrice(item.unitPrice * item.quantity)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        <Link href="/cart" className="text-sm text-primary hover:underline mt-1 inline-block">
+                          Edit items →
+                        </Link>
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-sm text-muted-foreground mb-1">Deliver to</h3>
+                        <p className="text-sm">
+                          {contact.firstName} {contact.lastName}<br />
+                          {delivery.street}, {delivery.area}, {delivery.county}<br />
+                          {contact.phone}
+                        </p>
+                        <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setStep(2)}>
+                          Edit →
+                        </Button>
+                      </div>
+                      <div className="border-t pt-4 space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>Subtotal</span>
+                          <span>{formatPrice(totals.subtotalInclVat)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Shipping</span>
+                          <span>{formatPrice(shippingFee)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>VAT (16%, included)</span>
+                          <span>{formatPrice(totals.vatAmount)}</span>
+                        </div>
+                        <div className="flex justify-between font-semibold text-base pt-2">
+                          <span>Total</span>
+                          <span>{formatPrice(totals.total)}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="terms"
+                          checked={termsAccepted}
+                          onChange={(e) => setTermsAccepted(e.target.checked)}
+                          className="rounded border-input"
+                        />
+                        <Label htmlFor="terms">I agree to PrintHub&apos;s Terms of Service and Privacy Policy *</Label>
+                      </div>
                       <Button
                         className="w-full bg-primary hover:bg-primary/90 text-base py-6"
                         onClick={handleCreateOrder}
@@ -764,9 +630,7 @@ export default function CheckoutPage() {
                         {placingOrder ? "Creating order…" : `Place order — ${formatPrice(totals.total)}`}
                       </Button>
                       <p className="text-xs text-muted-foreground">
-                        {payment.method === "BANK_TRANSFER"
-                          ? "By placing your order you agree to our terms. You will then upload your bank transfer proof."
-                          : "By placing your order you agree to our terms. Your M-Pesa number will receive a payment prompt."}
+                        By placing your order you agree to our terms. You will then choose how to pay (M-Pesa, Paybill, Card, or Pay on Pickup).
                       </p>
                     </>
                   )}

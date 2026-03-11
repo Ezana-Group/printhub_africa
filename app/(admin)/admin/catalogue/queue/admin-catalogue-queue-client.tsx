@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CheckCircle, XCircle, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
 
@@ -43,13 +42,6 @@ export function AdminCatalogueQueueClient({ className, initialItems }: AdminCata
       .catch(() => setData({ pendingReview: [] }))
       .finally(() => setLoading(false));
   }, [initialItems]);
-
-  const refetch = () => {
-    fetch("/api/admin/catalogue/queue")
-      .then((r) => r.json())
-      .then(setData)
-      .catch(() => setData({ pendingReview: [] }));
-  };
 
   const approve = async (id: string) => {
     const res = await fetch(`/api/admin/catalogue/${id}/approve`, { method: "POST" });

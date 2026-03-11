@@ -31,6 +31,9 @@ export default async function AdminOrderDetailPage({
 
   const serialized = {
     ...order,
+    paymentMethod: order.paymentMethod ?? null,
+    paymentStatus: order.paymentStatus ?? null,
+    pickupCode: order.pickupCode ?? null,
     total: order.total.toString(),
     subtotal: order.subtotal.toString(),
     tax: order.tax.toString(),

@@ -57,9 +57,11 @@ model User {
   supportTickets   SupportTicket[]
   ticketMessages   TicketMessage[]
   auditLogs        AuditLog[]
-  savedAddresses   SavedAddress[]
-  referralCodes    ReferralCode[]
-  loyaltyAccount   LoyaltyAccount?
+  savedAddresses     SavedAddress[]
+  savedMpesaNumbers  SavedMpesaNumber[]
+  savedCards         SavedCard[]
+  referralCodes      ReferralCode[]
+  loyaltyAccount     LoyaltyAccount?
   userNotificationPrefs UserNotificationPrefs?
   userPermissions     UserPermission[]
   performedByMovements ThreeDConsumableMovement[]
@@ -496,6 +498,11 @@ model Order {
   deliveredAt    DateTime?
   paidAt         DateTime?
 
+  // Payment method and status (shop orders)
+  paymentMethod  String?   // MPESA_STK | MPESA_PAYBILL | MPESA_TILL | CARD_PESAPAL | CARD_FLUTTERWAVE | CASH_ON_PICKUP | BANK_TRANSFER
+  paymentStatus  String?   // PENDING | PROCESSING | AWAITING_CONFIRMATION | CONFIRMED | FAILED | REFUNDED | CANCELLED
+  pickupCode     String?   // 4-digit code for pay-on-pickup
+
   items              OrderItem[]
   timeline           OrderTimeline[]
   trackingEvents     OrderTrackingEvent[]
@@ -591,13 +598,17 @@ enum PaymentProvider {
   FLUTTERWAVE
   STRIPE
   BANK_TRANSFER
+  CASH_ON_PICKUP
 }
 
 enum PaymentStatus {
   PENDING
+  PROCESSING
+  AWAITING_CONFIRMATION
   COMPLETED
   FAILED
   REFUNDED
+  CANCELLED
 }
 
 model Payment {
@@ -613,12 +624,68 @@ model Payment {
   providerResponse      Json?
   paidAt                DateTime?
   createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  // M-Pesa STK
+  mpesaCheckoutId       String?
+  mpesaReceiptNo        String?
+  mpesaPhone            String?
+
+  // Manual Paybill/Till
+  paybillNumber         String?
+  tillNumber            String?
+  manualReference       String?
+  manualVerifiedBy      String?
+  manualVerifiedAt      DateTime?
+  proofFileId           String?
+
+  // Card (Pesapal)
+  pesapalRef            String?
+  pesapalStatus         String?
+
+  // Pay on Pickup
+  pickupConfirmedBy     String?
+  pickupConfirmedAt     DateTime?
+  pickupNotes           String?
+
+  failureReason         String?
+  attempts              Int             @default(1)
+  ipAddress             String?
 
   mpesaTransaction MpesaTransaction?
   invoices         Invoice[]
 
   @@index([orderId])
   @@index([status])
+}
+
+model SavedMpesaNumber {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone     String   // +254XXXXXXXXX
+  label     String?
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, phone])
+  @@index([userId])
+}
+
+model SavedCard {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pesapalToken  String
+  last4         String
+  brand         String
+  expiryMonth   Int
+  expiryYear    Int
+  holderName    String?
+  isDefault     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
 }
 
 model MpesaTransaction {

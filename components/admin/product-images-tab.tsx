@@ -66,6 +66,8 @@ export function ProductImagesTab({
     return () => {
       cancelled = true;
     };
+    // Only re-run when productId changes; initialImages is used as fallback when API returns empty
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId]);
 
   const setMain = (index: number) => {

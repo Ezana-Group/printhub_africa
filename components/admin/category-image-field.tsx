@@ -11,7 +11,6 @@ function getPublicUrl(file: { publicUrl?: string; storageKey: string }): string 
 }
 
 export function CategoryImageField({
-  categoryId,
   currentImageUrl,
   onChange,
 }: {

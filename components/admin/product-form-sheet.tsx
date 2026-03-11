@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import type { ProductRow } from "@/components/admin/products-admin-client";
-import { ProductImagesTab, type ProductImage } from "@/components/admin/product-images-tab";
+import { ProductImagesTab } from "@/components/admin/product-images-tab";
 
 type ProductType = "READYMADE_3D" | "LARGE_FORMAT" | "CUSTOM";
 

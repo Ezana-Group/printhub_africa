@@ -52,8 +52,10 @@ export async function POST(req: Request) {
         provider: "MPESA",
         amount: order.total,
         currency: "KES",
-        status: "PENDING",
+        status: "PROCESSING",
         reference: order.orderNumber,
+        mpesaCheckoutId: result.CheckoutRequestID,
+        mpesaPhone: phone,
       },
     });
 
@@ -63,6 +65,14 @@ export async function POST(req: Request) {
         phoneNumber: phone,
         merchantRequestId: result.MerchantRequestID,
         checkoutRequestId: result.CheckoutRequestID,
+      },
+    });
+
+    await prisma.order.update({
+      where: { id: order.id },
+      data: {
+        paymentMethod: "MPESA_STK",
+        paymentStatus: "PROCESSING",
       },
     });
 
