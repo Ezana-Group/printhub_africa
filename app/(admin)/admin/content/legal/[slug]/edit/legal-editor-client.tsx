@@ -1,12 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, ExternalLink, FileCode2, History, RotateCcw, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  ExternalLink,
+  FileCode2,
+  History,
+  RotateCcw,
+  XCircle,
+  Type,
+  Heading2,
+  Heading3,
+  Link2,
+  List,
+  ListOrdered,
+  Bold,
+  Italic,
+  Table2,
+  Eye,
+} from "lucide-react";
 
 type HistoryItem = {
   id: string;
@@ -39,6 +56,70 @@ export function LegalPageEditorClient({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<"saved" | "error" | null>(null);
   const [tab, setTab] = useState<"edit" | "preview">("edit");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const cursorAfterInsertRef = useRef<number | null>(null);
+
+  // Restore cursor after content update (e.g. after toolbar insert)
+  useEffect(() => {
+    const ta = textareaRef.current;
+    const pos = cursorAfterInsertRef.current;
+    if (ta && pos != null) {
+      ta.focus();
+      ta.setSelectionRange(pos, pos);
+      cursorAfterInsertRef.current = null;
+    }
+  }, [content]);
+
+  const insertAtCursor = (openTag: string, closeTag: string = "") => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const before = content.slice(0, start);
+    const selected = content.slice(start, end);
+    const after = content.slice(end);
+    const insert = closeTag ? `${openTag}${selected}${closeTag}` : openTag;
+    const newContent = before + insert + after;
+    setContent(newContent);
+    cursorAfterInsertRef.current = start + insert.length;
+  };
+
+  const handleInsertHeading = (level: 2 | 3) => {
+    insertAtCursor(`<h${level}>`, `</h${level}>`);
+  };
+
+  const handleInsertParagraph = () => {
+    insertAtCursor("<p>", "</p>");
+  };
+
+  const handleInsertLink = () => {
+    const url = window.prompt("Enter URL (e.g. /privacy-policy or https://...):", "https://");
+    if (url == null || !url.trim()) return;
+    const escaped = url.trim().replace(/"/g, "&quot;");
+    insertAtCursor(`<a href="${escaped}">`, "</a>");
+  };
+
+  const handleInsertList = (ordered: boolean) => {
+    const tag = ordered ? "ol" : "ul";
+    insertAtCursor(`<${tag}>\n  <li>`, `</li>\n</${tag}>`);
+  };
+
+  const handleInsertBold = () => {
+    insertAtCursor("<strong>", "</strong>");
+  };
+
+  const handleInsertItalic = () => {
+    insertAtCursor("<em>", "</em>");
+  };
+
+  const handleInsertTable = () => {
+    const html = `<table>
+  <tr><th>Column 1</th><th>Column 2</th><th>Column 3</th></tr>
+  <tr><td>Cell</td><td>Cell</td><td>Cell</td></tr>
+  <tr><td>Cell</td><td>Cell</td><td>Cell</td></tr>
+</table>`;
+    insertAtCursor(html, "");
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -83,13 +164,25 @@ export function LegalPageEditorClient({
     }
   };
 
+  const toolbarButtons = [
+    { label: "Heading 2", icon: Heading2, onClick: () => handleInsertHeading(2) },
+    { label: "Heading 3", icon: Heading3, onClick: () => handleInsertHeading(3) },
+    { label: "Paragraph", icon: Type, onClick: handleInsertParagraph },
+    { label: "Link", icon: Link2, onClick: handleInsertLink },
+    { label: "Bullet list", icon: List, onClick: () => handleInsertList(false) },
+    { label: "Numbered list", icon: ListOrdered, onClick: () => handleInsertList(true) },
+    { label: "Bold", icon: Bold, onClick: handleInsertBold },
+    { label: "Italic", icon: Italic, onClick: handleInsertItalic },
+    { label: "Table", icon: Table2, onClick: handleInsertTable },
+  ];
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       {/* Main content area */}
       <div className="lg:col-span-2 space-y-4">
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           {/* Tab bar */}
-          <div className="flex border-b border-slate-200 bg-slate-50/80">
+          <div className="flex items-center border-b border-slate-200 bg-slate-50/80">
             <button
               type="button"
               onClick={() => setTab("edit")}
@@ -100,7 +193,7 @@ export function LegalPageEditorClient({
               }`}
             >
               <FileCode2 className="h-4 w-4" />
-              Edit HTML
+              Edit
             </button>
             <button
               type="button"
@@ -111,6 +204,7 @@ export function LegalPageEditorClient({
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
+              <Eye className="h-4 w-4" />
               Preview
             </button>
             <a
@@ -126,25 +220,41 @@ export function LegalPageEditorClient({
 
           <div className="p-4">
             {tab === "edit" ? (
-              <>
-                <p className="text-xs text-slate-500 mb-3">
-                  Use HTML for structure: <code className="bg-slate-100 px-1 rounded">&lt;h2&gt;</code>,{" "}
-                  <code className="bg-slate-100 px-1 rounded">&lt;p&gt;</code>,{" "}
-                  <code className="bg-slate-100 px-1 rounded">&lt;ul&gt;</code>,{" "}
-                  <code className="bg-slate-100 px-1 rounded">&lt;table&gt;</code>. Tables will look clean on the live page.
+              <div className="space-y-3">
+                {/* Formatting toolbar */}
+                <div className="flex flex-wrap items-center gap-1 p-2 rounded-lg bg-slate-50 border border-slate-200">
+                  <span className="text-xs font-medium text-slate-500 mr-2 shrink-0">Insert:</span>
+                  {toolbarButtons.map(({ label, icon: Icon, onClick }) => (
+                    <Button
+                      key={label}
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2 text-slate-600 hover:text-slate-900 hover:bg-slate-200/80"
+                      onClick={onClick}
+                      title={label}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span className="sr-only">{label}</span>
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-xs text-slate-500">
+                  Use the buttons above to insert headings, links, lists, and tables. Place the cursor where you want to insert, or select text to wrap (e.g. bold). You can also type HTML directly.
                 </p>
                 <Textarea
+                  ref={textareaRef}
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   className="min-h-[420px] font-mono text-sm leading-relaxed rounded-lg border-slate-200 bg-slate-50/50 focus:bg-white placeholder:text-slate-400"
                   placeholder="<h2>Section title</h2>&#10;<p>Paragraph text...</p>"
                   spellCheck={false}
                 />
-              </>
+              </div>
             ) : (
               <div className="min-h-[420px] rounded-lg border border-slate-200 bg-slate-50/30 p-6 overflow-auto">
                 <div
-                  className="prose prose-slate max-w-none prose-headings:font-display prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-table:border-collapse prose-table:w-full prose-th:border prose-th:border-slate-200 prose-th:bg-slate-50 prose-th:px-4 prose-th:py-3 prose-td:border prose-td:border-slate-200 prose-td:px-4 prose-td:py-3"
+                  className="prose prose-slate max-w-none prose-headings:font-display prose-h2:text-lg prose-h2:mt-8 prose-h2:mb-3 prose-h3:mt-6 prose-h3:mb-2 prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-table:border-collapse prose-table:w-full prose-th:border prose-th:border-slate-200 prose-th:bg-slate-50 prose-th:px-4 prose-th:py-3 prose-td:border prose-td:border-slate-200 prose-td:px-4 prose-td:py-3"
                   dangerouslySetInnerHTML={{ __html: content || "<p class='text-slate-400'>Nothing to preview yet.</p>" }}
                 />
               </div>
@@ -155,11 +265,8 @@ export function LegalPageEditorClient({
 
       {/* Sidebar */}
       <div className="space-y-6">
-        {/* Page settings card */}
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="font-semibold text-slate-900 flex items-center gap-2 mb-4">
-            Page settings
-          </h3>
+          <h3 className="font-semibold text-slate-900 mb-4">Page settings</h3>
           <div className="space-y-4">
             <div>
               <Label className="text-slate-600">Title</Label>
@@ -224,7 +331,6 @@ export function LegalPageEditorClient({
           </div>
         </div>
 
-        {/* Version history card */}
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <h3 className="font-semibold text-slate-900 flex items-center gap-2 mb-3">
             <History className="h-4 w-4" />
