@@ -133,8 +133,16 @@ export function AdminCatalogueClient() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-500">
-                    No catalogue items yet. Add items manually or import from Printables.
+                  <td colSpan={7} className="p-8 text-center">
+                    <p className="text-slate-500 mb-4">No catalogue items yet. Add items manually or import from Printables.</p>
+                    <div className="flex items-center justify-center gap-3">
+                      <Button asChild variant="default" size="sm" className="rounded-lg">
+                        <Link href="/admin/catalogue/new">Add item manually</Link>
+                      </Button>
+                      <Button asChild variant="outline" size="sm" className="rounded-lg">
+                        <Link href="/admin/catalogue/import">Import from Printables</Link>
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               )}
