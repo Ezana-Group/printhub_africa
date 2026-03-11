@@ -68,22 +68,23 @@ export function CatalogueImportForm({ categories }: CatalogueImportFormProps) {
     }
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/catalogue", {
+      const res = await fetch("/api/admin/catalogue/import/printables", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: displayName,
+          url: trimmedUrl,
           categoryId,
-          sourceType: "PRINTABLES",
-          sourceUrl: trimmedUrl,
-          shortDescription: undefined,
-          description: "",
+          nameOverride: nameOverride.trim() || undefined,
         }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data?.error?.message ?? data?.error ?? "Failed to create item");
+        setError(data?.error ?? data?.details ?? "Failed to import");
         return;
+      }
+      if (data.photosImported != null && data.message) {
+        setError(null);
+        // optional: show success message
       }
       router.push("/admin/catalogue");
       router.refresh();

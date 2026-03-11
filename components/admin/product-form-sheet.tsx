@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import type { ProductRow } from "@/components/admin/products-admin-client";
+import { ProductImagesTab, type ProductImage } from "@/components/admin/product-images-tab";
 
 type ProductType = "READYMADE_3D" | "LARGE_FORMAT" | "CUSTOM";
 
@@ -103,8 +104,8 @@ export function ProductFormSheet({
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const images = imagesStr.trim() ? imagesStr.split(/\n/).map((s) => s.trim()).filter(Boolean) : [];
-    const payload = {
+    const images = isEdit ? undefined : (imagesStr.trim() ? imagesStr.split(/\n/).map((s) => s.trim()).filter(Boolean) : []);
+    const payload: Record<string, unknown> = {
       name,
       slug: slug || undefined,
       description: description || undefined,
@@ -116,11 +117,11 @@ export function ProductFormSheet({
       sku: sku || undefined,
       stock: parseInt(stock, 10) || 0,
       minOrderQty: 1,
-      images,
       isActive,
       isFeatured,
       metaTitle: metaTitle || undefined,
       metaDescription: metaDescription || undefined,
+      ...(images != null && { images }),
     };
     try {
       if (isEdit && product && product.id !== "new") {
@@ -321,17 +322,16 @@ export function ProductFormSheet({
             )}
 
             {activeTab === "images" && (
-              <div>
-                <Label>Image URLs (one per line)</Label>
-                <Textarea
-                  value={imagesStr}
-                  onChange={(e) => setImagesStr(e.target.value)}
-                  rows={5}
-                  placeholder="https://..."
-                  className="mt-1 font-mono text-sm"
-                />
-                <p className="text-xs text-[#6B7280] mt-1">First URL = featured image. Max 8, JPG/PNG/WEBP.</p>
-              </div>
+              <ProductImagesTab
+                productId={isEdit && product && product.id !== "new" ? product.id : ""}
+                initialImages={(Array.isArray(product?.images) ? product.images : []).map((url, i) => ({
+                  url,
+                  isMain: i === 0,
+                  sortOrder: i,
+                  source: "url" as const,
+                }))}
+                onSave={() => {}}
+              />
             )}
 
             {activeTab === "seo" && (

@@ -10,10 +10,11 @@ export async function GET() {
   const [pending, importQueue] = await Promise.all([
     prisma.catalogueItem.findMany({
       where: { status: CatalogueStatus.PENDING_REVIEW },
-      orderBy: { createdAt: "asc" },
+      orderBy: { updatedAt: "asc" },
       include: {
         category: { select: { name: true, slug: true } },
-        photos: { where: { isPrimary: true }, take: 1 },
+        photos: { orderBy: { sortOrder: "asc" } },
+        availableMaterials: true,
       },
     }),
     prisma.catalogueImportQueue.findMany({
@@ -26,5 +27,6 @@ export async function GET() {
   return NextResponse.json({
     pendingReview: pending,
     importQueue,
+    count: pending.length,
   });
 }

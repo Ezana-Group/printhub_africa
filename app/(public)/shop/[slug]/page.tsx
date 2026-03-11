@@ -3,6 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getBusinessPublic } from "@/lib/business-public";
 import { AddToCartButton } from "./add-to-cart-button";
+import { ProductImageGallery } from "@/components/shop/product-image-gallery";
 import { formatPrice } from "@/lib/utils";
 
 const DEFAULT_WHATSAPP = "254700000000";
@@ -33,10 +34,15 @@ export default async function ProductPage({ params }: Props) {
 
   const productWithRelations = product as typeof product & {
     category?: { name: string; slug: string };
-    productImages?: { url: string; isPrimary: boolean }[];
+    productImages?: { id: string; url: string; altText: string | null; isPrimary: boolean; sortOrder: number }[];
     variants: { id: string; name: string; price: { toNumber?: () => number }; stock: number }[];
   };
-  const primaryImage = product.images?.[0] ?? productWithRelations.productImages?.find((i) => i.isPrimary)?.url ?? productWithRelations.productImages?.[0]?.url;
+  const dbImages = productWithRelations.productImages ?? [];
+  const galleryImages =
+    dbImages.length > 0
+      ? dbImages.map((img) => ({ id: img.id, url: img.url, altText: img.altText, isPrimary: img.isPrimary }))
+      : (product.images ?? []).map((url, i) => ({ id: undefined, url, altText: null as string | null, isPrimary: i === 0 }));
+  const primaryImage = product.images?.[0] ?? galleryImages.find((i) => i.isPrimary)?.url ?? galleryImages[0]?.url;
   const basePrice = Number(product.basePrice);
   const comparePrice = product.comparePrice != null ? Number(product.comparePrice) : null;
 
@@ -55,13 +61,8 @@ export default async function ProductPage({ params }: Props) {
       </nav>
 
       <div className="grid gap-8 lg:grid-cols-2">
-        <div className="aspect-square max-w-lg overflow-hidden rounded-2xl bg-slate-100">
-          {primaryImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={primaryImage} alt={product.name} className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full items-center justify-center text-slate-400">No image</div>
-          )}
+        <div className="max-w-lg">
+          <ProductImageGallery images={galleryImages} />
         </div>
 
         <div>

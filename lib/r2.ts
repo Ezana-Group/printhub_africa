@@ -165,3 +165,24 @@ export async function getObjectBuffer(
     return null;
   }
 }
+
+/** Upload a buffer to R2 (e.g. server-side import from Printables). */
+export async function putObjectBuffer(params: {
+  bucket: "private" | "public";
+  key: string;
+  body: Buffer;
+  contentType: string;
+}): Promise<void> {
+  const client = getClient();
+  if (!client) throw new Error("R2 not configured");
+  const b =
+    params.bucket === "private" ? PRIVATE_BUCKET : PUBLIC_BUCKET;
+  await client.send(
+    new PutObjectCommand({
+      Bucket: b,
+      Key: params.key,
+      Body: params.body,
+      ContentType: params.contentType,
+    })
+  );
+}

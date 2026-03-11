@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { FileUploader } from "@/components/upload/FileUploader";
+import { ProductImagesTab } from "@/components/admin/product-images-tab";
 
 type ProductType = "READYMADE_3D" | "LARGE_FORMAT" | "CUSTOM";
 
@@ -83,10 +85,10 @@ export function ProductForm({ categories, product }: ProductFormProps) {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const images = imagesStr.trim() ? imagesStr.split(/\n/).map((s) => s.trim()).filter(Boolean) : [];
+    const images = isEdit ? undefined : (imagesStr.trim() ? imagesStr.split(/\n/).map((s) => s.trim()).filter(Boolean) : []);
     const materials = materialsStr.trim() ? materialsStr.split(",").map((s) => s.trim()).filter(Boolean) : [];
     const colors = colorsStr.trim() ? colorsStr.split(",").map((s) => s.trim()).filter(Boolean) : [];
-    const payload = {
+    const payload: Record<string, unknown> = {
       name,
       slug: slug || undefined,
       description: description || undefined,
@@ -99,13 +101,13 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       stock: parseInt(stock, 10) || 0,
       minOrderQty: parseInt(minOrderQty, 10) || 1,
       maxOrderQty: maxOrderQty ? parseInt(maxOrderQty, 10) : undefined,
-      images,
       materials,
       colors,
       isActive,
       isFeatured,
       metaTitle: metaTitle || undefined,
       metaDescription: metaDescription || undefined,
+      ...(images != null && { images }),
     };
     try {
       if (isEdit) {
@@ -311,17 +313,48 @@ export function ProductForm({ categories, product }: ProductFormProps) {
           <h2 className="font-semibold">Media & attributes</h2>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="images">Image URLs (one per line)</Label>
-            <Textarea
-              id="images"
-              value={imagesStr}
-              onChange={(e) => setImagesStr(e.target.value)}
-              rows={3}
-              placeholder="https://..."
-              className="mt-1 font-mono text-sm"
+          {isEdit && product?.id ? (
+            <ProductImagesTab
+              productId={product.id}
+              initialImages={(product.images ?? []).map((url, i) => ({
+                url,
+                isMain: i === 0,
+                sortOrder: i,
+                source: "url" as const,
+              }))}
             />
-          </div>
+          ) : (
+            <>
+              <div>
+                <Label className="mb-1 block">Upload images</Label>
+                <p className="text-xs text-muted-foreground mb-2">JPEG, PNG, WebP · Max 8 · First = featured</p>
+                <FileUploader
+                  context="ADMIN_PRODUCT_IMAGE"
+                  accept={["image/jpeg", "image/png", "image/webp"]}
+                  maxSizeMB={20}
+                  maxFiles={8}
+                  hint="Uploaded images will be added below. You can also paste URLs."
+                  onUploadComplete={(files) => {
+                    const base = typeof process !== "undefined" ? process.env.NEXT_PUBLIC_R2_PUBLIC_URL : "";
+                    const urls = files.map((f) => f.publicUrl ?? (base && f.storageKey ? `${base}/${f.storageKey}` : f.storageKey));
+                    setImagesStr((prev) => (prev ? `${prev}\n${urls.join("\n")}` : urls.join("\n")));
+                  }}
+                />
+              </div>
+              <div>
+                <Label htmlFor="images">Image URLs (one per line)</Label>
+                <Textarea
+                  id="images"
+                  value={imagesStr}
+                  onChange={(e) => setImagesStr(e.target.value)}
+                  rows={3}
+                  placeholder="https://... or upload above"
+                  className="mt-1 font-mono text-sm"
+                />
+                <p className="text-xs text-muted-foreground mt-1">First URL = featured. Max 8. JPG/PNG/WEBP.</p>
+              </div>
+            </>
+          )}
           <div>
             <Label htmlFor="materials">Materials (comma-separated)</Label>
             <Input

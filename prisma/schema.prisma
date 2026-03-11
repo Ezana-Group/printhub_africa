@@ -210,13 +210,15 @@ model ProductVariant {
 }
 
 model ProductImage {
-  id        String  @id @default(cuid())
-  productId String
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  url       String
-  altText   String?
-  sortOrder Int     @default(0)
-  isPrimary Boolean @default(false)
+  id         String  @id @default(cuid())
+  productId  String
+  product    Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url        String
+  storageKey String?
+  uploadId   String?
+  altText    String?
+  sortOrder  Int     @default(0)
+  isPrimary  Boolean @default(false)
 
   @@index([productId])
 }
@@ -1614,6 +1616,10 @@ model CatalogueItem {
   printTimeHours   Float?
   metaTitle        String?
   metaDescription  String?
+  approvedBy       String?
+  approvedAt       DateTime?
+  rejectedBy       String?
+  rejectionReason  String?       @db.Text
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 
@@ -1626,12 +1632,15 @@ model CatalogueItem {
 }
 
 model CatalogueItemPhoto {
-  id             String        @id @default(cuid())
+  id              String        @id @default(cuid())
   catalogueItemId String
-  catalogueItem  CatalogueItem @relation(fields: [catalogueItemId], references: [id], onDelete: Cascade)
-  url            String
-  isPrimary      Boolean       @default(false)
-  sortOrder      Int           @default(0)
+  catalogueItem   CatalogueItem  @relation(fields: [catalogueItemId], references: [id], onDelete: Cascade)
+  url             String
+  storageKey      String?
+  altText         String?
+  sortOrder       Int            @default(0)
+  isPrimary       Boolean        @default(false)
+  sourceUrl       String?
 
   @@index([catalogueItemId])
 }

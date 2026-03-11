@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/admin-api-guard";
 import { z } from "zod";
-import { CatalogueStatus, CatalogueLicense } from "@prisma/client";
+import { CatalogueLicense } from "@prisma/client";
 
 export async function GET(
   _req: NextRequest,
@@ -97,14 +97,13 @@ export async function DELETE(
   if (auth instanceof NextResponse) return auth;
   const { id } = await params;
   try {
-    await prisma.catalogueItem.update({
+    await prisma.catalogueItem.delete({
       where: { id },
-      data: { status: CatalogueStatus.RETIRED },
     });
     return NextResponse.json({ ok: true });
   } catch (e) {
     if ((e as { code?: string })?.code === "P2025") return NextResponse.json({ error: "Not found" }, { status: 404 });
-    console.error("Retire catalogue item error:", e);
-    return NextResponse.json({ error: "Failed to retire item" }, { status: 500 });
+    console.error("Delete catalogue item error:", e);
+    return NextResponse.json({ error: "Failed to delete item" }, { status: 500 });
   }
 }

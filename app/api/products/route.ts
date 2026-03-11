@@ -66,26 +66,32 @@ export async function GET(req: NextRequest) {
         take: limit,
         include: {
           category: { select: { name: true, slug: true } },
-          productImages: { where: { isPrimary: true }, take: 1 },
+          productImages: { orderBy: { sortOrder: "asc" } },
         },
       }),
       prisma.product.count({ where }),
     ]);
 
-    const items = products.map((p) => ({
-      id: p.id,
-      name: p.name,
-      slug: p.slug,
-      shortDescription: p.shortDescription,
-      category: p.category,
-      productType: p.productType,
-      image: p.images?.[0] ?? p.productImages?.[0]?.url ?? null,
-      basePrice: Number(p.basePrice),
-      comparePrice: p.comparePrice != null ? Number(p.comparePrice) : null,
-      sku: p.sku,
-      stock: p.stock,
-      isFeatured: p.isFeatured,
-    }));
+    const items = products.map((p) => {
+      const imgs = p.productImages ?? [];
+      const featured = imgs.find((i) => i.isPrimary) ?? imgs[0];
+      const image = p.images?.[0] ?? featured?.url ?? null;
+      return {
+        id: p.id,
+        name: p.name,
+        slug: p.slug,
+        shortDescription: p.shortDescription,
+        category: p.category,
+        productType: p.productType,
+        image,
+        imagesCount: imgs.length,
+        basePrice: Number(p.basePrice),
+        comparePrice: p.comparePrice != null ? Number(p.comparePrice) : null,
+        sku: p.sku,
+        stock: p.stock,
+        isFeatured: p.isFeatured,
+      };
+    });
 
     return NextResponse.json({ items, total, page, limit, totalPages: Math.ceil(total / limit) });
   } catch (e) {

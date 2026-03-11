@@ -18,6 +18,7 @@ interface ProductItem {
   category: { name: string; slug: string };
   productType: string;
   image: string | null;
+  imagesCount?: number;
   basePrice: number;
   comparePrice: number | null;
   sku: string | null;
@@ -165,6 +166,7 @@ export function ShopContent() {
                     name={p.name}
                     slug={p.slug}
                     image={p.image}
+                    imagesCount={p.imagesCount}
                     basePrice={p.basePrice}
                     comparePrice={p.comparePrice}
                     category={p.category}

@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { CategoryImageField } from "@/components/admin/category-image-field";
 
 export type CategoryForForm = {
   id: string;
@@ -233,28 +234,14 @@ export function CategoryFormSheet({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="cat-image">Category image</Label>
-            <Input
-              id="cat-image"
-              type="url"
-              value={image}
-              onChange={(e) => setImage(e.target.value)}
-              placeholder="https://..."
+            <CategoryImageField
+              categoryId={category?.id}
+              currentImageUrl={image || null}
+              onChange={(url) => setImage(url ?? "")}
             />
             <p className="text-xs text-muted-foreground">
-              Shown on shop page cards. Recommended: 800×600px. Paste image URL.
+              Shown on shop page cards. Recommended: 800×600px or 1200×630px. Upload or paste URL.
             </p>
-            {image && (
-              <div className="relative mt-2 h-24 w-32 overflow-hidden rounded border bg-muted">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={image}
-                  alt="Preview"
-                  className="h-full w-full object-cover"
-                  onError={() => setImage("")}
-                />
-              </div>
-            )}
           </div>
 
           <div className="border-t pt-4">

@@ -12,13 +12,14 @@ interface ProductCardProps {
   name: string;
   slug: string;
   image: string | null;
+  imagesCount?: number;
   basePrice: number;
   comparePrice: number | null;
   category?: { name: string; slug: string };
   stock: number;
 }
 
-export function ProductCard({ id, name, slug, image, basePrice, comparePrice, category, stock }: ProductCardProps) {
+export function ProductCard({ id, name, slug, image, imagesCount, basePrice, comparePrice, category, stock }: ProductCardProps) {
   const addItem = useCartStore((s) => s.addItem);
 
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -51,6 +52,11 @@ export function ProductCard({ id, name, slug, image, basePrice, comparePrice, ca
             className="object-cover opacity-60"
             sizes="(max-width:768px) 100vw, 33vw"
           />
+        )}
+        {typeof imagesCount === "number" && imagesCount > 1 && (
+          <span className="absolute bottom-2 right-2 rounded-md bg-black/50 px-1.5 py-0.5 text-[10px] text-white">
+            1/{imagesCount}
+          </span>
         )}
         {category && (
           <span className="absolute left-2 top-2 rounded-lg bg-white/90 px-2 py-0.5 text-xs font-medium text-slate-700">

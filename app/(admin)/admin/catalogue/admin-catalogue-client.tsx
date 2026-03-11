@@ -1,11 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  MoreHorizontal,
+  Pencil,
+  Image as ImageIcon,
+  Box,
+  Send,
+  CheckCircle,
+  Pause,
+  Play,
+  ExternalLink,
+  Trash2,
+} from "lucide-react";
 
 interface CatalogueItemRow {
   id: string;
@@ -20,12 +40,21 @@ interface CatalogueItemRow {
 }
 
 export function AdminCatalogueClient() {
+  const router = useRouter();
   const [data, setData] = useState<{
     items: CatalogueItemRow[];
     total: number;
     pendingReviewCount: number;
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const refetch = useCallback(() => {
+    fetch("/api/admin/catalogue?limit=50")
+      .then((r) => r.json())
+      .then(setData)
+      .catch(() => setData({ items: [], total: 0, pendingReviewCount: 0 }));
+  }, []);
 
   useEffect(() => {
     fetch("/api/admin/catalogue?limit=50")
@@ -34,6 +63,53 @@ export function AdminCatalogueClient() {
       .catch(() => setData({ items: [], total: 0, pendingReviewCount: 0 }))
       .finally(() => setLoading(false));
   }, []);
+
+  const submitForReview = async (id: string) => {
+    const res = await fetch(`/api/admin/catalogue/${id}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "PENDING_REVIEW" }),
+    });
+    if (res.ok) {
+      setToast("Submitted for review");
+      refetch();
+    } else setToast("Failed to submit");
+  };
+
+  const approveItem = async (id: string) => {
+    const res = await fetch(`/api/admin/catalogue/${id}/approve`, { method: "POST" });
+    if (res.ok) {
+      setToast("Item approved and live!");
+      refetch();
+    } else setToast("Failed to approve");
+  };
+
+  const pauseItem = async (id: string) => {
+    await fetch(`/api/admin/catalogue/${id}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "PAUSED" }),
+    });
+    refetch();
+  };
+
+  const unpauseItem = async (id: string) => {
+    await fetch(`/api/admin/catalogue/${id}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "LIVE" }),
+    });
+    refetch();
+  };
+
+  const deleteItem = async (id: string) => {
+    if (!confirm("Delete this item? This cannot be undone.")) return;
+    const res = await fetch(`/api/admin/catalogue/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setToast("Item deleted");
+      refetch();
+    } else setToast("Failed to delete");
+  };
 
   if (loading) {
     return <Skeleton className="h-64 w-full rounded-xl" />;
@@ -114,19 +190,67 @@ export function AdminCatalogueClient() {
                         </Badge>
                       </td>
                       <td className="p-3 text-right">
-                        {item.status === "LIVE" && (
-                          <Link
-                            href={`/catalogue/${item.slug}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary text-sm hover:underline mr-2"
-                          >
-                            View on site
-                          </Link>
+                        {toast && (
+                          <p className="text-xs text-green-600 mb-1">{toast}</p>
                         )}
-                        <Button variant="ghost" size="sm" className="rounded-lg" asChild>
-                          <a href={`/admin/catalogue?edit=${item.id}`}>Edit</a>
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              className="p-1.5 rounded-lg hover:bg-slate-100 transition"
+                              aria-label="Actions"
+                            >
+                              <MoreHorizontal className="w-4 h-4 text-slate-500" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-52">
+                            <DropdownMenuItem onClick={() => router.push(`/admin/catalogue/${item.id}/edit`)}>
+                              <Pencil className="w-4 h-4 mr-2" /> Edit details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => router.push(`/admin/catalogue/${item.id}/edit?tab=photos`)}>
+                              <ImageIcon className="w-4 h-4 mr-2" /> Manage photos
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => router.push(`/admin/catalogue/${item.id}/edit?tab=stl`)}>
+                              <Box className="w-4 h-4 mr-2" /> Upload STL file
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            {item.status === "DRAFT" && (
+                              <DropdownMenuItem onClick={() => submitForReview(item.id)}>
+                                <Send className="w-4 h-4 mr-2 text-blue-500" />
+                                <span className="text-blue-600 font-medium">Submit for review</span>
+                              </DropdownMenuItem>
+                            )}
+                            {item.status === "PENDING_REVIEW" && (
+                              <DropdownMenuItem onClick={() => approveItem(item.id)}>
+                                <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
+                                <span className="text-green-600 font-medium">Approve → Live</span>
+                              </DropdownMenuItem>
+                            )}
+                            {item.status === "LIVE" && (
+                              <DropdownMenuItem onClick={() => pauseItem(item.id)}>
+                                <Pause className="w-4 h-4 mr-2" /> Pause listing
+                              </DropdownMenuItem>
+                            )}
+                            {item.status === "PAUSED" && (
+                              <DropdownMenuItem onClick={() => unpauseItem(item.id)}>
+                                <Play className="w-4 h-4 mr-2" /> Resume listing
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => window.open(`/catalogue/${item.slug}`, "_blank")}
+                              disabled={item.status !== "LIVE"}
+                            >
+                              <ExternalLink className="w-4 h-4 mr-2" /> View on site
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600"
+                              onClick={() => deleteItem(item.id)}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   );
