@@ -2,7 +2,6 @@
 
 import { useCallback, useState, useRef } from "react";
 import { Upload, X, Check, AlertCircle, File, Image, Box } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 export interface FileUploaderProps {
   context: string;
@@ -147,17 +146,20 @@ export function FileUploader({
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const validateFile = (file: File): string | null => {
-    const allowed = accept.includes(file.type) || accept.includes("*/*");
-    if (!allowed) {
-      const exts = accept.map((t) => t.split("/")[1]).join(", ");
-      return `File type not allowed. Accepted: ${exts}`;
-    }
-    if (file.size > maxSizeMB * 1024 * 1024) {
-      return `File too large. Max size: ${maxSizeMB}MB`;
-    }
-    return null;
-  };
+  const validateFile = useCallback(
+    (file: File): string | null => {
+      const allowed = accept.includes(file.type) || accept.includes("*/*");
+      if (!allowed) {
+        const exts = accept.map((t) => t.split("/")[1]).join(", ");
+        return `File type not allowed. Accepted: ${exts}`;
+      }
+      if (file.size > maxSizeMB * 1024 * 1024) {
+        return `File too large. Max size: ${maxSizeMB}MB`;
+      }
+      return null;
+    },
+    [accept, maxSizeMB]
+  );
 
   const uploadFile = useCallback(
     async (file: File, fileId: string) => {
@@ -188,7 +190,7 @@ export function FileUploader({
           throw new Error(err.error ?? "Failed to get upload URL");
         }
 
-        const { uploadId, presignedUrl, storageKey, bucket } = await presignRes.json();
+        const { uploadId, presignedUrl, storageKey } = await presignRes.json();
 
         await uploadWithProgress(presignedUrl, file, (progress) =>
           updateFile({ progress: 5 + progress * 90 })
@@ -235,7 +237,7 @@ export function FileUploader({
         onUploadError?.(message);
       }
     },
-    [context, quoteId, orderId, guestEmail, files, onUploadComplete, onUploadError]
+    [context, quoteId, orderId, guestEmail, onUploadComplete, onUploadError]
   );
 
   const handleFiles = useCallback(
@@ -263,7 +265,7 @@ export function FileUploader({
         .filter((f) => f.status === "pending")
         .forEach((f) => uploadFile(f.file, f.id));
     },
-    [files, maxFiles, uploadFile]
+    [files, maxFiles, uploadFile, validateFile]
   );
 
   const removeFile = useCallback((id: string) => {

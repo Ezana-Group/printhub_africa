@@ -104,7 +104,7 @@ export default function AccountUploadsPage() {
               <div className="flex items-start gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100">
                   {u.mimeType.startsWith("image/") ? (
-                    <Image className="h-5 w-5 text-slate-500" />
+                    <Image className="h-5 w-5 text-slate-500" aria-hidden alt="" />
                   ) : /\.(stl|obj|3mf)$/i.test(u.originalName) ? (
                     <Box className="h-5 w-5 text-slate-500" />
                   ) : (

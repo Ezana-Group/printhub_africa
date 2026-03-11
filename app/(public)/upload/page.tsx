@@ -12,8 +12,8 @@ type Tab = "3d" | "large_format";
 
 export default function UploadPage() {
   const [tab, setTab] = useState<Tab>("3d");
-  const [uploaded3d, setUploaded3d] = useState<UploadedFileResult[]>([]);
-  const [uploadedLf, setUploadedLf] = useState<UploadedFileResult[]>([]);
+  const [, setUploaded3d] = useState<UploadedFileResult[]>([]);
+  const [, setUploadedLf] = useState<UploadedFileResult[]>([]);
 
   return (
     <div className="container max-w-4xl mx-auto px-4 py-12">
