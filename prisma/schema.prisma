@@ -1230,3 +1230,92 @@ model TicketMessage {
 
   @@index([ticketId])
 }
+
+// ============== CAREERS ==============
+enum JobStatus {
+  DRAFT
+  PUBLISHED
+  PAUSED
+  CLOSED
+  FILLED
+}
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERNSHIP
+  ATTACHMENT
+}
+
+enum ApplicationStatus {
+  NEW
+  REVIEWING
+  SHORTLISTED
+  INTERVIEW_SCHEDULED
+  INTERVIEWED
+  OFFER_MADE
+  HIRED
+  REJECTED
+  WITHDRAWN
+}
+
+model JobListing {
+  id                  String    @id @default(cuid())
+  title               String
+  slug                String    @unique
+  department          String
+  type                JobType
+  location            String    @default("Nairobi, Kenya")
+  isRemote            Boolean   @default(false)
+  description         String
+  responsibilities    String
+  requirements        String
+  niceToHave          String?
+  salaryMin           Int?
+  salaryMax           Int?
+  showSalary          Boolean   @default(false)
+  benefits            Json?     // array of strings
+  applicationDeadline DateTime?
+  status              JobStatus @default(DRAFT)
+  isFeatured          Boolean   @default(false)
+  sortOrder           Int       @default(0)
+  metaTitle           String?
+  metaDescription     String?
+  customQuestions     Json?
+  publishedAt         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  applications JobApplication[]
+
+  @@index([status])
+  @@index([slug])
+}
+
+model JobApplication {
+  id             String            @id @default(cuid())
+  jobListingId   String
+  jobListing     JobListing        @relation(fields: [jobListingId], references: [id], onDelete: Cascade)
+  firstName      String
+  lastName       String
+  email          String
+  phone          String?
+  location       String?
+  coverLetter    String?
+  linkedinUrl    String?
+  portfolioUrl   String?
+  cvFileUrl      String?
+  cvFileName     String?
+  answers        Json?
+  source         String?
+  referredBy     String?
+  status         ApplicationStatus @default(NEW)
+  internalNotes  String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([jobListingId])
+  @@index([status])
+  @@index([email])
+}
