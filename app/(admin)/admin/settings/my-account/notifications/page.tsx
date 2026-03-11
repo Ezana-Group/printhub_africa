@@ -1,5 +1,4 @@
 import { SectionCard } from "@/components/settings/section-card";
-import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { SettingsSaveButton } from "@/components/settings/settings-save-button";

@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Plus, MoreHorizontal, ExternalLink, Pencil, Copy, FileText } from "lucide-react";
+import { Plus, MoreHorizontal, ExternalLink, Pencil, FileText } from "lucide-react";
 import { JobListingForm } from "./job-listing-form";
 import type { JobListing, JobApplication, JobStatus, ApplicationStatus } from "@prisma/client";
 
@@ -73,6 +73,7 @@ export function CareersAdminClient({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [listings, setListings] = useState(initialListings);
   const [applicationsList, setApplicationsList] = useState(initialApplications);
+  void setApplicationsList; // reserved for refetch after mutations
   const applications = filterJobId
     ? applicationsList.filter((a) => a.jobListingId === filterJobId)
     : applicationsList;
@@ -84,14 +85,6 @@ export function CareersAdminClient({
     if (res.ok) {
       const data = await res.json();
       setListings(data);
-    }
-  }
-
-  async function refetchApplications() {
-    const res = await fetch("/api/admin/careers/applications");
-    if (res.ok) {
-      const data = await res.json();
-      setApplicationsList(data);
     }
   }
 

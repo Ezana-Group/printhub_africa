@@ -3,10 +3,18 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { sendPasswordResetEmail } from "@/lib/email";
 import { generateToken, getResetPasswordExpiry } from "@/lib/tokens";
+import { rateLimit, getRateLimitClientIp } from "@/lib/rate-limit";
 
 const schema = z.object({ email: z.string().email() });
 
+const FORGOT_PASSWORD_LIMIT = 3;
+const FORGOT_PASSWORD_WINDOW_MS = 60 * 1000;
+
 export async function POST(req: Request) {
+  const ip = getRateLimitClientIp(req) ?? "unknown";
+  if (!rateLimit(`forgot-password:${ip}`, FORGOT_PASSWORD_LIMIT, FORGOT_PASSWORD_WINDOW_MS).ok) {
+    return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
+  }
   try {
     const body = await req.json();
     const parsed = schema.safeParse(body);

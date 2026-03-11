@@ -21,7 +21,7 @@ export async function GET() {
   }
   const kesValue = account.pointsBalance * (settings?.pointsValueKes ?? 0.5);
   const tiers = (settings?.tiers as Array<{ name: string; minPoints: number; maxPoints: number | null }>) ?? [];
-  const currentTier = tiers.find((t) => t.name === account.tier);
+  tiers.find((t) => t.name === account.tier);
   const nextTier = tiers.find((t) => t.minPoints > account.pointsEarned);
   return NextResponse.json({
     account,

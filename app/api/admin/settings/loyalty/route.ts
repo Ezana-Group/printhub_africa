@@ -18,7 +18,8 @@ export async function PATCH(req: Request) {
   const auth = await requireRole(req, "ADMIN");
   if (auth instanceof NextResponse) return auth;
   const body = await req.json().catch(() => ({}));
-  const { updatedAt, ...rest } = body;
+  const rest = { ...body };
+  delete (rest as Record<string, unknown>).updatedAt;
   await prisma.loyaltySettings.update({
     where: { id: "default" },
     data: { ...rest, updatedAt: new Date() },

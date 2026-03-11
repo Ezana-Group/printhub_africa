@@ -28,7 +28,15 @@ export const metadata: Metadata = {
   title: "PrintHub | Large Format & 3D Printing | Nairobi, Kenya",
   description:
     "Large format printing and 3D printing for Nairobi and all of Kenya. Banners, signage, vehicle wraps, canvas, custom 3D prints. An Ezana Group Company.",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL?.trim() || "https://printhub.africa"),
+  metadataBase: (() => {
+    const raw = process.env.NEXT_PUBLIC_APP_URL?.trim();
+    const url = raw || "https://printhub.africa";
+    try {
+      return new URL(url);
+    } catch {
+      return new URL("https://printhub.africa");
+    }
+  })(),
   openGraph: {
     title: "PrintHub | Printing the Future, Made in Kenya",
     description: "Large format & 3D printing. Shop online or upload your design.",

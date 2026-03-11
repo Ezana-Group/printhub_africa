@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { rateLimit, getRateLimitClientIp } from "@/lib/rate-limit";
 
 const schema = z.object({
   quoteType: z.enum(["large_format", "3d"]),
@@ -10,7 +11,14 @@ const schema = z.object({
   inputs: z.record(z.string(), z.unknown()),
 });
 
+const QUOTE_SUBMIT_LIMIT = 10;
+const QUOTE_SUBMIT_WINDOW_MS = 60 * 1000;
+
 export async function POST(req: Request) {
+  const ip = getRateLimitClientIp(req) ?? "unknown";
+  if (!rateLimit(`quote-submit:${ip}`, QUOTE_SUBMIT_LIMIT, QUOTE_SUBMIT_WINDOW_MS).ok) {
+    return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+  }
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Sign in to submit a quote request." }, { status: 401 });

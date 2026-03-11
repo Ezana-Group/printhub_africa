@@ -1,6 +1,5 @@
 import { requireAdminSettings } from "@/lib/auth-guard";
 import { SectionCard } from "@/components/settings/section-card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SettingsSaveButton } from "@/components/settings/settings-save-button";

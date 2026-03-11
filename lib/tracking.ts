@@ -97,14 +97,18 @@ export const TRACKING_EVENTS: Record<
   },
 };
 
-async function sendTrackingSms(_orderId: string, _status: string) {
+async function sendTrackingSms(orderId: string, status: string) {
+  void orderId;
+  void status;
   // TODO: integrate Africa's Talking or other SMS provider
   // const order = await prisma.order.findUnique({ where: { id: orderId }, include: { shippingAddress: true } });
   // const phone = order?.shippingAddress?.phone ?? order?.user?.phone;
   // if (phone) await sendSms(phone, `PrintHub: Order update - ${TRACKING_EVENTS[status]?.title}`);
 }
 
-async function sendTrackingEmail(_orderId: string, _status: string) {
+async function sendTrackingEmail(orderId: string, status: string) {
+  void orderId;
+  void status;
   // TODO: integrate Resend — send order update email with tracking link
   // const order = await prisma.order.findUnique({ where: { id: orderId }, include: { shippingAddress: true } });
   // const email = order?.shippingAddress?.email ?? order?.user?.email;

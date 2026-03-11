@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/admin-api-guard";
 import { z } from "zod";
-import { CatalogueStatus, CatalogueLicense, CatalogueSourceType } from "@prisma/client";
+import { CatalogueStatus, CatalogueLicense } from "@prisma/client";
 
 export async function GET(
   _req: NextRequest,

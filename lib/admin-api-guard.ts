@@ -40,7 +40,6 @@ export async function requireAdminApi(context: AdminApiContext): Promise<AdminAp
     return { session: authSession, role, permissions };
   }
 
-  const needEdit = context.needEdit ?? false;
   const required = context.permission;
   if (!hasPermission(role, permissions, required)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

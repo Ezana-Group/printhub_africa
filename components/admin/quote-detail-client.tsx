@@ -54,6 +54,8 @@ export function QuoteDetailClient({
   customerEstimateHigh?: number | null;
   deadlineHint?: string | null;
 }) {
+  void quoteNumber;
+  void notes;
   const [status, setStatus] = useState(currentStatus);
   const [assignedTo, setAssignedTo] = useState(assignedStaffId ?? "");
   const [amount, setAmount] = useState(quotedAmount?.toString() ?? "");
@@ -265,7 +267,7 @@ export function QuoteDetailClient({
             {PIPELINE.map((s, i) => {
               const isCompleted = currentIndex > i;
               const isCurrent = status === s;
-              const isFuture = currentIndex < i;
+              void (currentIndex < i); // isFuture for pipeline styling
               return (
                 <div key={s} className="flex flex-1 items-center gap-0 min-w-0">
                   <div className="flex flex-col items-center shrink-0">

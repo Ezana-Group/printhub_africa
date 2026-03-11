@@ -1,0 +1,299 @@
+# PrintHub Africa — Full Codebase Audit
+
+**Date:** 2026-03-11  
+**Scope:** Security, architecture, production-readiness, code quality, completeness
+
+---
+
+## 🔴 CRITICAL — Fix Immediately
+
+### 1. MPesa Callback Has No Origin Validation
+[route.ts](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/app/api/payments/mpesa/callback/route.ts)
+
+The M-Pesa STK callback endpoint accepts any POST request and processes payment confirmations **without validating the request came from Safaricom**. An attacker can forge payment confirmations, marking orders as CONFIRMED and payments as COMPLETED without actual payment.
+
+**Impact:** Direct financial loss — orders fulfilled without payment.
+
+**Fix:** Validate callback origin (Safaricom IP whitelist) or implement HMAC signature verification. At minimum, cross-check the amount received against the amount expected.
+
+---
+
+### 2. No Rate Limiting on Any Endpoint
+There is **zero rate limiting** anywhere in the codebase. Every public-facing endpoint is vulnerable:
+
+| Endpoint | Attack Vector |
+|---|---|
+| `/api/auth/register` | Mass account creation / spam |
+| `/api/auth/forgot-password` | Email bombing a user |
+| `/api/payments/mpesa/stkpush` | STK push spam to phone numbers |
+| `/api/contact` | Spam via contact form |
+| `/api/quote` | Quote request flooding |
+
+**Fix:** Add rate limiting middleware (e.g. `@upstash/ratelimit` with Redis, or in-memory for MVP). Prioritize auth and payment endpoints.
+
+---
+
+### 3. ESLint Disabled During Builds
+[next.config.mjs](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/next.config.mjs) — Line 4
+
+```js
+eslint: { ignoreDuringBuilds: true },
+```
+
+This means type errors and lint violations are **completely invisible during production builds**. Bugs ship silently.
+
+**Fix:** Remove `ignoreDuringBuilds: true`. Fix lint errors properly instead of hiding them.
+
+---
+
+### 4. No Security Headers (CSP, HSTS, X-Frame-Options)
+The application sets **no security headers at all**. No Content-Security-Policy, no Strict-Transport-Security, no X-Frame-Options, no X-Content-Type-Options.
+
+**Impact:** Vulnerable to clickjacking, MIME sniffing, and lacks browser-level XSS protection.
+
+**Fix:** Add security headers in [next.config.mjs](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/next.config.mjs) or middleware:
+```js
+headers: [
+  { key: 'X-Frame-Options', value: 'DENY' },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+  { key: 'Content-Security-Policy', value: "default-src 'self'; ..." },
+]
+```
+
+---
+
+### 5. Email Service Silently Fakes Success
+[email.ts](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/lib/email.ts) — Lines 16-19
+
+```ts
+if (!process.env.RESEND_API_KEY) {
+  console.warn("RESEND_API_KEY not set; email not sent:", { to, subject });
+  return { success: true }; // ← LIES
+}
+```
+
+When `RESEND_API_KEY` is missing, the system **tells callers the email was sent successfully**. This means:
+- Users register but never receive verification emails → locked out
+- Password resets silently fail → users can't recover accounts
+- Quote confirmations never arrive → lost business
+
+**Fix:** Return `{ success: false, reason: "email_not_configured" }` and handle it in callers. Or throw in production.
+
+---
+
+## 🟠 HIGH — Fix Before Production
+
+### 6. Three Out of Four Payment Providers Are Stubs
+Only M-Pesa works. The others return 501:
+
+| Provider | Status | File |
+|---|---|---|
+| M-Pesa | ✅ Implemented | [stkpush/route.ts](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/app/api/payments/mpesa/stkpush/route.ts) |
+| Stripe | ❌ `// TODO` stub | [create-intent/route.ts](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/app/api/payments/stripe/create-intent/route.ts) |
+| Flutterwave | ❌ `// TODO` stub | [initiate/route.ts](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/app/api/payments/flutterwave/initiate/route.ts) |
+| Pesapal | ❌ `// TODO` stub | [initiate/route.ts](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/app/api/payments/pesapal/initiate/route.ts) |
+
+**Impact:** If the UI offers these payment options, users hit dead ends. If MPesa goes down, there's no fallback.
+
+**Fix:** Either implement the providers or **remove them from the UI entirely** so users don't see broken options.
+
+---
+
+### 7. File Upload (S3) Is Completely Non-Functional
+[s3.ts](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/lib/s3.ts)
+
+Both [getUploadUrl()](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/lib/s3.ts#9-18) and [getSignedDownloadUrl()](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/lib/s3.ts#19-26) are TODO stubs that return empty strings. The schema has `UploadedFile` model with 11 file types, but **no user can actually upload files**.
+
+For a print shop where customers upload artwork (STL, AI, PDF, PSD, etc.), this is a core business requirement that doesn't work.
+
+---
+
+### 8. Search (Algolia) Is Non-Functional
+[algolia.ts](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/lib/algolia.ts)
+
+[searchProducts()](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/lib/algolia.ts#6-13) always returns `{ hits: [] }`. Product search doesn't work.
+
+---
+
+### 9. CMS (Sanity) Is Non-Functional
+[sanity.ts](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/lib/sanity.ts)
+
+[getClient()](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/lib/sanity.ts#8-13) returns `null`. [getBlogPosts()](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/lib/sanity.ts#14-21) returns `[]`. Blog/content features don't work.
+
+---
+
+### 10. Password Requirements Too Weak
+[register/route.ts](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/app/api/auth/register/route.ts) — Line 10
+
+```ts
+password: z.string().min(8, "At least 8 characters"),
+```
+
+Only enforces 8 character minimum. No requirement for uppercase, lowercase, numbers, or special characters. Password `aaaaaaaa` would pass.
+
+**Fix:** Add complexity requirements or use `zxcvbn` for strength scoring.
+
+---
+
+### 11. JWT Callback Queries Database on Every Request for STAFF
+[auth.ts](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/lib/auth.ts) — Lines 78-83
+
+```ts
+if (role === "STAFF" && token.id) {
+  const staff = await prisma.staff.findUnique({...});
+  token.permissions = staff?.permissions ?? [];
+}
+```
+
+Every single request from a STAFF user triggers a database query in the JWT callback. With multiple staff users, this becomes a DB bottleneck. The comment says "AUDIT FIX" but the approach is wrong.
+
+**Fix:** Cache permissions with a short TTL (e.g. 5 minutes via Redis or in-memory), or only refresh on explicit permission changes.
+
+---
+
+### 12. Forgot-Password Enables Email Bombing
+[forgot-password/route.ts](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/app/api/auth/forgot-password/route.ts)
+
+No rate limiting, no cooldown period. An attacker can call this endpoint in a loop with a victim's email, flooding their inbox with reset emails. Not just annoying — it can trigger spam blocks on your Resend sending domain.
+
+---
+
+### 13. No CSRF Protection
+The project has **zero CSRF protection**. No CSRF tokens are generated or validated. While NextAuth handles its own CSRF for sign-in, all other API routes (orders, quotes, payments, settings, contact) are unprotected.
+
+---
+
+## 🟡 MEDIUM — Fix Soon
+
+### 14. Hardcoded Secret in Example File
+[.env.local.example](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/.env.local.example) — Line 13
+
+```
+NEXTAUTH_SECRET=lSRuKHzmRDASmnnAbEG0z9eTgM9X4kQ71HiOytEbfM0=
+```
+
+A pre-generated secret is in the example file. If anyone copies [.env.local.example](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/.env.local.example) to `.env.local` without changing it, every deployment shares the same JWT secret.
+
+**Fix:** Replace with a placeholder like `NEXTAUTH_SECRET=your-secret-here-generate-with-openssl`.
+
+---
+
+### 15. Dockerfile Exposes Hardcoded Database URL
+[Dockerfile](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/Dockerfile) — Line 18
+
+```dockerfile
+ENV DATABASE_URL="postgresql://user:password@db:5432/printhub?schema=public"
+```
+
+This is baked into a Docker layer. While it's overridden at runtime, the credentials are in the image history.
+
+**Fix:** Use a build-arg or a dummy URL that can't be mistaken for real credentials.
+
+---
+
+### 16. Template Download Links Point to Non-Existent Files
+[large-format-printing/page.tsx](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/app/(public)/services/large-format-printing/page.tsx) — Lines 636-654
+
+Links to `/templates/rollup-banner.ai`, `/templates/aframe.ai`, `/templates/backdrop.ai`, `/templates/vehicle-wrap-guide.pdf` — none of these files exist in the `public/` directory. Users clicking these get 404s.
+
+---
+
+### 17. Incomplete Test Coverage
+| Area | Test Files | Notes |
+|---|---|---|
+| Unit tests | 1 dir (`__tests__/components/`) | Only component tests |
+| E2E/Integration | 7 spec files in `tests/` | auth, finance, inventory, permissions, quotes, settings, staff |
+| API routes | None | Zero tests for any API endpoint |
+| Payment flows | None | Critical path untested |
+| Calculator engines | 1 file (`lib/lf-calculator-engine.test.ts`) | Only LF calculator |
+
+No tests for: registration, password reset, MPesa flow, order creation, admin operations, email sending.
+
+---
+
+### 18. `Coursera LNP82RAEFMBN.pdf` in Root Directory
+A personal Coursera certificate PDF is committed to the repo root. This is unrelated to the project and should be removed.
+
+---
+
+### 19. `PrintHub_CursorAI_Prompt.md` Committed to Repo
+A 56KB AI prompt file is in the repo root. This exposes your development methodology and project roadmap to anyone with repo access.
+
+---
+
+### 20. No Error Monitoring in Production
+No Sentry or equivalent is configured. The env template has `SENTRY_DSN` placeholder but there's no Sentry SDK in `package.json` or any initialization code. Production errors go unnoticed.
+
+---
+
+### 21. Orders API and Products API Have TODOs
+Both `app/api/orders/route.ts` and `app/api/products/route.ts` contain TODO comments, indicating incomplete implementations for core e-commerce functionality.
+
+---
+
+## 🔵 LOW — Improve When Possible
+
+### 22. Google OAuth Configured Without Fallback
+[auth.ts](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/lib/auth.ts) — Lines 19-22
+
+```ts
+GoogleProvider({
+  clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+}),
+```
+
+When env vars aren't set, Google OAuth is initialized with empty strings rather than being conditionally excluded. This could lead to confusing errors if a user clicks "Sign in with Google."
+
+---
+
+### 23. Africa's Talking SMS Silently Succeeds Without Credentials
+[africas-talking.ts](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/lib/africas-talking.ts) — Lines 11-14
+
+```ts
+if (!key || !username) {
+  console.warn("AT_API_KEY / AT_USERNAME not set; SMS not sent");
+  return true; // ← says it worked
+}
+```
+
+Same pattern as email — claims success when nothing was sent.
+
+---
+
+### 24. Cart Model Stores Items as JSON Blob
+[schema.prisma](file:///Users/mose/Printhub_Antigravity_Audit/printhub_africa/prisma/schema.prisma) — Line 793
+
+```prisma
+items Json // array of { productId, variantId, quantity, customizations }
+```
+
+Cart items are a JSON blob with no referential integrity. If a product is deleted, cart items silently reference non-existent products. No DB-level quantity validation.
+
+---
+
+### 25. Schema Complexity vs Implementation Gap
+
+The Prisma schema is **extensive** (40+ models, 1100+ lines) covering:
+- Full asset management (PrinterAsset, MaintenanceLog, MaintenancePartUsed)
+- Full inventory system (LFStockItem, ThreeDConsumable, InventoryHardwareItem)
+- Full order workflow (ProductionQueue, Machine)
+- Corporate accounts, support tickets, newsletters
+
+Many of these models appear to have **little or no API/UI implementation**. This creates maintenance burden and migration complexity for unused features.
+
+---
+
+## Summary Scoreboard
+
+| Category | Score | Notes |
+|---|---|---|
+| **Security** | 3/10 | No rate limiting, no CSP, unvalidated payment callbacks, no CSRF |
+| **Completeness** | 4/10 | 3/4 payment providers stub, S3/Algolia/Sanity stub, template files 404 |
+| **Code Quality** | 6/10 | Good use of Zod, proper Prisma patterns, but ESLint suppressed |
+| **Test Coverage** | 2/10 | No API tests, no payment tests, minimal coverage |
+| **Production Readiness** | 3/10 | No error monitoring, no security headers, email silently fails |
+| **Architecture** | 6/10 | Clean route groups, proper middleware, good permission system |
+
+**Overall: Not production-ready.** The security gaps (especially #1 and #2) are exploitable right now if the app is live. The stub services mean core features are broken. Prioritize the 🔴 items immediately.

@@ -14,8 +14,8 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Prisma generate (needs schema; DATABASE_URL can be dummy for build)
-ENV DATABASE_URL="postgresql://user:password@db:5432/printhub?schema=public"
+# Prisma generate (needs schema; use dummy URL for build only — real URL at runtime)
+ENV DATABASE_URL="postgresql://build:build@localhost:5432/build?schema=public"
 RUN npx prisma generate
 
 # Build Next.js (disable telemetry)

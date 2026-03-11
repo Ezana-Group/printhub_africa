@@ -40,12 +40,10 @@ export default function CheckoutPage() {
     setDelivery,
     payment,
     setPayment,
-    orderId,
     setOrderId,
     reset: resetCheckout,
   } = useCheckoutStore();
 
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [paymentMethods, setPaymentMethods] = useState<{
     mpesa: boolean;
@@ -115,7 +113,7 @@ export default function CheckoutPage() {
           ? shippingRates.express ?? shippingRates.standard
           : shippingRates.standard;
     setDelivery({ fee });
-  }, [delivery.method, shippingRates.standard, shippingRates.express]);
+  }, [delivery.method, shippingRates.standard, shippingRates.express, setDelivery]);
 
   const canContinueStep1 =
     contact.email &&

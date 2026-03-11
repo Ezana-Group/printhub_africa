@@ -26,6 +26,8 @@ export function QuotesUploadsTabs({
   staffList?: { id: string; name: string; email: string }[];
   quotesListComponent?: React.ReactNode;
 }) {
+  void quotes;
+  void staffList;
   const [tab, setTab] = useState<"quotes" | "uploads" | "calculator">(quotesListComponent ? "quotes" : "uploads");
 
   return (

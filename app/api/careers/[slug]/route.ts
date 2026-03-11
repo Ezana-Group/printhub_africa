@@ -19,6 +19,7 @@ export async function GET(
   });
   if (!job) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- exclude _count from response
   const { _count, ...rest } = job;
   const sanitized = {
     ...rest,

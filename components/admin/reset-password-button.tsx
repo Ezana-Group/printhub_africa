@@ -4,13 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
 /** AUDIT FIX: Reset password button with handler — sends reset email via API. */
-export function ResetPasswordButton({
-  staffId,
-  staffEmail,
-}: {
-  staffId: string;
-  staffEmail: string;
-}) {
+export function ResetPasswordButton({ staffId, staffEmail }: { staffId: string; staffEmail: string }) {
+  void staffEmail;
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);

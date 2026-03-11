@@ -368,10 +368,6 @@ export function Inventory3DSection({
       return next;
     });
   };
-  const toggleSelectAll = () => {
-    if (selectedIds.size === filamentItems.length) setSelectedIds(new Set());
-    else setSelectedIds(new Set(filamentItems.map((c) => c.id)));
-  };
   const clearSelection = () => setSelectedIds(new Set());
 
   const [inlineEdit, setInlineEdit] = useState<{ id: string; field: "quantity" | "location"; value: string } | null>(null);
@@ -560,7 +556,6 @@ export function Inventory3DSection({
     try {
       const isAdd = adjustTab === "add";
       const movementQty = isAdd ? delta : -delta;
-      const newQty = isAdd ? adjustFilament.quantity + delta : Math.max(0, adjustFilament.quantity - delta);
       const res = await fetch(`/api/admin/3d-consumables/${adjustFilament.id}/movements`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

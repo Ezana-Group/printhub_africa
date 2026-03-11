@@ -41,7 +41,8 @@ export function EditableSectionProvider({ children }: { children: React.ReactNod
   }, []);
 
   const requestEditStable = useCallback(
-    (sectionId: string, sectionTitle: string, _hasChanges: boolean): boolean => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- signature required by EditableSection
+    (sectionId: string, _sectionTitle: string, _hasChanges: boolean): boolean => {
       if (typeof window !== "undefined") {
         const currentId = activeSectionId;
         if (currentId && currentId !== sectionId) {

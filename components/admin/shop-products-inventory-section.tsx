@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { TableToolbar, type FilterConfig } from "@/components/admin/ui/TableToolbar";
 import { TableEmptyState } from "@/components/admin/ui/TableEmptyState";
 import { useTableUrlState } from "@/hooks/useTableUrlState";
-import { Search, Package, Plus } from "lucide-react";
+import { Package, Plus } from "lucide-react";
 
 export type ShopProductRow = {
   id: string;

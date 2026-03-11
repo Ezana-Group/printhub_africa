@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { sendEmail } from "@/lib/email";
 import { getBusinessPublic } from "@/lib/business-public";
+import { rateLimit, getRateLimitClientIp } from "@/lib/rate-limit";
 
 const bodySchema = z.object({
   name: z.string().min(1, "Name is required").max(200),
@@ -11,7 +12,14 @@ const bodySchema = z.object({
   message: z.string().min(10, "Message must be at least 10 characters").max(5000),
 });
 
+const CONTACT_LIMIT = 10;
+const CONTACT_WINDOW_MS = 60 * 1000;
+
 export async function POST(req: NextRequest) {
+  const ip = getRateLimitClientIp(req) ?? "unknown";
+  if (!rateLimit(`contact:${ip}`, CONTACT_LIMIT, CONTACT_WINDOW_MS).ok) {
+    return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+  }
   try {
     const raw = await req.json();
     const parsed = bodySchema.safeParse(raw);

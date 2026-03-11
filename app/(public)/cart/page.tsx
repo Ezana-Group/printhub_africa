@@ -20,7 +20,7 @@ export default function CartPage() {
     0,
     appliedCoupon?.discountAmount ?? 0
   );
-  const { subtotalInclVat, vatAmount, total: totalWithVat, vatNote } = totals;
+  const { subtotalInclVat, vatAmount, total: totalWithVat } = totals;
 
   const handleApplyCoupon = async () => {
     const code = couponInput.trim();

@@ -66,6 +66,7 @@ export function DangerZoneActions() {
   const [loading, setLoading] = useState(false);
 
   const handleConfirm = async (id: string) => {
+    void id;
     setLoading(true);
     try {
       await new Promise((r) => setTimeout(r, 800));

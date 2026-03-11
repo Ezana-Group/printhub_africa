@@ -4,13 +4,21 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { stkPush } from "@/lib/mpesa";
 import { z } from "zod";
+import { rateLimit, getRateLimitClientIp } from "@/lib/rate-limit";
 
 const schema = z.object({
   orderId: z.string(),
   phone: z.string().min(9),
 });
 
+const STKPUSH_LIMIT = 5;
+const STKPUSH_WINDOW_MS = 60 * 1000;
+
 export async function POST(req: Request) {
+  const ip = getRateLimitClientIp(req) ?? "unknown";
+  if (!rateLimit(`stkpush:${ip}`, STKPUSH_LIMIT, STKPUSH_WINDOW_MS).ok) {
+    return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
+  }
   await getServerSession(authOptions);
   const parsed = schema.safeParse(await req.json());
   if (!parsed.success) {

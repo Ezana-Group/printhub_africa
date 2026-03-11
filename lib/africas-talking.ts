@@ -10,7 +10,7 @@ export async function sendSMS(to: string, message: string): Promise<boolean> {
   const username = process.env.AT_USERNAME;
   if (!key || !username) {
     console.warn("AT_API_KEY / AT_USERNAME not set; SMS not sent");
-    return true;
+    return false;
   }
   const phone = to.replace(/\D/g, "").replace(/^0/, "254");
   const body = new URLSearchParams({

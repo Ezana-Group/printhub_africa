@@ -23,7 +23,7 @@ export async function sendEmail({
 }) {
   if (!process.env.RESEND_API_KEY) {
     console.warn("RESEND_API_KEY not set; email not sent:", { to, subject });
-    return { success: true };
+    return { success: false, error: "email_not_configured" };
   }
   const resend = new Resend(process.env.RESEND_API_KEY);
   const payload: { from: string; to: string[]; subject: string; html?: string; text?: string } = {
@@ -166,7 +166,7 @@ export async function sendStaffQuoteAcceptedEmail(
   customerName: string,
   quotedAmountKes: number
 ) {
-  const { businessName, footer } = await getEmailBranding();
+  const { businessName } = await getEmailBranding();
   const adminUrl = `${baseUrl}/admin/quotes`;
   return sendEmail({
     to: staffEmail,
@@ -190,7 +190,7 @@ export async function sendStaffQuoteAssignedEmail(
   customerName: string,
   typeLabel: string
 ) {
-  const { businessName, footer } = await getEmailBranding();
+  const { businessName } = await getEmailBranding();
   const adminUrl = `${baseUrl}/admin/quotes`;
   return sendEmail({
     to: staffEmail,

@@ -33,7 +33,10 @@ export async function GET(req: NextRequest) {
     const material = searchParams.get("material") ?? undefined;
     const colour = searchParams.get("colour") ?? undefined;
     const q = searchParams.get("q")?.trim() || undefined;
-    const sort = (searchParams.get("sort") || "featured") as (typeof SORT_OPTIONS)[number];
+    const rawSort = searchParams.get("sort") || "featured";
+    const sort = SORT_OPTIONS.includes(rawSort as (typeof SORT_OPTIONS)[number])
+      ? (rawSort as (typeof SORT_OPTIONS)[number])
+      : "featured";
     const featuredOnly = searchParams.get("featured") === "true";
     const tag = searchParams.get("tag") ?? undefined;
     const priceRange = searchParams.get("price") ?? undefined; // under-500 | 500-1500 | 1500-3000 | over-3000

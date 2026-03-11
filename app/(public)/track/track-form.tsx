@@ -51,7 +51,7 @@ export function TrackForm({ initialOrder, onSearch, loading }: TrackFormProps) {
           className="mt-1"
         />
         <p className="text-xs text-slate-500 mt-1">
-          Either one is enough if you're signed in; otherwise use both.
+          Either one is enough if you&apos;re signed in; otherwise use both.
         </p>
       </div>
       <Button type="submit" disabled={loading}>

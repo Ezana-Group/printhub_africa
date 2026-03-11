@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { getBusinessPublic } from "@/lib/business-public";
+import { rateLimit, getRateLimitClientIp } from "@/lib/rate-limit";
 
 const bodySchema = z.object({
   type: z.enum(["large_format", "3d_print"]),
@@ -20,7 +21,14 @@ const bodySchema = z.object({
   details: z.record(z.string(), z.unknown()).optional(),
 });
 
+const QUOTE_LIMIT = 10;
+const QUOTE_WINDOW_MS = 60 * 1000;
+
 export async function POST(req: NextRequest) {
+  const ip = getRateLimitClientIp(req) ?? "unknown";
+  if (!rateLimit(`quote:${ip}`, QUOTE_LIMIT, QUOTE_WINDOW_MS).ok) {
+    return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+  }
   try {
     const session = await getServerSession(authOptions);
     const raw = await req.json();
