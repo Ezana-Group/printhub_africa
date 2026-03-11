@@ -63,3 +63,6 @@ next-env.d.ts
 Coursera*.pdf
 *Cursor*Prompt*
 *CursorAI*
+
+# Sentry Config File
+.env.sentry-build-plugin
