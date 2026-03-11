@@ -10,7 +10,6 @@ import {
   SectionReveal,
 } from "@/components/services";
 import { LargeFormatServiceGrid } from "@/components/services/LargeFormatServiceGrid";
-import { Button } from "@/components/ui/button";
 import { getBusinessPublic } from "@/lib/business-public";
 
 // Local images (WebP) — large format / print shop / signage
@@ -633,28 +632,13 @@ export default async function LargeFormatPrintingPage() {
                 </tbody>
               </table>
             </div>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Button asChild variant="outline" className="rounded-xl font-mono text-xs" size="sm">
-                <Link href="/templates/rollup-banner.ai" download target="_blank" rel="noopener">
-                  ↓ Rollup Banner Template (AI)
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="rounded-xl font-mono text-xs" size="sm">
-                <Link href="/templates/aframe.ai" download target="_blank" rel="noopener">
-                  ↓ A-Frame Template (AI)
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="rounded-xl font-mono text-xs" size="sm">
-                <Link href="/templates/backdrop.ai" download target="_blank" rel="noopener">
-                  ↓ Backdrop Template (AI)
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="rounded-xl font-mono text-xs" size="sm">
-                <Link href="/templates/vehicle-wrap-guide.pdf" download target="_blank" rel="noopener">
-                  ↓ Vehicle Wrap Guide (PDF)
-                </Link>
-              </Button>
-            </div>
+            <p className="mt-6 text-sm text-slate-600">
+              Templates (rollup banner, A-frame, backdrop, vehicle wrap guide) are available on request.{" "}
+              <Link href="/contact" className="text-[var(--brand)] font-medium underline">
+                Contact us
+              </Link>{" "}
+              to request the file format you need.
+            </p>
           </div>
         </div>
       </SectionReveal>

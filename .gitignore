@@ -58,3 +58,8 @@ erpnext-data/
 next-env.d.ts
 
 /lib/generated/prisma
+
+# Personal / dev files — do not commit
+Coursera*.pdf
+*Cursor*Prompt*
+*CursorAI*
