@@ -111,8 +111,8 @@ export async function PATCH(
       await writeAudit({
         userId: session.user?.id,
         action: `ORDER_${status ?? "UPDATE"}`,
-        target: "Order",
-        targetId: id,
+        entity: "Order",
+        entityId: id,
         details: timelineMessage ?? (trackingNumber ? `Tracking: ${trackingNumber}` : undefined),
         request: req,
       });

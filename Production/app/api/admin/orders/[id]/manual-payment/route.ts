@@ -45,8 +45,8 @@ export async function POST(
   await writeAudit({
     userId: userId ?? undefined,
     action: "ORDER_MANUAL_PAYMENT",
-    target: "Order",
-    targetId: id,
+    entity: "Order",
+    entityId: id,
     details: `Manual payment: ${method}, ref: ${reference ?? "—"}, amount: KSh ${amountKes}`,
     request: req,
   });
