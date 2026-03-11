@@ -4,6 +4,17 @@ import { NextResponse } from "next/server";
 const ADMIN_ROLES = ["STAFF", "ADMIN", "SUPER_ADMIN"];
 const MUTATION_METHODS = ["POST", "PUT", "PATCH", "DELETE"];
 
+/** Public API paths that must never be blocked (no auth, no origin check). */
+function isPublicCatalogueApi(pathname: string, method: string): boolean {
+  if (method !== "GET") return false;
+  return (
+    pathname === "/api/catalogue" ||
+    pathname === "/api/catalogue/categories" ||
+    pathname === "/api/catalogue/featured" ||
+    pathname.startsWith("/api/catalogue/") // includes /api/catalogue/[slug]
+  );
+}
+
 /** CSRF mitigation: reject state-changing API requests from other origins when Origin header is present. */
 function checkApiOrigin(req: Request): NextResponse | null {
   const path = new URL(req.url).pathname;
@@ -37,6 +48,11 @@ function innerMiddleware(req: Request) {
 
 export default withAuth(
   function middleware(req) {
+    const path = new URL(req.url).pathname;
+    const method = req.method;
+    if (isPublicCatalogueApi(path, method)) {
+      return NextResponse.next();
+    }
     const apiBlock = checkApiOrigin(req);
     if (apiBlock) return apiBlock;
     return innerMiddleware(req);
@@ -45,6 +61,8 @@ export default withAuth(
     callbacks: {
       authorized: ({ token, req }) => {
         const path = new URL(req.url).pathname;
+        const method = req.method ?? "GET";
+        if (isPublicCatalogueApi(path, method)) return true;
         if (path.startsWith("/admin")) {
           return !!token && ADMIN_ROLES.includes(token.role as string);
         }
