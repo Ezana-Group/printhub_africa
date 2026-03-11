@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { Menu, Search, ShoppingCart, User } from "lucide-react";
 import type { BusinessPublic } from "@/lib/business-public";
 import { useCartStore } from "@/store/cart-store";
@@ -69,72 +69,155 @@ export function Header({ business }: { business?: BusinessPublic }) {
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[280px] border-0 bg-white shadow-xl">
-            <nav className="flex flex-col gap-6 pt-8">
-              {NAV_LINKS.map((item) =>
-                item.children ? (
-                  <div key={item.href}>
+          <SheetContent
+            side="left"
+            className="flex w-[280px] max-w-[85vw] flex-col border-0 bg-white p-0 shadow-xl"
+          >
+            {/* Fixed header — logo (close button is absolute in SheetContent) */}
+            <div className="flex flex-shrink-0 items-center border-b border-slate-200 px-6 py-4 pr-14">
+              <span className="font-display text-lg font-bold text-slate-900">
+                {siteName}
+              </span>
+            </div>
+
+            {/* Fixed Login/Register or user strip — always visible at top */}
+            {status === "authenticated" ? (
+              <div className="flex flex-shrink-0 items-center gap-3 border-b border-slate-200 bg-slate-50/50 px-6 py-4">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
+                  {(session?.user?.name ?? "?")[0]?.toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-slate-900">
+                    {session?.user?.name ?? "Account"}
+                  </p>
+                  <p className="truncate text-xs text-slate-500">
+                    {session?.user?.email}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-shrink-0 gap-2 border-b border-slate-200 bg-slate-50/50 px-6 py-4">
+                <Button variant="outline" size="sm" className="flex-1 rounded-xl border-slate-300" asChild>
+                  <Link href="/login" onClick={() => setMobileOpen(false)}>
+                    Login
+                  </Link>
+                </Button>
+                <Button size="sm" className="flex-1 rounded-xl bg-primary hover:bg-primary/90" asChild>
+                  <Link href="/register" onClick={() => setMobileOpen(false)}>
+                    Register
+                  </Link>
+                </Button>
+              </div>
+            )}
+
+            {/* Scrollable nav links */}
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              <nav className="flex flex-col gap-1 p-6">
+                {NAV_LINKS.map((item) =>
+                  item.children ? (
+                    <div key={item.href}>
+                      <Link
+                        href={item.href}
+                        className={`block rounded-lg px-4 py-3 text-sm font-semibold transition hover:bg-slate-50 ${
+                          isActive(item.href, pathname, true) ? "text-primary" : "text-slate-900"
+                        }`}
+                        onClick={() => setMobileOpen(false)}
+                      >
+                        {item.label}
+                      </Link>
+                      <ul className="space-y-0.5 pl-4">
+                        {item.children.map((c) => (
+                          <li key={c.href}>
+                            <Link
+                              href={c.href}
+                              className="block rounded-lg px-4 py-2.5 text-sm text-slate-600 transition hover:bg-slate-50 hover:text-slate-900"
+                              onClick={() => setMobileOpen(false)}
+                            >
+                              {c.label}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
                     <Link
+                      key={item.href}
                       href={item.href}
-                      className={`font-semibold ${isActive(item.href, pathname, true) ? "text-primary" : "text-slate-900"}`}
+                      className={`block rounded-lg px-4 py-3 text-sm font-semibold transition hover:bg-slate-50 ${
+                        isActive(item.href, pathname) ? "text-primary" : "text-slate-900"
+                      }`}
                       onClick={() => setMobileOpen(false)}
                     >
                       {item.label}
                     </Link>
-                    <ul className="mt-2 pl-4 space-y-2">
-                      {item.children.map((c) => (
-                        <li key={c.href}>
-                          <Link
-                            href={c.href}
-                            className="text-slate-600 hover:text-slate-900"
-                            onClick={() => setMobileOpen(false)}
-                          >
-                            {c.label}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : (
+                  )
+                )}
+                <div className="pt-4">
                   <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`font-semibold ${isActive(item.href, pathname) ? "text-primary" : "text-slate-900"}`}
+                    href="/get-a-quote"
                     onClick={() => setMobileOpen(false)}
+                    className="block w-full rounded-xl border-2 border-primary py-3 text-center text-sm font-semibold text-primary transition hover:bg-orange-50"
                   >
-                    {item.label}
+                    Get a Quote
                   </Link>
-                )
-              )}
-              <div className="border-t border-slate-200 pt-6 flex flex-col gap-2">
-                <Button variant="outline" asChild className="w-full rounded-xl">
-                  <Link href="/shop">Shop Now</Link>
-                </Button>
-                {status === "authenticated" ? (
+                </div>
+                {status === "authenticated" && (
                   <>
-                    <Button asChild className="w-full rounded-xl">
-                      <Link href="/account">My Account</Link>
-                    </Button>
-                    {((session?.user as { role?: string })?.role === "ADMIN" ||
-                      (session?.user as { role?: string })?.role === "SUPER_ADMIN" ||
-                      (session?.user as { role?: string })?.role === "STAFF") && (
-                      <Button variant="secondary" asChild className="w-full rounded-xl">
-                        <Link href="/admin/dashboard">Admin</Link>
-                      </Button>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <Button asChild className="w-full rounded-xl" variant="ghost">
-                      <Link href="/login">Login</Link>
-                    </Button>
-                    <Button asChild className="w-full rounded-xl bg-primary hover:bg-primary/90">
-                      <Link href="/register">Register</Link>
-                    </Button>
+                    <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      My Account
+                    </p>
+                    <Link
+                      href="/account"
+                      className="block rounded-lg px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      Dashboard
+                    </Link>
+                    <Link
+                      href="/account/orders"
+                      className="block rounded-lg px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      My Orders
+                    </Link>
+                    <Link
+                      href="/account/quotes"
+                      className="block rounded-lg px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      My Quotes
+                    </Link>
+                    <Link
+                      href="/account/settings"
+                      className="block rounded-lg px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      onClick={() => setMobileOpen(false)}
+                    >
+                      Settings
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMobileOpen(false);
+                        signOut();
+                      }}
+                      className="w-full rounded-lg px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50"
+                    >
+                      Sign out
+                    </button>
                   </>
                 )}
-              </div>
-            </nav>
+                <div className="h-6" />
+              </nav>
+            </div>
+
+            {/* Fixed footer — Shop Now */}
+            <div className="flex flex-shrink-0 border-t border-slate-200 bg-white px-6 py-4">
+              <Button className="w-full rounded-xl font-semibold" asChild>
+                <Link href="/shop" onClick={() => setMobileOpen(false)}>
+                  Shop Now
+                </Link>
+              </Button>
+            </div>
           </SheetContent>
         </Sheet>
 

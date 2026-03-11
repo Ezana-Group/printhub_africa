@@ -46,6 +46,7 @@ export const ROUTE_TO_PERMISSION: Record<string, PermissionKey | string> = {
   "/admin/catalogue/import": "products_edit",
   "/admin/catalogue/categories": "products_view",
   "/admin/catalogue/designers": "products_view",
+  "/admin/uploads": "orders_view",
 };
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];

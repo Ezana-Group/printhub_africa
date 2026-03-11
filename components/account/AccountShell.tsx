@@ -10,6 +10,7 @@ import {
   Settings,
   LogOut,
   FileText,
+  Upload,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +18,7 @@ const NAV = [
   { href: "/account", label: "Dashboard", icon: LayoutDashboard },
   { href: "/account/orders", label: "My Orders", icon: Package },
   { href: "/account/quotes", label: "My Quotes", icon: FileText },
+  { href: "/account/uploads", label: "My Uploads", icon: Upload },
   { href: "/account/addresses", label: "Addresses", icon: MapPin },
   { href: "/account/settings", label: "Settings", icon: Settings },
 ];

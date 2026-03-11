@@ -16,6 +16,7 @@ import { KENYA_COUNTIES_CHECKOUT } from "@/lib/constants";
 import { StepIndicator } from "@/components/checkout/step-indicator";
 import { CheckoutOrderSummary } from "@/components/checkout/checkout-order-summary";
 import { Select } from "@/components/ui/select";
+import { FileUploader } from "@/components/upload/FileUploader";
 
 const PHONE_REGEX = /^\+?254[17]\d{8}$/;
 
@@ -604,6 +605,19 @@ export default function CheckoutPage() {
                       </div>
                     </label>
                   )}
+                  <label className="flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer hover:bg-muted/30 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      checked={payment.method === "BANK_TRANSFER"}
+                      onChange={() => setPayment({ method: "BANK_TRANSFER" })}
+                      className="mt-1"
+                    />
+                    <div>
+                      <span className="font-medium">Bank Transfer</span>
+                      <p className="text-sm text-muted-foreground mt-0.5">Pay via bank transfer, then upload your proof</p>
+                    </div>
+                  </label>
                   {payment.method === "MPESA" && (
                     <div className="pt-2">
                       <Label>M-Pesa phone number</Label>
@@ -671,7 +685,11 @@ export default function CheckoutPage() {
                   </div>
                   <div>
                     <h3 className="font-medium text-sm text-muted-foreground mb-1">Payment</h3>
-                    <p className="text-sm">M-Pesa — {payment.mpesaPhone || contact.phone}</p>
+                    <p className="text-sm">
+                      {payment.method === "BANK_TRANSFER"
+                        ? "Bank Transfer — upload proof after placing order"
+                        : `M-Pesa — ${payment.mpesaPhone || contact.phone}`}
+                    </p>
                     <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setStep(3)}>
                       Edit →
                     </Button>
@@ -704,16 +722,54 @@ export default function CheckoutPage() {
                     />
                     <Label htmlFor="terms">I agree to PrintHub&apos;s Terms of Service and Privacy Policy *</Label>
                   </div>
-                  <Button
-                    className="w-full bg-primary hover:bg-primary/90 text-base py-6"
-                    onClick={handleCreateOrder}
-                    disabled={placingOrder || !termsAccepted}
-                  >
-                    {placingOrder ? "Creating order…" : `Place order — ${formatPrice(totals.total)}`}
-                  </Button>
-                  <p className="text-xs text-muted-foreground">
-                    By placing your order you agree to our terms. Your M-Pesa number will receive a payment prompt.
-                  </p>
+
+                  {payment.method === "BANK_TRANSFER" && placedOrderId ? (
+                    <div className="space-y-4">
+                      <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+                        <p className="font-medium">Order {placedOrderNumber} created.</p>
+                        <p className="mt-1">
+                          Transfer KSh {totals.total.toLocaleString()} to our bank account, then upload your payment proof below.
+                        </p>
+                        <p className="mt-2 text-xs">
+                          Bank: KCB Bank Kenya · Account: 1234567890 · Name: Ezana Group Limited · Reference: {placedOrderNumber}
+                        </p>
+                      </div>
+                      <FileUploader
+                        context="CUSTOMER_PAYMENT_PROOF"
+                        accept={["image/jpeg", "image/png", "application/pdf"]}
+                        maxSizeMB={10}
+                        maxFiles={1}
+                        orderId={placedOrderId}
+                        label="Upload transfer screenshot or receipt"
+                        description="JPEG, PNG, or PDF · Max 10MB"
+                      />
+                      <Button
+                        className="w-full bg-primary hover:bg-primary/90"
+                        onClick={() => {
+                          useCartStore.getState().clearCart();
+                          resetCheckout();
+                          router.push(`/order-confirmation/${placedOrderId}`);
+                        }}
+                      >
+                        Done — View order
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <Button
+                        className="w-full bg-primary hover:bg-primary/90 text-base py-6"
+                        onClick={handleCreateOrder}
+                        disabled={placingOrder || !termsAccepted}
+                      >
+                        {placingOrder ? "Creating order…" : `Place order — ${formatPrice(totals.total)}`}
+                      </Button>
+                      <p className="text-xs text-muted-foreground">
+                        {payment.method === "BANK_TRANSFER"
+                          ? "By placing your order you agree to our terms. You will then upload your bank transfer proof."
+                          : "By placing your order you agree to our terms. Your M-Pesa number will receive a payment prompt."}
+                      </p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             )}

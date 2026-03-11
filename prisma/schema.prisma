@@ -676,6 +676,7 @@ model UploadedFile {
   id               String             @id @default(cuid())
   userId           String?
   user             User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  guestEmail       String?            // for guest uploads (e.g. quote without account)
   orderId          String?
   quoteId          String?
   quote            Quote?             @relation(fields: [quoteId], references: [id], onDelete: SetNull)
@@ -696,6 +697,7 @@ model UploadedFile {
   virusScanStatus  String?            // "pending" | "clean" | "infected" | "error"
   virusScanAt      DateTime?
   reviewedBy       String?
+  reviewedAt       DateTime?
   reviewNotes      String?
   rejectionReason  String?
   printVolume      Float?

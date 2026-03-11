@@ -26,7 +26,7 @@ export interface CheckoutDelivery {
 }
 
 export interface CheckoutPayment {
-  method: "MPESA" | "STRIPE" | "PESAPAL" | "FLUTTERWAVE";
+  method: "MPESA" | "STRIPE" | "PESAPAL" | "FLUTTERWAVE" | "BANK_TRANSFER";
   mpesaPhone?: string;
 }
 
