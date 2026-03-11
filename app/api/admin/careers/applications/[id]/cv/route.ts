@@ -33,6 +33,7 @@ export async function GET(
   if (!application) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const cvFileUrl = application.cvFileUrl;
+  if (!cvFileUrl) return NextResponse.json({ error: "No CV file" }, { status: 404 });
   if (cvFileUrl.startsWith("http://") || cvFileUrl.startsWith("https://")) {
     return NextResponse.redirect(cvFileUrl);
   }

@@ -40,10 +40,10 @@ export default async function LegalPageEditPage({
       </div>
       <LegalPageEditorClient
         slug={page.slug}
-        title={page.title}
+        title={page.title ?? page.slug}
         content={page.content}
         version={page.version}
-        lastUpdated={page.lastUpdated}
+        lastUpdated={page.lastUpdated ?? ""}
         isPublished={page.isPublished}
         history={history.map((h) => ({
           id: h.id,

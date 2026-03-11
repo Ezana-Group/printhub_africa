@@ -31,7 +31,10 @@ export async function POST(req: Request) {
     }
 
     const materialOption = item.availableMaterials[0];
-    if (!materialOption || !materialOption.availableColours.includes(colourHex)) {
+    const colours = Array.isArray(materialOption?.availableColours)
+      ? (materialOption.availableColours as string[])
+      : [];
+    if (!materialOption || (colours.length > 0 && !colours.includes(colourHex))) {
       return NextResponse.json(
         { error: "Selected material or colour is not available for this item" },
         { status: 400 }
@@ -42,7 +45,7 @@ export async function POST(req: Request) {
     if (baseKes == null) {
       return NextResponse.json({ error: "Item has no price set" }, { status: 400 });
     }
-    const unitPriceKes = Math.round(baseKes + materialOption.priceModifierKes);
+    const unitPriceKes = Math.round(baseKes + (materialOption.priceModifierKes ?? 0));
     const qty = Math.max(item.minQuantity, Math.min(item.maxQuantity, quantity));
 
     const primaryPhoto = item.photos[0];

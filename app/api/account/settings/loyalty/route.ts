@@ -19,7 +19,8 @@ export async function GET() {
       tierProgress: null,
     });
   }
-  const kesValue = account.pointsBalance * (settings?.pointsValueKes ?? 0.5);
+  const kesPerPoint = settings?.kesPerPointSpent ?? 0.5;
+  const kesValue = account.points * kesPerPoint;
   const tiers = (settings?.tiers as Array<{ name: string; minPoints: number; maxPoints: number | null }>) ?? [];
   tiers.find((t) => t.name === account.tier);
   const nextTier = tiers.find((t) => t.minPoints > account.pointsEarned);

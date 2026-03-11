@@ -27,7 +27,9 @@ export async function POST(req: Request) {
   if (!body.success) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   const zone = await prisma.deliveryZone.create({
     data: {
-      ...body.data,
+      name: body.data.name,
+      counties: Array.isArray(body.data.counties) ? body.data.counties.join(",") : undefined,
+      feeKes: body.data.feeKes,
       minDays: body.data.minDays ?? 3,
       maxDays: body.data.maxDays ?? 5,
       isActive: body.data.isActive ?? true,

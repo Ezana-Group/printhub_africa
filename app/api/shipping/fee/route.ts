@@ -12,7 +12,13 @@ export async function GET(req: Request) {
   try {
     // Optional: resolve from DeliveryZone if you have zones by county
     const zones = await prisma.deliveryZone.findMany({
-      where: { isActive: true, counties: { has: county } },
+      where: {
+        isActive: true,
+        OR: [
+          { county: { equals: county } },
+          { counties: { contains: county } },
+        ],
+      },
       orderBy: { sortOrder: "asc" },
       take: 1,
     });

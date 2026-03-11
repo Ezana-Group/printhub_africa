@@ -27,7 +27,7 @@ export async function scanFile(
   }
 
   const form = new FormData();
-  form.append("file", new Blob([buffer]), filename);
+  form.append("file", new Blob([new Uint8Array(buffer)]), filename);
 
   let res: Response;
   try {

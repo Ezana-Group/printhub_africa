@@ -8,7 +8,7 @@ function buildWhere(searchParams: URLSearchParams): Prisma.AuditLogWhereInput {
   const user = searchParams.get("user");
   if (user) where.userId = user;
   const category = searchParams.get("category");
-  if (category) where.category = category;
+  if (category) where.entity = category;
   const from = searchParams.get("from");
   const to = searchParams.get("to");
   if (from || to) {
@@ -29,16 +29,16 @@ export async function GET(req: Request) {
     orderBy: { timestamp: "desc" },
   });
   const csv = [
-    ["Timestamp", "User", "Role", "Category", "Action", "Target", "Details", "IP"].join(","),
+    ["Timestamp", "User", "Role", "Entity", "Entity ID", "Action", "After", "IP"].join(","),
     ...logs.map((l) =>
       [
         l.timestamp.toISOString(),
         l.user?.name ?? "System",
         l.user?.role ?? "—",
-        l.category ?? "—",
+        l.entity ?? "—",
+        l.entityId ?? "—",
         l.action,
-        l.target ?? "—",
-        `"${(l.details ?? "").replace(/"/g, '""')}"`,
+        `"${(typeof l.after === "string" ? l.after : JSON.stringify(l.after ?? "")).replace(/"/g, '""')}"`,
         l.ipAddress ?? "—",
       ].join(",")
     ),

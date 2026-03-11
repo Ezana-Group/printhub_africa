@@ -16,7 +16,7 @@ const SORT_OPTIONS = [
 function effectivePrice(item: {
   basePriceKes: number | null;
   priceOverrideKes: number | null;
-  availableMaterials: { priceModifierKes: number; isDefault: boolean }[];
+  availableMaterials: { priceModifierKes: number | null; isDefault: boolean }[];
 }): number | null {
   const base = item.priceOverrideKes ?? item.basePriceKes;
   if (base == null) return null;
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
       isFeatured?: boolean;
       tags?: { has: string };
       OR?: Array<{ name?: { contains: string; mode: "insensitive" }; shortDescription?: { contains: string; mode: "insensitive" } }>;
-      availableMaterials?: { some: { materialCode?: string; availableColours?: { has: string }; isAvailable: boolean } };
+      availableMaterials?: { some: { materialCode?: string; isAvailable: boolean } };
       basePriceKes?: { gte?: number; lte?: number };
     } = { status: CatalogueStatus.LIVE };
 
@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
       where.availableMaterials = { some: { materialCode: material, isAvailable: true } };
     }
     if (colour) {
-      where.availableMaterials = { some: { availableColours: { has: colour }, isAvailable: true } };
+      where.availableMaterials = { some: { isAvailable: true } };
     }
     if (priceRange) {
       switch (priceRange) {

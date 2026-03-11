@@ -12,10 +12,10 @@ export async function awardLoyaltyPoints(orderId: string): Promise<void> {
     }),
   ]);
   if (!loyalty?.enabled || !order?.userId) return;
+  const kesPerPoint = loyalty.kesPerPointSpent ?? 1;
+  const pointsPerKes = loyalty.pointsPerKesSpent ?? 0;
   const totalKes = Number(order.total);
-  const basePoints = Math.floor(
-    (totalKes / loyalty.kesPerPointSpent) * loyalty.pointsPerKesSpent
-  );
+  const basePoints = Math.floor((totalKes / kesPerPoint) * pointsPerKes);
   const account = await prisma.loyaltyAccount.upsert({
     where: { userId: order.userId },
     update: {},
@@ -30,9 +30,8 @@ export async function awardLoyaltyPoints(orderId: string): Promise<void> {
     prisma.loyaltyAccount.update({
       where: { userId: order.userId },
       data: {
-        pointsBalance: { increment: points },
+        points: { increment: points },
         pointsEarned: { increment: points },
-        lastActivity: new Date(),
       },
     }),
     prisma.loyaltyTransaction.create({
@@ -40,8 +39,8 @@ export async function awardLoyaltyPoints(orderId: string): Promise<void> {
         accountId: account.id,
         type: "EARN",
         points,
+        reference: orderId,
         description: `Order ${orderId}`,
-        orderId,
       },
     }),
   ]);

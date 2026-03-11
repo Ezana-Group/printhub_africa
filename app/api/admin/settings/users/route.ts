@@ -12,7 +12,7 @@ export async function GET(req: Request) {
   if (auth instanceof NextResponse) return auth;
   const users = await prisma.user.findMany({
     where: { role: { in: ["STAFF", "ADMIN", "SUPER_ADMIN"] } },
-    include: { permissions: true, staff: true },
+    include: { userPermissions: true, staff: true },
     orderBy: { createdAt: "asc" },
   });
   return NextResponse.json(users);

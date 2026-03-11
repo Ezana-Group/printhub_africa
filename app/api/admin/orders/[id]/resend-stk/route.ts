@@ -27,6 +27,7 @@ export async function POST(
         take: 1,
         include: { mpesaTransaction: true },
       },
+      shippingAddress: true,
     },
   });
   if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });

@@ -118,11 +118,12 @@ export default async function JobPage({ params }: Props) {
                   <JobContent html={job.niceToHave} />
                 </section>
               )}
-              {job.benefits.length > 0 && (
+              {Array.isArray(job.benefits) &&
+                job.benefits.filter((b): b is string => typeof b === "string").length > 0 && (
                 <section>
                   <h2 className="font-display text-xl text-white mb-3">What we offer</h2>
                   <div className="flex flex-wrap gap-2">
-                    {job.benefits.map((b) => (
+                    {(job.benefits as unknown[]).filter((b): b is string => typeof b === "string").map((b) => (
                       <span
                         key={b}
                         className="px-3 py-1 rounded-full bg-white/10 text-white/90 text-sm"

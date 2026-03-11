@@ -36,13 +36,15 @@ export default async function AdminContentLegalPage() {
           <tbody>
             {pages.map((p) => (
               <tr key={p.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
-                <td className="p-4 font-medium text-slate-900">{p.title}</td>
+                <td className="p-4 font-medium text-slate-900">{p.title ?? p.slug}</td>
                 <td className="p-4 text-slate-500">
-                  {new Date(p.lastUpdated).toLocaleDateString("en-KE", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })}
+                  {p.lastUpdated
+                    ? new Date(p.lastUpdated).toLocaleDateString("en-KE", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })
+                    : "—"}
                 </td>
                 <td className="p-4 text-slate-500">v{p.version}</td>
                 <td className="p-4 text-right">

@@ -157,11 +157,13 @@ export default async function LegalPage({ params }: Props) {
               </h1>
               <p className="text-sm text-slate-500 mt-2">
                 Last updated:{" "}
-                {new Date(page.lastUpdated).toLocaleDateString("en-KE", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
+                {page.lastUpdated
+                  ? new Date(page.lastUpdated).toLocaleDateString("en-KE", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })
+                  : "—"}
               </p>
               <div
                 className="prose prose-slate mt-8 max-w-none prose-headings:font-display prose-headings:scroll-mt-20 prose-h2:text-lg prose-h2:mt-8 prose-h2:mb-3 prose-h2:font-semibold prose-h3:text-base prose-h3:mt-6 prose-h3:mb-2 prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-p:leading-relaxed prose-ul:my-4 prose-li:my-0.5 prose-table:border-collapse prose-table:w-full prose-th:border prose-th:border-slate-200 prose-th:bg-slate-50 prose-th:px-4 prose-th:py-3 prose-th:text-left prose-td:border prose-td:border-slate-200 prose-td:px-4 prose-td:py-3"

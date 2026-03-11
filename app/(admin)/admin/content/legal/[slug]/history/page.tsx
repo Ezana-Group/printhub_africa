@@ -25,12 +25,12 @@ export default async function LegalPageHistoryPage({
         items={[
           { label: "Content", href: "/admin/content/legal" },
           { label: "Legal Pages", href: "/admin/content/legal" },
-          { label: page.title, href: `/admin/content/legal/${slug}/edit` },
+          { label: page.title ?? slug, href: `/admin/content/legal/${slug}/edit` },
           { label: "History" },
         ]}
       />
       <h1 className="font-display text-2xl font-bold">
-        History — {page.title}
+        History — {page.title ?? slug}
       </h1>
       <Link
         href={`/admin/content/legal/${slug}/edit`}

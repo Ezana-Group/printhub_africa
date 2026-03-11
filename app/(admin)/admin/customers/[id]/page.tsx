@@ -127,7 +127,7 @@ export default async function AdminCustomerDetailPage({
       fileType: u.fileType,
       status: u.status,
       createdAt: u.createdAt,
-      url: u.url,
+      url: u.url ?? "",
     })),
     auditLogs: user.auditLogs.map((a) => ({
       id: a.id,

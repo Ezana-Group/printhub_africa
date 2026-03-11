@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { requireAdminApi } from "@/lib/admin-api-guard";
 import { writeAudit } from "@/lib/audit";
@@ -69,14 +70,7 @@ export async function PATCH(
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
-    const updateData: {
-      status?: string;
-      trackingNumber?: string;
-      shippedAt?: Date;
-      deliveredAt?: Date;
-      cancelledAt?: Date;
-      cancelReason?: string;
-    } = {};
+    const updateData: Prisma.OrderUpdateInput = {};
     if (status != null) {
       updateData.status = status;
       if (status === "SHIPPED") updateData.shippedAt = new Date();

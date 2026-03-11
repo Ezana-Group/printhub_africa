@@ -42,10 +42,20 @@ export default async function AdminOrderDetailPage({
     shippedAt: order.shippedAt?.toISOString() ?? null,
     deliveredAt: order.deliveredAt?.toISOString() ?? null,
     paidAt: order.paidAt?.toISOString() ?? null,
-    items: order.items.map((i) => ({
-      ...i,
-      unitPrice: i.unitPrice.toString(),
-    })),
+    items: order.items.map((i) => {
+      const attrs = i.productVariant?.attributes;
+      const attributes =
+        attrs != null && typeof attrs === "object" && !Array.isArray(attrs)
+          ? (attrs as Record<string, unknown>)
+          : undefined;
+      return {
+        ...i,
+        unitPrice: i.unitPrice.toString(),
+        productVariant: i.productVariant
+          ? { ...i.productVariant, attributes }
+          : null,
+      };
+    }),
     payments: order.payments.map((p) => ({
       ...p,
       amount: p.amount.toString(),

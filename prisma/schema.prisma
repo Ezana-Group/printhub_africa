@@ -36,6 +36,10 @@ model User {
   inviteToken         String?
   inviteTokenExpiry   DateTime?
   status              String?   @default("ACTIVE") // ACTIVE | INVITE_PENDING | DEACTIVATED
+  totpSecret          String?   // 2FA TOTP secret
+  dateOfBirth         DateTime?
+  isAnonymised        Boolean?  @default(false)
+  anonymisedAt        DateTime?
 
   accounts         Account[]
   sessions         Session[]
@@ -53,6 +57,12 @@ model User {
   supportTickets   SupportTicket[]
   ticketMessages   TicketMessage[]
   auditLogs        AuditLog[]
+  savedAddresses   SavedAddress[]
+  referralCodes    ReferralCode[]
+  loyaltyAccount   LoyaltyAccount?
+  userNotificationPrefs UserNotificationPrefs?
+  userPermissions     UserPermission[]
+  performedByMovements ThreeDConsumableMovement[]
 }
 
 model Address {
@@ -441,6 +451,7 @@ enum OrderType {
   LARGE_FORMAT
   THREE_D_PRINT // 3D print jobs (custom FDM/resin)
   QUOTE
+  POD           // Print on demand (catalogue)
 }
 
 model Order {
@@ -1187,9 +1198,13 @@ model ThreeDConsumable {
   location          String?
   costPerKgKes      Float?   // cost per kg (KES) – FILAMENT; used by 3D calculator
   unitCostKes       Float?   // cost per unit (KES) – RESIN/OTHER; for margin/profit checks
+  colourHex         String?  // e.g. #FF0000 for filament colour
+  weightPerSpoolKg  Float?   // filament spool weight (kg)
   notes             String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  movements ThreeDConsumableMovement[]
 }
 
 // ============== STAFF & ADMIN ==============
@@ -1249,6 +1264,125 @@ model TicketMessage {
   @@index([ticketId])
 }
 
+model SavedAddress {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label         String   @default("Home")
+  recipientName String?
+  phone         String?
+  line1         String
+  line2         String?
+  city          String
+  county        String
+  isDefault     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model ReferralCode {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  code      String   @unique
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model LoyaltyAccount {
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  points       Int       @default(0)
+  pointsEarned Int       @default(0) // lifetime earned (for tier)
+  tier         String?
+  updatedAt    DateTime  @updatedAt
+
+  transactions LoyaltyTransaction[]
+}
+
+model LoyaltyTransaction {
+  id          String         @id @default(cuid())
+  accountId   String
+  account     LoyaltyAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  points      Int
+  type        String         // EARN, REDEEM, ADJUST
+  reference   String?        // orderId, etc.
+  description String?
+  createdAt   DateTime       @default(now())
+
+  @@index([accountId])
+}
+
+model UserNotificationPrefs {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailOrders    Boolean? @default(true)
+  emailMarketing Boolean? @default(false)
+  smsOrders     Boolean? @default(false)
+  updatedAt      DateTime @updatedAt
+}
+
+model UserPermission {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission String
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, permission])
+  @@index([userId])
+}
+
+model Courier {
+  id           String   @id @default(cuid())
+  name         String
+  sortOrder    Int      @default(0)
+  trackingUrl  String?
+  phone        String?
+  logo         String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model DeliveryZone {
+  id          String   @id @default(cuid())
+  name        String
+  county      String?
+  counties    String?  // comma-separated list
+  postcodes   String?  // comma-separated or regex
+  feeKes      Float?
+  minOrderKes Float?
+  minDays     Int?
+  maxDays     Int?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ThreeDConsumableMovement {
+  id             String           @id @default(cuid())
+  consumableId   String
+  consumable     ThreeDConsumable @relation(fields: [consumableId], references: [id], onDelete: Cascade)
+  type           String           // RECEIVED, CONSUMED, ADJUSTMENT, etc.
+  quantity       Int              // delta: positive = in, negative = out
+  costPerKgKes   Float?
+  supplier       String?
+  reference      String?
+  performedById  String?
+  performedBy    User?            @relation(fields: [performedById], references: [id])
+  notes          String?
+  createdAt      DateTime         @default(now())
+
+  @@index([consumableId])
+}
+
 // ============== SETTINGS (single-row per id) ==============
 model BusinessSettings {
   id                   String    @id // "default"
@@ -1288,15 +1422,20 @@ model BusinessSettings {
 }
 
 model SeoSettings {
-  id             String   @id // "default"
-  siteName       String?
-  titleTemplate  String?
-  defaultTitle   String?
-  defaultDescription String?
-  ogImageUrl     String?
-  twitterHandle  String?
-  sitemapGeneratedAt DateTime?
-  updatedAt      DateTime @updatedAt
+  id                      String    @id // "default"
+  siteName                String?
+  titleTemplate           String?
+  defaultTitle            String?
+  defaultDescription      String?
+  ogImageUrl              String?
+  defaultOgImageUrl       String?
+  twitterHandle           String?
+  sitemapGeneratedAt      DateTime?
+  robotsTxt               String?
+  sitemapIncludePages     Boolean?  @default(true)
+  sitemapIncludeProducts  Boolean?  @default(true)
+  sitemapIncludeCategories Boolean? @default(true)
+  updatedAt               DateTime  @updatedAt
 }
 
 model ShippingSettings {
@@ -1309,10 +1448,13 @@ model ShippingSettings {
 }
 
 model LoyaltySettings {
-  id          String   @id // "default"
-  bonusRules  Json?    // array of { id, name, type, value, enabled }
-  tiers       Json?    // array of { name, minPoints, maxPoints, earnMultiplier, perks }
-  updatedAt   DateTime @updatedAt
+  id               String   @id // "default"
+  enabled          Boolean?  @default(true)
+  pointsPerKesSpent Float?
+  kesPerPointSpent Float?
+  bonusRules       Json?     // array of { id, name, type, value, enabled }
+  tiers            Json?     // array of { name, minPoints, maxPoints, earnMultiplier, perks }
+  updatedAt        DateTime @updatedAt
 }
 
 model ReferralSettings {
@@ -1358,6 +1500,7 @@ model Faq {
   isPopular  Boolean     @default(false)
   sortOrder  Int         @default(0)
   isActive   Boolean     @default(true)
+  updatedBy  String?
 
   @@index([categoryId])
 }
@@ -1417,12 +1560,14 @@ enum CatalogueLicense {
 }
 
 model CatalogueCategory {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  icon      String?
-  sortOrder Int      @default(0)
-  isActive  Boolean  @default(true)
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  icon        String?
+  description String?
+  imageUrl    String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
 
   items CatalogueItem[]
 
@@ -1430,9 +1575,12 @@ model CatalogueCategory {
 }
 
 model CatalogueDesigner {
-  id     String   @id @default(cuid())
-  name   String
-  slug   String?  @unique
+  id         String   @id @default(cuid())
+  name       String
+  slug       String?  @unique
+  username   String?
+  platform   String?
+  profileUrl String?
 
   items CatalogueItem[]
 }
@@ -1458,7 +1606,14 @@ model CatalogueItem {
   isFeatured       Boolean            @default(false)
   isNewArrival     Boolean            @default(false)
   isStaffPick      Boolean            @default(false)
+  isPopular        Boolean            @default(false)
   sortOrder        Int                @default(0)
+  basePriceKes     Float?
+  priceOverrideKes Float?
+  weightGrams      Float?
+  printTimeHours   Float?
+  metaTitle        String?
+  metaDescription  String?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 
@@ -1490,6 +1645,7 @@ model CatalogueItemMaterial {
   priceModifierKes  Float?        @default(0)
   isDefault         Boolean       @default(false)
   isAvailable       Boolean       @default(true)
+  availableColours   Json?         // array of colour hex or names
 
   @@index([catalogueItemId])
 }
@@ -1565,6 +1721,7 @@ model JobListing {
   metaDescription     String?
   customQuestions     Json?
   publishedAt         DateTime?
+  createdBy           String?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
@@ -1591,10 +1748,13 @@ model JobApplication {
   answers        Json?
   source         String?
   referredBy     String?
-  status         ApplicationStatus @default(NEW)
-  internalNotes  String?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  status           ApplicationStatus @default(NEW)
+  internalNotes    String?
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  rejectionReason  String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
   @@index([jobListingId])
   @@index([status])
