@@ -3,7 +3,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export interface CartItem {
+/** Shop product cart line */
+export interface ShopCartItem {
   productId: string;
   variantId?: string;
   quantity: number;
@@ -11,6 +12,31 @@ export interface CartItem {
   name: string;
   image?: string;
   slug: string;
+  type?: "SHOP";
+}
+
+/** Print-on-Demand catalogue cart line */
+export interface CatalogueCartItem {
+  type: "CATALOGUE";
+  catalogueItemId: string;
+  name: string;
+  slug: string;
+  image?: string;
+  imageUrl?: string;
+  materialCode: string;
+  materialName: string;
+  colourHex: string;
+  colourName: string;
+  quantity: number;
+  unitPrice: number;
+  weightGrams?: number;
+  printTimeHours?: number;
+}
+
+export type CartItem = ShopCartItem | CatalogueCartItem;
+
+export function isCatalogueCartItem(i: CartItem): i is CatalogueCartItem {
+  return i.type === "CATALOGUE";
 }
 
 export interface AppliedCoupon {
@@ -18,12 +44,21 @@ export interface AppliedCoupon {
   discountAmount: number;
 }
 
+function cartItemKey(i: CartItem): string {
+  if (isCatalogueCartItem(i)) {
+    return `cat:${i.catalogueItemId}:${i.materialCode}:${i.colourHex}`;
+  }
+  return `shop:${i.productId}:${i.variantId ?? ""}`;
+}
+
 interface CartState {
   items: CartItem[];
   appliedCoupon: AppliedCoupon | null;
   addItem: (item: CartItem) => void;
   updateQuantity: (productId: string, variantId: string | undefined, quantity: number) => void;
+  updateCatalogueQuantity: (catalogueItemId: string, materialCode: string, colourHex: string, quantity: number) => void;
   removeItem: (productId: string, variantId?: string) => void;
+  removeCatalogueItem: (catalogueItemId: string, materialCode: string, colourHex: string) => void;
   clearCart: () => void;
   setAppliedCoupon: (coupon: AppliedCoupon | null) => void;
   total: () => number;
@@ -37,19 +72,21 @@ export const useCartStore = create<CartState>()(
       appliedCoupon: null,
       addItem: (item) => {
         set((state) => {
-          const existing = state.items.find(
-            (i) => i.productId === item.productId && (i.variantId ?? "") === (item.variantId ?? "")
-          );
+          const key = cartItemKey(item);
+          const existing = state.items.find((i) => cartItemKey(i) === key);
           if (existing) {
             return {
               items: state.items.map((i) =>
-                i.productId === item.productId && (i.variantId ?? "") === (item.variantId ?? "")
+                cartItemKey(i) === key
                   ? { ...i, quantity: i.quantity + item.quantity }
                   : i
               ),
             };
           }
-          return { items: [...state.items, item] };
+          const normalized: CartItem = "type" in item && item.type === "CATALOGUE"
+            ? { ...item, image: item.image ?? item.imageUrl }
+            : { ...item, type: "SHOP" as const };
+          return { items: [...state.items, normalized] };
         });
       },
       updateQuantity: (productId, variantId, quantity) => {
@@ -57,19 +94,35 @@ export const useCartStore = create<CartState>()(
           get().removeItem(productId, variantId);
           return;
         }
+        const key = `shop:${productId}:${variantId ?? ""}`;
         set((state) => ({
           items: state.items.map((i) =>
-            i.productId === productId && (i.variantId ?? "") === (variantId ?? "")
-              ? { ...i, quantity }
-              : i
+            cartItemKey(i) === key ? { ...i, quantity } : i
+          ),
+        }));
+      },
+      updateCatalogueQuantity: (catalogueItemId, materialCode, colourHex, quantity) => {
+        if (quantity < 1) {
+          get().removeCatalogueItem(catalogueItemId, materialCode, colourHex);
+          return;
+        }
+        const key = `cat:${catalogueItemId}:${materialCode}:${colourHex}`;
+        set((state) => ({
+          items: state.items.map((i) =>
+            cartItemKey(i) === key ? { ...i, quantity } : i
           ),
         }));
       },
       removeItem: (productId, variantId) => {
+        const key = `shop:${productId}:${variantId ?? ""}`;
         set((state) => ({
-          items: state.items.filter(
-            (i) => !(i.productId === productId && (i.variantId ?? "") === (variantId ?? ""))
-          ),
+          items: state.items.filter((i) => cartItemKey(i) !== key),
+        }));
+      },
+      removeCatalogueItem: (catalogueItemId, materialCode, colourHex) => {
+        const key = `cat:${catalogueItemId}:${materialCode}:${colourHex}`;
+        set((state) => ({
+          items: state.items.filter((i) => cartItemKey(i) !== key),
         }));
       },
       clearCart: () => set({ items: [], appliedCoupon: null }),

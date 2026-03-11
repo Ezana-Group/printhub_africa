@@ -3,14 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useCartStore } from "@/store/cart-store";
+import { useCartStore, isCatalogueCartItem } from "@/store/cart-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatPrice } from "@/lib/utils";
 import { calculateCartTotals } from "@/lib/cart-calculations";
 
 export default function CartPage() {
-  const { items, updateQuantity, removeItem, clearCart, appliedCoupon, setAppliedCoupon } = useCartStore();
+  const { items, updateQuantity, updateCatalogueQuantity, removeItem, removeCatalogueItem, clearCart, appliedCoupon, setAppliedCoupon } = useCartStore();
   const [couponInput, setCouponInput] = useState("");
   const [couponError, setCouponError] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
@@ -74,55 +74,77 @@ export default function CartPage() {
 
       <div className="mt-8 grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-4">
-          {items.map((item) => (
-            <div
-              key={`${item.productId}-${item.variantId ?? ""}`}
-              className="flex gap-4 rounded-2xl border border-slate-200 bg-white p-4"
-            >
-              <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-slate-100">
-                {item.image ? (
-                  <Image src={item.image} alt={item.name} fill className="object-cover" sizes="96px" />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-slate-400 text-xs">No image</div>
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <Link href={`/shop/${item.slug}`} className="font-semibold text-slate-900 hover:underline">
-                  {item.name}
-                </Link>
-                <p className="text-sm text-slate-600 mt-0.5">{formatPrice(item.unitPrice)} × {item.quantity}</p>
-                <div className="mt-2 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => updateQuantity(item.productId, item.variantId, Math.max(1, item.quantity - 1))}
-                    className="h-8 w-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
-                    aria-label="Decrease"
-                  >
-                    −
-                  </button>
-                  <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
-                  <button
-                    type="button"
-                    onClick={() => updateQuantity(item.productId, item.variantId, item.quantity + 1)}
-                    className="h-8 w-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
-                    aria-label="Increase"
-                  >
-                    +
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => removeItem(item.productId, item.variantId)}
-                    className="ml-2 text-sm text-red-600 hover:underline"
-                  >
-                    Remove
-                  </button>
+          {items.map((item) => {
+            const isCatalogue = isCatalogueCartItem(item);
+            const imgUrl = item.image ?? (isCatalogue ? item.imageUrl : undefined);
+            const itemHref = isCatalogue ? `/catalogue/${item.slug}` : `/shop/${item.slug}`;
+            return (
+              <div
+                key={isCatalogue ? `cat:${item.catalogueItemId}:${item.materialCode}:${item.colourHex}` : `${item.productId}-${item.variantId ?? ""}`}
+                className="flex gap-4 rounded-2xl border border-slate-200 bg-white p-4"
+              >
+                <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-slate-100">
+                  {imgUrl ? (
+                    <Image src={imgUrl} alt={item.name} fill className="object-cover" sizes="96px" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-slate-400 text-xs">No image</div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <Link href={itemHref} className="font-semibold text-slate-900 hover:underline">
+                    {item.name}
+                  </Link>
+                  {isCatalogue && (
+                    <p className="text-sm text-slate-500 mt-0.5">
+                      Print-on-Demand · {item.materialName} · {item.colourName}
+                    </p>
+                  )}
+                  <p className="text-sm text-slate-600 mt-0.5">{formatPrice(item.unitPrice)} × {item.quantity}</p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        isCatalogue
+                          ? updateCatalogueQuantity(item.catalogueItemId, item.materialCode, item.colourHex, Math.max(1, item.quantity - 1))
+                          : updateQuantity(item.productId, item.variantId, Math.max(1, item.quantity - 1))
+                      }
+                      className="h-8 w-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+                      aria-label="Decrease"
+                    >
+                      −
+                    </button>
+                    <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        isCatalogue
+                          ? updateCatalogueQuantity(item.catalogueItemId, item.materialCode, item.colourHex, item.quantity + 1)
+                          : updateQuantity(item.productId, item.variantId, item.quantity + 1)
+                      }
+                      className="h-8 w-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+                      aria-label="Increase"
+                    >
+                      +
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        isCatalogue
+                          ? removeCatalogueItem(item.catalogueItemId, item.materialCode, item.colourHex)
+                          : removeItem(item.productId, item.variantId)
+                      }
+                      className="ml-2 text-sm text-red-600 hover:underline"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+                <div className="text-right font-semibold text-slate-900">
+                  {formatPrice(item.unitPrice * item.quantity)}
                 </div>
               </div>
-              <div className="text-right font-semibold text-slate-900">
-                {formatPrice(item.unitPrice * item.quantity)}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-6 h-fit">

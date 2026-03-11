@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useCartStore } from "@/store/cart-store";
+import { useCartStore, isCatalogueCartItem } from "@/store/cart-store";
 import { useCheckoutStore } from "@/store/checkout-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -141,12 +141,26 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: items.map((i) => ({
-            productId: i.productId,
-            variantId: i.variantId ?? undefined,
-            quantity: i.quantity,
-            unitPrice: i.unitPrice,
-          })),
+          items: items.map((i) =>
+            isCatalogueCartItem(i)
+              ? {
+                  catalogueItemId: i.catalogueItemId,
+                  quantity: i.quantity,
+                  unitPrice: i.unitPrice,
+                  customizations: {
+                    materialCode: i.materialCode,
+                    materialName: i.materialName,
+                    colourHex: i.colourHex,
+                    colourName: i.colourName,
+                  },
+                }
+              : {
+                  productId: i.productId,
+                  variantId: i.variantId ?? undefined,
+                  quantity: i.quantity,
+                  unitPrice: i.unitPrice,
+                }
+          ),
           shippingAddress: {
             fullName: `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim(),
             email: contact.email,
@@ -633,7 +647,10 @@ export default function CheckoutPage() {
                     <h3 className="font-medium text-sm text-muted-foreground mb-2">Items</h3>
                     <ul className="space-y-2">
                       {items.map((item) => (
-                        <li key={`${item.productId}-${item.variantId ?? ""}`} className="flex justify-between text-sm">
+                        <li
+                          key={isCatalogueCartItem(item) ? `cat:${item.catalogueItemId}:${item.materialCode}:${item.colourHex}` : `shop:${item.productId}:${item.variantId ?? ""}`}
+                          className="flex justify-between text-sm"
+                        >
                           <span>{item.name} × {item.quantity}</span>
                           <span>{formatPrice(item.unitPrice * item.quantity)}</span>
                         </li>

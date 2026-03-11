@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { useCartStore } from "@/store/cart-store";
+import { useCartStore, isCatalogueCartItem } from "@/store/cart-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatPrice } from "@/lib/utils";
@@ -90,23 +90,29 @@ export function CheckoutOrderSummary({
         <ul className="space-y-3 mb-4">
           {items.map((item) => (
             <li
-              key={`${item.productId}-${item.variantId ?? ""}`}
+              key={isCatalogueCartItem(item) ? `cat:${item.catalogueItemId}:${item.materialCode}:${item.colourHex}` : `shop:${item.productId}:${item.variantId ?? ""}`}
               className="flex gap-3"
             >
               <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted">
-                {item.image ? (
+                {(() => {
+                  const src = item.image ?? (isCatalogueCartItem(item) ? item.imageUrl : undefined);
+                  if (!src || typeof src !== "string") {
+                    return (
+                  <div className="flex h-full items-center justify-center text-muted-foreground text-xs">
+                    No image
+                  </div>
+                    );
+                  }
+                  return (
                   <Image
-                    src={item.image}
+                    src={src}
                     alt={item.name}
                     fill
                     className="object-cover"
                     sizes="48px"
                   />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-muted-foreground text-xs">
-                    No image
-                  </div>
-                )}
+                  );
+                })()}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-sm truncate">{item.name}</p>

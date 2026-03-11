@@ -34,6 +34,7 @@ const NAV_LINKS = [
     href: "/shop",
     children: [
       { label: "All Products", href: "/shop" },
+      { label: "Print-on-Demand Catalogue", href: "/catalogue" },
       { label: "New Arrivals", href: "/shop?sort=newest" },
       { label: "Best Sellers", href: "/shop?sort=bestselling" },
     ],

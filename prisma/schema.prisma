@@ -450,6 +450,7 @@ enum OrderType {
   CUSTOM_PRINT  // legacy; prefer 3D_PRINT for new orders
   LARGE_FORMAT
   THREE_D_PRINT // 3D print jobs (custom FDM/resin)
+  POD           // Print-on-Demand catalogue
   QUOTE
 }
 
@@ -486,10 +487,12 @@ model OrderItem {
   order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId      String?
   product        Product? @relation(fields: [productId], references: [id])
+  catalogueItemId String?
+  catalogueItem   CatalogueItem? @relation(fields: [catalogueItemId], references: [id])
   variantId      String?
   quantity       Int
   unitPrice      Decimal  @db.Decimal(12, 2)
-  customizations Json?
+  customizations Json?    // for POD: { materialCode, materialName, colourHex, colourName, stlFileRef?, weightGrams?, printTimeHours? }
   uploadedFileId String?
   instructions   String?
   createdAt      DateTime @default(now())
@@ -499,6 +502,7 @@ model OrderItem {
   productVariantId String?
 
   @@index([orderId])
+  @@index([catalogueItemId])
 }
 
 model OrderTimeline {
@@ -1617,4 +1621,181 @@ model DeliveryZone {
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ============== PRINT-ON-DEMAND CATALOGUE ==============
+enum CatalogueLicense {
+  CC0
+  CC_BY
+  CC_BY_SA
+  PARTNERSHIP
+  ORIGINAL
+}
+
+enum CatalogueStatus {
+  DRAFT
+  PENDING_REVIEW
+  LIVE
+  PAUSED
+  RETIRED
+}
+
+enum PrintDifficulty {
+  STANDARD
+  MODERATE
+  ADVANCED
+}
+
+enum CatalogueSourceType {
+  MANUAL
+  PRINTABLES
+  THINGIVERSE
+  PARTNER
+  ORIGINAL
+}
+
+enum ImportStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  FLAGGED
+}
+
+model CatalogueCategory {
+  id          String           @id @default(cuid())
+  name        String
+  slug        String           @unique
+  description String?
+  imageUrl    String?
+  icon        String?
+  sortOrder   Int              @default(0)
+  isActive    Boolean          @default(true)
+  items       CatalogueItem[]
+  createdAt   DateTime         @default(now())
+}
+
+model CatalogueDesigner {
+  id              String           @id @default(cuid())
+  name            String
+  username        String?
+  platform        String?
+  profileUrl      String?
+  licenseDefault  CatalogueLicense @default(CC_BY)
+  isPartner       Boolean          @default(false)
+  revenueSharePct Float?
+  paymentMethod   String?
+  paymentDetails  String?
+  totalEarnedKes  Float            @default(0)
+  items           CatalogueItem[]
+  createdAt       DateTime        @default(now())
+}
+
+model CatalogueItem {
+  id                String              @id @default(cuid())
+  name              String
+  slug              String              @unique
+  description       String              @db.Text
+  shortDescription  String?
+
+  categoryId        String
+  category          CatalogueCategory   @relation(fields: [categoryId], references: [id])
+  tags              String[]
+
+  designerId        String?
+  designer          CatalogueDesigner?  @relation(fields: [designerId], references: [id])
+  sourceUrl         String?
+  licenseType       CatalogueLicense
+  designerCredit    String?
+
+  stlFileUrl        String?
+  stlFileName       String?
+  stlFileSizeBytes  Int?
+
+  weightGrams       Float?
+  printTimeHours    Float?
+  supportsRequired  Boolean             @default(false)
+  printDifficulty   PrintDifficulty     @default(STANDARD)
+  buildVolumeX      Float?
+  buildVolumeY      Float?
+  buildVolumeZ      Float?
+
+  availableMaterials CatalogueItemMaterial[]
+  photos            CatalogueItemPhoto[]
+
+  basePriceKes      Float?
+  priceOverrideKes  Float?
+  minQuantity       Int                 @default(1)
+  maxQuantity       Int                 @default(50)
+
+  status            CatalogueStatus     @default(PENDING_REVIEW)
+  isFeatured        Boolean             @default(false)
+  isNewArrival      Boolean             @default(false)
+  isStaffPick       Boolean             @default(false)
+  isPopular         Boolean             @default(false)
+  sortOrder         Int                 @default(0)
+
+  sourceType        CatalogueSourceType @default(MANUAL)
+  externalId        String?
+
+  metaTitle         String?
+  metaDescription   String?
+
+  addedBy           String?
+  approvedBy        String?
+  approvedAt        DateTime?
+  rejectedBy        String?
+  rejectionReason   String?
+  internalNotes     String?             @db.Text
+
+  orders            OrderItem[]
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([categoryId])
+  @@index([status])
+  @@index([slug])
+}
+
+model CatalogueItemMaterial {
+  id               String        @id @default(cuid())
+  catalogueItemId  String
+  catalogueItem    CatalogueItem @relation(fields: [catalogueItemId], references: [id], onDelete: Cascade)
+  materialCode    String
+  materialName     String
+  availableColours String[]
+  priceModifierKes Float         @default(0)
+  isDefault        Boolean       @default(false)
+  isAvailable      Boolean       @default(true)
+
+  @@index([catalogueItemId])
+}
+
+model CatalogueItemPhoto {
+  id              String        @id @default(cuid())
+  catalogueItemId String
+  catalogueItem   CatalogueItem @relation(fields: [catalogueItemId], references: [id], onDelete: Cascade)
+  url             String
+  altText         String?
+  isPrimary       Boolean       @default(false)
+  sortOrder       Int           @default(0)
+
+  @@index([catalogueItemId])
+}
+
+model CatalogueImportQueue {
+  id              String    @id @default(cuid())
+  externalId      String
+  platform        String
+  name            String
+  designerName    String?
+  licenseType     String?
+  previewImageUrl String?
+  sourceUrl       String
+  rawData         Json
+  status          ImportStatus @default(PENDING)
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  rejectionReason String?
+  importedItemId  String?
+  createdAt       DateTime  @default(now())
 }

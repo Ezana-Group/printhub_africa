@@ -19,7 +19,7 @@ import { TablePagination } from "@/components/admin/ui/TablePagination";
 import { TableEmptyState } from "@/components/admin/ui/TableEmptyState";
 import { useTableUrlState } from "@/hooks/useTableUrlState";
 
-export type OrderType = "SHOP" | "CUSTOM_PRINT" | "LARGE_FORMAT" | "THREE_D_PRINT" | "QUOTE";
+export type OrderType = "SHOP" | "CUSTOM_PRINT" | "LARGE_FORMAT" | "THREE_D_PRINT" | "POD" | "QUOTE";
 
 type OrderRow = {
   id: string;
@@ -34,6 +34,7 @@ type OrderRow = {
 
 const ORDER_TYPE_CONFIG: Record<OrderType, { label: string; variant: "secondary" | "default" | "outline" | "destructive"; icon?: React.ComponentType<{ className?: string }> }> = {
   SHOP: { label: "Shop", variant: "secondary", icon: ShoppingCart },
+  POD: { label: "Print-on-Demand", variant: "default", icon: Printer },
   LARGE_FORMAT: { label: "Large Format", variant: "default", icon: Printer },
   THREE_D_PRINT: { label: "3D Print", variant: "outline", icon: Printer },
   CUSTOM_PRINT: { label: "Custom Print", variant: "outline", icon: Printer },

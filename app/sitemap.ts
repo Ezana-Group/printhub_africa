@@ -16,6 +16,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         "/about",
         "/careers",
         "/shop",
+        "/catalogue",
         "/get-a-quote",
         "/cart",
         "/checkout",
@@ -80,5 +81,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .catch(() => []);
   }
 
-  return [...staticPages, ...(Array.isArray(jobSlugs) ? jobSlugs : []), ...productUrls, ...categoryUrls];
+  let catalogueItemUrls: MetadataRoute.Sitemap = [];
+  if (includeProducts) {
+    try {
+      const rows = await prisma.catalogueItem.findMany({
+        where: { status: "LIVE" },
+        select: { slug: true, updatedAt: true },
+      });
+      catalogueItemUrls = rows.map((r) => ({
+        url: `${base}/catalogue/${r.slug}`,
+        lastModified: r.updatedAt,
+        changeFrequency: "weekly" as const,
+        priority: 0.7,
+      }));
+    } catch {
+      catalogueItemUrls = [];
+    }
+  }
+
+  return [
+    ...staticPages,
+    ...(Array.isArray(jobSlugs) ? jobSlugs : []),
+    ...productUrls,
+    ...categoryUrls,
+    ...catalogueItemUrls,
+  ];
 }

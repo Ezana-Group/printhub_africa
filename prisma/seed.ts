@@ -806,6 +806,28 @@ async function main() {
   }
   console.log("Settings defaults (SEO, Loyalty, Referral, Discounts, System, Business, Shipping) seeded");
 
+  // Print-on-Demand Catalogue categories
+  const catalogueCategories = [
+    { name: "Home Décor", slug: "home-decor", icon: "home", sortOrder: 1 },
+    { name: "Phone & Tech", slug: "phone-tech", icon: "smartphone", sortOrder: 2 },
+    { name: "Jewellery & Wearables", slug: "jewellery", icon: "gem", sortOrder: 3 },
+    { name: "Toys & Games", slug: "toys-games", icon: "gamepad-2", sortOrder: 4 },
+    { name: "Tools & Organisers", slug: "tools", icon: "wrench", sortOrder: 5 },
+    { name: "Architecture & Models", slug: "architecture", icon: "building-2", sortOrder: 6 },
+    { name: "Education & STEM", slug: "education", icon: "graduation-cap", sortOrder: 7 },
+    { name: "Fashion Accessories", slug: "fashion", icon: "scissors", sortOrder: 8 },
+    { name: "Office & Desk", slug: "office-desk", icon: "monitor", sortOrder: 9 },
+    { name: "Kenya Collection", slug: "kenya-collection", icon: "map-pin", sortOrder: 10 },
+  ];
+  for (const cat of catalogueCategories) {
+    await prisma.catalogueCategory.upsert({
+      where: { slug: cat.slug },
+      update: { name: cat.name, icon: cat.icon, sortOrder: cat.sortOrder },
+      create: { ...cat, isActive: true },
+    });
+  }
+  console.log("Catalogue categories seeded");
+
   console.log("Seed completed.");
 }
 

@@ -22,6 +22,7 @@ import {
   HelpCircle,
   Scale,
   Briefcase,
+  Layers,
 } from "lucide-react";
 import { canAccessRoute } from "@/lib/admin-permissions";
 import { cn } from "@/lib/utils";
@@ -45,6 +46,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
       { href: "/admin/products", label: "Products", icon: Package },
       { href: "/admin/categories", label: "Categories", icon: FolderTree },
+      { href: "/admin/catalogue", label: "Catalogue", icon: Layers },
     ],
   },
   {

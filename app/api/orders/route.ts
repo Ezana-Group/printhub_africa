@@ -12,6 +12,7 @@ const createOrderSchema = z.object({
     z.object({
       productId: z.string().optional(),
       variantId: z.string().optional(),
+      catalogueItemId: z.string().optional(),
       quantity: z.number().min(1),
       unitPrice: z.number(),
       customizations: z.record(z.string(), z.unknown()).optional(),
@@ -53,13 +54,15 @@ export async function POST(req: Request) {
   const discount = reqDiscount;
 
   const orderNumber = await ensureUniqueOrderNumber();
+  const hasPOD = items.some((i) => i.catalogueItemId);
+  const orderType = hasPOD ? "POD" : "SHOP";
 
   const order = await prisma.order.create({
     data: {
       orderNumber,
       userId: session?.user?.id ?? null,
       status: "PENDING",
-      type: "SHOP",
+      type: orderType,
       subtotal,
       tax,
       shippingCost,
@@ -71,6 +74,7 @@ export async function POST(req: Request) {
         create: items.map((i) => ({
           productId: i.productId ?? null,
           productVariantId: i.variantId ?? null,
+          catalogueItemId: i.catalogueItemId ?? null,
           quantity: i.quantity,
           unitPrice: i.unitPrice,
           customizations: (i.customizations ?? undefined) as object | undefined,
