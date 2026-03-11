@@ -57,5 +57,6 @@ const nextConfig = {
 export default withSentryConfig(nextConfig, {
   org: process.env.SENTRY_ORG || "",
   project: process.env.SENTRY_PROJECT || "",
-  silent: !process.env.CI,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI || !process.env.SENTRY_AUTH_TOKEN,
 });
