@@ -32,6 +32,8 @@ const createOrderSchema = z.object({
   shippingCost: z.number().min(0).optional(),
   discount: z.number().min(0).optional(),
   notes: z.string().optional(),
+  pickupLocationId: z.string().optional(),
+  deliveryNotes: z.string().optional(),
 });
 
 export async function POST(req: Request) {
@@ -50,7 +52,25 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
-  const { items, shippingAddress, shippingCost: reqShipping = 0, discount: reqDiscount = 0, notes } = parsed.data;
+  const { items, shippingAddress: reqAddress, shippingCost: reqShipping = 0, discount: reqDiscount = 0, notes, pickupLocationId, deliveryNotes } = parsed.data;
+  const isPickup = reqAddress.deliveryMethod?.toLowerCase() === "pickup";
+
+  let shippingAddress = reqAddress;
+  let orderPickupLocationId: string | null = null;
+  if (isPickup && pickupLocationId) {
+    const location = await prisma.pickupLocation.findUnique({ where: { id: pickupLocationId, isActive: true } });
+    if (location) {
+      orderPickupLocationId = location.id;
+      const notesLine = [location.instructions, deliveryNotes].filter(Boolean).join("; ");
+      shippingAddress = {
+        ...reqAddress,
+        street: notesLine ? `${location.street}${location.postalCode ? `, ${location.postalCode}` : ""} — ${notesLine}` : `${location.street}${location.postalCode ? `, ${location.postalCode}` : ""}`,
+        city: location.city,
+        county: location.county,
+        postalCode: location.postalCode ?? undefined,
+      };
+    }
+  }
 
   // Prices are VAT-inclusive — use same calculation as cart/checkout
   const { subtotalInclVat, vatAmount, total } = calculateCartTotals(
@@ -89,7 +109,8 @@ export async function POST(req: Request) {
         discount,
         total,
         currency: "KES",
-        notes,
+        notes: [notes, deliveryNotes].filter(Boolean).join(" — ") || undefined,
+        pickupLocationId: orderPickupLocationId,
         items: {
           create: items.map((i) => ({
             productId: i.productId ?? null,

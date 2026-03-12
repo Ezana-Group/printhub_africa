@@ -20,6 +20,56 @@ import { Smartphone, CreditCard, Building2, Wallet } from "lucide-react";
 
 const PHONE_REGEX = /^\+?254[17]\d{8}$/;
 
+type PickupLoc = { id: string; name: string; city: string; county: string; street: string };
+function PickupLocationSelector({
+  sameCounty,
+  other,
+  all,
+  loading,
+  selectedId,
+  onSelect,
+}: {
+  sameCounty: PickupLoc[];
+  other: PickupLoc[];
+  all: PickupLoc[];
+  loading: boolean;
+  selectedId: string;
+  onSelect: (id: string, name: string) => void;
+}) {
+  if (loading) return <p className="text-sm text-muted-foreground py-2">Loading pickup locations…</p>;
+  if (all.length === 0) return <p className="text-sm text-amber-600 py-2">No pickup locations configured. Please contact us.</p>;
+  const renderList = (list: PickupLoc[], label: string) =>
+    list.length > 0 ? (
+      <div key={label} className="mt-2">
+        {label && <p className="text-xs font-medium text-muted-foreground mb-1">{label}</p>}
+        <div className="space-y-1">
+          {list.map((loc) => (
+            <label key={loc.id} className="flex items-start gap-3 p-2 rounded-md border cursor-pointer hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+              <input
+                type="radio"
+                name="pickupLocation"
+                value={loc.id}
+                checked={selectedId === loc.id}
+                onChange={() => onSelect(loc.id, loc.name)}
+                className="mt-1"
+              />
+              <span className="text-sm">
+                <span className="font-medium">{loc.name}</span>
+                <span className="text-muted-foreground"> — {loc.street}, {loc.city}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
+    ) : null;
+  return (
+    <div className="pl-6 border-l-2 border-muted mt-2 space-y-2">
+      {sameCounty.length > 0 && renderList(sameCounty, "Near you (same county)")}
+      {other.length > 0 && renderList(other, sameCounty.length > 0 ? "Other locations" : "Pickup locations")}
+    </div>
+  );
+}
+
 function normalizePhone(val: string): string {
   const digits = val.replace(/\D/g, "");
   if (digits.startsWith("254")) return `+${digits}`;
@@ -62,6 +112,8 @@ export default function CheckoutPage() {
     pickup: number;
     noZonesConfigured?: boolean;
   }>({ standard: null, express: null, pickup: 0 });
+  const [pickupLocations, setPickupLocations] = useState<{ sameCounty: PickupLoc[]; other: PickupLoc[]; all: PickupLoc[] }>({ sameCounty: [], other: [], all: [] });
+  const [pickupLocationsLoading, setPickupLocationsLoading] = useState(false);
   const [createAccount, setCreateAccount] = useState(false);
   const [password, setPassword] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -119,6 +171,23 @@ export default function CheckoutPage() {
       .catch(() => setShippingRates({ standard: null, express: null, pickup: 0, noZonesConfigured: true }));
   }, [delivery.county]);
 
+  useEffect(() => {
+    setPickupLocationsLoading(true);
+    const county = (delivery.county ?? "").trim();
+    const url = county ? `/api/shipping/pickup-locations?county=${encodeURIComponent(county)}` : "/api/shipping/pickup-locations";
+    fetch(url)
+      .then((r) => r.json())
+      .then((data) =>
+        setPickupLocations({
+          sameCounty: Array.isArray(data.sameCounty) ? data.sameCounty : [],
+          other: Array.isArray(data.other) ? data.other : [],
+          all: Array.isArray(data.all) ? data.all : [],
+        })
+      )
+      .catch(() => setPickupLocations({ sameCounty: [], other: [], all: [] }))
+      .finally(() => setPickupLocationsLoading(false));
+  }, [delivery.county]);
+
   // Sync delivery fee when method or shipping rates change; switch to PICKUP if delivery not available for county
   useEffect(() => {
     const standardAvailable = shippingRates.standard != null;
@@ -143,11 +212,13 @@ export default function CheckoutPage() {
     PHONE_REGEX.test(normalizePhone(contact.phone ?? "")) &&
     (!createAccount || (password && password.length >= 8));
 
-  const canContinueStep2 =
-    (delivery.street ?? "").trim() &&
-    (delivery.area ?? "").trim() &&
-    (delivery.county ?? "").trim() &&
-    (delivery.city ?? "").trim();
+  const isPickup = delivery.method === "PICKUP";
+  const canContinueStep2 = isPickup
+    ? (delivery.county ?? "").trim() && (delivery.city ?? "").trim() && (delivery.pickupLocationId ?? "").trim()
+    : (delivery.street ?? "").trim() &&
+      (delivery.area ?? "").trim() &&
+      (delivery.county ?? "").trim() &&
+      (delivery.city ?? "").trim();
 
   const handleCreateOrder = async () => {
     setPlacingOrder(true);
@@ -181,9 +252,9 @@ export default function CheckoutPage() {
             fullName: `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim(),
             email: contact.email,
             phone: normalizePhone(contact.phone ?? ""),
-            street: delivery.street,
+            street: isPickup ? (delivery.pickupLocationName ?? "Pickup") : (delivery.street ?? ""),
             city: delivery.city ?? "Nairobi",
-            county: delivery.county,
+            county: delivery.county ?? "",
             postalCode: delivery.postalCode || undefined,
             deliveryMethod:
               delivery.method === "STANDARD"
@@ -192,6 +263,8 @@ export default function CheckoutPage() {
                   ? "Express"
                   : "Pickup",
           },
+          pickupLocationId: isPickup ? delivery.pickupLocationId ?? undefined : undefined,
+          deliveryNotes: delivery.notes || undefined,
           shippingCost: shippingFee,
           discount: appliedCoupon?.discountAmount ?? 0,
         }),
@@ -399,8 +472,18 @@ export default function CheckoutPage() {
                             checked={delivery.method === "PICKUP"}
                             onChange={() => setDelivery({ method: "PICKUP", fee: 0 })}
                           />
-                          <span>Pick up — Nairobi — FREE</span>
+                          <span>Pick up — {delivery.pickupLocationName ? `${delivery.pickupLocationName} — FREE` : "Select location below — FREE"}</span>
                         </label>
+                        {delivery.method === "PICKUP" && (
+                          <PickupLocationSelector
+                            sameCounty={pickupLocations.sameCounty}
+                            other={pickupLocations.other}
+                            all={pickupLocations.all}
+                            loading={pickupLocationsLoading}
+                            selectedId={delivery.pickupLocationId ?? ""}
+                            onSelect={(id, name) => setDelivery({ pickupLocationId: id, pickupLocationName: name })}
+                          />
+                        )}
                       </div>
                     ) : (
                       <div className="space-y-2">
@@ -431,8 +514,18 @@ export default function CheckoutPage() {
                             checked={delivery.method === "PICKUP"}
                             onChange={() => setDelivery({ method: "PICKUP", fee: 0 })}
                           />
-                          <span>Pick up — Nairobi — FREE</span>
+                          <span>Pick up — {delivery.pickupLocationName ? `${delivery.pickupLocationName} — FREE` : "Select location below — FREE"}</span>
                         </label>
+                        {delivery.method === "PICKUP" && (
+                          <PickupLocationSelector
+                            sameCounty={pickupLocations.sameCounty}
+                            other={pickupLocations.other}
+                            all={pickupLocations.all}
+                            loading={pickupLocationsLoading}
+                            selectedId={delivery.pickupLocationId ?? ""}
+                            onSelect={(id, name) => setDelivery({ pickupLocationId: id, pickupLocationName: name })}
+                          />
+                        )}
                       </div>
                     )}
                   </div>
@@ -740,10 +833,13 @@ export default function CheckoutPage() {
                         </Link>
                       </div>
                       <div>
-                        <h3 className="font-medium text-sm text-muted-foreground mb-1">Deliver to</h3>
+                        <h3 className="font-medium text-sm text-muted-foreground mb-1">{delivery.method === "PICKUP" ? "Pick up at" : "Deliver to"}</h3>
                         <p className="text-sm">
                           {contact.firstName} {contact.lastName}<br />
-                          {delivery.street}, {delivery.area}, {delivery.county}<br />
+                          {delivery.method === "PICKUP" && delivery.pickupLocationName
+                            ? `${delivery.pickupLocationName} (pickup)`
+                            : `${delivery.street}, ${delivery.area}, ${delivery.county}`}
+                          <br />
                           {contact.phone}
                         </p>
                         <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setStep(2)}>

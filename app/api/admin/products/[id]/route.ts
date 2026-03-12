@@ -49,7 +49,10 @@ export async function PATCH(
   }
   let skuUpdate: string | null | undefined = data.sku;
   if (data.sku !== undefined && (data.sku === null || (typeof data.sku === "string" && !data.sku.trim()))) {
-    skuUpdate = await generateNextProductSku();
+    const categoryIdForSku =
+      data.categoryId ??
+      (await prisma.product.findUnique({ where: { id }, select: { categoryId: true } }))?.categoryId;
+    skuUpdate = await generateNextProductSku(categoryIdForSku ?? undefined);
   } else if (data.sku !== undefined && typeof data.sku === "string" && data.sku.trim()) {
     const existingBySku = await prisma.product.findFirst({
       where: { sku: data.sku.trim(), NOT: { id } },

@@ -23,6 +23,9 @@ export interface CheckoutDelivery {
   method: "STANDARD" | "EXPRESS" | "PICKUP";
   fee: number;
   estimatedDays?: string;
+  /** When method is PICKUP, chosen location id and display name */
+  pickupLocationId?: string;
+  pickupLocationName?: string;
 }
 
 export interface CheckoutPayment {

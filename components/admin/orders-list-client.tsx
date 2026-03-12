@@ -30,6 +30,8 @@ type OrderRow = {
   createdAt: string;
   user?: { name: string | null; email: string } | null;
   payments: { status: string }[];
+  /** Comma-separated SKUs for shelf picking (e.g. "PRD-00001, LF-VINYL-1M×2") */
+  skuSummary: string | null;
 };
 
 const ORDER_TYPE_CONFIG: Record<OrderType, { label: string; variant: "secondary" | "default" | "outline" | "destructive"; icon?: React.ComponentType<{ className?: string }> }> = {
@@ -95,7 +97,8 @@ export function OrdersListClient({
         (o) =>
           o.orderNumber.toLowerCase().includes(q) ||
           (o.user?.name?.toLowerCase().includes(q)) ||
-          (o.user?.email?.toLowerCase().includes(q))
+          (o.user?.email?.toLowerCase().includes(q)) ||
+          (o.skuSummary?.toLowerCase().includes(q))
       );
     }
     if (statusFilter) list = list.filter((o) => o.status === statusFilter);
@@ -168,9 +171,9 @@ export function OrdersListClient({
   ];
 
   const exportCsv = useCallback(() => {
-    const csv = ["Order #,Type,Customer,Total,Payment,Status,Date"];
+    const csv = ["Order #,Type,Customer,Total,Payment,Status,SKU / Pick location,Date"];
     filteredAndSorted.forEach((o) => {
-      csv.push([o.orderNumber, o.type, o.user?.name ?? o.user?.email ?? "Guest", o.total, o.payments[0]?.status ?? "", o.status, o.createdAt].map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","));
+      csv.push([o.orderNumber, o.type, o.user?.name ?? o.user?.email ?? "Guest", o.total, o.payments[0]?.status ?? "", o.status, o.skuSummary ?? "", o.createdAt].map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","));
     });
     const blob = new Blob([csv.join("\n")], { type: "text/csv" });
     const a = document.createElement("a");
@@ -226,7 +229,7 @@ export function OrdersListClient({
       </div>
 
       <TableToolbar
-        searchPlaceholder="Search by order #, customer name, email..."
+        searchPlaceholder="Search by order #, customer, email, SKU..."
         searchValue={url.q}
         onSearch={url.setSearch}
         filters={filters}
@@ -262,6 +265,7 @@ export function OrdersListClient({
                   <th className="text-left p-4 font-medium">Total</th>
                   <th className="text-left p-4 font-medium">Payment</th>
                   <th className="text-left p-4 font-medium">Status</th>
+                  <th className="text-left p-4 font-medium">SKU / Pick location</th>
                   <th className="text-left p-4 font-medium">Date</th>
                   <th className="text-left p-4 font-medium">Actions</th>
                 </tr>
@@ -282,6 +286,9 @@ export function OrdersListClient({
                     </td>
                     <td className="p-4">
                       <StatusBadge status={o.status} />
+                    </td>
+                    <td className="p-4 font-mono text-xs text-muted-foreground max-w-[200px] truncate" title={o.skuSummary ?? undefined}>
+                      {o.skuSummary ?? "—"}
                     </td>
                     <td className="p-4 text-muted-foreground">{new Date(o.createdAt).toLocaleDateString("en-GB", { dateStyle: "medium" })}</td>
                     <td className="p-4" onClick={(e) => e.stopPropagation()}>

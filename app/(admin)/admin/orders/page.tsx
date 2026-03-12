@@ -30,6 +30,13 @@ export default async function AdminOrdersPage({
       include: {
         user: { select: { name: true, email: true } },
         payments: { take: 1, orderBy: { createdAt: "desc" }, select: { status: true } },
+        items: {
+          select: {
+            quantity: true,
+            product: { select: { sku: true } },
+            productVariant: { select: { sku: true } },
+          },
+        },
       },
     }),
     prisma.order.groupBy({
@@ -60,16 +67,28 @@ export default async function AdminOrdersPage({
     .filter((o) => o.createdAt >= startOfMonth && o.payments[0]?.status === "COMPLETED")
     .reduce((s, o) => s + Number(o.total), 0);
 
-  const ordersSerialized = orders.map((o) => ({
-    id: o.id,
-    orderNumber: o.orderNumber,
-    type: o.type,
-    status: o.status,
-    total: Number(o.total),
-    createdAt: o.createdAt.toISOString(),
-    user: o.user,
-    payments: o.payments,
-  }));
+  const ordersSerialized = orders.map((o) => {
+    const skuParts: string[] = [];
+    o.items.forEach((item) => {
+      const sku = item.productVariant?.sku ?? item.product?.sku ?? null;
+      if (sku) {
+        const qty = item.quantity;
+        skuParts.push(qty > 1 ? `${sku}×${qty}` : sku);
+      }
+    });
+    return {
+      id: o.id,
+      orderNumber: o.orderNumber,
+      type: o.type,
+      status: o.status,
+      total: Number(o.total),
+      createdAt: o.createdAt.toISOString(),
+      user: o.user,
+      payments: o.payments,
+      skus: skuParts,
+      skuSummary: skuParts.length ? skuParts.join(", ") : null,
+    };
+  });
 
   return (
     <div className="p-6 space-y-6">

@@ -7,6 +7,7 @@ import { SettingsSaveButton } from "@/components/settings/settings-save-button";
 import { SettingsSwitch } from "@/components/settings/settings-switch";
 import { CouriersSection } from "@/components/admin/couriers-section";
 import { DeliveryZonesSection } from "@/components/admin/delivery-zones-section";
+import { PickupLocationsSection } from "@/components/admin/pickup-locations-section";
 
 export default async function AdminSettingsShippingPage() {
   await requireAdminSettings();
@@ -38,6 +39,7 @@ export default async function AdminSettingsShippingPage() {
       <h1 className="font-display text-2xl font-bold">Shipping & Delivery</h1>
       <form id="settings-shipping" className="space-y-6">
       <DeliveryZonesSection />
+      <PickupLocationsSection />
       <SectionCard
         title="Free Shipping"
         description="Orders above threshold get free delivery."

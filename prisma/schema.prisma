@@ -502,6 +502,8 @@ model Order {
   paymentMethod  String?   // MPESA_STK | MPESA_PAYBILL | MPESA_TILL | CARD_PESAPAL | CARD_FLUTTERWAVE | CASH_ON_PICKUP | BANK_TRANSFER
   paymentStatus  String?   // PENDING | PROCESSING | AWAITING_CONFIRMATION | CONFIRMED | FAILED | REFUNDED | CANCELLED
   pickupCode     String?   // 4-digit code for pay-on-pickup
+  pickupLocationId String?
+  pickupLocation   PickupLocation? @relation(fields: [pickupLocationId], references: [id])
 
   items              OrderItem[]
   timeline           OrderTimeline[]
@@ -1433,6 +1435,22 @@ model DeliveryZone {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model PickupLocation {
+  id          String   @id @default(cuid())
+  name        String   // e.g. "Nairobi — Westlands"
+  city        String
+  county      String
+  street      String   // full address line
+  postalCode  String?
+  instructions String? // e.g. "Gate B, call on arrival"
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orders Order[]
 }
 
 model ThreeDConsumableMovement {

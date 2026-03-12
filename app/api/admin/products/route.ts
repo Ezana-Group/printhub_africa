@@ -53,7 +53,7 @@ export async function POST(req: Request) {
   // Normalize SKU: empty string -> auto-generate; otherwise use provided (must be unique)
   let sku: string | null = (data.sku?.trim() || null) as string | null;
   if (!sku) {
-    sku = await generateNextProductSku();
+    sku = await generateNextProductSku(data.categoryId);
   } else {
     const existingBySku = await prisma.product.findUnique({ where: { sku } });
     if (existingBySku) {
