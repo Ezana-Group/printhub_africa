@@ -114,7 +114,17 @@ export async function POST(req: Request) {
       );
     }
 
-    const session = await getServerSession(authOptions);
+    let session: Awaited<ReturnType<typeof getServerSession>> = null;
+    try {
+      session = await getServerSession(authOptions);
+    } catch (authErr) {
+      console.error("Presign auth error:", authErr);
+      return NextResponse.json(
+        { error: "Session check failed. Ensure NEXTAUTH_SECRET and NEXTAUTH_URL are set." },
+        { status: 503 }
+      );
+    }
+
     let json: unknown;
     try {
       json = await req.json();
@@ -190,26 +200,35 @@ export async function POST(req: Request) {
       );
     }
 
-    const uploadedFile = await prisma.uploadedFile.create({
-      data: {
-        userId: session?.user?.id ?? null,
-        guestEmail: context.startsWith("CUSTOMER_") && !session ? guestEmail ?? null : null,
-        originalName: filename,
-        filename: filename,
-        storageKey,
-        bucket: params.bucket,
-        mimeType,
-        size: sizeBytes,
-        ext,
-        fileType: extToFileType(ext),
-        uploadContext: context as UploadContext,
-        folder: params.folder,
-        status: "UPLOADING",
-        quoteId: quoteId ?? null,
-        orderId: orderId ?? null,
-        uploadedByAdmin: context.startsWith("ADMIN_"),
-      },
-    });
+    let uploadedFile;
+    try {
+      uploadedFile = await prisma.uploadedFile.create({
+        data: {
+          userId: session?.user?.id ?? null,
+          guestEmail: context.startsWith("CUSTOMER_") && !session ? guestEmail ?? null : null,
+          originalName: filename,
+          filename: filename,
+          storageKey,
+          bucket: params.bucket,
+          mimeType,
+          size: sizeBytes,
+          ext,
+          fileType: extToFileType(ext),
+          uploadContext: context as UploadContext,
+          folder: params.folder,
+          status: "UPLOADING",
+          quoteId: quoteId ?? null,
+          orderId: orderId ?? null,
+          uploadedByAdmin: context.startsWith("ADMIN_"),
+        },
+      });
+    } catch (dbErr) {
+      console.error("Presign DB error:", dbErr);
+      return NextResponse.json(
+        { error: "Database error. Check DATABASE_URL and that the database is reachable." },
+        { status: 503 }
+      );
+    }
 
     return NextResponse.json({
       uploadId: uploadedFile.id,
@@ -219,9 +238,10 @@ export async function POST(req: Request) {
       expiresIn: 600,
     });
   } catch (err) {
-    console.error("Upload presign error:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("Upload presign error:", message, err);
     return NextResponse.json(
-      { error: "Failed to generate upload link. Try again or contact support." },
+      { error: "Failed to generate upload link. Try again or contact support.", code: "PRESIGN_ERROR" },
       { status: 500 }
     );
   }
