@@ -90,7 +90,8 @@ export function CatalogueItemDetail({ slugPromise }: CatalogueItemDetailProps) {
       })
       .then((data) => {
         setItem(data);
-        const defaultMat = data.availableMaterials?.find((m: MaterialOption) => m.isDefault) ?? data.availableMaterials?.[0];
+        const materials = Array.isArray(data?.availableMaterials) ? data.availableMaterials : [];
+        const defaultMat = materials.find((m: MaterialOption) => m.isDefault) ?? materials[0];
         setSelectedMaterial(defaultMat ?? null);
         if (defaultMat?.availableColours?.length) {
           setSelectedColour(defaultMat.availableColours[0]);
@@ -158,7 +159,7 @@ export function CatalogueItemDetail({ slugPromise }: CatalogueItemDetailProps) {
     );
   }
 
-  const photos = item.photos?.length ? item.photos : [];
+  const photos = Array.isArray(item.photos) && item.photos.length > 0 ? item.photos : [];
   const primaryPhoto = photos[primaryPhotoIndex] ?? photos[0];
 
   return (
@@ -215,7 +216,7 @@ export function CatalogueItemDetail({ slugPromise }: CatalogueItemDetailProps) {
               <div>
                 <p className="text-sm font-medium text-slate-700">Material</p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {item.availableMaterials.map((m) => (
+                  {(item.availableMaterials ?? []).map((m) => (
                     <Button
                       key={m.id}
                       variant={selectedMaterial?.id === m.id ? "default" : "outline"}
@@ -260,8 +261,8 @@ export function CatalogueItemDetail({ slugPromise }: CatalogueItemDetailProps) {
                     variant="outline"
                     size="icon"
                     className="rounded-xl"
-                    onClick={() => setQuantity((q) => Math.max(item.minQuantity, q - 1))}
-                    disabled={quantity <= item.minQuantity}
+                    onClick={() => setQuantity((q) => Math.max(item.minQuantity ?? 1, q - 1))}
+                    disabled={quantity <= (item.minQuantity ?? 1)}
                   >
                     −
                   </Button>
@@ -270,8 +271,8 @@ export function CatalogueItemDetail({ slugPromise }: CatalogueItemDetailProps) {
                     variant="outline"
                     size="icon"
                     className="rounded-xl"
-                    onClick={() => setQuantity((q) => Math.min(item.maxQuantity, q + 1))}
-                    disabled={quantity >= item.maxQuantity}
+                    onClick={() => setQuantity((q) => Math.min(item.maxQuantity ?? 50, q + 1))}
+                    disabled={quantity >= (item.maxQuantity ?? 50)}
                   >
                     +
                   </Button>

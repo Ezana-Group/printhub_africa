@@ -76,6 +76,8 @@ export function CatalogueEditForm({
     initialItem.priceOverrideKes != null ? String(initialItem.priceOverrideKes) : ""
   );
   const [sourceUrl, setSourceUrl] = useState(initialItem.sourceUrl ?? "");
+  const [syncPhotosLoading, setSyncPhotosLoading] = useState(false);
+  const [syncPhotosMessage, setSyncPhotosMessage] = useState<string | null>(null);
 
   useEffect(() => {
     setItem(initialItem);
@@ -158,6 +160,36 @@ export function CatalogueEditForm({
       router.refresh();
     }
   };
+
+  const importPhotosFromPrintables = async () => {
+    const url = (sourceUrl || item.sourceUrl || "").trim();
+    if (!url.toLowerCase().includes("printables.com")) {
+      setSyncPhotosMessage("Save a Printables link in the Details tab first.");
+      return;
+    }
+    setSyncPhotosMessage(null);
+    setSyncPhotosLoading(true);
+    try {
+      const res = await fetch(`/api/admin/catalogue/${initialItem.id}/sync-printables-photos`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSyncPhotosMessage(data?.error ?? "Failed to import photos");
+        return;
+      }
+      setSyncPhotosMessage(data?.message ?? `Imported ${data?.photosImported ?? 0} photo(s).`);
+      await refetchItem();
+      router.refresh();
+    } catch {
+      setSyncPhotosMessage("Something went wrong. Please try again.");
+    } finally {
+      setSyncPhotosLoading(false);
+    }
+  };
+
+  const hasPrintablesLink =
+    (sourceUrl || item.sourceUrl || "").trim().toLowerCase().includes("printables.com");
 
   const tabs: { id: TabId; label: string }[] = [
     { id: "details", label: "Details" },
@@ -293,6 +325,31 @@ export function CatalogueEditForm({
 
       {tab === "photos" && (
         <div className="space-y-6">
+          {hasPrintablesLink && (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-medium text-slate-700 mb-2">
+                Import images from Printables
+              </p>
+              <p className="text-xs text-slate-600 mb-3">
+                Fetch and add photos from the Printables link set in Details. Existing photos are kept; new ones are added.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-xl"
+                disabled={syncPhotosLoading}
+                onClick={importPhotosFromPrintables}
+              >
+                {syncPhotosLoading ? "Importing…" : "Import images from Printables"}
+              </Button>
+              {syncPhotosMessage && (
+                <p className={`text-sm mt-2 ${syncPhotosMessage.startsWith("Added") || syncPhotosMessage.includes("photo") ? "text-green-700" : "text-amber-700"}`}>
+                  {syncPhotosMessage}
+                </p>
+              )}
+            </div>
+          )}
           {item.photos.length > 0 && (
             <div>
               <p className="text-sm font-medium text-slate-700 mb-3">
