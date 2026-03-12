@@ -16,7 +16,7 @@ import { KENYA_COUNTIES_CHECKOUT } from "@/lib/constants";
 import { StepIndicator } from "@/components/checkout/step-indicator";
 import { CheckoutOrderSummary } from "@/components/checkout/checkout-order-summary";
 import { Select } from "@/components/ui/select";
-import { PaymentStep } from "@/components/checkout/PaymentStep";
+import { Smartphone, CreditCard, Building2, Wallet } from "lucide-react";
 
 const PHONE_REGEX = /^\+?254[17]\d{8}$/;
 
@@ -57,25 +57,24 @@ export default function CheckoutPage() {
     googlePay: boolean;
   }>({ mpesa: true, airtelMoney: true, tkash: true, stripe: false, pesapal: false, flutterwave: false, applePay: false, googlePay: false });
   const [shippingRates, setShippingRates] = useState<{
-    standard: number;
+    standard: number | null;
     express: number | null;
     pickup: number;
-  }>({ standard: 300, express: 600, pickup: 0 });
+    noZonesConfigured?: boolean;
+  }>({ standard: null, express: null, pickup: 0 });
   const [createAccount, setCreateAccount] = useState(false);
   const [password, setPassword] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [placingOrder, setPlacingOrder] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
   const [placedOrderNumber, setPlacedOrderNumber] = useState("");
-  const [savedMpesaNumbers, setSavedMpesaNumbers] = useState<{ id: string; phone: string; label: string | null; isDefault: boolean }[]>([]);
-  const [savedCards, setSavedCards] = useState<{ id: string; last4: string; brand: string; expiryMonth: number; expiryYear: number; holderName?: string | null; isDefault: boolean }[]>([]);
 
   const shippingFee =
     delivery.method === "PICKUP"
       ? 0
       : delivery.method === "EXPRESS"
-        ? shippingRates.express ?? shippingRates.standard
-        : delivery.fee ?? shippingRates.standard;
+        ? (shippingRates.express ?? shippingRates.standard ?? 0)
+        : (delivery.fee ?? shippingRates.standard ?? 0);
 
   const totals = calculateCartTotals(
     items.map((i) => ({ unitPrice: i.unitPrice, quantity: i.quantity })),
@@ -111,22 +110,28 @@ export default function CheckoutPage() {
       .then((r) => r.json())
       .then((data) =>
         setShippingRates({
-          standard: data.standard ?? 300,
+          standard: data.standard ?? null,
           express: data.express ?? null,
           pickup: data.pickup ?? 0,
+          noZonesConfigured: data.noZonesConfigured ?? false,
         })
       )
-      .catch(() => {});
+      .catch(() => setShippingRates({ standard: null, express: null, pickup: 0, noZonesConfigured: true }));
   }, [delivery.county]);
 
-  // Sync delivery fee when method or shipping rates change
+  // Sync delivery fee when method or shipping rates change; switch to PICKUP if delivery not available for county
   useEffect(() => {
+    const standardAvailable = shippingRates.standard != null;
+    if (!standardAvailable && (delivery.method === "STANDARD" || delivery.method === "EXPRESS")) {
+      setDelivery({ method: "PICKUP", fee: 0 });
+      return;
+    }
     const fee =
       delivery.method === "PICKUP"
         ? 0
         : delivery.method === "EXPRESS"
-          ? shippingRates.express ?? shippingRates.standard
-          : shippingRates.standard;
+          ? shippingRates.express ?? shippingRates.standard ?? 0
+          : shippingRates.standard ?? 0;
     setDelivery({ fee });
   }, [delivery.method, shippingRates.standard, shippingRates.express, setDelivery]);
 
@@ -201,24 +206,6 @@ export default function CheckoutPage() {
     } finally {
       setPlacingOrder(false);
     }
-  };
-
-  // When order is placed, fetch saved payment methods for PaymentStep
-  useEffect(() => {
-    if (!placedOrderId || !session?.user) return;
-    Promise.all([
-      fetch("/api/account/payment-methods/mpesa").then((r) => r.json()),
-      fetch("/api/account/payment-methods/cards").then((r) => r.json()),
-    ]).then(([mpesaData, cardsData]) => {
-      setSavedMpesaNumbers(mpesaData.numbers ?? []);
-      setSavedCards(cardsData.cards ?? []);
-    }).catch(() => {});
-  }, [placedOrderId, session?.user]);
-
-  const handlePaymentComplete = () => {
-    useCartStore.getState().clearCart();
-    resetCheckout();
-    router.push(`/order-confirmation/${placedOrderId}`);
   };
 
   if (items.length === 0) {
@@ -398,37 +385,56 @@ export default function CheckoutPage() {
                   </div>
                   <div>
                     <Label className="block mb-2">Delivery method</Label>
-                    <div className="space-y-2">
-                      <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50">
-                        <input
-                          type="radio"
-                          name="deliveryMethod"
-                          checked={delivery.method === "STANDARD"}
-                          onChange={() => setDelivery({ method: "STANDARD", fee: shippingRates.standard })}
-                        />
-                        <span>Standard Delivery — {formatPrice(shippingRates.standard)} — 3–5 business days</span>
-                      </label>
-                      {(shippingRates.express ?? 0) > 0 && (
-                        <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50">
+                    {shippingRates.standard == null ? (
+                      <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground rounded-lg border border-amber-200 bg-amber-50 p-3">
+                          {shippingRates.noZonesConfigured
+                            ? "Delivery rates are not set up yet for your area. Please choose Pick up below or contact us."
+                            : "Delivery is not available for this county yet. Please choose Pick up or contact us."}
+                        </p>
+                        <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
                           <input
                             type="radio"
                             name="deliveryMethod"
-                            checked={delivery.method === "EXPRESS"}
-                            onChange={() => setDelivery({ method: "EXPRESS", fee: shippingRates.express ?? shippingRates.standard })}
+                            checked={delivery.method === "PICKUP"}
+                            onChange={() => setDelivery({ method: "PICKUP", fee: 0 })}
                           />
-                          <span>Express — {formatPrice(shippingRates.express ?? 0)} — 1–2 business days</span>
+                          <span>Pick up — Nairobi — FREE</span>
                         </label>
-                      )}
-                      <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50">
-                        <input
-                          type="radio"
-                          name="deliveryMethod"
-                          checked={delivery.method === "PICKUP"}
-                          onChange={() => setDelivery({ method: "PICKUP", fee: 0 })}
-                        />
-                        <span>Pick up — Nairobi — FREE</span>
-                      </label>
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                          <input
+                            type="radio"
+                            name="deliveryMethod"
+                            checked={delivery.method === "STANDARD"}
+                            onChange={() => setDelivery({ method: "STANDARD", fee: shippingRates.standard ?? 0 })}
+                          />
+                          <span>Standard Delivery — {formatPrice(shippingRates.standard ?? 0)} — 3–5 business days</span>
+                        </label>
+                        {(shippingRates.express ?? 0) > 0 && (
+                          <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                            <input
+                              type="radio"
+                              name="deliveryMethod"
+                              checked={delivery.method === "EXPRESS"}
+                              onChange={() => setDelivery({ method: "EXPRESS", fee: shippingRates.express ?? shippingRates.standard ?? 0 })}
+                            />
+                            <span>Express — {formatPrice(shippingRates.express ?? 0)} — 1–2 business days</span>
+                          </label>
+                        )}
+                        <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                          <input
+                            type="radio"
+                            name="deliveryMethod"
+                            checked={delivery.method === "PICKUP"}
+                            onChange={() => setDelivery({ method: "PICKUP", fee: 0 })}
+                          />
+                          <span>Pick up — Nairobi — FREE</span>
+                        </label>
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
@@ -446,7 +452,7 @@ export default function CheckoutPage() {
               </Card>
             )}
 
-            {/* Step 3 — Payment */}
+            {/* Step 3 — Payment (card-style grid like Complete payment) */}
             {step === 3 && (
               <Card>
                 <CardHeader>
@@ -454,154 +460,124 @@ export default function CheckoutPage() {
                   <p className="text-sm text-muted-foreground">Choose your payment method</p>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {paymentMethods.mpesa && (
-                    <label className="flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer hover:bg-muted/30 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        checked={payment.method === "MPESA"}
-                        onChange={() => setPayment({ method: "MPESA" })}
-                        className="mt-1"
-                      />
-                      <div>
-                        <span className="font-medium">M-Pesa</span>
-                        <span className="ml-2 text-xs bg-primary/20 text-primary px-1.5 py-0.5 rounded">RECOMMENDED</span>
-                        <p className="text-sm text-muted-foreground mt-0.5">Lipa Na M-Pesa STK Push — instant, secure</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {paymentMethods.mpesa && (
+                      <button
+                        type="button"
+                        onClick={() => setPayment({ method: "MPESA" })}
+                        className={`rounded-xl border-2 p-4 text-left transition ${payment.method === "MPESA" ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"}`}
+                      >
+                        <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-green-50">
+                          <Smartphone className="h-5 w-5 text-green-600" />
+                        </div>
+                        <p className="text-sm font-semibold text-foreground">M-Pesa</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">STK push to your phone</p>
+                      </button>
+                    )}
+                    {paymentMethods.airtelMoney && (
+                      <button
+                        type="button"
+                        onClick={() => setPayment({ method: "AIRTEL_MONEY" })}
+                        className={`rounded-xl border-2 p-4 text-left transition ${payment.method === "AIRTEL_MONEY" ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"}`}
+                      >
+                        <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-red-50">
+                          <Wallet className="h-5 w-5 text-red-600" />
+                        </div>
+                        <p className="text-sm font-semibold text-foreground">Airtel Money</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">Pay with your Airtel line</p>
+                      </button>
+                    )}
+                    {paymentMethods.tkash && (
+                      <button
+                        type="button"
+                        onClick={() => setPayment({ method: "TKASH" })}
+                        className={`rounded-xl border-2 p-4 text-left transition ${payment.method === "TKASH" ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"}`}
+                      >
+                        <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100">
+                          <Smartphone className="h-5 w-5 text-slate-600" />
+                        </div>
+                        <p className="text-sm font-semibold text-foreground">TKash (Telkom)</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">Pay with your Telkom line</p>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setPayment({ method: "CARD" })}
+                      className={`rounded-xl border-2 p-4 text-left transition ${payment.method === "CARD" ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"}`}
+                    >
+                      <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50">
+                        <CreditCard className="h-5 w-5 text-blue-600" />
                       </div>
-                    </label>
-                  )}
-                  {paymentMethods.airtelMoney && (
-                    <label className="flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer hover:bg-muted/30 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        checked={payment.method === "AIRTEL_MONEY"}
-                        onChange={() => setPayment({ method: "AIRTEL_MONEY" })}
-                        className="mt-1"
-                      />
-                      <div>
-                        <span className="font-medium">Airtel Money</span>
-                        <p className="text-sm text-muted-foreground mt-0.5">Pay with your Airtel line — STK or Paybill</p>
-                      </div>
-                    </label>
-                  )}
-                  {paymentMethods.tkash && (
-                    <label className="flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer hover:bg-muted/30 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        checked={payment.method === "TKASH"}
-                        onChange={() => setPayment({ method: "TKASH" })}
-                        className="mt-1"
-                      />
-                      <div>
-                        <span className="font-medium">TKash (Telkom)</span>
-                        <p className="text-sm text-muted-foreground mt-0.5">Pay with your Telkom line</p>
-                      </div>
-                    </label>
-                  )}
-                  {paymentMethods.stripe && (
-                    <label className="flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer hover:bg-muted/30 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        checked={payment.method === "STRIPE"}
-                        onChange={() => setPayment({ method: "STRIPE" })}
-                        className="mt-1"
-                      />
-                      <div>
-                        <span className="font-medium">Card (Visa / Mastercard)</span>
-                        <p className="text-sm text-muted-foreground mt-0.5">Powered by Stripe</p>
-                      </div>
-                    </label>
-                  )}
-                  {paymentMethods.pesapal && (
-                    <label className="flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer hover:bg-muted/30 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        checked={payment.method === "PESAPAL"}
-                        onChange={() => setPayment({ method: "PESAPAL" })}
-                        className="mt-1"
-                      />
-                      <div>
-                        <span className="font-medium">Pesapal</span>
-                        <p className="text-sm text-muted-foreground mt-0.5">Card, bank transfer, mobile money</p>
-                      </div>
-                    </label>
-                  )}
-                  {paymentMethods.flutterwave && (
-                    <label className="flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer hover:bg-muted/30 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        checked={payment.method === "FLUTTERWAVE"}
-                        onChange={() => setPayment({ method: "FLUTTERWAVE" })}
-                        className="mt-1"
-                      />
-                      <div>
-                        <span className="font-medium">Flutterwave</span>
-                        <p className="text-sm text-muted-foreground mt-0.5">M-Pesa, cards, multiple currencies</p>
-                      </div>
-                    </label>
-                  )}
-                  <label className="flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer hover:bg-muted/30 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      checked={payment.method === "CARD"}
-                      onChange={() => setPayment({ method: "CARD" })}
-                      className="mt-1"
-                    />
-                    <div>
-                      <span className="font-medium">Card (Visa / Mastercard)</span>
-                      <p className="text-sm text-muted-foreground mt-0.5">Enter your card details below</p>
-                    </div>
-                  </label>
-                  {paymentMethods.applePay && (
-                    <label className="flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer hover:bg-muted/30 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        checked={payment.method === "APPLE_PAY"}
-                        onChange={() => setPayment({ method: "APPLE_PAY" })}
-                        className="mt-1"
-                      />
-                      <div>
-                        <span className="font-medium">Apple Pay</span>
-                        <p className="text-sm text-muted-foreground mt-0.5">Pay with Face ID or Touch ID</p>
-                      </div>
-                    </label>
-                  )}
-                  {paymentMethods.googlePay && (
-                    <label className="flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer hover:bg-muted/30 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        checked={payment.method === "GOOGLE_PAY"}
-                        onChange={() => setPayment({ method: "GOOGLE_PAY" })}
-                        className="mt-1"
-                      />
-                      <div>
-                        <span className="font-medium">Google Pay</span>
-                        <p className="text-sm text-muted-foreground mt-0.5">Pay with your Google account</p>
-                      </div>
-                    </label>
-                  )}
-                  <label className="flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer hover:bg-muted/30 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      checked={payment.method === "BANK_TRANSFER"}
-                      onChange={() => setPayment({ method: "BANK_TRANSFER" })}
-                      className="mt-1"
-                    />
-                    <div>
-                      <span className="font-medium">Bank Transfer</span>
-                      <p className="text-sm text-muted-foreground mt-0.5">Pay via bank transfer — enter card or account details below, then upload proof if needed</p>
-                    </div>
-                  </label>
-                  {(payment.method === "BANK_TRANSFER" || payment.method === "CARD") && (
+                      <p className="text-sm font-semibold text-foreground">Card</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">Visa or Mastercard</p>
+                    </button>
+                    {paymentMethods.stripe && (
+                      <button
+                        type="button"
+                        onClick={() => setPayment({ method: "STRIPE" })}
+                        className={`rounded-xl border-2 p-4 text-left transition ${payment.method === "STRIPE" ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"}`}
+                      >
+                        <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50">
+                          <CreditCard className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <p className="text-sm font-semibold text-foreground">Card (Stripe)</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">Visa or Mastercard</p>
+                      </button>
+                    )}
+                    {paymentMethods.pesapal && (
+                      <button
+                        type="button"
+                        onClick={() => setPayment({ method: "PESAPAL" })}
+                        className={`rounded-xl border-2 p-4 text-left transition ${payment.method === "PESAPAL" ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"}`}
+                      >
+                        <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50">
+                          <CreditCard className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <p className="text-sm font-semibold text-foreground">Pesapal</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">Card via Pesapal</p>
+                      </button>
+                    )}
+                    {paymentMethods.flutterwave && (
+                      <button
+                        type="button"
+                        onClick={() => setPayment({ method: "FLUTTERWAVE" })}
+                        className={`rounded-xl border-2 p-4 text-left transition ${payment.method === "FLUTTERWAVE" ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"}`}
+                      >
+                        <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50">
+                          <Building2 className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <p className="text-sm font-semibold text-foreground">Flutterwave</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">Cards & mobile money</p>
+                      </button>
+                    )}
+                    {paymentMethods.applePay && (
+                      <button
+                        type="button"
+                        onClick={() => setPayment({ method: "APPLE_PAY" })}
+                        className={`rounded-xl border-2 p-4 text-left transition ${payment.method === "APPLE_PAY" ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"}`}
+                      >
+                        <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100">
+                          <CreditCard className="h-5 w-5 text-slate-700" />
+                        </div>
+                        <p className="text-sm font-semibold text-foreground">Apple Pay</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">Face ID or Touch ID</p>
+                      </button>
+                    )}
+                    {paymentMethods.googlePay && (
+                      <button
+                        type="button"
+                        onClick={() => setPayment({ method: "GOOGLE_PAY" })}
+                        className={`rounded-xl border-2 p-4 text-left transition ${payment.method === "GOOGLE_PAY" ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"}`}
+                      >
+                        <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100">
+                          <CreditCard className="h-5 w-5 text-slate-700" />
+                        </div>
+                        <p className="text-sm font-semibold text-foreground">Google Pay</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">Pay with Google</p>
+                      </button>
+                    )}
+                  </div>
+                  {payment.method === "CARD" && (
                     <div className="space-y-3 rounded-xl border border-border bg-muted/20 p-4">
                       <h3 className="text-sm font-medium">Card / payment details</h3>
                       <div>
@@ -709,26 +685,41 @@ export default function CheckoutPage() {
               </Card>
             )}
 
-            {/* Step 4 — Review & Payment */}
+            {/* Step 4 — Review (place order) or Order placed (confirmation only) */}
             {step === 4 && (
               <Card>
                 <CardHeader>
                   <h2 className="font-semibold text-lg">
-                    {placedOrderId ? "Complete payment" : "Review your order"}
+                    {placedOrderId ? "Order placed" : "Review your order"}
                   </h2>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {placedOrderId ? (
-                    <PaymentStep
-                      order={{
-                        id: placedOrderId,
-                        orderNumber: placedOrderNumber,
-                        totalKes: totals.total,
-                      }}
-                      savedMpesaNumbers={savedMpesaNumbers}
-                      savedCards={savedCards}
-                      onPaymentComplete={handlePaymentComplete}
-                    />
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        Thank you. Your order has been placed.
+                      </p>
+                      <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                        <p className="text-sm font-medium text-foreground">Order number</p>
+                        <p className="text-lg font-semibold font-mono">{placedOrderNumber}</p>
+                        <p className="text-sm text-muted-foreground pt-2">
+                          Total: {formatPrice(totals.total)}
+                        </p>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        We&apos;ve sent a confirmation to your email. You can view your order and complete payment from the link below.
+                      </p>
+                      <Button
+                        className="w-full"
+                        onClick={() => {
+                          useCartStore.getState().clearCart();
+                          resetCheckout();
+                          router.push(`/order-confirmation/${placedOrderId}`);
+                        }}
+                      >
+                        View order & complete payment
+                      </Button>
+                    </div>
                   ) : (
                     <>
                       <div>
@@ -804,7 +795,7 @@ export default function CheckoutPage() {
                         </Button>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        By placing your order you agree to our terms. You will then choose how to pay (M-Pesa, Paybill, Card, or Pay on Pickup).
+                        By placing your order you agree to our terms. You will receive a confirmation with a link to view your order and complete payment.
                       </p>
                     </>
                   )}
