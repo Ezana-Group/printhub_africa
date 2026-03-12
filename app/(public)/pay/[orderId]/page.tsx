@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PayOrderClient } from "./pay-order-client";
 
@@ -19,6 +21,7 @@ export default async function PayOrderPage({
       orderNumber: true,
       total: true,
       status: true,
+      userId: true,
       paymentLinkToken: true,
       paymentLinkExpiresAt: true,
     },
@@ -26,13 +29,19 @@ export default async function PayOrderPage({
 
   if (!order) notFound();
 
-  const valid =
+  const validToken =
     token &&
     order.paymentLinkToken === token &&
     order.paymentLinkExpiresAt &&
     new Date(order.paymentLinkExpiresAt) > new Date();
 
-  if (!valid) {
+  const session = await getServerSession(authOptions);
+  const isOrderOwner = session?.user?.id && order.userId === session.user.id;
+  const canPayFromAccount = isOrderOwner && order.status === "PENDING";
+
+  const allowed = validToken || canPayFromAccount;
+
+  if (!allowed) {
     return (
       <div className="min-h-[40vh] flex items-center justify-center p-6">
         <div className="text-center max-w-md">

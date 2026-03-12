@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
@@ -16,7 +16,7 @@ import { KENYA_COUNTIES_CHECKOUT } from "@/lib/constants";
 import { StepIndicator } from "@/components/checkout/step-indicator";
 import { CheckoutOrderSummary } from "@/components/checkout/checkout-order-summary";
 import { Select } from "@/components/ui/select";
-import { Smartphone, CreditCard, Building2, Wallet } from "lucide-react";
+import { Smartphone, CreditCard, Building2, Wallet, Loader2 } from "lucide-react";
 
 const PHONE_REGEX = /^\+?254[17]\d{8}$/;
 
@@ -120,6 +120,9 @@ export default function CheckoutPage() {
   const [placingOrder, setPlacingOrder] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
   const [placedOrderNumber, setPlacedOrderNumber] = useState("");
+  const [stkWaiting, setStkWaiting] = useState(false);
+  const [stkPolling, setStkPolling] = useState(false);
+  const [stkFailed, setStkFailed] = useState(false);
 
   const shippingFee =
     delivery.method === "PICKUP"
@@ -220,65 +223,164 @@ export default function CheckoutPage() {
       (delivery.county ?? "").trim() &&
       (delivery.city ?? "").trim();
 
-  const handleCreateOrder = async () => {
+  const buildOrderPayload = () => ({
+    items: items.map((i) =>
+      isCatalogueCartItem(i)
+        ? {
+            catalogueItemId: i.catalogueItemId,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice,
+            customizations: {
+              materialCode: i.materialCode,
+              materialName: i.materialName,
+              colourHex: i.colourHex,
+              colourName: i.colourName,
+            },
+          }
+        : {
+            productId: i.productId,
+            variantId: i.variantId ?? undefined,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice,
+          }
+    ),
+    shippingAddress: {
+      fullName: `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim(),
+      email: contact.email,
+      phone: normalizePhone(contact.phone ?? ""),
+      street: isPickup ? (delivery.pickupLocationName ?? "Pickup") : (delivery.street ?? ""),
+      city: delivery.city ?? "Nairobi",
+      county: delivery.county ?? "",
+      postalCode: delivery.postalCode || undefined,
+      deliveryMethod:
+        delivery.method === "STANDARD"
+          ? "Standard"
+          : delivery.method === "EXPRESS"
+            ? "Express"
+            : "Pickup",
+    },
+    pickupLocationId: isPickup ? delivery.pickupLocationId ?? undefined : undefined,
+    deliveryNotes: delivery.notes || undefined,
+    shippingCost: shippingFee,
+    discount: appliedCoupon?.discountAmount ?? 0,
+  });
+
+  const createOrder = async (): Promise<{ id: string; orderNumber: string } | null> => {
     setPlacingOrder(true);
     setError("");
     try {
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          items: items.map((i) =>
-            isCatalogueCartItem(i)
-              ? {
-                  catalogueItemId: i.catalogueItemId,
-                  quantity: i.quantity,
-                  unitPrice: i.unitPrice,
-                  customizations: {
-                    materialCode: i.materialCode,
-                    materialName: i.materialName,
-                    colourHex: i.colourHex,
-                    colourName: i.colourName,
-                  },
-                }
-              : {
-                  productId: i.productId,
-                  variantId: i.variantId ?? undefined,
-                  quantity: i.quantity,
-                  unitPrice: i.unitPrice,
-                }
-          ),
-          shippingAddress: {
-            fullName: `${contact.firstName ?? ""} ${contact.lastName ?? ""}`.trim(),
-            email: contact.email,
-            phone: normalizePhone(contact.phone ?? ""),
-            street: isPickup ? (delivery.pickupLocationName ?? "Pickup") : (delivery.street ?? ""),
-            city: delivery.city ?? "Nairobi",
-            county: delivery.county ?? "",
-            postalCode: delivery.postalCode || undefined,
-            deliveryMethod:
-              delivery.method === "STANDARD"
-                ? "Standard"
-                : delivery.method === "EXPRESS"
-                  ? "Express"
-                  : "Pickup",
-          },
-          pickupLocationId: isPickup ? delivery.pickupLocationId ?? undefined : undefined,
-          deliveryNotes: delivery.notes || undefined,
-          shippingCost: shippingFee,
-          discount: appliedCoupon?.discountAmount ?? 0,
-        }),
+        body: JSON.stringify(buildOrderPayload()),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to create order");
       setOrderId(data.order.id);
       setPlacedOrderId(data.order.id);
       setPlacedOrderNumber(data.order.orderNumber);
+      return { id: data.order.id, orderNumber: data.order.orderNumber };
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
+      return null;
     } finally {
       setPlacingOrder(false);
     }
+  };
+
+  const pollMpesaStatus = useCallback(
+    (checkoutRequestId: string, orderId: string) => {
+      let attempts = 0;
+      const maxAttempts = 24;
+      const poll = async () => {
+        try {
+          const res = await fetch(
+            `/api/payments/mpesa/status?checkoutRequestId=${encodeURIComponent(checkoutRequestId)}&orderId=${encodeURIComponent(orderId)}`
+          );
+          const data = await res.json();
+          if (data.status === "CONFIRMED") {
+            setStkPolling(false);
+            setStkWaiting(false);
+            setStep(4);
+            return;
+          }
+          if (data.status === "FAILED") {
+            setStkPolling(false);
+            setStkWaiting(false);
+            setStkFailed(true);
+            return;
+          }
+          attempts++;
+          if (attempts < maxAttempts) setTimeout(poll, 5000);
+          else {
+            setStkPolling(false);
+            setStkWaiting(false);
+            setStkFailed(true);
+          }
+        } catch {
+          attempts++;
+          if (attempts < maxAttempts) setTimeout(poll, 5000);
+          else {
+            setStkPolling(false);
+            setStkWaiting(false);
+            setStkFailed(true);
+          }
+        }
+      };
+      poll();
+    },
+    [setStep]
+  );
+
+  const handlePayWithMpesa = async () => {
+    if (!termsAccepted) {
+      setError("Please accept the terms to continue.");
+      return;
+    }
+    const phone = payment.mpesaPhone ?? contact.phone ?? "";
+    const normalized = normalizePhone(phone).replace(/\D/g, "");
+    if (normalized.length < 9) {
+      setError("Enter a valid M-Pesa phone number.");
+      return;
+    }
+    setError("");
+    setStkFailed(false);
+    const order = await createOrder();
+    if (!order) return;
+    setStkWaiting(true);
+    try {
+      const res = await fetch("/api/payments/mpesa/stkpush", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: order.id, phone: normalized.startsWith("254") ? normalized : "254" + normalized }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "STK push failed");
+      setStkPolling(true);
+      pollMpesaStatus(data.checkoutRequestId, order.id);
+    } catch (e) {
+      setStkWaiting(false);
+      setError(e instanceof Error ? e.message : "Payment request failed");
+      setStkFailed(true);
+    }
+  };
+
+  const handleProceedToPaymentPage = async () => {
+    if (!termsAccepted) {
+      setError("Please accept the terms to continue.");
+      return;
+    }
+    const order = await createOrder();
+    if (order) {
+      useCartStore.getState().clearCart();
+      resetCheckout();
+      router.push(`/pay/${order.id}`);
+    }
+  };
+
+  const handleStepClick = (s: 1 | 2 | 3 | 4) => {
+    if (s === 4 && !placedOrderId) return;
+    setStep(s);
   };
 
   if (items.length === 0) {
@@ -294,7 +396,7 @@ export default function CheckoutPage() {
       <div className="container max-w-6xl mx-auto px-4 py-8">
         <h1 className="font-display text-2xl font-bold text-foreground mb-6">Checkout</h1>
         <div className="mb-8">
-          <StepIndicator currentStep={step} onStepClick={setStep} />
+          <StepIndicator currentStep={step} onStepClick={handleStepClick} />
         </div>
 
         <div className="grid lg:grid-cols-[1fr_380px] gap-8 lg:gap-12">
@@ -545,14 +647,32 @@ export default function CheckoutPage() {
               </Card>
             )}
 
-            {/* Step 3 — Payment (card-style grid like Complete payment) */}
+            {/* Step 3 — Payment: complete payment here; Review (step 4) only after payment succeeds */}
             {step === 3 && (
               <Card>
                 <CardHeader>
                   <h2 className="font-semibold text-lg">Payment</h2>
-                  <p className="text-sm text-muted-foreground">Choose your payment method</p>
+                  <p className="text-sm text-muted-foreground">Complete payment to place your order. Review is shown after payment.</p>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {stkWaiting ? (
+                    <div className="rounded-xl border border-muted bg-muted/30 p-6 text-center space-y-3">
+                      <Loader2 className="h-10 w-10 animate-spin mx-auto text-primary" />
+                      <p className="font-medium">Complete payment on your phone</p>
+                      <p className="text-sm text-muted-foreground">
+                        {stkPolling ? "Checking payment status…" : "An M-Pesa prompt was sent. Enter your PIN to pay."}
+                      </p>
+                    </div>
+                  ) : stkFailed && placedOrderId ? (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-3">
+                      <p className="text-sm font-medium text-amber-800">STK push didn’t go through</p>
+                      <p className="text-sm text-amber-700">Complete payment via Paybill or try again on the payment page.</p>
+                      <Button className="w-full" onClick={() => { useCartStore.getState().clearCart(); resetCheckout(); router.push(`/pay/${placedOrderId}`); }}>
+                        Open payment page
+                      </Button>
+                    </div>
+                  ) : (
+                  <>
                   <div className="grid grid-cols-2 gap-3">
                     {paymentMethods.mpesa && (
                       <button
@@ -738,7 +858,7 @@ export default function CheckoutPage() {
                         placeholder="+254 7XX XXX XXX"
                         className="mt-1"
                       />
-                      <p className="text-xs text-muted-foreground mt-1">We&apos;ll send an STK push to this number.</p>
+                      <p className="text-xs text-muted-foreground mt-1">We&apos;ll send an STK push to this number to complete payment.</p>
                     </div>
                   )}
                   {(payment.method === "AIRTEL_MONEY" || payment.method === "TKASH") && (
@@ -753,148 +873,81 @@ export default function CheckoutPage() {
                         className="mt-1"
                       />
                       <p className="text-xs text-muted-foreground mt-1">
-                        {payment.method === "AIRTEL_MONEY"
-                          ? "We'll send a payment request to this Airtel number, or use Paybill after you place your order."
-                          : "We'll send a payment request to this Telkom number, or use Paybill after you place your order."}
+                        You&apos;ll complete payment on the next page (M-Pesa or Paybill).
                       </p>
                     </div>
                   )}
+                  <div className="flex items-center gap-2 pt-2">
+                    <input
+                      type="checkbox"
+                      id="terms-step3"
+                      checked={termsAccepted}
+                      onChange={(e) => setTermsAccepted(e.target.checked)}
+                      className="rounded border-input"
+                    />
+                    <Label htmlFor="terms-step3">I agree to PrintHub&apos;s Terms of Service and Privacy Policy *</Label>
+                  </div>
                   <div className="flex gap-2 pt-2">
                     <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
                       ← Back
                     </Button>
-                    <Button
-                      className="flex-1 bg-primary hover:bg-primary/90"
-                      onClick={() => setStep(4)}
-                      disabled={
-                        (payment.method === "MPESA" && !(payment.mpesaPhone || contact.phone)) ||
-                        ((payment.method === "AIRTEL_MONEY" || payment.method === "TKASH") && !(payment.mobileMoneyPhone || contact.phone))
-                      }
-                    >
-                      Continue to Review →
-                    </Button>
+                    {payment.method === "MPESA" ? (
+                      <Button
+                        className="flex-1 bg-primary hover:bg-primary/90"
+                        onClick={handlePayWithMpesa}
+                        disabled={placingOrder || !termsAccepted || !(payment.mpesaPhone || contact.phone)}
+                      >
+                        {placingOrder ? "Creating order…" : "Pay with M-Pesa"}
+                      </Button>
+                    ) : (
+                      <Button
+                        className="flex-1 bg-primary hover:bg-primary/90"
+                        onClick={handleProceedToPaymentPage}
+                        disabled={placingOrder || !termsAccepted}
+                      >
+                        {placingOrder ? "Creating order…" : "Proceed to payment"}
+                      </Button>
+                    )}
                   </div>
+                  </>
+                  )}
                 </CardContent>
               </Card>
             )}
 
-            {/* Step 4 — Review (place order) or Order placed (confirmation only) */}
-            {step === 4 && (
+            {/* Step 4 — Order placed (only shown after payment succeeds) */}
+            {step === 4 && placedOrderId && (
               <Card>
                 <CardHeader>
-                  <h2 className="font-semibold text-lg">
-                    {placedOrderId ? "Order placed" : "Review your order"}
-                  </h2>
+                  <h2 className="font-semibold text-lg">Order placed</h2>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  {placedOrderId ? (
-                    <div className="space-y-4">
-                      <p className="text-sm text-muted-foreground">
-                        Thank you. Your order has been placed.
-                      </p>
-                      <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
-                        <p className="text-sm font-medium text-foreground">Order number</p>
-                        <p className="text-lg font-semibold font-mono">{placedOrderNumber}</p>
-                        <p className="text-sm text-muted-foreground pt-2">
-                          Total: {formatPrice(totals.total)}
-                        </p>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        We&apos;ve sent a confirmation to your email. You can view your order and complete payment from the link below.
-                      </p>
-                      <Button
-                        className="w-full"
-                        onClick={() => {
-                          useCartStore.getState().clearCart();
-                          resetCheckout();
-                          router.push(`/order-confirmation/${placedOrderId}`);
-                        }}
-                      >
-                        View order & complete payment
-                      </Button>
-                    </div>
-                  ) : (
-                    <>
-                      <div>
-                        <h3 className="font-medium text-sm text-muted-foreground mb-2">Items</h3>
-                        <ul className="space-y-2">
-                          {items.map((item) => (
-                            <li
-                              key={isCatalogueCartItem(item) ? `cat:${item.catalogueItemId}:${item.materialCode}:${item.colourHex}` : `shop:${item.productId}:${item.variantId ?? ""}`}
-                              className="flex justify-between text-sm"
-                            >
-                              <span>{item.name} × {item.quantity}</span>
-                              <span>{formatPrice(item.unitPrice * item.quantity)}</span>
-                            </li>
-                          ))}
-                        </ul>
-                        <Link href="/cart" className="text-sm text-primary hover:underline mt-1 inline-block">
-                          Edit items →
-                        </Link>
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-sm text-muted-foreground mb-1">{delivery.method === "PICKUP" ? "Pick up at" : "Deliver to"}</h3>
-                        <p className="text-sm">
-                          {contact.firstName} {contact.lastName}<br />
-                          {delivery.method === "PICKUP" && delivery.pickupLocationName
-                            ? `${delivery.pickupLocationName} (pickup)`
-                            : `${delivery.street}, ${delivery.area}, ${delivery.county}`}
-                          <br />
-                          {contact.phone}
-                        </p>
-                        <Button variant="link" className="p-0 h-auto text-primary" onClick={() => setStep(2)}>
-                          Edit →
-                        </Button>
-                      </div>
-                      <div className="border-t pt-4 space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span>Subtotal</span>
-                          <span>{formatPrice(totals.subtotalInclVat)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Shipping</span>
-                          <span>{formatPrice(shippingFee)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>VAT (16%, included)</span>
-                          <span>{formatPrice(totals.vatAmount)}</span>
-                        </div>
-                        <div className="flex justify-between font-semibold text-base pt-2">
-                          <span>Total</span>
-                          <span>{formatPrice(totals.total)}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id="terms"
-                          checked={termsAccepted}
-                          onChange={(e) => setTermsAccepted(e.target.checked)}
-                          className="rounded border-input"
-                        />
-                        <Label htmlFor="terms">I agree to PrintHub&apos;s Terms of Service and Privacy Policy *</Label>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          onClick={() => setStep(3)}
-                          className="flex-1"
-                        >
-                          ← Back
-                        </Button>
-                        <Button
-                          className="flex-1 bg-primary hover:bg-primary/90 text-base py-6"
-                          onClick={handleCreateOrder}
-                          disabled={placingOrder || !termsAccepted}
-                        >
-                          {placingOrder ? "Creating order…" : `Place order — ${formatPrice(totals.total)}`}
-                        </Button>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        By placing your order you agree to our terms. You will receive a confirmation with a link to view your order and complete payment.
-                      </p>
-                    </>
-                  )}
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Thank you. Your payment was successful and your order has been placed.
+                  </p>
+                  <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                    <p className="text-sm font-medium text-foreground">Order number</p>
+                    <p className="text-lg font-semibold font-mono">{placedOrderNumber}</p>
+                    <p className="text-sm text-muted-foreground pt-2">
+                      Total: {formatPrice(totals.total)}
+                    </p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    We&apos;ve sent a confirmation to your email.
+                  </p>
+                  <Button
+                    className="w-full"
+                    onClick={() => {
+                      useCartStore.getState().clearCart();
+                      resetCheckout();
+                      router.push(`/order-confirmation/${placedOrderId}`);
+                    }}
+                  >
+                    View order confirmation
+                  </Button>
+                  <Button variant="outline" className="w-full" asChild>
+                    <Link href="/shop">Continue shopping</Link>
+                  </Button>
                 </CardContent>
               </Card>
             )}

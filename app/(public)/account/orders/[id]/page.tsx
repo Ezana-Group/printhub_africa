@@ -129,6 +129,11 @@ export default function OrderDetailPage() {
               {order.discount > 0 && <div className="flex justify-between"><dt className="text-slate-600">Discount</dt><dd>-{formatPrice(order.discount)}</dd></div>}
               <div className="flex justify-between border-t border-slate-200 pt-2 font-semibold"><dt>Total</dt><dd>{formatPrice(order.total)}</dd></div>
             </dl>
+            {order.status === "PENDING" && (
+              <Button asChild className="mt-4 w-full rounded-xl bg-[#E8440A] hover:bg-[#E8440A]/90">
+                <Link href={`/pay/${order.id}`}>Pay now</Link>
+              </Button>
+            )}
             {canCancel && (
               <Button
                 variant="destructive"
