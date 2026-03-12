@@ -22,6 +22,7 @@ const ALLOWED_TYPES: Record<
     bucket: "private",
   },
   "model/obj": { ext: ["obj"], maxMB: 500, bucket: "private" },
+  "model/3mf": { ext: ["3mf"], maxMB: 500, bucket: "private" },
   "application/sla": { ext: ["stl"], maxMB: 500, bucket: "private" },
   "application/pdf": { ext: ["pdf"], maxMB: 200, bucket: "private" },
   "image/svg+xml": { ext: ["svg"], maxMB: 50, bucket: "private" },
@@ -105,100 +106,123 @@ function extToFileType(ext: string): UploadedFileType {
 }
 
 export async function POST(req: Request) {
-  if (!isR2Configured()) {
-    return NextResponse.json(
-      { error: "File upload is not configured" },
-      { status: 503 }
-    );
-  }
-
-  const session = await getServerSession(authOptions);
-  const body = schema.safeParse(await req.json());
-  if (!body.success) {
-    return NextResponse.json(
-      { error: "Invalid body", details: body.error.flatten() },
-      { status: 400 }
-    );
-  }
-
-  const { filename, mimeType, sizeBytes, context, quoteId, orderId, guestEmail } = body.data;
-
-  const typeConfig = ALLOWED_TYPES[mimeType];
-  if (!typeConfig) {
-    return NextResponse.json(
-      { error: `File type not allowed: ${mimeType}` },
-      { status: 400 }
-    );
-  }
-
-  const maxBytes = typeConfig.maxMB * 1024 * 1024;
-  if (sizeBytes > maxBytes) {
-    return NextResponse.json(
-      { error: `File too large. Max size: ${typeConfig.maxMB}MB` },
-      { status: 400 }
-    );
-  }
-
-  if (context.startsWith("ADMIN_")) {
-    const role = (session?.user as { role?: string })?.role ?? "";
-    if (role !== "ADMIN" && role !== "SUPER_ADMIN" && role !== "STAFF") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  try {
+    if (!isR2Configured()) {
+      return NextResponse.json(
+        { error: "File upload is not configured. Set R2_ENDPOINT, R2_ACCESS_KEY_ID, and R2_SECRET_ACCESS_KEY." },
+        { status: 503 }
+      );
     }
-  }
-  if (context === "USER_AVATAR" || context === "STAFF_AVATAR") {
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const session = await getServerSession(authOptions);
+    let json: unknown;
+    try {
+      json = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
-  }
+    const body = schema.safeParse(json);
+    if (!body.success) {
+      return NextResponse.json(
+        { error: "Invalid body", details: body.error.flatten() },
+        { status: 400 }
+      );
+    }
 
-  const params = CONTEXT_TO_FOLDER[context] ?? {
-    folder: "designs/general" as UploadFolder,
-    bucket: "private" as const,
-  };
-  const ext = filename.split(".").pop()?.toLowerCase() ?? "bin";
-  const baseName = filename.replace(/\.[^/.]+$/, "");
+    const { filename, mimeType, sizeBytes, context, quoteId, orderId, guestEmail } = body.data;
 
-  const storageKey = generateStorageKey({
-    folder: params.folder,
-    userId: session?.user?.id,
-    filename: baseName,
-    ext,
-  });
+    const typeConfig = ALLOWED_TYPES[mimeType];
+    if (!typeConfig) {
+      return NextResponse.json(
+        { error: `File type not allowed: ${mimeType}. Allowed: images (JPEG, PNG, WebP, etc.), PDF, STL, and other design formats.` },
+        { status: 400 }
+      );
+    }
 
-  const presignedUrl = await createPresignedUploadUrl({
-    bucket: params.bucket,
-    key: storageKey,
-    contentType: mimeType,
-    maxSizeMB: typeConfig.maxMB,
-    expiresIn: 600,
-  });
+    const maxBytes = typeConfig.maxMB * 1024 * 1024;
+    if (sizeBytes > maxBytes) {
+      return NextResponse.json(
+        { error: `File too large. Max size: ${typeConfig.maxMB}MB` },
+        { status: 400 }
+      );
+    }
 
-  const uploadedFile = await prisma.uploadedFile.create({
-    data: {
-      userId: session?.user?.id ?? null,
-      guestEmail: context.startsWith("CUSTOMER_") && !session ? guestEmail ?? null : null,
-      originalName: filename,
-      filename: filename,
+    if (context.startsWith("ADMIN_")) {
+      const role = (session?.user as { role?: string })?.role ?? "";
+      if (role !== "ADMIN" && role !== "SUPER_ADMIN" && role !== "STAFF") {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+      }
+    }
+    if (context === "USER_AVATAR" || context === "STAFF_AVATAR") {
+      if (!session?.user?.id) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+    }
+
+    const params = CONTEXT_TO_FOLDER[context] ?? {
+      folder: "designs/general" as UploadFolder,
+      bucket: "private" as const,
+    };
+    const ext = filename.split(".").pop()?.toLowerCase() ?? "bin";
+    const baseName = filename.replace(/\.[^/.]+$/, "");
+
+    const storageKey = generateStorageKey({
+      folder: params.folder,
+      userId: session?.user?.id,
+      filename: baseName,
+      ext,
+    });
+
+    let presignedUrl: string;
+    try {
+      presignedUrl = await createPresignedUploadUrl({
+        bucket: params.bucket,
+        key: storageKey,
+        contentType: mimeType,
+        maxSizeMB: typeConfig.maxMB,
+        expiresIn: 600,
+      });
+    } catch (r2Err) {
+      console.error("Presign R2 error:", r2Err);
+      return NextResponse.json(
+        { error: "Storage configuration error. Check R2_ENDPOINT (e.g. https://<account>.r2.cloudflarestorage.com) and bucket names." },
+        { status: 503 }
+      );
+    }
+
+    const uploadedFile = await prisma.uploadedFile.create({
+      data: {
+        userId: session?.user?.id ?? null,
+        guestEmail: context.startsWith("CUSTOMER_") && !session ? guestEmail ?? null : null,
+        originalName: filename,
+        filename: filename,
+        storageKey,
+        bucket: params.bucket,
+        mimeType,
+        size: sizeBytes,
+        ext,
+        fileType: extToFileType(ext),
+        uploadContext: context as UploadContext,
+        folder: params.folder,
+        status: "UPLOADING",
+        quoteId: quoteId ?? null,
+        orderId: orderId ?? null,
+        uploadedByAdmin: context.startsWith("ADMIN_"),
+      },
+    });
+
+    return NextResponse.json({
+      uploadId: uploadedFile.id,
+      presignedUrl,
       storageKey,
       bucket: params.bucket,
-      mimeType,
-      size: sizeBytes,
-      ext,
-      fileType: extToFileType(ext),
-      uploadContext: context as UploadContext,
-      folder: params.folder,
-      status: "UPLOADING",
-      quoteId: quoteId ?? null,
-      orderId: orderId ?? null,
-      uploadedByAdmin: context.startsWith("ADMIN_"),
-    },
-  });
-
-  return NextResponse.json({
-    uploadId: uploadedFile.id,
-    presignedUrl,
-    storageKey,
-    bucket: params.bucket,
-    expiresIn: 600,
-  });
+      expiresIn: 600,
+    });
+  } catch (err) {
+    console.error("Upload presign error:", err);
+    return NextResponse.json(
+      { error: "Failed to generate upload link. Try again or contact support." },
+      { status: 500 }
+    );
+  }
 }

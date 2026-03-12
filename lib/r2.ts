@@ -3,6 +3,9 @@
  * printhub-uploads = private (signed URLs only)
  * printhub-public = public (CDN URL)
  * Client uploads via presigned PUT; never route large files through Next.js.
+ *
+ * CORS: For browser uploads to work, both buckets need CORS configured in
+ * Cloudflare Dashboard → R2 → bucket → Settings → CORS policy. See docs/R2_CORS.md.
  */
 
 import {

@@ -760,8 +760,14 @@ export default function GetAQuotePage() {
                               accept={[
                                 "model/stl",
                                 "model/obj",
+                                "model/3mf",
                                 "application/octet-stream",
                                 "application/sla",
+                                ".stl",
+                                ".obj",
+                                ".3mf",
+                                ".step",
+                                ".stp",
                               ]}
                               maxSizeMB={500}
                               maxFiles={5}

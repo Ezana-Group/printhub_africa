@@ -113,12 +113,15 @@ export function FileUploader({
         const mimeOk = accept.includes(file.type);
         const extMap: Record<string, string[]> = {
           "model/stl": [".stl"],
-          "application/octet-stream": [".stl", ".obj", ".3mf", ".step"],
+          "model/obj": [".obj"],
+          "model/3mf": [".3mf"],
+          "application/octet-stream": [".stl", ".obj", ".3mf", ".step", ".stp"],
           "image/vnd.adobe.photoshop": [".psd"],
           "application/postscript": [".ai", ".eps"],
           "application/dxf": [".dxf"],
         };
-        const extOk = accept.some((t) => extMap[t]?.includes(ext));
+        const extOk =
+          accept.some((t) => extMap[t]?.includes(ext)) || accept.includes(ext);
         if (!mimeOk && !extOk) {
           const readable = humanAccept(accept);
           return `File type not supported. Please upload: ${readable}`;
