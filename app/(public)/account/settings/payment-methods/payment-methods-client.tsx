@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   Phone,
   CreditCard,
@@ -293,18 +294,11 @@ export function PaymentMethodsClient() {
           </div>
         )}
         {savedCards.length < 3 && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="mt-4"
-            onClick={() =>
-              (window.location.href =
-                "/account/settings/payment-methods/add-card")
-            }
-          >
-            <Plus className="h-4 w-4 mr-1.5" />
-            Add card
+          <Button type="button" variant="outline" size="sm" className="mt-4" asChild>
+            <Link href="/account/settings/payment-methods/add-card">
+              <Plus className="h-4 w-4 mr-1.5" />
+              Add card
+            </Link>
           </Button>
         )}
       </SectionCard>

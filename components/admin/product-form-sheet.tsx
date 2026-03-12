@@ -41,7 +41,7 @@ export function ProductFormSheet({
   const isEdit = !!product && product.id !== "new";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"details" | "pricing" | "inventory" | "images" | "seo">("details");
+  const [activeTab, setActiveTab] = useState<"details" | "pricing" | "images" | "seo">("details");
 
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -51,7 +51,6 @@ export function ProductFormSheet({
   const [productType, setProductType] = useState<ProductType>("READYMADE_3D");
   const [basePrice, setBasePrice] = useState("");
   const [comparePrice, setComparePrice] = useState("");
-  const [sku, setSku] = useState("");
   const [stock, setStock] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [isFeatured, setIsFeatured] = useState(false);
@@ -69,7 +68,6 @@ export function ProductFormSheet({
       setProductType(product.productType);
       setBasePrice(String(product.basePrice));
       setComparePrice(product.comparePrice != null ? String(product.comparePrice) : "");
-      setSku(product.id === "new" ? "" : (product.sku ?? ""));
       setStock(String(product.stock));
       setIsActive(product.isActive);
       setIsFeatured(product.isFeatured ?? false);
@@ -85,7 +83,6 @@ export function ProductFormSheet({
       setProductType("READYMADE_3D");
       setBasePrice("");
       setComparePrice("");
-      setSku("");
       setStock("0");
       setIsActive(true);
       setIsFeatured(false);
@@ -114,7 +111,8 @@ export function ProductFormSheet({
       productType,
       basePrice: parseFloat(basePrice) || 0,
       comparePrice: comparePrice ? parseFloat(comparePrice) : undefined,
-      sku: sku || undefined,
+      // SKU is auto-generated on create; omit so API generates it
+      ...(isEdit && product && product.id !== "new" && (product as { sku?: string }).sku && { sku: (product as { sku: string }).sku }),
       stock: parseInt(stock, 10) || 0,
       minOrderQty: 1,
       isActive,
@@ -152,7 +150,6 @@ export function ProductFormSheet({
   const tabs = [
     { id: "details" as const, label: "Details" },
     { id: "pricing" as const, label: "Pricing" },
-    { id: "inventory" as const, label: "Inventory" },
     { id: "images" as const, label: "Images" },
     { id: "seo" as const, label: "SEO" },
   ];
@@ -233,6 +230,17 @@ export function ProductFormSheet({
                   </select>
                 </div>
                 <div>
+                  <Label htmlFor="stock">Quantity (stock)</Label>
+                  <Input
+                    id="stock"
+                    type="number"
+                    min={0}
+                    value={stock}
+                    onChange={(e) => setStock(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
                   <Label htmlFor="description">Description</Label>
                   <Textarea
                     id="description"
@@ -289,32 +297,6 @@ export function ProductFormSheet({
                     step={0.01}
                     value={comparePrice}
                     onChange={(e) => setComparePrice(e.target.value)}
-                    className="mt-1"
-                  />
-                </div>
-              </div>
-            )}
-
-            {activeTab === "inventory" && (
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="sku">SKU</Label>
-                  <Input
-                    id="sku"
-                    value={sku}
-                    onChange={(e) => setSku(e.target.value)}
-                    placeholder="e.g. PRH-001"
-                    className="mt-1 font-mono"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="stock">Quantity</Label>
-                  <Input
-                    id="stock"
-                    type="number"
-                    min={0}
-                    value={stock}
-                    onChange={(e) => setStock(e.target.value)}
                     className="mt-1"
                   />
                 </div>

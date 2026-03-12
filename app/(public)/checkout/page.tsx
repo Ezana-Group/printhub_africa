@@ -626,8 +626,111 @@ export default function CheckoutPage() {
                   <h2 className="font-semibold text-lg">Delivery</h2>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Delivery method first so user chooses Standard/Express/Pick up; then we show address or pickup accordingly */}
-                  <div>
+                  {/* 1. Your delivery address first: saved addresses (if any) + add new address form */}
+                  <div className="space-y-4">
+                    <Label className="block font-medium">Your delivery address</Label>
+                    {session?.user && savedAddresses.length > 0 ? (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-2">Choose a saved address or add a new one in the form below.</p>
+                        <div className="space-y-2">
+                          {savedAddresses.map((addr) => (
+                            <label
+                              key={addr.id}
+                              className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5"
+                            >
+                              <input
+                                type="radio"
+                                name="savedAddress"
+                                checked={selectedSavedAddressId === addr.id}
+                                onChange={() => {
+                                  setSelectedSavedAddressId(addr.id);
+                                  const parts = (addr.recipientName ?? "").trim().split(/\s+/);
+                                  const firstName = parts[0] ?? "";
+                                  const lastName = parts.slice(1).join(" ") ?? "";
+                                  setContact({ firstName: firstName || contact.firstName, lastName: lastName || contact.lastName, phone: addr.phone ?? contact.phone });
+                                  setDelivery({ street: addr.line1, area: addr.line2 ?? "", city: addr.city, county: addr.county });
+                                }}
+                                className="mt-1"
+                              />
+                              <div className="text-sm">
+                                <span className="font-medium">{addr.label}{addr.isDefault ? " (Default)" : ""}</span>
+                                <p className="text-muted-foreground mt-0.5">{addr.line1}{addr.line2 ? `, ${addr.line2}` : ""} — {addr.city}, {addr.county}</p>
+                              </div>
+                            </label>
+                          ))}
+                          <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                            <input
+                              type="radio"
+                              name="savedAddress"
+                              checked={selectedSavedAddressId === null}
+                              onChange={() => setSelectedSavedAddressId(null)}
+                              className="mt-1"
+                            />
+                            <span className="text-sm font-medium">Add a new address</span>
+                          </label>
+                        </div>
+                      </div>
+                    ) : session?.user ? (
+                      <p className="text-sm text-muted-foreground">No saved addresses yet. Fill in the form below; we&apos;ll save it to your profile for next time.</p>
+                    ) : null}
+                    <div>
+                      <Label>Street address / Estate / Building *</Label>
+                      <Input
+                        value={delivery.street ?? ""}
+                        onChange={(e) => setDelivery({ street: e.target.value })}
+                        placeholder="e.g. Kilimani Road, Valley Arcade"
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label>Sub-county / Area *</Label>
+                      <Input
+                        value={delivery.area ?? ""}
+                        onChange={(e) => setDelivery({ area: e.target.value })}
+                        placeholder="e.g. Kilimani"
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label>County *</Label>
+                      <Select
+                        className="mt-1"
+                        value={delivery.county ?? ""}
+                        onChange={(e) => setDelivery({ county: e.target.value })}
+                        options={KENYA_COUNTIES_CHECKOUT.map((c) => ({ value: c, label: c }))}
+                        placeholder="Select county"
+                      />
+                    </div>
+                    <div>
+                      <Label>City *</Label>
+                      <Input
+                        value={delivery.city ?? "Nairobi"}
+                        onChange={(e) => setDelivery({ city: e.target.value })}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label>Postal code (optional)</Label>
+                      <Input
+                        inputMode="numeric"
+                        value={delivery.postalCode ?? ""}
+                        onChange={(e) => setDelivery({ postalCode: e.target.value })}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label>Delivery notes (optional)</Label>
+                      <Input
+                        value={delivery.notes ?? ""}
+                        onChange={(e) => setDelivery({ notes: e.target.value })}
+                        placeholder='e.g. "Green gate, call on arrival"'
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 2. Delivery method */}
+                  <div className="pt-4 border-t">
                     <Label className="block mb-2">Delivery method</Label>
                     {shippingRates.standard == null ? (
                       <div className="space-y-2">
@@ -639,7 +742,7 @@ export default function CheckoutPage() {
                           </p>
                         )}
                         {!delivery.county && (
-                          <p className="text-sm text-muted-foreground">Select a county in your delivery address below to see if delivery is available and the cost.</p>
+                          <p className="text-sm text-muted-foreground">Select a county in your delivery address above to see if delivery is available and the cost.</p>
                         )}
                         <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
                           <input
@@ -779,111 +882,6 @@ export default function CheckoutPage() {
                       </div>
                     )}
                   </div>
-
-                  {/* Delivery address: shown only when Standard or Express is selected; saved addresses (if any) then form */}
-                  {(delivery.method === "STANDARD" || delivery.method === "EXPRESS") && (
-                    <div className="space-y-4 pt-2 border-t">
-                      <Label className="block font-medium">Your delivery address</Label>
-                      {session?.user && savedAddresses.length > 0 ? (
-                        <div>
-                          <p className="text-sm text-muted-foreground mb-2">Choose a saved address or enter a new one below. You can edit the fields after selecting.</p>
-                          <div className="space-y-2">
-                            <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                              <input
-                                type="radio"
-                                name="savedAddress"
-                                checked={selectedSavedAddressId === null}
-                                onChange={() => setSelectedSavedAddressId(null)}
-                                className="mt-1"
-                              />
-                              <span className="text-sm font-medium">Use a new address</span>
-                            </label>
-                            {savedAddresses.map((addr) => (
-                              <label
-                                key={addr.id}
-                                className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5"
-                              >
-                                <input
-                                  type="radio"
-                                  name="savedAddress"
-                                  checked={selectedSavedAddressId === addr.id}
-                                  onChange={() => {
-                                    setSelectedSavedAddressId(addr.id);
-                                    const parts = (addr.recipientName ?? "").trim().split(/\s+/);
-                                    const firstName = parts[0] ?? "";
-                                    const lastName = parts.slice(1).join(" ") ?? "";
-                                    setContact({ firstName: firstName || contact.firstName, lastName: lastName || contact.lastName, phone: addr.phone ?? contact.phone });
-                                    setDelivery({ street: addr.line1, area: addr.line2 ?? "", city: addr.city, county: addr.county });
-                                  }}
-                                  className="mt-1"
-                                />
-                                <div className="text-sm">
-                                  <span className="font-medium">{addr.label}{addr.isDefault ? " (Default)" : ""}</span>
-                                  <p className="text-muted-foreground mt-0.5">{addr.line1}{addr.line2 ? `, ${addr.line2}` : ""} — {addr.city}, {addr.county}</p>
-                                </div>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      ) : session?.user ? (
-                        <p className="text-sm text-muted-foreground">No saved addresses yet. Fill in the form below; we&apos;ll save it to your profile for next time.</p>
-                      ) : null}
-                      <div>
-                        <Label>Street address / Estate / Building *</Label>
-                        <Input
-                          value={delivery.street ?? ""}
-                          onChange={(e) => setDelivery({ street: e.target.value })}
-                          placeholder="e.g. Kilimani Road, Valley Arcade"
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label>Sub-county / Area *</Label>
-                        <Input
-                          value={delivery.area ?? ""}
-                          onChange={(e) => setDelivery({ area: e.target.value })}
-                          placeholder="e.g. Kilimani"
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label>County *</Label>
-                        <Select
-                          className="mt-1"
-                          value={delivery.county ?? ""}
-                          onChange={(e) => setDelivery({ county: e.target.value })}
-                          options={KENYA_COUNTIES_CHECKOUT.map((c) => ({ value: c, label: c }))}
-                          placeholder="Select county"
-                        />
-                      </div>
-                      <div>
-                        <Label>City *</Label>
-                        <Input
-                          value={delivery.city ?? "Nairobi"}
-                          onChange={(e) => setDelivery({ city: e.target.value })}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label>Postal code (optional)</Label>
-                        <Input
-                          inputMode="numeric"
-                          value={delivery.postalCode ?? ""}
-                          onChange={(e) => setDelivery({ postalCode: e.target.value })}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label>Delivery notes (optional)</Label>
-                        <Input
-                          value={delivery.notes ?? ""}
-                          onChange={(e) => setDelivery({ notes: e.target.value })}
-                          placeholder='e.g. "Green gate, call on arrival"'
-                          className="mt-1"
-                        />
-                      </div>
-                    </div>
-                  )}
 
                   <div className="flex gap-2">
                     <Button variant="outline" onClick={() => setStep(1)} className="flex-1">

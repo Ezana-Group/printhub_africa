@@ -75,6 +75,7 @@ export function CatalogueEditForm({
   const [priceOverrideKes, setPriceOverrideKes] = useState(
     initialItem.priceOverrideKes != null ? String(initialItem.priceOverrideKes) : ""
   );
+  const [sourceUrl, setSourceUrl] = useState(initialItem.sourceUrl ?? "");
 
   useEffect(() => {
     setItem(initialItem);
@@ -91,6 +92,7 @@ export function CatalogueEditForm({
         ? String(initialItem.priceOverrideKes)
         : ""
     );
+    setSourceUrl(initialItem.sourceUrl ?? "");
   }, [initialItem]);
 
   const refetchItem = useCallback(async () => {
@@ -115,6 +117,7 @@ export function CatalogueEditForm({
           shortDescription: shortDescription.trim() || null,
           description: description.trim() || null,
           categoryId: categoryId || undefined,
+          sourceUrl: sourceUrl.trim() ? sourceUrl.trim() : null,
           basePriceKes: basePriceKes ? parseFloat(basePriceKes) : null,
           priceOverrideKes: priceOverrideKes
             ? parseFloat(priceOverrideKes)
@@ -221,6 +224,20 @@ export function CatalogueEditForm({
                 </option>
               ))}
             </select>
+          </div>
+          <div>
+            <Label htmlFor="sourceUrl">Printables link</Label>
+            <Input
+              id="sourceUrl"
+              type="url"
+              value={sourceUrl}
+              onChange={(e) => setSourceUrl(e.target.value)}
+              placeholder="https://www.printables.com/model/12345-name"
+              className="mt-1"
+            />
+            <p className="text-xs text-slate-500 mt-0.5">
+              Link to the model on Printables.com (for attribution and re-import).
+            </p>
           </div>
           <div>
             <Label htmlFor="shortDesc">Short description</Label>

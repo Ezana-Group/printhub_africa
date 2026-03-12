@@ -58,6 +58,50 @@ const bodySchema = z.object({
   nameOverride: z.string().max(300).optional(),
 });
 
+type ModelShape = {
+  name: string;
+  summary?: string;
+  description?: string;
+  tags?: { name: string }[];
+  license?: { spdxId?: string };
+  user?: { publicUsername?: string; handle?: string };
+  images?: Array<{ filePath?: string; filePathOptimized?: string; isMain?: boolean }>;
+  likesCount?: number;
+  makes?: { id: string }[];
+};
+
+/** Fallback: fetch Printables page HTML and parse og: meta for title, description, image. */
+async function fetchPrintablesPageFallback(url: string): Promise<ModelShape | null> {
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; PrintHub/1.0; +https://printhub.africa)" },
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    const ogTitle = html.match(/<meta\s+property="og:title"\s+content="([^"]*)"/i)?.[1];
+    const ogDesc = html.match(/<meta\s+property="og:description"\s+content="([^"]*)"/i)?.[1];
+    const ogImage = html.match(/<meta\s+property="og:image"\s+content="([^"]*)"/i)?.[1];
+    const name = (ogTitle && decodeHtmlEntities(ogTitle).trim()) || "Imported from Printables";
+    const description = ogDesc ? decodeHtmlEntities(ogDesc).trim() : undefined;
+    const images: ModelShape["images"] = ogImage
+      ? [{ filePath: ogImage, filePathOptimized: ogImage, isMain: true }]
+      : undefined;
+    return { name, summary: description, description, images };
+  } catch {
+    return null;
+  }
+}
+
+function decodeHtmlEntities(s: string): string {
+  return s
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'");
+}
+
 export async function POST(req: NextRequest) {
   const auth = await requireAdminApi({ permission: "products_edit" });
   if (auth instanceof NextResponse) return auth;
@@ -72,9 +116,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const match = body.url.match(/printables\.com\/model\/(\d+)/i);
-  const modelId = match?.[1];
-  if (!modelId) {
+  const urlMatch = body.url.match(/printables\.com\/model\/([^/?#]+)/i);
+  const urlSlug = urlMatch?.[1]?.trim(); // e.g. "444253-twisted-lamp-shade-for-ikea-skaftet"
+  const modelId = urlSlug?.replace(/^(\d+).*/, "$1") ?? null; // numeric id "444253"
+  if (!urlSlug || !modelId) {
     return NextResponse.json(
       { error: "Invalid Printables URL. Use e.g. https://www.printables.com/model/123456-name" },
       { status: 400 }
@@ -88,45 +133,64 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Category not found" }, { status: 400 });
   }
 
-  let model: {
-    name: string;
-    summary?: string;
-    description?: string;
-    tags?: { name: string }[];
-    license?: { spdxId?: string };
-    user?: { publicUsername?: string; handle?: string };
-    images?: Array<{
-      filePath?: string;
-      filePathOptimized?: string;
-      isMain?: boolean;
-    }>;
-    likesCount?: number;
-    makes?: { id: string }[];
+  let model: ModelShape | undefined;
+
+  const graphqlHeaders: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    "User-Agent": "Mozilla/5.0 (compatible; PrintHub/1.0; +https://printhub.africa)",
+    Origin: "https://www.printables.com",
+    Referer: "https://www.printables.com/",
   };
 
+  type GqlResponse = { data?: { model?: ModelShape }; errors?: Array<{ message?: string }> };
+
   try {
-    const gqlRes = await fetch(PRINTABLES_GRAPHQL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        query: PRINTABLES_MODEL_QUERY,
-        variables: { id: modelId },
-      }),
-    });
-    const gqlData = await gqlRes.json();
-    model = gqlData?.data?.model;
+    let gqlData: GqlResponse | null = null;
+
+    for (const idVar of [modelId, urlSlug]) {
+      const gqlRes = await fetch(PRINTABLES_GRAPHQL, {
+        method: "POST",
+        headers: graphqlHeaders,
+        body: JSON.stringify({
+          query: PRINTABLES_MODEL_QUERY,
+          variables: { id: idVar },
+        }),
+      });
+      gqlData = (await gqlRes.json()) as GqlResponse;
+      model = gqlData?.data?.model ?? undefined;
+      if (model?.name) break;
+    }
+
     if (!model?.name) {
-      return NextResponse.json(
-        { error: "Model not found on Printables or API returned no data" },
-        { status: 404 }
-      );
+      const errMsg =
+        gqlData?.errors?.[0]?.message ||
+        (gqlData?.data?.model === null ? "Model not found (ID may have changed)." : "API returned no data.");
+      console.error("Printables GraphQL:", errMsg, "id tried:", modelId, urlSlug, "errors:", gqlData?.errors);
+
+      const fallback = await fetchPrintablesPageFallback(body.url);
+      if (fallback) {
+        model = fallback;
+      } else {
+        return NextResponse.json(
+          { error: `Model not found on Printables or API returned no data. ${errMsg}` },
+          { status: 404 }
+        );
+      }
     }
   } catch (e) {
     console.error("Printables GraphQL error:", e);
-    return NextResponse.json(
-      { error: "Failed to fetch from Printables" },
-      { status: 502 }
-    );
+    const fallback = await fetchPrintablesPageFallback(body.url).catch(() => null);
+    if (fallback) model = fallback;
+    else
+      return NextResponse.json(
+        { error: "Failed to fetch from Printables" },
+        { status: 502 }
+      );
+  }
+
+  if (!model?.name) {
+    return NextResponse.json({ error: "Could not load model data" }, { status: 502 });
   }
 
   const name = (body.nameOverride?.trim() || model.name).slice(0, 300);
@@ -172,14 +236,21 @@ export async function POST(req: NextRequest) {
   }[] = [];
   const limit = Math.min(sorted.length, 8);
 
+  const resolveImageUrl = (path: string): string => {
+    if (/^https?:\/\//i.test(path)) return path;
+    const base = "https://www.printables.com";
+    return path.startsWith("/") ? `${base}${path}` : `${base}/${path}`;
+  };
+
   for (let i = 0; i < limit; i++) {
     const img = sorted[i];
-    const imageUrl = img.filePathOptimized || img.filePath;
-    if (!imageUrl || typeof imageUrl !== "string") continue;
+    const rawPath = img.filePathOptimized || img.filePath;
+    if (!rawPath || typeof rawPath !== "string") continue;
+    const imageUrl = resolveImageUrl(rawPath);
 
     try {
       const imgRes = await fetch(imageUrl, {
-        headers: { "User-Agent": "PrintHub/1.0 (catalogue import)" },
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; PrintHub/1.0; +https://printhub.africa)" },
       });
       if (!imgRes.ok) continue;
       const imageBuffer = await imgRes.arrayBuffer();
