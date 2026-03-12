@@ -214,6 +214,10 @@ export function OrderDetailClient({ orderId, initialOrder }: { orderId: string; 
   const [resendStkLoading, setResendStkLoading] = useState(false);
   const [confirmPaymentLoading, setConfirmPaymentLoading] = useState(false);
   const [, setWaitingForPayment] = useState(false);
+  const [refundAmount, setRefundAmount] = useState("");
+  const [refundReason, setRefundReason] = useState("");
+  const [refundLoading, setRefundLoading] = useState(false);
+  const [refundError, setRefundError] = useState<string | null>(null);
 
   const fetchOrder = useCallback(async () => {
     const res = await fetch(`/api/admin/orders/${orderId}`);
@@ -528,6 +532,102 @@ export function OrderDetailClient({ orderId, initialOrder }: { orderId: string; 
             Confirm collected and paid — {formatPrice(totalKes)}
           </Button>
         </div>
+      )}
+
+      {order.status !== "REFUNDED" &&
+        (() => {
+          const totalPaid = order.payments
+            .filter((p: Payment) => p.status === "COMPLETED")
+            .reduce((s: number, p: Payment) => s + Number(p.amount), 0);
+          return totalPaid > 0;
+        })() && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Issue refund</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Customer will be notified by email and SMS. Process the payout (e.g. M-Pesa B2C) separately if needed.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <form
+              className="space-y-3 max-w-sm"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setRefundError(null);
+                const amount = parseFloat(refundAmount);
+                const totalPaid = order.payments
+                  .filter((p: Payment) => p.status === "COMPLETED")
+                  .reduce((s: number, p: Payment) => s + Number(p.amount), 0);
+                if (Number.isNaN(amount) || amount < 0.01) {
+                  setRefundError("Enter a valid amount");
+                  return;
+                }
+                if (amount > totalPaid) {
+                  setRefundError(`Amount cannot exceed ${formatPrice(totalPaid)}`);
+                  return;
+                }
+                setRefundLoading(true);
+                try {
+                  const res = await fetch(`/api/admin/orders/${orderId}/refund`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      amount,
+                      reason: refundReason.trim() || undefined,
+                      markCompleted: true,
+                    }),
+                  });
+                  const data = await res.json();
+                  if (!res.ok) throw new Error(data.error?.amount?.[0] ?? data.error ?? "Refund failed");
+                  setRefundAmount("");
+                  setRefundReason("");
+                  await fetchOrder();
+                  await fetchTimeline();
+                  router.refresh();
+                } catch (err) {
+                  setRefundError(err instanceof Error ? err.message : "Refund failed");
+                } finally {
+                  setRefundLoading(false);
+                }
+              }}
+            >
+              <div>
+                <Label htmlFor="refundAmount">Amount (KES)</Label>
+                <Input
+                  id="refundAmount"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  placeholder={String(
+                    order.payments
+                      .filter((p: Payment) => p.status === "COMPLETED")
+                      .reduce((s: number, p: Payment) => s + Number(p.amount), 0)
+                  )}
+                  value={refundAmount}
+                  onChange={(e) => setRefundAmount(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="refundReason">Reason (optional)</Label>
+                <Textarea
+                  id="refundReason"
+                  placeholder="e.g. Customer request, duplicate payment"
+                  value={refundReason}
+                  onChange={(e) => setRefundReason(e.target.value)}
+                  rows={2}
+                  className="mt-1"
+                />
+              </div>
+              {refundError && (
+                <p className="text-sm text-destructive">{refundError}</p>
+              )}
+              <Button type="submit" variant="secondary" disabled={refundLoading}>
+                {refundLoading ? "Processing…" : "Issue refund and notify customer"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       )}
 
       <div className="grid lg:grid-cols-[1fr_340px] gap-6">

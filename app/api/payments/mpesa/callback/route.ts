@@ -16,7 +16,22 @@ interface CallbackBody {
   };
 }
 
+/** Safaricom callback IP whitelist (comma-separated). Empty = allow all (sandbox). */
+function isAllowedCallbackIp(req: Request): boolean {
+  const whitelist = process.env.MPESA_CALLBACK_IP_WHITELIST?.trim();
+  if (!whitelist) return true; // sandbox: allow all
+  const ips = whitelist.split(",").map((s) => s.trim()).filter(Boolean);
+  if (ips.length === 0) return true;
+  const forwarded = req.headers.get("x-forwarded-for");
+  const clientIp = forwarded ? forwarded.split(",")[0]?.trim() : req.headers.get("x-real-ip") ?? null;
+  if (!clientIp) return false;
+  return ips.some((ip) => clientIp === ip || clientIp.startsWith(ip));
+}
+
 export async function POST(req: Request) {
+  if (!isAllowedCallbackIp(req)) {
+    return NextResponse.json({ ResultCode: 1, ResultDesc: "Forbidden" }, { status: 403 });
+  }
   let body: CallbackBody;
   try {
     body = await req.json();

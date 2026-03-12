@@ -33,6 +33,7 @@ export default function OrderDetailPage() {
   const { status: authStatus } = useSession();
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     if (authStatus !== "authenticated" || !params.id) return;
@@ -49,6 +50,29 @@ export default function OrderDetailPage() {
   if (authStatus === "unauthenticated") {
     router.replace("/login");
     return null;
+  }
+
+  const canCancel = order && ["PENDING", "CONFIRMED"].includes(order.status);
+
+  async function handleCancel() {
+    if (!order?.id || !canCancel) return;
+    if (!confirm("Cancel this order? This cannot be undone.")) return;
+    setCancelling(true);
+    try {
+      const res = await fetch(`/api/orders/${order.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cancel", cancelReason: "Cancelled by customer" }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error ?? "Failed to cancel");
+        return;
+      }
+      setOrder((o) => (o ? { ...o, status: "CANCELLED" } : null));
+    } finally {
+      setCancelling(false);
+    }
   }
 
   if (loading || !order) {
@@ -105,6 +129,21 @@ export default function OrderDetailPage() {
               {order.discount > 0 && <div className="flex justify-between"><dt className="text-slate-600">Discount</dt><dd>-{formatPrice(order.discount)}</dd></div>}
               <div className="flex justify-between border-t border-slate-200 pt-2 font-semibold"><dt>Total</dt><dd>{formatPrice(order.total)}</dd></div>
             </dl>
+            {canCancel && (
+              <Button
+                variant="destructive"
+                className="mt-4 w-full rounded-xl"
+                disabled={cancelling}
+                onClick={handleCancel}
+              >
+                {cancelling ? "Cancelling..." : "Cancel order"}
+              </Button>
+            )}
+            <Button asChild variant="outline" className="mt-4 w-full rounded-xl" size="sm">
+              <a href={`/api/orders/${order.id}/invoice`} target="_blank" rel="noopener noreferrer">
+                Download invoice
+              </a>
+            </Button>
             <Button asChild variant="outline" className="mt-6 w-full rounded-xl">
               <Link href="/shop">Order again</Link>
             </Button>

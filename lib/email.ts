@@ -128,6 +128,31 @@ export async function sendOrderConfirmationEmail(
   });
 }
 
+/** Order status update (tracking) — used by createTrackingEvent. */
+export async function sendOrderStatusEmail(
+  email: string,
+  orderNumber: string,
+  title: string,
+  description: string
+) {
+  const { businessName, footer } = await getEmailBranding();
+  const trackUrl = `${baseUrl}/track?ref=${encodeURIComponent(orderNumber)}`;
+  return sendEmail({
+    to: email,
+    subject: `Order ${orderNumber} – ${title} – ${businessName}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h1 style="color: #FF4D00;">${businessName}</h1>
+        <p><strong>Order ${orderNumber}</strong></p>
+        <p><strong>${title}</strong></p>
+        <p>${description}</p>
+        <p><a href="${trackUrl}" style="color: #FF4D00; font-weight: bold;">Track your order</a></p>
+        <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
+      </div>
+    `,
+  });
+}
+
 /** Manual payment submitted — we received your reference; team will confirm within 30 min. */
 export async function sendPaymentReceivedEmail(
   email: string,

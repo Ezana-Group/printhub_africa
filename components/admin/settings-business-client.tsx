@@ -132,6 +132,7 @@ export function SettingsBusinessClient({
                 className="focus-visible:ring-orange-500"
               />
             </div>
+            {/* AUDIT-FIX: wire FileUploader ADMIN_LOGO when ready */}
             <p className="text-sm text-muted-foreground">Logo: Min 400×400px, PNG. <Button type="button" variant="outline" size="sm" disabled title="Coming soon">Upload</Button></p>
           </div>
         )}

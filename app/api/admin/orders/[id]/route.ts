@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { requireAdminApi } from "@/lib/admin-api-guard";
 import { writeAudit } from "@/lib/audit";
+import { createTrackingEvent } from "@/lib/tracking";
 
 const ORDER_STATUSES = [
   "PENDING",
@@ -86,16 +87,23 @@ export async function PATCH(
         where: { id },
         data: updateData,
       });
+      const newStatus = status ?? order.status;
       await prisma.orderTimeline.create({
         data: {
           orderId: id,
-          status: status ?? order.status,
+          status: newStatus,
           message: status != null
             ? `Status updated to ${status}${trackingNumber ? ` · Tracking: ${trackingNumber}` : ""}`
             : "Updated",
           updatedBy: session.user?.email ?? session.user?.id ?? undefined,
         },
       });
+      if (status != null && status !== order.status) {
+        await createTrackingEvent(id, status, {
+          description: trackingNumber ? `Tracking: ${trackingNumber}` : undefined,
+          createdBy: session.user?.id,
+        });
+      }
       await writeAudit({
         userId: session.user?.id,
         action: `ORDER_${status ?? "UPDATE"}`,

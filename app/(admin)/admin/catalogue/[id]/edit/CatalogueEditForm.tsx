@@ -362,8 +362,7 @@ export function CatalogueEditForm({
         <div className="rounded-xl border-2 border-dashed border-slate-200 p-8 text-center text-slate-500">
           <p className="font-medium">STL file upload</p>
           <p className="text-sm mt-1">
-            Upload and attach an STL file for this catalogue item. (Coming soon
-            or use import from Printables.)
+            Upload and attach an STL file for this catalogue item. (Coming soon — AUDIT-FIX: wire FileUploader ADMIN_CATALOGUE_STL or use import from Printables.)
           </p>
         </div>
       )}

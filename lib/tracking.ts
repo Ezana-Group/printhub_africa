@@ -5,6 +5,8 @@
 
 import { prisma } from "@/lib/prisma";
 import { getBusinessPublic } from "@/lib/business-public";
+import { sendOrderStatusEmail } from "@/lib/email";
+import { sendSMS } from "@/lib/africas-talking";
 
 export const TRACKING_EVENTS: Record<
   string,
@@ -98,21 +100,33 @@ export const TRACKING_EVENTS: Record<
 };
 
 async function sendTrackingSms(orderId: string, status: string) {
-  void orderId;
-  void status;
-  // TODO: integrate Africa's Talking or other SMS provider
-  // const order = await prisma.order.findUnique({ where: { id: orderId }, include: { shippingAddress: true } });
-  // const phone = order?.shippingAddress?.phone ?? order?.user?.phone;
-  // if (phone) await sendSms(phone, `PrintHub: Order update - ${TRACKING_EVENTS[status]?.title}`);
+  const template = TRACKING_EVENTS[status];
+  if (!template) return;
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { shippingAddress: true, user: { select: { phone: true } } },
+  });
+  const phone = order?.shippingAddress?.phone ?? order?.user?.phone;
+  if (phone) {
+    await sendSMS(phone, `PrintHub: ${template.title} – Order ${order?.orderNumber ?? orderId}. Track: ${process.env.NEXT_PUBLIC_APP_URL ?? "https://printhub.africa"}/track?ref=${order?.orderNumber ?? ""}`);
+  }
 }
 
 async function sendTrackingEmail(orderId: string, status: string) {
-  void orderId;
-  void status;
-  // TODO: integrate Resend — send order update email with tracking link
-  // const order = await prisma.order.findUnique({ where: { id: orderId }, include: { shippingAddress: true } });
-  // const email = order?.shippingAddress?.email ?? order?.user?.email;
-  // if (email) await sendEmail(email, ...);
+  const template = TRACKING_EVENTS[status];
+  if (!template) return;
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { shippingAddress: true, user: { select: { email: true } } },
+  });
+  const email = order?.shippingAddress?.email ?? order?.user?.email;
+  if (email && order?.orderNumber) {
+    const business = await getBusinessPublic();
+    const description = template.description
+      .replace(/\{\{city\}\}/g, business.city || "facility")
+      .replace(/\{\{businessName\}\}/g, business.businessName);
+    await sendOrderStatusEmail(email, order.orderNumber, template.title, description);
+  }
 }
 
 export type CreateTrackingEventOptions = {
