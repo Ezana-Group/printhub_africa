@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { SettingsSaveButton } from "@/components/settings/settings-save-button";
+import { OrderNumberPrefixesSection } from "@/components/settings/order-number-prefixes-section";
 
 export default async function AdminSettingsSystemPage() {
   await requireAdminSettings();
@@ -40,6 +41,7 @@ export default async function AdminSettingsSystemPage() {
           <Input type="number" defaultValue="500" />
         </div>
       </SectionCard>
+      <OrderNumberPrefixesSection />
       <SectionCard
         title="Cache Management"
         description="Pricing, product, finance cache TTL. Clear caches."

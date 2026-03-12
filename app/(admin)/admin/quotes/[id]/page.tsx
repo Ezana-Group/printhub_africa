@@ -136,19 +136,17 @@ export default async function AdminQuoteDetailPage({
             projectName={quote.projectName}
           />
 
-          {quote.uploadedFiles.length > 0 && (
-            <QuoteUploadedFilesCard
-              files={quote.uploadedFiles.map((f) => ({
-                id: f.id,
-                originalName: f.originalName,
-                filename: f.filename,
-                mimeType: f.mimeType,
-                size: f.size,
-                fileType: f.fileType,
-                createdAt: f.createdAt.toISOString(),
-              }))}
-            />
-          )}
+          <QuoteUploadedFilesCard
+            files={quote.uploadedFiles.map((f) => ({
+              id: f.id,
+              originalName: f.originalName,
+              filename: f.filename,
+              mimeType: f.mimeType,
+              size: f.size,
+              fileType: f.fileType,
+              createdAt: f.createdAt.toISOString(),
+            }))}
+          />
 
           {quote.referenceFiles && quote.referenceFiles.length > 0 && (
             <QuoteFilesSection

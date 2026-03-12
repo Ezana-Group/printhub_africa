@@ -10,16 +10,21 @@ export async function GET() {
     const settings = await prisma.businessSettings.findUnique({
       where: { id: "default" },
     });
+    const stripeOn = settings?.stripeEnabled ?? false;
     return NextResponse.json({
       mpesa: settings?.mpesaEnabled ?? true,
-      stripe: settings?.stripeEnabled ?? false,
+      airtelMoney: true,
+      tkash: true,
+      stripe: stripeOn,
       pesapal: settings?.pesapalEnabled ?? false,
       flutterwave: settings?.flutterwaveEnabled ?? false,
+      applePay: stripeOn,
+      googlePay: stripeOn,
     });
   } catch (e) {
     console.error("Payment methods error:", e);
     return NextResponse.json(
-      { mpesa: true, stripe: false, pesapal: false, flutterwave: false },
+      { mpesa: true, airtelMoney: true, tkash: true, stripe: false, pesapal: false, flutterwave: false, applePay: false, googlePay: false },
       { status: 200 }
     );
   }

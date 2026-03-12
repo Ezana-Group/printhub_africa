@@ -257,21 +257,24 @@ export function QuoteDetailClient({
         </CardContent>
       </Card>
 
-      {/* Status pipeline stepper */}
+      {/* Status pipeline stepper — vertical timeline on small screens, horizontal on md+ */}
       <Card>
         <CardHeader>
           <h2 className="font-semibold">Status pipeline</h2>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Mobile: vertical stepper. Desktop: horizontal */}
-          <div className="flex flex-col md:flex-row md:items-center gap-0">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:gap-0">
             {PIPELINE.flatMap((s, i) => {
               const isCompleted = currentIndex > i;
               const isCurrent = status === s;
+              const label = PIPELINE_LABELS[s] ?? s.replace("_", " ");
               const stepEl = (
-                <div key={s} className="flex flex-1 items-center gap-2 min-w-0 md:flex-col md:gap-0 md:min-w-0">
+                <div
+                  key={s}
+                  className="flex items-center gap-3 py-1 lg:py-0 lg:flex-col lg:flex-1 lg:min-w-0 lg:gap-1.5"
+                >
                   <div
-                    className={`h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                    className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 lg:h-4 lg:w-4 ${
                       isCompleted
                         ? "bg-[#E8440A] border-[#E8440A]"
                         : isCurrent
@@ -282,11 +285,11 @@ export function QuoteDetailClient({
                     {isCompleted && <span className="text-[10px] text-white font-bold">✓</span>}
                   </div>
                   <span
-                    className={`text-xs font-medium md:mt-1.5 md:text-center leading-tight md:max-w-[4rem] md:text-[11px] ${
+                    className={`text-sm font-medium lg:text-center lg:text-[11px] lg:max-w-[4.5rem] leading-tight ${
                       isCurrent ? "text-foreground font-semibold" : "text-muted-foreground"
                     }`}
                   >
-                    {PIPELINE_LABELS[s] ?? s.replace("_", " ")}
+                    {label}
                   </span>
                 </div>
               );
@@ -294,8 +297,8 @@ export function QuoteDetailClient({
                 i < PIPELINE.length - 1 ? (
                   <div
                     key={`conn-${s}`}
-                    className={`shrink-0 md:flex-1 md:min-w-[6px] md:mx-0.5
-                      w-0.5 min-h-[10px] ml-[7px] my-0.5 md:w-auto md:min-h-0 md:h-0.5 md:my-0 md:ml-0 ${
+                    className={`shrink-0 lg:flex-1 lg:min-w-[6px] lg:mx-0.5 self-center
+                      w-0.5 min-h-[12px] ml-[9px] my-0.5 lg:w-auto lg:min-h-0 lg:h-0.5 lg:my-0 lg:ml-0 ${
                       isCompleted ? "bg-[#E8440A]" : "bg-muted"
                     }`}
                   />
@@ -303,7 +306,7 @@ export function QuoteDetailClient({
               return connectorEl ? [stepEl, connectorEl] : [stepEl];
             })}
           </div>
-          <div className="flex flex-col gap-2 pt-2">
+          <div className="flex flex-col gap-2 pt-2 border-t border-border pt-4">
             {nextStatus && (
               <Button
                 size="sm"

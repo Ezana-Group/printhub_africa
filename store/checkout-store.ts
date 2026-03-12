@@ -26,8 +26,25 @@ export interface CheckoutDelivery {
 }
 
 export interface CheckoutPayment {
-  method: "MPESA" | "STRIPE" | "PESAPAL" | "FLUTTERWAVE" | "BANK_TRANSFER";
+  method:
+    | "MPESA"
+    | "AIRTEL_MONEY"
+    | "TKASH"
+    | "STRIPE"
+    | "PESAPAL"
+    | "FLUTTERWAVE"
+    | "BANK_TRANSFER"
+    | "CARD"
+    | "APPLE_PAY"
+    | "GOOGLE_PAY";
   mpesaPhone?: string;
+  /** Airtel Money / TKash phone (Airtel: 07XX; Telkom: 07XX) */
+  mobileMoneyPhone?: string;
+  /** Card details (only for display/validation; never send raw card to server — use Stripe Elements token in production) */
+  cardNumber?: string;
+  cardExpiry?: string;
+  cardCvc?: string;
+  cardholderName?: string;
 }
 
 export interface CheckoutCoupon {

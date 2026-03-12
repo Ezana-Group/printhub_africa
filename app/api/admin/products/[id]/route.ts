@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { requireAdminApi } from "@/lib/admin-api-guard";
+import { generateNextProductSku } from "@/lib/product-utils";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -46,6 +47,17 @@ export async function PATCH(
       return NextResponse.json({ error: { slug: ["Slug already in use"] } }, { status: 400 });
     }
   }
+  let skuUpdate: string | null | undefined = data.sku;
+  if (data.sku !== undefined && (data.sku === null || (typeof data.sku === "string" && !data.sku.trim()))) {
+    skuUpdate = await generateNextProductSku();
+  } else if (data.sku !== undefined && typeof data.sku === "string" && data.sku.trim()) {
+    const existingBySku = await prisma.product.findFirst({
+      where: { sku: data.sku.trim(), NOT: { id } },
+    });
+    if (existingBySku) {
+      return NextResponse.json({ error: { sku: ["SKU already in use"] } }, { status: 400 });
+    }
+  }
   try {
     const product = await prisma.product.update({
       where: { id },
@@ -58,7 +70,7 @@ export async function PATCH(
         ...(data.productType != null && { productType: data.productType }),
         ...(data.basePrice != null && { basePrice: data.basePrice }),
         ...(data.comparePrice !== undefined && { comparePrice: data.comparePrice }),
-        ...(data.sku !== undefined && { sku: data.sku }),
+        ...(skuUpdate !== undefined && { sku: skuUpdate }),
         ...(data.stock != null && { stock: data.stock }),
         ...(data.minOrderQty != null && { minOrderQty: data.minOrderQty }),
         ...(data.maxOrderQty !== undefined && { maxOrderQty: data.maxOrderQty }),

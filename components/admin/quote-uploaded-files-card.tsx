@@ -41,17 +41,22 @@ function is3DFile(name: string, mime: string): boolean {
 }
 
 export function QuoteUploadedFilesCard({ files }: { files: QuoteUploadedFile[] }) {
-  if (!files?.length) return null;
+  const list = files ?? [];
 
   return (
     <Card>
       <CardHeader>
         <h2 className="font-semibold">Customer uploads</h2>
         <p className="text-xs text-muted-foreground">
-          Files attached to this quote. Use Download to open or save.
+          {list.length > 0
+            ? "Files attached to this quote. Use Download to open or save."
+            : "Files the customer uploaded when submitting this quote."}
         </p>
       </CardHeader>
       <CardContent>
+        {list.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4">No files attached to this quote.</p>
+        ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {files.map((file) => {
             const is3D = is3DFile(file.originalName, file.mimeType);
@@ -93,6 +98,7 @@ export function QuoteUploadedFilesCard({ files }: { files: QuoteUploadedFile[] }
             );
           })}
         </div>
+        )}
       </CardContent>
     </Card>
   );

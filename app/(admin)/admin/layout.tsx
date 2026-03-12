@@ -40,7 +40,9 @@ export default async function AdminLayout({
         </Link>
       </header>
       <EditableSectionProvider>
-        <main className="pl-56 pt-14 min-h-screen bg-[#F9FAFB]">{children}</main>
+        <main className="fixed left-56 top-14 right-0 bottom-0 overflow-y-auto overflow-x-hidden bg-[#F9FAFB]">
+          {children}
+        </main>
       </EditableSectionProvider>
     </div>
   );

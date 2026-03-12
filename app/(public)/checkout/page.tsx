@@ -48,10 +48,14 @@ export default function CheckoutPage() {
   const [error, setError] = useState("");
   const [paymentMethods, setPaymentMethods] = useState<{
     mpesa: boolean;
+    airtelMoney: boolean;
+    tkash: boolean;
     stripe: boolean;
     pesapal: boolean;
     flutterwave: boolean;
-  }>({ mpesa: true, stripe: false, pesapal: false, flutterwave: false });
+    applePay: boolean;
+    googlePay: boolean;
+  }>({ mpesa: true, airtelMoney: true, tkash: true, stripe: false, pesapal: false, flutterwave: false, applePay: false, googlePay: false });
   const [shippingRates, setShippingRates] = useState<{
     standard: number;
     express: number | null;
@@ -86,7 +90,18 @@ export default function CheckoutPage() {
   useEffect(() => {
     fetch("/api/checkout/payment-methods")
       .then((r) => r.json())
-      .then(setPaymentMethods)
+      .then((data) =>
+        setPaymentMethods({
+          mpesa: data.mpesa ?? true,
+          airtelMoney: data.airtelMoney ?? true,
+          tkash: data.tkash ?? true,
+          stripe: data.stripe ?? false,
+          pesapal: data.pesapal ?? false,
+          flutterwave: data.flutterwave ?? false,
+          applePay: data.applePay ?? data.stripe ?? false,
+          googlePay: data.googlePay ?? data.stripe ?? false,
+        })
+      )
       .catch(() => {});
   }, []);
 
@@ -219,7 +234,7 @@ export default function CheckoutPage() {
       <div className="container max-w-6xl mx-auto px-4 py-8">
         <h1 className="font-display text-2xl font-bold text-foreground mb-6">Checkout</h1>
         <div className="mb-8">
-          <StepIndicator currentStep={step} />
+          <StepIndicator currentStep={step} onStepClick={setStep} />
         </div>
 
         <div className="grid lg:grid-cols-[1fr_380px] gap-8 lg:gap-12">
@@ -455,6 +470,36 @@ export default function CheckoutPage() {
                       </div>
                     </label>
                   )}
+                  {paymentMethods.airtelMoney && (
+                    <label className="flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer hover:bg-muted/30 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        checked={payment.method === "AIRTEL_MONEY"}
+                        onChange={() => setPayment({ method: "AIRTEL_MONEY" })}
+                        className="mt-1"
+                      />
+                      <div>
+                        <span className="font-medium">Airtel Money</span>
+                        <p className="text-sm text-muted-foreground mt-0.5">Pay with your Airtel line — STK or Paybill</p>
+                      </div>
+                    </label>
+                  )}
+                  {paymentMethods.tkash && (
+                    <label className="flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer hover:bg-muted/30 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        checked={payment.method === "TKASH"}
+                        onChange={() => setPayment({ method: "TKASH" })}
+                        className="mt-1"
+                      />
+                      <div>
+                        <span className="font-medium">TKash (Telkom)</span>
+                        <p className="text-sm text-muted-foreground mt-0.5">Pay with your Telkom line</p>
+                      </div>
+                    </label>
+                  )}
                   {paymentMethods.stripe && (
                     <label className="flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer hover:bg-muted/30 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
                       <input
@@ -504,15 +549,115 @@ export default function CheckoutPage() {
                     <input
                       type="radio"
                       name="paymentMethod"
+                      checked={payment.method === "CARD"}
+                      onChange={() => setPayment({ method: "CARD" })}
+                      className="mt-1"
+                    />
+                    <div>
+                      <span className="font-medium">Card (Visa / Mastercard)</span>
+                      <p className="text-sm text-muted-foreground mt-0.5">Enter your card details below</p>
+                    </div>
+                  </label>
+                  {paymentMethods.applePay && (
+                    <label className="flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer hover:bg-muted/30 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        checked={payment.method === "APPLE_PAY"}
+                        onChange={() => setPayment({ method: "APPLE_PAY" })}
+                        className="mt-1"
+                      />
+                      <div>
+                        <span className="font-medium">Apple Pay</span>
+                        <p className="text-sm text-muted-foreground mt-0.5">Pay with Face ID or Touch ID</p>
+                      </div>
+                    </label>
+                  )}
+                  {paymentMethods.googlePay && (
+                    <label className="flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer hover:bg-muted/30 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        checked={payment.method === "GOOGLE_PAY"}
+                        onChange={() => setPayment({ method: "GOOGLE_PAY" })}
+                        className="mt-1"
+                      />
+                      <div>
+                        <span className="font-medium">Google Pay</span>
+                        <p className="text-sm text-muted-foreground mt-0.5">Pay with your Google account</p>
+                      </div>
+                    </label>
+                  )}
+                  <label className="flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer hover:bg-muted/30 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                    <input
+                      type="radio"
+                      name="paymentMethod"
                       checked={payment.method === "BANK_TRANSFER"}
                       onChange={() => setPayment({ method: "BANK_TRANSFER" })}
                       className="mt-1"
                     />
                     <div>
                       <span className="font-medium">Bank Transfer</span>
-                      <p className="text-sm text-muted-foreground mt-0.5">Pay via bank transfer, then upload your proof</p>
+                      <p className="text-sm text-muted-foreground mt-0.5">Pay via bank transfer — enter card or account details below, then upload proof if needed</p>
                     </div>
                   </label>
+                  {(payment.method === "BANK_TRANSFER" || payment.method === "CARD") && (
+                    <div className="space-y-3 rounded-xl border border-border bg-muted/20 p-4">
+                      <h3 className="text-sm font-medium">Card / payment details</h3>
+                      <div>
+                        <Label>Cardholder name</Label>
+                        <Input
+                          value={payment.cardholderName ?? ""}
+                          onChange={(e) => setPayment({ cardholderName: e.target.value })}
+                          placeholder="Name on card"
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label>Card number</Label>
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="cc-number"
+                          value={payment.cardNumber ?? ""}
+                          onChange={(e) => setPayment({ cardNumber: e.target.value.replace(/\D/g, "").slice(0, 19) })}
+                          placeholder="1234 5678 9012 3456"
+                          className="mt-1 font-mono"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label>Expiry (MM/YY)</Label>
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            autoComplete="cc-exp"
+                            value={payment.cardExpiry ?? ""}
+                            onChange={(e) => {
+                              const v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                              if (v.length >= 2) setPayment({ cardExpiry: `${v.slice(0, 2)}/${v.slice(2)}` });
+                              else setPayment({ cardExpiry: v });
+                            }}
+                            placeholder="MM/YY"
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label>CVC</Label>
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            autoComplete="cc-csc"
+                            value={payment.cardCvc ?? ""}
+                            onChange={(e) => setPayment({ cardCvc: e.target.value.replace(/\D/g, "").slice(0, 4) })}
+                            placeholder="123"
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Your card details are secured. For card payments we use Stripe or Pesapal; details are not stored on our servers.</p>
+                    </div>
+                  )}
                   {payment.method === "MPESA" && (
                     <div className="pt-2">
                       <Label>M-Pesa phone number</Label>
@@ -527,6 +672,24 @@ export default function CheckoutPage() {
                       <p className="text-xs text-muted-foreground mt-1">We&apos;ll send an STK push to this number.</p>
                     </div>
                   )}
+                  {(payment.method === "AIRTEL_MONEY" || payment.method === "TKASH") && (
+                    <div className="pt-2">
+                      <Label>{payment.method === "AIRTEL_MONEY" ? "Airtel" : "Telkom"} phone number</Label>
+                      <Input
+                        type="tel"
+                        inputMode="tel"
+                        value={payment.mobileMoneyPhone ?? contact.phone ?? ""}
+                        onChange={(e) => setPayment({ mobileMoneyPhone: e.target.value })}
+                        placeholder="+254 7XX XXX XXX"
+                        className="mt-1"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {payment.method === "AIRTEL_MONEY"
+                          ? "We'll send a payment request to this Airtel number, or use Paybill after you place your order."
+                          : "We'll send a payment request to this Telkom number, or use Paybill after you place your order."}
+                      </p>
+                    </div>
+                  )}
                   <div className="flex gap-2 pt-2">
                     <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
                       ← Back
@@ -534,7 +697,10 @@ export default function CheckoutPage() {
                     <Button
                       className="flex-1 bg-primary hover:bg-primary/90"
                       onClick={() => setStep(4)}
-                      disabled={payment.method === "MPESA" && !(payment.mpesaPhone || contact.phone)}
+                      disabled={
+                        (payment.method === "MPESA" && !(payment.mpesaPhone || contact.phone)) ||
+                        ((payment.method === "AIRTEL_MONEY" || payment.method === "TKASH") && !(payment.mobileMoneyPhone || contact.phone))
+                      }
                     >
                       Continue to Review →
                     </Button>
@@ -621,13 +787,22 @@ export default function CheckoutPage() {
                         />
                         <Label htmlFor="terms">I agree to PrintHub&apos;s Terms of Service and Privacy Policy *</Label>
                       </div>
-                      <Button
-                        className="w-full bg-primary hover:bg-primary/90 text-base py-6"
-                        onClick={handleCreateOrder}
-                        disabled={placingOrder || !termsAccepted}
-                      >
-                        {placingOrder ? "Creating order…" : `Place order — ${formatPrice(totals.total)}`}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => setStep(3)}
+                          className="flex-1"
+                        >
+                          ← Back
+                        </Button>
+                        <Button
+                          className="flex-1 bg-primary hover:bg-primary/90 text-base py-6"
+                          onClick={handleCreateOrder}
+                          disabled={placingOrder || !termsAccepted}
+                        >
+                          {placingOrder ? "Creating order…" : `Place order — ${formatPrice(totals.total)}`}
+                        </Button>
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         By placing your order you agree to our terms. You will then choose how to pay (M-Pesa, Paybill, Card, or Pay on Pickup).
                       </p>
@@ -641,7 +816,25 @@ export default function CheckoutPage() {
           <div className="lg:sticky lg:top-8 lg:self-start">
             <CheckoutOrderSummary
               shippingFee={shippingFee}
-              paymentMethod={step >= 3 ? (payment.method === "MPESA" ? "M-Pesa" : payment.method) : undefined}
+              paymentMethod={
+                step >= 3
+                  ? payment.method === "MPESA"
+                    ? "M-Pesa"
+                    : payment.method === "AIRTEL_MONEY"
+                      ? "Airtel Money"
+                      : payment.method === "TKASH"
+                        ? "TKash"
+                        : payment.method === "CARD"
+                          ? "Card"
+                          : payment.method === "APPLE_PAY"
+                            ? "Apple Pay"
+                            : payment.method === "GOOGLE_PAY"
+                              ? "Google Pay"
+                              : payment.method === "BANK_TRANSFER"
+                                ? "Bank Transfer"
+                                : payment.method
+                  : undefined
+              }
             />
           </div>
         </div>

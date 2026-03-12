@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { requireAdminApi } from "@/lib/admin-api-guard";
+import { generateNextProductSku } from "@/lib/product-utils";
 
 function slugify(s: string): string {
   return s
@@ -49,13 +50,15 @@ export async function POST(req: Request) {
     while (await prisma.product.findUnique({ where: { slug: `${slug}-${n}` } })) n++;
     finalSlug = `${slug}-${n}`;
   }
-  // Normalize SKU: empty string -> null so we don't hit unique constraint on duplicate empty SKUs
-  const sku = (data.sku?.trim() || null) as string | null;
-  if (sku) {
+  // Normalize SKU: empty string -> auto-generate; otherwise use provided (must be unique)
+  let sku: string | null = (data.sku?.trim() || null) as string | null;
+  if (!sku) {
+    sku = await generateNextProductSku();
+  } else {
     const existingBySku = await prisma.product.findUnique({ where: { sku } });
     if (existingBySku) {
       return NextResponse.json(
-        { error: "SKU already in use. Please choose a different SKU or leave it blank." },
+        { error: "SKU already in use. Please choose a different SKU or leave it blank to auto-generate." },
         { status: 400 }
       );
     }

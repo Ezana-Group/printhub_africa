@@ -36,7 +36,17 @@ const createOrderSchema = z.object({
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
-  const parsed = createOrderSchema.safeParse(await req.json());
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch (e) {
+    console.error("Orders POST: invalid or empty JSON body", e);
+    return NextResponse.json(
+      { error: "Invalid request body. Please refresh and try again." },
+      { status: 400 }
+    );
+  }
+  const parsed = createOrderSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
@@ -53,47 +63,63 @@ export async function POST(req: Request) {
   const shippingCost = reqShipping;
   const discount = reqDiscount;
 
-  const orderNumber = await ensureUniqueOrderNumber();
   const hasPOD = items.some((i) => i.catalogueItemId);
   const orderType = hasPOD ? "POD" : "SHOP";
+  let orderNumber: string;
+  try {
+    orderNumber = await ensureUniqueOrderNumber(orderType);
+  } catch (e) {
+    console.error("Order number generation error:", e);
+    return NextResponse.json(
+      { error: "Unable to generate order number. Please try again." },
+      { status: 500 }
+    );
+  }
 
-  const order = await prisma.order.create({
-    data: {
-      orderNumber,
-      userId: session?.user?.id ?? null,
-      status: "PENDING",
-      type: orderType,
-      subtotal,
-      tax,
-      shippingCost,
-      discount,
-      total,
-      currency: "KES",
-      notes,
-      items: {
-        create: items.map((i) => ({
-          productId: i.productId ?? null,
-          productVariantId: i.variantId ?? null,
-          catalogueItemId: i.catalogueItemId ?? null,
-          quantity: i.quantity,
-          unitPrice: i.unitPrice,
-          customizations: (i.customizations ?? undefined) as object | undefined,
-          instructions: i.instructions ?? undefined,
-        })),
+  try {
+    const order = await prisma.order.create({
+      data: {
+        orderNumber,
+        userId: session?.user?.id ?? null,
+        status: "PENDING",
+        type: orderType,
+        subtotal,
+        tax,
+        shippingCost,
+        discount,
+        total,
+        currency: "KES",
+        notes,
+        items: {
+          create: items.map((i) => ({
+            productId: i.productId ?? null,
+            productVariantId: i.variantId ?? null,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice,
+            customizations: (i.customizations ?? undefined) as object | undefined,
+            instructions: i.instructions ?? undefined,
+          })),
+        },
+        shippingAddress: {
+          create: shippingAddress,
+        },
       },
-      shippingAddress: {
-        create: shippingAddress,
+      include: {
+        items: true,
+        shippingAddress: true,
       },
-    },
-    include: {
-      items: true,
-      shippingAddress: true,
-    },
-  });
+    });
 
-  await createTrackingEvent(order.id, "PENDING");
+    await createTrackingEvent(order.id, "PENDING");
 
-  return NextResponse.json({ order });
+    return NextResponse.json({ order });
+  } catch (e) {
+    console.error("Order create error:", e);
+    return NextResponse.json(
+      { error: "Failed to create order. Please try again." },
+      { status: 500 }
+    );
+  }
 }
 
 export async function GET() {
