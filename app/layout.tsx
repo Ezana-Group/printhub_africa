@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Syne, DM_Sans, JetBrains_Mono, Playfair_Display } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
@@ -70,6 +71,7 @@ export default function RootLayout({
           Skip to main content
         </a>
         <Providers>{children}</Providers>
+        <Analytics />
       </body>
     </html>
   );
