@@ -23,11 +23,13 @@ export default async function AdminLayout({
 
   return (
     <div className="min-h-screen bg-background">
-      <aside className="fixed left-0 top-0 z-40 h-screen w-56 border-r border-border bg-card">
-        <Link href="/admin/dashboard" className="block p-4 font-display font-bold text-primary">
+      <aside className="fixed left-0 top-0 z-40 flex h-screen w-56 flex-col border-r border-border bg-card">
+        <Link href="/admin/dashboard" className="shrink-0 p-4 font-display font-bold text-primary">
           PrintHub Admin
         </Link>
-        <AdminNav role={role} permissions={permissions} newQuotesCount={newQuotesCount} />
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <AdminNav role={role} permissions={permissions} newQuotesCount={newQuotesCount} />
+        </div>
       </aside>
       <header className="fixed top-0 left-56 right-0 z-30 h-14 border-b border-border bg-card flex items-center justify-between px-6">
         <span className="text-sm text-muted-foreground">

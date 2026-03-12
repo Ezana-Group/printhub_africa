@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -94,6 +96,11 @@ export default function GetAQuotePage() {
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
+  const [submitContactName, setSubmitContactName] = useState("");
+  const [submitContactEmail, setSubmitContactEmail] = useState("");
+  const [submitContactPhone, setSubmitContactPhone] = useState("");
+  const { data: session, status: sessionStatus } = useSession();
+  const profileFetched = useRef(false);
 
   const [materialSlug3d, setMaterialSlug3d] = useState("");
   const initialMaterialSlugSet = useRef(false);
@@ -136,6 +143,27 @@ export default function GetAQuotePage() {
     setOptionsLoading(true);
     fetchThreeDOptions().finally(() => setOptionsLoading(false));
   }, [serviceType, fetchThreeDOptions]);
+
+  // Pre-fill contact from profile when logged in
+  useEffect(() => {
+    if (sessionStatus !== "authenticated" || !session?.user?.id || profileFetched.current) return;
+    profileFetched.current = true;
+    fetch("/api/account/settings/profile")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((profile: { name?: string; email?: string; phone?: string | null } | null) => {
+        if (!profile) return;
+        const name = profile.name ?? session?.user?.name ?? "";
+        const email = profile.email ?? (session?.user?.email as string) ?? "";
+        const phone = profile.phone ?? "";
+        setContactName(name);
+        setContactEmail(email);
+        setContactPhone(phone);
+        setSubmitContactName(name);
+        setSubmitContactEmail(email);
+        setSubmitContactPhone(phone);
+      })
+      .catch(() => { profileFetched.current = false; });
+  }, [sessionStatus, session?.user?.id, session?.user?.name, session?.user?.email]);
 
   async function handleIdeaSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -664,6 +692,15 @@ export default function GetAQuotePage() {
                       placeholder="+254 7XX XXX XXX"
                     />
                   </div>
+                  {sessionStatus !== "loading" && !session && (
+                    <p className="text-sm text-slate-600">
+                      Have an account?{" "}
+                      <Link href="/login" className="font-medium text-primary hover:underline">
+                        Sign in
+                      </Link>{" "}
+                      to save your quote. Or continue as guest below.
+                    </p>
+                  )}
                   {status === "success" && (
                     <div className="flex items-center gap-3 rounded-2xl border border-green-200 bg-green-50 p-4 text-green-800">
                       <CheckCircle className="h-5 w-5 shrink-0" />
@@ -821,19 +858,53 @@ export default function GetAQuotePage() {
                   Step 3 — Details &amp; submit
                 </h2>
                 <form onSubmit={handleUploadSubmit} className="space-y-6" suppressHydrationWarning>
+                  {sessionStatus !== "loading" && !session && (
+                    <p className="text-sm text-slate-600">
+                      Have an account?{" "}
+                      <Link href="/login" className="font-medium text-primary hover:underline">
+                        Sign in
+                      </Link>{" "}
+                      to save your quote. Or continue as guest below.
+                    </p>
+                  )}
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="name">Name *</Label>
-                      <Input id="name" name="name" required className="mt-1 rounded-xl" placeholder="Your name" />
+                      <Input
+                        id="name"
+                        name="name"
+                        required
+                        className="mt-1 rounded-xl"
+                        placeholder="Your name"
+                        value={submitContactName}
+                        onChange={(e) => setSubmitContactName(e.target.value)}
+                      />
                     </div>
                     <div>
                       <Label htmlFor="email">Email *</Label>
-                      <Input id="email" name="email" type="email" required className="mt-1 rounded-xl" placeholder="you@example.com" />
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        required
+                        className="mt-1 rounded-xl"
+                        placeholder="you@example.com"
+                        value={submitContactEmail}
+                        onChange={(e) => setSubmitContactEmail(e.target.value)}
+                      />
                     </div>
                   </div>
                   <div>
                     <Label htmlFor="phone">Phone</Label>
-                    <Input id="phone" name="phone" type="tel" className="mt-1 rounded-xl" placeholder="+254 7XX XXX XXX" />
+                    <Input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      className="mt-1 rounded-xl"
+                      placeholder="+254 7XX XXX XXX"
+                      value={submitContactPhone}
+                      onChange={(e) => setSubmitContactPhone(e.target.value)}
+                    />
                   </div>
                   <Card className="rounded-2xl">
                     <CardHeader className="pb-2">

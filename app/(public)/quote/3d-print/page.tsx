@@ -20,6 +20,13 @@ export default function Quote3DPrintPage() {
         confirm your final price within 2 business days.
       </p>
       <CustomerPrintCalculator />
+      <p className="mt-6 text-sm text-slate-600">
+        To submit this estimate and get a quote,{" "}
+        <Link href="/get-a-quote" className="font-medium text-primary hover:underline">
+          go to Get a Quote
+        </Link>{" "}
+        and choose 3D Print.
+      </p>
     </div>
   );
 }

@@ -1,20 +1,11 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useSession, signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { useCalculatorConfig, compute3DEstimateFromConfig } from "@/hooks/useCalculatorConfig";
-import { formatKes, type PrintJob } from "@/lib/3d-calculator-engine";
+import { formatKes } from "@/lib/3d-calculator-engine";
 import {
   COLOUR_PILLS,
   BRAND_COLOUR_HEX,
@@ -55,7 +46,6 @@ type CustomerPrintCalculatorProps = {
 
 export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, onMaterialChange }: CustomerPrintCalculatorProps) {
   const { data: config, loading: configLoading } = useCalculatorConfig();
-  const { data: session } = useSession();
 
   const [materialType, setMaterialType] = useState("");
   const [colorChoice, setColorChoice] = useState("");
@@ -64,9 +54,6 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
   const [quantity, setQuantity] = useState(1);
   const [postProcessing, setPostProcessing] = useState(false);
   const [addOnsOpen, setAddOnsOpen] = useState(false);
-  const [quoteOpen, setQuoteOpen] = useState(false);
-  const [instructions, setInstructions] = useState("");
-  const [submitStatus, setSubmitStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
 
   const materials: MaterialWithColors[] = useMemo(() => {
     if (!config?.filaments?.length) return [];
@@ -153,18 +140,6 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
     }
   }, [effectiveMaterial, materials, colorChoice, onMaterialChange]);
 
-  const job: PrintJob = useMemo(
-    () => ({
-      name: "Quote",
-      material: effectiveMaterial,
-      weightGrams: Number(weightGrams) || 0,
-      printTimeHours: Number(printTimeHours) || 0,
-      postProcessing,
-      quantity: Math.max(1, Math.min(999, quantity)),
-    }),
-    [effectiveMaterial, weightGrams, printTimeHours, postProcessing, quantity]
-  );
-
   const selectedFilament = useMemo(
     () => materials.find((m) => m.code === effectiveMaterial),
     [materials, effectiveMaterial]
@@ -191,42 +166,6 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
   useEffect(() => {
     onEstimateChange?.(priceLow, priceHigh);
   }, [priceLow, priceHigh, onEstimateChange]);
-
-  const handleSubmitQuote = async () => {
-    if (!session?.user) {
-      setQuoteOpen(false);
-      signIn();
-      return;
-    }
-    setSubmitStatus("loading");
-    try {
-      const res = await fetch("/api/quote/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          quoteType: "3d",
-          estimatedTotal: breakdown?.finalPrice ?? 0,
-          inputs: {
-            material: job.material,
-            color: colorChoice || undefined,
-            weightGrams: job.weightGrams,
-            printTimeHours: job.printTimeHours,
-            quantity: job.quantity,
-            postProcessing: job.postProcessing,
-            instructions,
-          },
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSubmitStatus("success");
-      } else {
-        setSubmitStatus("error");
-      }
-    } catch {
-      setSubmitStatus("error");
-    }
-  };
 
   const isLight = variant === "light";
   const cardClass = isLight
@@ -481,69 +420,6 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
         This is an estimate. Our team will confirm your final price within 2
         business days.
       </p>
-
-      <div className="mt-6 flex flex-col gap-3">
-        <Sheet open={quoteOpen} onOpenChange={setQuoteOpen}>
-          <SheetTrigger asChild>
-            <Button
-              className={`w-full rounded-xl font-semibold ${isLight ? "bg-[#E8440A] text-white hover:bg-[#E8440A]/90" : "bg-[#E8440A] text-white hover:bg-[#E8440A]/90"}`}
-              size="lg"
-            >
-              Submit for Quote →
-            </Button>
-          </SheetTrigger>
-          <SheetContent className={isLight ? "border-slate-200 bg-white text-slate-900" : "border-[#E8440A]/20 bg-[#0A0A0A] text-white"}>
-            <SheetHeader>
-              <SheetTitle className={isLight ? "text-slate-900" : "text-white"}>Submit for Quote</SheetTitle>
-            </SheetHeader>
-            <div className="mt-6 space-y-4">
-              {!session ? (
-                <div className="space-y-3">
-                  <p className={isLight ? "text-sm text-slate-600" : "text-sm text-white/70"}>
-                    Sign in to submit your quote request. We&apos;ll save your
-                    estimate and get back to you within 2 business days.
-                  </p>
-                  <Button
-                    className={isLight ? "w-full rounded-xl bg-[#E8440A] text-white hover:bg-[#E8440A]/90" : "w-full rounded-xl bg-[#E8440A] text-white hover:bg-[#E8440A]/90"}
-                    onClick={() => signIn()}
-                  >
-                    Sign in
-                  </Button>
-                </div>
-              ) : submitStatus === "success" ? (
-                <p className="text-sm text-green-600">
-                  Quote request submitted. We&apos;ll confirm your final price
-                  within 2 business days.
-                </p>
-              ) : submitStatus === "error" ? (
-                <p className="text-sm text-red-600">
-                  Something went wrong. Please try again or contact us.
-                </p>
-              ) : (
-                <>
-                  <div>
-                    <Label className={isLight ? "text-slate-700" : "text-white/70"}>Special instructions (optional)</Label>
-                    <Textarea
-                      value={instructions}
-                      onChange={(e) => setInstructions(e.target.value)}
-                      rows={3}
-                      className={isLight ? "mt-1.5 rounded-xl" : "mt-1.5 border-white/10 bg-white/5 text-white"}
-                      placeholder="e.g. colour, finish, deadline…"
-                    />
-                  </div>
-                  <Button
-                    className={isLight ? "w-full rounded-xl bg-[#E8440A] text-white hover:bg-[#E8440A]/90" : "w-full rounded-xl bg-[#E8440A] text-white hover:bg-[#E8440A]/90"}
-                    onClick={handleSubmitQuote}
-                    disabled={submitStatus === "loading"}
-                  >
-                    {submitStatus === "loading" ? "Submitting…" : "Submit quote request"}
-                  </Button>
-                </>
-              )}
-            </div>
-          </SheetContent>
-        </Sheet>
-      </div>
     </div>
   );
 }

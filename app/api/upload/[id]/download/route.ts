@@ -42,11 +42,12 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
+  const wantRedirect = req.nextUrl.searchParams.get("redirect") === "1";
+
   if (file.bucket === "public" && file.storageKey) {
-    return NextResponse.json({
-      url: publicFileUrl(file.storageKey),
-      expiresIn: null,
-    });
+    const publicUrl = publicFileUrl(file.storageKey);
+    if (wantRedirect) return NextResponse.redirect(publicUrl);
+    return NextResponse.json({ url: publicUrl, expiresIn: null });
   }
 
   if (!file.storageKey || !isR2Configured()) {
@@ -57,5 +58,6 @@ export async function GET(
   }
 
   const url = await createPresignedDownloadUrl(file.storageKey, 3600);
+  if (wantRedirect) return NextResponse.redirect(url);
   return NextResponse.json({ url, expiresIn: 3600 });
 }

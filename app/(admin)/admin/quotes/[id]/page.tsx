@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { QuoteDetailClient } from "@/components/admin/quote-detail-client";
 import { QuoteSubmissionDetails } from "@/components/admin/quote-submission-details";
 import { QuoteFilesSection } from "@/components/admin/quote-files-section";
+import { QuoteUploadedFilesCard } from "@/components/admin/quote-uploaded-files-card";
 import { QuoteThreadCard } from "@/components/admin/quote-thread-card";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -34,6 +35,10 @@ export default async function AdminQuoteDetailPage({
     include: {
       customer: { select: { id: true, name: true, email: true, phone: true } },
       assignedStaff: { select: { id: true, user: { select: { name: true, email: true } } } },
+      uploadedFiles: {
+        orderBy: { createdAt: "asc" },
+        select: { id: true, originalName: true, filename: true, mimeType: true, size: true, fileType: true, createdAt: true },
+      },
     },
   });
 
@@ -130,6 +135,20 @@ export default async function AdminQuoteDetailPage({
             description={quote.description}
             projectName={quote.projectName}
           />
+
+          {quote.uploadedFiles.length > 0 && (
+            <QuoteUploadedFilesCard
+              files={quote.uploadedFiles.map((f) => ({
+                id: f.id,
+                originalName: f.originalName,
+                filename: f.filename,
+                mimeType: f.mimeType,
+                size: f.size,
+                fileType: f.fileType,
+                createdAt: f.createdAt.toISOString(),
+              }))}
+            />
+          )}
 
           {quote.referenceFiles && quote.referenceFiles.length > 0 && (
             <QuoteFilesSection

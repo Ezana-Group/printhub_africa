@@ -27,6 +27,7 @@ Use one of the following.
       "https://printhub.africa",
       "https://www.printhub.africa",
       "https://test.ovid.co.ke",
+      "https://www.test.ovid.co.ke",
       "http://localhost:3000",
       "http://127.0.0.1:3000"
     ],

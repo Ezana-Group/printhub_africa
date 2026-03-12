@@ -222,10 +222,10 @@ export function QuoteDetailClient({
         <CardContent className="space-y-3 text-sm">
           <p className="text-muted-foreground">Time since submitted: {formatTimeAgo(createdAt)}</p>
           <p className="text-muted-foreground">Time to first response: {timeToFirstResponse()}</p>
-          <div>
+          <div className="break-words">
             <span className="text-muted-foreground">Deadline: </span>
             {deadlineStatus ? (
-              <span className="inline-flex items-center gap-1.5">
+              <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
                 {deadlineStatus.urgency === "overdue" && <span className="text-red-600 font-medium">⚠️ Overdue</span>}
                 {deadlineStatus.urgency === "urgent" && <span className="text-red-600 font-medium">🔴 Urgent</span>}
                 {deadlineStatus.urgency === "soon" && <span className="text-amber-600 font-medium">🟡 Due soon</span>}
@@ -235,21 +235,21 @@ export function QuoteDetailClient({
                 )}
               </span>
             ) : deadlineHint ? (
-              <span className="text-muted-foreground italic">Customer mentioned: &quot;{deadlineHint}&quot;</span>
+              <span className="text-muted-foreground italic break-words">Customer mentioned: &quot;{deadlineHint}&quot;</span>
             ) : (
               <span className="text-muted-foreground">—</span>
             )}
           </div>
           <div className="pt-2 border-t border-border">
             <Label className="text-xs text-muted-foreground">Set deadline</Label>
-            <div className="flex gap-2 mt-1">
+            <div className="flex flex-col gap-2 mt-1 sm:flex-row sm:items-center">
               <Input
                 type="date"
                 value={deadlineValue}
                 onChange={(e) => setDeadlineValue(e.target.value)}
-                className="h-8 text-sm"
+                className="h-8 text-sm w-full sm:w-auto sm:min-w-[140px]"
               />
-              <Button size="sm" variant="outline" onClick={handleSaveDeadline} disabled={deadlineSaving || !deadlineValue.trim()}>
+              <Button size="sm" variant="outline" onClick={handleSaveDeadline} disabled={deadlineSaving || !deadlineValue.trim()} className="shrink-0">
                 {deadlineSaving ? "Saving…" : "Save"}
               </Button>
             </div>
@@ -263,42 +263,44 @@ export function QuoteDetailClient({
           <h2 className="font-semibold">Status pipeline</h2>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-0">
-            {PIPELINE.map((s, i) => {
+          {/* Mobile: vertical stepper. Desktop: horizontal */}
+          <div className="flex flex-col md:flex-row md:items-center gap-0">
+            {PIPELINE.flatMap((s, i) => {
               const isCompleted = currentIndex > i;
               const isCurrent = status === s;
-              void (currentIndex < i); // isFuture for pipeline styling
-              return (
-                <div key={s} className="flex flex-1 items-center gap-0 min-w-0">
-                  <div className="flex flex-col items-center shrink-0">
-                    <div
-                      className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${
-                        isCompleted
-                          ? "bg-[#E8440A] border-[#E8440A]"
-                          : isCurrent
-                            ? "bg-transparent border-[#E8440A] ring-2 ring-[#E8440A]/30"
-                            : "bg-muted border-muted-foreground/30"
-                      }`}
-                    >
-                      {isCompleted && <span className="text-[10px] text-white font-bold">✓</span>}
-                    </div>
-                    <span
-                      className={`mt-1.5 text-[11px] font-medium text-center max-w-[4rem] leading-tight ${
-                        isCurrent ? "text-foreground font-semibold" : "text-muted-foreground"
-                      }`}
-                    >
-                      {PIPELINE_LABELS[s] ?? s.replace("_", " ")}
-                    </span>
+              const stepEl = (
+                <div key={s} className="flex flex-1 items-center gap-2 min-w-0 md:flex-col md:gap-0 md:min-w-0">
+                  <div
+                    className={`h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                      isCompleted
+                        ? "bg-[#E8440A] border-[#E8440A]"
+                        : isCurrent
+                          ? "bg-transparent border-[#E8440A] ring-2 ring-[#E8440A]/30"
+                          : "bg-muted border-muted-foreground/30"
+                    }`}
+                  >
+                    {isCompleted && <span className="text-[10px] text-white font-bold">✓</span>}
                   </div>
-                  {i < PIPELINE.length - 1 && (
-                    <div
-                      className={`flex-1 h-0.5 min-w-[8px] mx-0.5 ${
-                        isCompleted ? "bg-[#E8440A]" : "bg-muted"
-                      }`}
-                    />
-                  )}
+                  <span
+                    className={`text-xs font-medium md:mt-1.5 md:text-center leading-tight md:max-w-[4rem] md:text-[11px] ${
+                      isCurrent ? "text-foreground font-semibold" : "text-muted-foreground"
+                    }`}
+                  >
+                    {PIPELINE_LABELS[s] ?? s.replace("_", " ")}
+                  </span>
                 </div>
               );
+              const connectorEl =
+                i < PIPELINE.length - 1 ? (
+                  <div
+                    key={`conn-${s}`}
+                    className={`shrink-0 md:flex-1 md:min-w-[6px] md:mx-0.5
+                      w-0.5 min-h-[10px] ml-[7px] my-0.5 md:w-auto md:min-h-0 md:h-0.5 md:my-0 md:ml-0 ${
+                      isCompleted ? "bg-[#E8440A]" : "bg-muted"
+                    }`}
+                  />
+                ) : null;
+              return connectorEl ? [stepEl, connectorEl] : [stepEl];
             })}
           </div>
           <div className="flex flex-col gap-2 pt-2">
@@ -307,7 +309,7 @@ export function QuoteDetailClient({
                 size="sm"
                 onClick={() => handleUpdateStatus(nextStatus)}
                 disabled={saving}
-                className="bg-[#E8440A] hover:bg-[#E8440A]/90"
+                className="w-full sm:w-auto bg-[#E8440A] hover:bg-[#E8440A]/90"
               >
                 → Move to: {PIPELINE_LABELS[nextStatus] ?? nextStatus.replace("_", " ")}
               </Button>
