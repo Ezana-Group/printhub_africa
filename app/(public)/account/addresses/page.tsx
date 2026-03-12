@@ -38,15 +38,7 @@ export default async function AccountAddressesPage() {
       <p className="text-slate-600 mt-1">Your saved delivery addresses. They are used at checkout; you can change or add more when you place an order.</p>
       <Link href="/account" className="mt-4 inline-block text-sm text-primary hover:underline">← Back to account</Link>
 
-      {list.length === 0 ? (
-        <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center">
-          <p className="text-slate-600">No saved addresses yet.</p>
-          <p className="text-sm text-slate-500 mt-1">Addresses are saved to your profile when you checkout. You can also add one when you place your next order.</p>
-          <Link href="/shop" className="mt-4 inline-block text-sm font-medium text-primary hover:underline">Go to shop</Link>
-        </div>
-      ) : (
-        <SavedAddressesList addresses={list} />
-      )}
+      <SavedAddressesList addresses={list} />
       </div>
     </div>
   );

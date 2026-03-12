@@ -25,14 +25,20 @@ export type SavedAddressItem = {
   isDefault: boolean;
 };
 
+const emptyForm = { label: "Home", recipientName: "", phone: "", line1: "", line2: "", city: "", county: "" };
+const MAX_ADDRESSES = 5;
+
 export function SavedAddressesList({ addresses }: { addresses: SavedAddressItem[] }) {
   const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [defaultingId, setDefaultingId] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<SavedAddressItem | null>(null);
-  const [form, setForm] = useState({ label: "", recipientName: "", phone: "", line1: "", line2: "", city: "", county: "" });
+  const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+  const canAddMore = addresses.length < MAX_ADDRESSES;
 
   const handleDelete = async (id: string) => {
     setDeletingId(id);
@@ -95,9 +101,65 @@ export function SavedAddressesList({ addresses }: { addresses: SavedAddressItem[
     }
   };
 
+  const openAdd = () => {
+    setForm(emptyForm);
+    setAddError(null);
+    setAddOpen(true);
+  };
+
+  const handleSaveAdd = async () => {
+    if (!form.line1?.trim() || !form.city?.trim() || !form.county?.trim()) return;
+    setAddError(null);
+    setSaving(true);
+    try {
+      const res = await fetch("/api/account/settings/addresses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          label: form.label || "Home",
+          recipientName: form.recipientName || undefined,
+          phone: form.phone || undefined,
+          line1: form.line1.trim(),
+          line2: form.line2?.trim() || undefined,
+          city: form.city.trim(),
+          county: form.county.trim(),
+          isDefault: addresses.length === 0,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setAddOpen(false);
+        router.refresh();
+      } else {
+        setAddError(data.error ?? "Failed to add address");
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <>
-      <ul className="mt-8 space-y-4">
+      <div className="mt-8 flex flex-col gap-4">
+        {canAddMore && (
+          <Button onClick={openAdd} variant="outline" className="w-fit">
+            Add new address
+          </Button>
+        )}
+        {addresses.length >= MAX_ADDRESSES && (
+          <p className="text-sm text-muted-foreground">You can save up to {MAX_ADDRESSES} addresses. Delete one to add another.</p>
+        )}
+      </div>
+      {addresses.length === 0 ? (
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center">
+          <p className="text-slate-600">No saved addresses yet.</p>
+          <p className="text-sm text-slate-500 mt-1">Add an address below or when you checkout.</p>
+          {canAddMore && (
+            <Button onClick={openAdd} className="mt-4">Add your first address</Button>
+          )}
+        </div>
+      ) : (
+      <ul className="mt-4 space-y-4">
         {addresses.map((a) => (
           <li key={a.id} className="rounded-2xl border border-slate-200 bg-white p-4">
             <div className="flex items-start justify-between gap-2">
@@ -128,6 +190,54 @@ export function SavedAddressesList({ addresses }: { addresses: SavedAddressItem[
           </li>
         ))}
       </ul>
+      )}
+
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add address</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="add-label">Label (e.g. Home, Work)</Label>
+              <Input id="add-label" value={form.label} onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="add-recipient">Recipient name</Label>
+              <Input id="add-recipient" value={form.recipientName} onChange={(e) => setForm((f) => ({ ...f, recipientName: e.target.value }))} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="add-phone">Phone</Label>
+              <Input id="add-phone" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="add-line1">Address line 1 *</Label>
+              <Input id="add-line1" value={form.line1} onChange={(e) => setForm((f) => ({ ...f, line1: e.target.value }))} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="add-line2">Address line 2 (optional)</Label>
+              <Input id="add-line2" value={form.line2} onChange={(e) => setForm((f) => ({ ...f, line2: e.target.value }))} />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="grid gap-2">
+                <Label htmlFor="add-city">City *</Label>
+                <Input id="add-city" value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="add-county">County *</Label>
+                <Input id="add-county" value={form.county} onChange={(e) => setForm((f) => ({ ...f, county: e.target.value }))} />
+              </div>
+            </div>
+            {addError && <p className="text-sm text-destructive">{addError}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveAdd} disabled={saving || !form.line1?.trim() || !form.city?.trim() || !form.county?.trim()}>
+              {saving ? "Saving…" : "Add address"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-md">
