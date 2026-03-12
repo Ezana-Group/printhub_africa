@@ -105,6 +105,8 @@ function extToFileType(ext: string): UploadedFileType {
   return (map[ext.toLowerCase()] as UploadedFileType) ?? "OTHER";
 }
 
+type SessionLike = { user?: { id?: string; role?: string } } | null;
+
 export async function POST(req: Request) {
   try {
     if (!isR2Configured()) {
@@ -114,9 +116,9 @@ export async function POST(req: Request) {
       );
     }
 
-    let session: Awaited<ReturnType<typeof getServerSession>> = null;
+    let session: SessionLike = null;
     try {
-      session = await getServerSession(authOptions);
+      session = (await getServerSession(authOptions)) as SessionLike;
     } catch (authErr) {
       console.error("Presign auth error:", authErr);
       return NextResponse.json(
@@ -158,7 +160,7 @@ export async function POST(req: Request) {
     }
 
     if (context.startsWith("ADMIN_")) {
-      const role = (session?.user as { role?: string })?.role ?? "";
+      const role = session?.user?.role ?? "";
       if (role !== "ADMIN" && role !== "SUPER_ADMIN" && role !== "STAFF") {
         return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
       }
