@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { FileUploader, type UploadedFileResult } from "@/components/upload/FileU
 import { formatPrice } from "@/lib/utils";
 import { AlertCircle, Copy, Check, Loader2 } from "lucide-react";
 
-const PAYBILL_NUMBER = process.env.NEXT_PUBLIC_MPESA_PAYBILL ?? "522522";
+const DEFAULT_PAYBILL = process.env.NEXT_PUBLIC_MPESA_PAYBILL ?? "522522";
 
 export function PayOrderClient({
   orderId,
@@ -21,6 +21,7 @@ export function PayOrderClient({
   totalKes: number;
 }) {
   const router = useRouter();
+  const [paybillNumber, setPaybillNumber] = useState(DEFAULT_PAYBILL);
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [waiting, setWaiting] = useState(false);
@@ -28,6 +29,17 @@ export function PayOrderClient({
   const [polling, setPolling] = useState(false);
   const [paymentReceived, setPaymentReceived] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/checkout/payment-methods")
+      .then((r) => r.json())
+      .then((data) => {
+        if (typeof data.mpesaPaybillNumber === "string" && data.mpesaPaybillNumber.trim()) {
+          setPaybillNumber(data.mpesaPaybillNumber.trim());
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const [manualRef, setManualRef] = useState("");
   const [proofFile, setProofFile] = useState<UploadedFileResult | null>(null);
@@ -198,7 +210,7 @@ export function PayOrderClient({
           <div className="space-y-3 rounded-xl bg-muted/50 p-4 text-sm">
             <p className="font-semibold text-muted-foreground">On your phone: M-Pesa → Lipa na M-Pesa → Pay Bill</p>
             {[
-              { label: "Business No.", value: PAYBILL_NUMBER, key: "paybill" },
+              { label: "Business No.", value: paybillNumber, key: "paybill" },
               { label: "Account No.", value: orderNumber, key: "account" },
               { label: "Amount (KES)", value: String(totalKes), key: "amount" },
             ].map((row) => (

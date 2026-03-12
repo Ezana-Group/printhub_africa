@@ -33,6 +33,7 @@ const createOrderSchema = z.object({
   discount: z.number().min(0).optional(),
   notes: z.string().optional(),
   pickupLocationId: z.string().optional(),
+  preferredCourierId: z.string().optional(),
   deliveryNotes: z.string().optional(),
 });
 
@@ -52,8 +53,14 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
-  const { items, shippingAddress: reqAddress, shippingCost: reqShipping = 0, discount: reqDiscount = 0, notes, pickupLocationId, deliveryNotes } = parsed.data;
+  const { items, shippingAddress: reqAddress, shippingCost: reqShipping = 0, discount: reqDiscount = 0, notes, pickupLocationId, preferredCourierId, deliveryNotes } = parsed.data;
   const isPickup = reqAddress.deliveryMethod?.toLowerCase() === "pickup";
+
+  let orderCourierId: string | null = null;
+  if (preferredCourierId && !isPickup) {
+    const courier = await prisma.courier.findFirst({ where: { id: preferredCourierId, isActive: true } });
+    if (courier) orderCourierId = courier.id;
+  }
 
   let shippingAddress = reqAddress;
   let orderPickupLocationId: string | null = null;
@@ -111,6 +118,7 @@ export async function POST(req: Request) {
         currency: "KES",
         notes: [notes, deliveryNotes].filter(Boolean).join(" — ") || undefined,
         pickupLocationId: orderPickupLocationId,
+        courierId: orderCourierId ?? undefined,
         items: {
           create: items.map((i) => ({
             productId: i.productId ?? null,
@@ -132,6 +140,47 @@ export async function POST(req: Request) {
     });
 
     await createTrackingEvent(order.id, "PENDING");
+
+    // Save shipping address to user's profile (SavedAddress) when logged in and delivery is not pickup
+    const isPickupDelivery = reqAddress.deliveryMethod?.toLowerCase() === "pickup";
+    if (session?.user?.id && !isPickupDelivery && order.shippingAddress) {
+      try {
+        const count = await prisma.savedAddress.count({ where: { userId: session.user.id } });
+        if (count < 5) {
+          const line1 = (order.shippingAddress.street ?? "").trim();
+          const city = (order.shippingAddress.city ?? "").trim();
+          const county = (order.shippingAddress.county ?? "").trim();
+          if (line1 && city && county) {
+            const existing = await prisma.savedAddress.findFirst({
+              where: {
+                userId: session.user.id,
+                line1,
+                city,
+                county,
+              },
+            });
+            if (!existing) {
+              await prisma.savedAddress.create({
+                data: {
+                  userId: session.user.id,
+                  label: "Home",
+                  recipientName: order.shippingAddress.fullName?.trim() || undefined,
+                  phone: order.shippingAddress.phone?.trim() || undefined,
+                  line1,
+                  line2: undefined,
+                  city,
+                  county,
+                  isDefault: count === 0,
+                },
+              });
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Save address to profile:", e);
+        // non-fatal
+      }
+    }
 
     return NextResponse.json({ order });
   } catch (e) {

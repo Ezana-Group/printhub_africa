@@ -23,6 +23,8 @@ interface TrackResultProps {
       total: number;
       estimatedDelivery: string | null;
       deliveryType: string;
+      trackingNumber?: string;
+      courier?: { name: string; phone?: string; trackingUrl?: string };
     };
     events: Array<{
       status: string;
@@ -60,6 +62,36 @@ export function TrackResult({ data }: TrackResultProps) {
         · {order.itemCount} item{order.itemCount !== 1 ? "s" : ""} · KES{" "}
         {Number(order.total).toLocaleString()}
       </p>
+
+      {(order.trackingNumber || order.courier) && (
+        <div className="mt-4 p-4 rounded-lg bg-slate-50 border border-slate-100 space-y-2">
+          {order.trackingNumber && (
+            <p className="text-sm">
+              <strong>Tracking number:</strong> <span className="font-mono">{order.trackingNumber}</span>
+            </p>
+          )}
+          {order.courier && (
+            <>
+              <p className="text-sm">
+                <strong>Courier:</strong> {order.courier.name}
+                {order.courier.phone && (
+                  <> · <a href={`tel:${order.courier.phone}`} className="text-primary hover:underline">{order.courier.phone}</a></>
+                )}
+              </p>
+              {order.courier.trackingUrl && order.trackingNumber && (
+                <a
+                  href={order.courier.trackingUrl.replace(/\{trackingNumber\}/gi, encodeURIComponent(order.trackingNumber))}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block text-sm font-medium text-primary hover:underline"
+                >
+                  Track with {order.courier.name} →
+                </a>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       <div className="mt-6 relative">
         {events.map((event, i) => {

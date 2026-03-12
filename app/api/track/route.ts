@@ -79,6 +79,7 @@ export async function GET(req: NextRequest) {
           : { id: "impossible" },
     include: {
       shippingAddress: true,
+      courier: { select: { id: true, name: true, phone: true, trackingUrl: true } },
       trackingEvents: {
         where: { isPublic: true },
         orderBy: { createdAt: "desc" },
@@ -114,6 +115,14 @@ export async function GET(req: NextRequest) {
       total: Number(order.total),
       estimatedDelivery: order.estimatedDelivery,
       deliveryType: order.shippingAddress?.deliveryMethod ?? "standard",
+      trackingNumber: order.trackingNumber ?? undefined,
+      courier: order.courier
+        ? {
+            name: order.courier.name,
+            phone: order.courier.phone ?? undefined,
+            trackingUrl: order.courier.trackingUrl ?? undefined,
+          }
+        : undefined,
     },
     events: order.trackingEvents.map((e) => ({
       status: e.status,

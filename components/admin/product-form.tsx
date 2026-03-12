@@ -64,7 +64,6 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const [productType, setProductType] = useState<ProductType>(product?.productType ?? "READYMADE_3D");
   const [basePrice, setBasePrice] = useState(String(product?.basePrice ?? 0));
   const [comparePrice, setComparePrice] = useState(product?.comparePrice != null ? String(product.comparePrice) : "");
-  const [sku, setSku] = useState(product?.sku ?? "");
   const [stock, setStock] = useState(String(product?.stock ?? 0));
   const [minOrderQty, setMinOrderQty] = useState(String(product?.minOrderQty ?? 1));
   const [maxOrderQty, setMaxOrderQty] = useState(product?.maxOrderQty != null ? String(product.maxOrderQty) : "");
@@ -97,7 +96,6 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       productType,
       basePrice: parseFloat(basePrice) || 0,
       comparePrice: comparePrice ? parseFloat(comparePrice) : undefined,
-      sku: sku || undefined,
       stock: parseInt(stock, 10) || 0,
       minOrderQty: parseInt(minOrderQty, 10) || 1,
       maxOrderQty: maxOrderQty ? parseInt(maxOrderQty, 10) : undefined,
@@ -229,12 +227,23 @@ export function ProductForm({ categories, product }: ProductFormProps) {
               </select>
             </div>
           </div>
+          <div>
+            <Label htmlFor="stock">Quantity (stock)</Label>
+            <Input
+              id="stock"
+              type="number"
+              min={0}
+              value={stock}
+              onChange={(e) => setStock(e.target.value)}
+              className="mt-1"
+            />
+          </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <h2 className="font-semibold">Pricing & stock</h2>
+          <h2 className="font-semibold">Pricing</h2>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -260,23 +269,6 @@ export function ProductForm({ categories, product }: ProductFormProps) {
                 step={0.01}
                 value={comparePrice}
                 onChange={(e) => setComparePrice(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="sku">SKU</Label>
-              <Input id="sku" value={sku} onChange={(e) => setSku(e.target.value)} className="mt-1" />
-            </div>
-            <div>
-              <Label htmlFor="stock">Stock</Label>
-              <Input
-                id="stock"
-                type="number"
-                min={0}
-                value={stock}
-                onChange={(e) => setStock(e.target.value)}
                 className="mt-1"
               />
             </div>

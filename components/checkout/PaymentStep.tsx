@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { FileUploader, type UploadedFileResult } from "@/components/upload/FileUploader";
 import { formatPrice } from "@/lib/utils";
 
-const PAYBILL_NUMBER = "522522";
+const DEFAULT_PAYBILL = "522522";
 
 export interface PaymentStepOrder {
   id: string;
@@ -30,11 +30,14 @@ export function PaymentStep({
   savedMpesaNumbers,
   savedCards,
   onPaymentComplete,
+  paybillNumber = DEFAULT_PAYBILL,
 }: {
   order: PaymentStepOrder;
   savedMpesaNumbers: { id: string; phone: string; label: string | null; isDefault: boolean }[];
   savedCards: { id: string; last4: string; brand: string; expiryMonth: number; expiryYear: number; holderName?: string | null; isDefault: boolean }[];
   onPaymentComplete: (payment: { id: string }) => void;
+  /** From admin Settings → Payments (Paybill/Till). Default 522522. */
+  paybillNumber?: string;
 }) {
   const [method, setMethod] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -331,6 +334,7 @@ export function PaymentStep({
               <PaybillInstructions
                 orderNumber={order.orderNumber}
                 amount={order.totalKes}
+                paybillNumber={paybillNumber}
                 setProofFile={setProofFile}
                 orderId={order.id}
                 onReferenceSubmit={(ref) => {
@@ -360,6 +364,7 @@ export function PaymentStep({
           <PaybillInstructions
             orderNumber={order.orderNumber}
             amount={order.totalKes}
+            paybillNumber={paybillNumber}
             setProofFile={setProofFile}
             orderId={order.id}
             onReferenceSubmit={(ref) => {
@@ -470,6 +475,7 @@ export function PaymentStep({
 function PaybillInstructions({
   orderNumber,
   amount,
+  paybillNumber,
   setProofFile,
   orderId,
   onReferenceSubmit,
@@ -477,6 +483,7 @@ function PaybillInstructions({
 }: {
   orderNumber: string;
   amount: number;
+  paybillNumber: string;
   setProofFile: (f: UploadedFileResult | null) => void;
   orderId: string;
   onReferenceSubmit: (ref: string) => void;
@@ -499,7 +506,7 @@ function PaybillInstructions({
           Open M-Pesa → <strong>Lipa na M-Pesa</strong> → <strong>Pay Bill</strong>
         </p>
         {[
-          { label: "Business No.", value: PAYBILL_NUMBER, key: "paybill" },
+          { label: "Business No.", value: paybillNumber, key: "paybill" },
           { label: "Account No.", value: orderNumber, key: "account" },
           { label: "Amount (KES)", value: String(amount), key: "amount" },
         ].map((row) => (

@@ -17,18 +17,15 @@ export default async function AdminSettingsShippingPage() {
     clickCollectEnabled: false,
   };
   try {
-    const row = await prisma.pricingConfig.findUnique({
-      where: { key: "adminSettings:shipping" },
+    const row = await prisma.shippingSettings.findUnique({
+      where: { id: "default" },
     });
-    if (row?.valueJson) {
-      const parsed = JSON.parse(row.valueJson) as Record<string, unknown>;
-      const asBool = (v: unknown) => v === true || v === "true";
-      const threshold = parsed.freeShippingThreshold;
+    if (row) {
       settings = {
-        freeShippingEnabled: asBool(parsed.freeShippingEnabled) ?? false,
-        expressEnabled: asBool(parsed.expressEnabled) ?? false,
-        clickCollectEnabled: asBool(parsed.clickCollectEnabled) ?? false,
-        freeShippingThreshold: threshold != null ? String(threshold) : undefined,
+        freeShippingEnabled: row.freeShippingEnabled ?? false,
+        expressEnabled: row.expressEnabled ?? false,
+        clickCollectEnabled: row.clickCollectEnabled ?? false,
+        freeShippingThreshold: row.freeShippingThresholdKes != null ? String(row.freeShippingThresholdKes) : undefined,
       };
     }
   } catch {

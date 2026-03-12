@@ -22,6 +22,9 @@ export async function PATCH(
     logo?: string | null;
     isActive?: boolean;
     sortOrder?: number;
+    address?: string | null;
+    city?: string | null;
+    county?: string | null;
   } = {};
   if (typeof body.name === "string") data.name = body.name.trim();
   if (body.trackingUrl !== undefined) data.trackingUrl = body.trackingUrl === null ? null : String(body.trackingUrl).trim();
@@ -29,6 +32,9 @@ export async function PATCH(
   if (body.logo !== undefined) data.logo = body.logo === null ? null : String(body.logo).trim();
   if (typeof body.isActive === "boolean") data.isActive = body.isActive;
   if (typeof body.sortOrder === "number") data.sortOrder = body.sortOrder;
+  if (body.address !== undefined) data.address = body.address === null ? null : String(body.address).trim();
+  if (body.city !== undefined) data.city = body.city === null ? null : String(body.city).trim();
+  if (body.county !== undefined) data.county = body.county === null ? null : String(body.county).trim();
 
   const courier = await prisma.courier.update({
     where: { id },

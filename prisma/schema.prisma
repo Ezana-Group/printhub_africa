@@ -504,6 +504,8 @@ model Order {
   pickupCode     String?   // 4-digit code for pay-on-pickup
   pickupLocationId String?
   pickupLocation   PickupLocation? @relation(fields: [pickupLocationId], references: [id])
+  courierId        String?   // Customer's preferred courier location (from checkout) or assigned courier
+  courier          Courier? @relation(fields: [courierId], references: [id])
 
   items              OrderItem[]
   timeline           OrderTimeline[]
@@ -1417,8 +1419,12 @@ model Courier {
   phone        String?
   logo         String?
   isActive     Boolean  @default(true)
+  address      String?  // Street / branch address for "nearest location" selection
+  city         String?
+  county       String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  orders       Order[]
 }
 
 model DeliveryZone {

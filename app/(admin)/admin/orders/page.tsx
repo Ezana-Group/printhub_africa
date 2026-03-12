@@ -7,6 +7,14 @@ const PRINT_JOB_TYPES = ["LARGE_FORMAT", "THREE_D_PRINT", "CUSTOM_PRINT"] as con
 const SHOP_TYPE = "SHOP" as const;
 const QUOTE_TYPE = "QUOTE" as const;
 
+/** Print Jobs tab: orders that are print-service types OR any order with status PRINTING (e.g. shop orders sent to production). */
+const printJobsWhere = {
+  OR: [
+    { type: { in: [...PRINT_JOB_TYPES] } },
+    { status: "PRINTING" as const },
+  ],
+};
+
 export default async function AdminOrdersPage({
   searchParams,
 }: {
@@ -15,7 +23,7 @@ export default async function AdminOrdersPage({
   await requireAdminSection("/admin/orders");
   const { tab } = await searchParams;
 
-  const [orders, typeCounts, allForKpis] = await Promise.all([
+  const [orders, typeCounts, printJobsCountResult, allForKpis] = await Promise.all([
     prisma.order.findMany({
       orderBy: { createdAt: "desc" },
       take: 500,
@@ -23,7 +31,7 @@ export default async function AdminOrdersPage({
         tab === "shop"
           ? { type: SHOP_TYPE }
           : tab === "print-jobs"
-            ? { type: { in: [...PRINT_JOB_TYPES] } }
+            ? printJobsWhere
             : tab === "quotes"
               ? { type: QUOTE_TYPE }
               : undefined,
@@ -43,6 +51,7 @@ export default async function AdminOrdersPage({
       by: ["type"],
       _count: { id: true },
     }),
+    prisma.order.count({ where: printJobsWhere }),
     prisma.order.findMany({
       select: { id: true, total: true, status: true, createdAt: true, payments: { take: 1, orderBy: { createdAt: "desc" }, select: { status: true } } },
     }),
@@ -50,10 +59,6 @@ export default async function AdminOrdersPage({
 
   const countByType = Object.fromEntries(typeCounts.map((r) => [r.type, r._count.id]));
   const shopCount = countByType["SHOP"] ?? 0;
-  const printJobsCount =
-    (countByType["LARGE_FORMAT"] ?? 0) +
-    (countByType["THREE_D_PRINT"] ?? 0) +
-    (countByType["CUSTOM_PRINT"] ?? 0);
   const quotesCount = countByType["QUOTE"] ?? 0;
   const allCount = Object.values(countByType).reduce((a, b) => a + b, 0);
 
@@ -101,7 +106,7 @@ export default async function AdminOrdersPage({
       <Suspense fallback={<div className="animate-pulse h-64 bg-muted/50 rounded-md" />}>
         <OrdersListClient
           orders={ordersSerialized}
-          counts={{ all: allCount, shop: shopCount, printJobs: printJobsCount, quotes: quotesCount }}
+          counts={{ all: allCount, shop: shopCount, printJobs: printJobsCountResult, quotes: quotesCount }}
           kpis={{ totalOrders: allCount, revenue, pending: pendingCount, thisMonthRevenue }}
         />
       </Suspense>

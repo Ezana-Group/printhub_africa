@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
@@ -114,6 +114,9 @@ export default function CheckoutPage() {
   }>({ standard: null, express: null, pickup: 0 });
   const [pickupLocations, setPickupLocations] = useState<{ sameCounty: PickupLoc[]; other: PickupLoc[]; all: PickupLoc[] }>({ sameCounty: [], other: [], all: [] });
   const [pickupLocationsLoading, setPickupLocationsLoading] = useState(false);
+  type CourierLoc = { id: string; name: string; address?: string; city?: string; county?: string; phone?: string; trackingUrl?: string };
+  const [courierLocations, setCourierLocations] = useState<{ sameCounty: CourierLoc[]; other: CourierLoc[]; all: CourierLoc[] }>({ sameCounty: [], other: [], all: [] });
+  const [courierLocationsLoading, setCourierLocationsLoading] = useState(false);
   const [createAccount, setCreateAccount] = useState(false);
   const [password, setPassword] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -123,6 +126,12 @@ export default function CheckoutPage() {
   const [stkWaiting, setStkWaiting] = useState(false);
   const [stkPolling, setStkPolling] = useState(false);
   const [stkFailed, setStkFailed] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState<{ id: string; label: string; recipientName: string | null; phone: string | null; line1: string; line2: string | null; city: string; county: string; isDefault: boolean }[]>([]);
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<string | null>(null);
+  const hasAutoSelectedDefault = useRef(false);
+  const [orderForSelf, setOrderForSelf] = useState(true);
+  const [profileData, setProfileData] = useState<{ name?: string | null; email?: string | null; phone?: string | null } | null>(null);
+  const hasPrefilledContactFromProfile = useRef(false);
 
   const shippingFee =
     delivery.method === "PICKUP"
@@ -140,6 +149,59 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (items.length === 0) router.push("/cart");
   }, [items.length, router]);
+
+  useEffect(() => {
+    if (!session?.user) return;
+    fetch("/api/account/settings/addresses")
+      .then((r) => r.json())
+      .then((list) => {
+        if (Array.isArray(list) && !("error" in list)) {
+          setSavedAddresses(list);
+        }
+      })
+      .catch(() => {});
+  }, [session?.user]);
+
+  useEffect(() => {
+    if (!session?.user) return;
+    fetch("/api/account/settings/profile")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { name?: string | null; email?: string | null; phone?: string | null } | null) => {
+        if (data) setProfileData(data);
+      })
+      .catch(() => {});
+  }, [session?.user]);
+
+  useEffect(() => {
+    if (step !== 1 || !session?.user) return;
+    if (!orderForSelf) {
+      hasPrefilledContactFromProfile.current = false;
+      return;
+    }
+    if (hasPrefilledContactFromProfile.current) return;
+    const name = profileData?.name ?? (session?.user?.name as string | undefined) ?? "";
+    const email = profileData?.email ?? (session?.user?.email as string | undefined) ?? "";
+    const phone = profileData?.phone ?? "";
+    if (!email && !name && !phone) return;
+    const parts = name.trim().split(/\s+/);
+    const firstName = parts[0] ?? "";
+    const lastName = parts.slice(1).join(" ") ?? "";
+    setContact({ email: email || "", firstName: firstName || "", lastName: lastName || "", phone: phone || "" });
+    if (profileData) hasPrefilledContactFromProfile.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- store setters are stable
+  }, [step, session?.user, orderForSelf, profileData]);
+
+  useEffect(() => {
+    if (hasAutoSelectedDefault.current || savedAddresses.length === 0 || step !== 2 || delivery.method === "PICKUP") return;
+    const defaultAddr = savedAddresses.find((a) => a.isDefault);
+    if (!defaultAddr) return;
+    hasAutoSelectedDefault.current = true;
+    setSelectedSavedAddressId(defaultAddr.id);
+    const parts = (defaultAddr.recipientName ?? "").trim().split(/\s+/);
+    setContact({ firstName: parts[0] ?? "", lastName: parts.slice(1).join(" ") ?? "", phone: defaultAddr.phone ?? "" });
+    setDelivery({ street: defaultAddr.line1, area: defaultAddr.line2 ?? "", city: defaultAddr.city, county: defaultAddr.county });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- store setters are stable
+  }, [savedAddresses, step, delivery.method]);
 
   useEffect(() => {
     fetch("/api/checkout/payment-methods")
@@ -189,6 +251,23 @@ export default function CheckoutPage() {
       )
       .catch(() => setPickupLocations({ sameCounty: [], other: [], all: [] }))
       .finally(() => setPickupLocationsLoading(false));
+  }, [delivery.county]);
+
+  useEffect(() => {
+    setCourierLocationsLoading(true);
+    const county = (delivery.county ?? "").trim();
+    const url = county ? `/api/shipping/courier-locations?county=${encodeURIComponent(county)}` : "/api/shipping/courier-locations";
+    fetch(url)
+      .then((r) => r.json())
+      .then((data) =>
+        setCourierLocations({
+          sameCounty: Array.isArray(data.sameCounty) ? data.sameCounty : [],
+          other: Array.isArray(data.other) ? data.other : [],
+          all: Array.isArray(data.all) ? data.all : [],
+        })
+      )
+      .catch(() => setCourierLocations({ sameCounty: [], other: [], all: [] }))
+      .finally(() => setCourierLocationsLoading(false));
   }, [delivery.county]);
 
   // Sync delivery fee when method or shipping rates change; switch to PICKUP if delivery not available for county
@@ -260,6 +339,7 @@ export default function CheckoutPage() {
             : "Pickup",
     },
     pickupLocationId: isPickup ? delivery.pickupLocationId ?? undefined : undefined,
+    preferredCourierId: !isPickup ? (delivery.preferredCourierId ?? undefined) : undefined,
     deliveryNotes: delivery.notes || undefined,
     shippingCost: shippingFee,
     discount: appliedCoupon?.discountAmount ?? 0,
@@ -419,6 +499,46 @@ export default function CheckoutPage() {
                   )}
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {session?.user && (
+                    <div>
+                      <Label className="mb-2 block">Who is this order for?</Label>
+                      <div className="space-y-2">
+                        <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                          <input
+                            type="radio"
+                            name="orderFor"
+                            checked={orderForSelf}
+                            onChange={() => {
+                              setOrderForSelf(true);
+                              hasPrefilledContactFromProfile.current = false;
+                            }}
+                            className="mt-1"
+                          />
+                          <div>
+                            <span className="font-medium">Ordering for myself</span>
+                            <p className="text-sm text-muted-foreground mt-0.5">We&apos;ve filled your details from your profile. You can change them below if needed.</p>
+                          </div>
+                        </label>
+                        <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                          <input
+                            type="radio"
+                            name="orderFor"
+                            checked={!orderForSelf}
+                            onChange={() => {
+                              setOrderForSelf(false);
+                              hasPrefilledContactFromProfile.current = false;
+                              setContact({ firstName: "", lastName: "", phone: "" });
+                            }}
+                            className="mt-1"
+                          />
+                          <div>
+                            <span className="font-medium">Sending as a gift (or to someone else)</span>
+                            <p className="text-sm text-muted-foreground mt-0.5">Enter the recipient&apos;s name and phone below. Order confirmation will still go to your email.</p>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <Label>Email address *</Label>
                     <Input
@@ -428,11 +548,13 @@ export default function CheckoutPage() {
                       placeholder="you@example.com"
                       className="mt-1"
                     />
-                    <p className="text-xs text-muted-foreground mt-1">We&apos;ll send your order confirmation here</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {orderForSelf ? "We'll send your order confirmation here" : "Your email — we'll send the order confirmation to you"}
+                    </p>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label>First name *</Label>
+                      <Label>{orderForSelf ? "First name *" : "Recipient first name *"}</Label>
                       <Input
                         value={contact.firstName ?? ""}
                         onChange={(e) => setContact({ firstName: e.target.value })}
@@ -440,7 +562,7 @@ export default function CheckoutPage() {
                       />
                     </div>
                     <div>
-                      <Label>Last name *</Label>
+                      <Label>{orderForSelf ? "Last name *" : "Recipient last name *"}</Label>
                       <Input
                         value={contact.lastName ?? ""}
                         onChange={(e) => setContact({ lastName: e.target.value })}
@@ -449,7 +571,7 @@ export default function CheckoutPage() {
                     </div>
                   </div>
                   <div>
-                    <Label>Phone number *</Label>
+                    <Label>{orderForSelf ? "Phone number *" : "Recipient phone number *"}</Label>
                     <Input
                       type="tel"
                       inputMode="tel"
@@ -504,6 +626,49 @@ export default function CheckoutPage() {
                   <h2 className="font-semibold text-lg">Delivery</h2>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {session?.user && savedAddresses.length > 0 && delivery.method !== "PICKUP" && (
+                    <div>
+                      <Label className="mb-2 block">Saved addresses</Label>
+                      <p className="text-sm text-muted-foreground mb-2">You can have multiple addresses. Choose one or enter a new address below; you can edit the fields after selecting.</p>
+                      <div className="space-y-2">
+                        <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                          <input
+                            type="radio"
+                            name="savedAddress"
+                            checked={selectedSavedAddressId === null}
+                            onChange={() => setSelectedSavedAddressId(null)}
+                            className="mt-1"
+                          />
+                          <span className="text-sm font-medium">Use a new address</span>
+                        </label>
+                        {savedAddresses.map((addr) => (
+                          <label
+                            key={addr.id}
+                            className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5"
+                          >
+                            <input
+                              type="radio"
+                              name="savedAddress"
+                              checked={selectedSavedAddressId === addr.id}
+                              onChange={() => {
+                                setSelectedSavedAddressId(addr.id);
+                                const parts = (addr.recipientName ?? "").trim().split(/\s+/);
+                                const firstName = parts[0] ?? "";
+                                const lastName = parts.slice(1).join(" ") ?? "";
+                                setContact({ firstName: firstName || contact.firstName, lastName: lastName || contact.lastName, phone: addr.phone ?? contact.phone });
+                                setDelivery({ street: addr.line1, area: addr.line2 ?? "", city: addr.city, county: addr.county });
+                              }}
+                              className="mt-1"
+                            />
+                            <div className="text-sm">
+                              <span className="font-medium">{addr.label}{addr.isDefault ? " (Default)" : ""}</span>
+                              <p className="text-muted-foreground mt-0.5">{addr.line1}{addr.line2 ? `, ${addr.line2}` : ""} — {addr.city}, {addr.county}</p>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <Label>Street address / Estate / Building *</Label>
                     <Input
@@ -627,6 +792,62 @@ export default function CheckoutPage() {
                             selectedId={delivery.pickupLocationId ?? ""}
                             onSelect={(id, name) => setDelivery({ pickupLocationId: id, pickupLocationName: name })}
                           />
+                        )}
+                        {(delivery.method === "STANDARD" || delivery.method === "EXPRESS") && courierLocations.all.length > 0 && (
+                          <div className="pt-4 border-t mt-4">
+                            <Label className="mb-2 block">Preferred courier location</Label>
+                            <p className="text-sm text-muted-foreground mb-2">Select the nearest courier branch for delivery. Tracking and courier contact will be available after dispatch.</p>
+                            {courierLocationsLoading ? (
+                              <p className="text-sm text-muted-foreground py-2">Loading…</p>
+                            ) : (
+                              <div className="space-y-2">
+                                {courierLocations.sameCounty.length > 0 && (
+                                  <div className="mt-2">
+                                    <p className="text-xs font-medium text-muted-foreground mb-1">Near you (same county)</p>
+                                    {courierLocations.sameCounty.map((c) => (
+                                      <label key={c.id} className="flex items-start gap-3 p-2 rounded-md border cursor-pointer hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                                        <input
+                                          type="radio"
+                                          name="preferredCourier"
+                                          checked={(delivery.preferredCourierId ?? "") === c.id}
+                                          onChange={() => setDelivery({ preferredCourierId: c.id, preferredCourierName: c.name })}
+                                          className="mt-1"
+                                        />
+                                        <span className="text-sm">
+                                          <span className="font-medium">{c.name}</span>
+                                          {(c.address || c.city) && (
+                                            <span className="text-muted-foreground"> — {[c.address, c.city, c.county].filter(Boolean).join(", ")}</span>
+                                          )}
+                                        </span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                )}
+                                {courierLocations.other.length > 0 && (
+                                  <div className="mt-2">
+                                    <p className="text-xs font-medium text-muted-foreground mb-1">{courierLocations.sameCounty.length > 0 ? "Other locations" : "Courier locations"}</p>
+                                    {courierLocations.other.map((c) => (
+                                      <label key={c.id} className="flex items-start gap-3 p-2 rounded-md border cursor-pointer hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                                        <input
+                                          type="radio"
+                                          name="preferredCourier"
+                                          checked={(delivery.preferredCourierId ?? "") === c.id}
+                                          onChange={() => setDelivery({ preferredCourierId: c.id, preferredCourierName: c.name })}
+                                          className="mt-1"
+                                        />
+                                        <span className="text-sm">
+                                          <span className="font-medium">{c.name}</span>
+                                          {(c.address || c.city) && (
+                                            <span className="text-muted-foreground"> — {[c.address, c.city, c.county].filter(Boolean).join(", ")}</span>
+                                          )}
+                                        </span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
                     )}

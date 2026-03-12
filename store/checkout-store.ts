@@ -26,6 +26,9 @@ export interface CheckoutDelivery {
   /** When method is PICKUP, chosen location id and display name */
   pickupLocationId?: string;
   pickupLocationName?: string;
+  /** Preferred courier location (for STANDARD/EXPRESS delivery) */
+  preferredCourierId?: string;
+  preferredCourierName?: string;
 }
 
 export interface CheckoutPayment {

@@ -31,13 +31,16 @@ export async function POST(req: NextRequest) {
   const logo = typeof body.logo === "string" ? body.logo.trim() || null : null;
   const isActive = typeof body.isActive === "boolean" ? body.isActive : true;
   const sortOrder = typeof body.sortOrder === "number" ? body.sortOrder : 0;
+  const address = typeof body.address === "string" ? body.address.trim() || null : null;
+  const city = typeof body.city === "string" ? body.city.trim() || null : null;
+  const county = typeof body.county === "string" ? body.county.trim() || null : null;
 
   if (!name) {
     return NextResponse.json({ error: "name required" }, { status: 400 });
   }
 
   const courier = await prisma.courier.create({
-    data: { name, trackingUrl, phone, logo, isActive, sortOrder },
+    data: { name, trackingUrl, phone, logo, isActive, sortOrder, address, city, county },
   });
   return NextResponse.json({ courier });
 }

@@ -52,6 +52,25 @@ export async function POST(req: Request) {
     );
   }
 
+  let paybillNumber: string | undefined = "522522";
+  let tillNumber: string | undefined = "123456";
+  const paymentsConfig = await prisma.pricingConfig.findUnique({
+    where: { key: "adminSettings:payments" },
+  });
+  if (paymentsConfig?.valueJson) {
+    try {
+      const data = JSON.parse(paymentsConfig.valueJson) as { mpesaPaybillNumber?: string; mpesaTillNumber?: string };
+      if (typeof data.mpesaPaybillNumber === "string" && data.mpesaPaybillNumber.trim()) {
+        paybillNumber = data.mpesaPaybillNumber.trim();
+      }
+      if (typeof data.mpesaTillNumber === "string" && data.mpesaTillNumber.trim()) {
+        tillNumber = data.mpesaTillNumber.trim();
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   const payment = await prisma.payment.create({
     data: {
       orderId: order.id,
@@ -62,8 +81,8 @@ export async function POST(req: Request) {
       reference: order.orderNumber,
       manualReference: reference,
       proofFileId: proofFileId ?? undefined,
-      paybillNumber: method === "MPESA_PAYBILL" ? "522522" : undefined,
-      tillNumber: method === "MPESA_TILL" ? "123456" : undefined,
+      paybillNumber: method === "MPESA_PAYBILL" ? paybillNumber : undefined,
+      tillNumber: method === "MPESA_TILL" ? tillNumber : undefined,
     },
   });
 
