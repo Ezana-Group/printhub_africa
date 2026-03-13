@@ -253,7 +253,7 @@ export function ProductImagesTab({
                 typeof process !== "undefined" && process.env.NEXT_PUBLIC_R2_PUBLIC_URL
                   ? process.env.NEXT_PUBLIC_R2_PUBLIC_URL.replace(/\/$/, "")
                   : "";
-              const newImages: ProductImage[] = files
+              const newImages = files
                 .map((f, idx) => {
                   const url =
                     f.publicUrl ?? (f.storageKey && baseUrl ? `${baseUrl}/${f.storageKey}` : "");
@@ -267,8 +267,8 @@ export function ProductImagesTab({
                     source: "uploaded" as const,
                   };
                 })
-                .filter((img): img is ProductImage => img !== null)
-                .map((img, i) => ({ ...img, sortOrder: images.length + i }));
+                .filter((img): img is NonNullable<typeof img> => img !== null)
+                .map((img, i) => ({ ...img, sortOrder: images.length + i })) as ProductImage[];
               if (newImages.length < files.length) {
                 setUrlError(
                   "Some images had no public URL. Set R2_PUBLIC_URL and NEXT_PUBLIC_R2_PUBLIC_URL so uploads display correctly."
