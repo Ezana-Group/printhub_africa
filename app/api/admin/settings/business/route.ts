@@ -9,6 +9,7 @@ const patchSchema = z.object({
   tradingName: z.string().nullable().optional(),
   tagline: z.string().nullable().optional(),
   website: z.string().nullable().optional(),
+  logo: z.string().nullable().optional(),
   favicon: z.string().nullable().optional(),
   primaryPhone: z.string().nullable().optional(),
   whatsapp: z.string().nullable().optional(),

@@ -75,9 +75,11 @@ export function Header({ business }: { business?: BusinessPublic }) {
           >
             {/* Fixed header — logo (close button is absolute in SheetContent) */}
             <div className="flex flex-shrink-0 items-center border-b border-slate-200 px-6 py-4 pr-14">
-              <span className="font-display text-lg font-bold text-slate-900">
-                {siteName}
-              </span>
+              <img
+                src={business?.logo ?? "/logo.png"}
+                alt={siteName}
+                className="h-8 w-auto max-w-[120px] object-contain"
+              />
             </div>
 
             {/* Fixed Login/Register or user strip — always visible at top */}
@@ -225,10 +227,11 @@ export function Header({ business }: { business?: BusinessPublic }) {
           href="/"
           className="font-display text-xl font-bold text-slate-900 flex items-center gap-2.5"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white text-sm font-bold shadow-lg shadow-primary/25">
-            {siteName.charAt(0)}
-          </span>
-          {siteName}
+          <img
+            src={business?.logo ?? "/logo.png"}
+            alt={siteName}
+            className="h-9 w-auto max-w-[140px] object-contain object-left"
+          />
         </Link>
 
         <nav className="hidden md:flex items-center gap-1">

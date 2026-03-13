@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { AnnouncementBar } from "@/components/layout/announcement-bar";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
@@ -8,6 +9,13 @@ import { getBusinessPublic } from "@/lib/business-public";
 
 // Always fetch fresh business data so saved contact/WhatsApp shows immediately
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const business = await getBusinessPublic();
+  return {
+    icons: business.favicon ? { icon: business.favicon } : undefined,
+  };
+}
 
 export default async function PublicLayout({
   children,

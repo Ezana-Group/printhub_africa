@@ -1899,7 +1899,8 @@ model BusinessSettings {
   tradingName          String?
   tagline              String?
   website              String?
-  favicon              String?
+  logo                 String?   // URL (e.g. R2 public) — used in header, invoices
+  favicon              String?   // URL (e.g. R2 public) — 32×32 ICO/PNG for browser tab
   primaryPhone         String?
   whatsapp             String?
   primaryEmail         String?

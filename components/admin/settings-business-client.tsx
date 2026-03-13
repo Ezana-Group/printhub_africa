@@ -1,14 +1,53 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { EditableSection } from "@/components/admin/editable-section";
+import { FileUploader } from "@/components/upload/FileUploader";
 
 const EMPTY: Record<string, string> = {};
 const getStr = (obj: Record<string, string>, key: string) => obj[key] ?? "";
+
+/** Defaults shown in view when DB value is empty. Edit form must show the same so fields are pre-filled. */
+const FORM_DEFAULTS: Record<string, string> = {
+  businessName: "PrintHub",
+  tradingName: "PrintHub (An Ezana Group Company)",
+  tagline: "Professional Printing. Nairobi. Kenya.",
+  website: "printhub.africa",
+  logo: "",
+  favicon: "",
+  primaryPhone: "",
+  whatsapp: "",
+  primaryEmail: "hello@printhub.africa",
+  supportEmail: "support@printhub.africa",
+  financeEmail: "finance@printhub.africa",
+  address1: "",
+  address2: "",
+  city: "Nairobi",
+  county: "Nairobi County",
+  country: "Kenya",
+  googleMapsUrl: "",
+  socialFacebook: "",
+  socialInstagram: "",
+  socialTwitter: "",
+  socialLinkedIn: "",
+  socialTikTok: "",
+  socialYouTube: "",
+};
+
+/** Merge server/fetch data with defaults: use saved value if non-empty, else default. Ensures edit form is pre-filled like view. */
+function mergeWithDefaults(raw: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  const allKeys = new Set([...Object.keys(FORM_DEFAULTS), ...Object.keys(raw)]);
+  for (const k of allKeys) {
+    const v = raw[k];
+    const def = FORM_DEFAULTS[k] ?? "";
+    out[k] = typeof v === "string" && v.trim() !== "" ? v.trim() : def;
+  }
+  return out;
+}
 
 export function SettingsBusinessClient({
   initialData,
@@ -18,7 +57,9 @@ export function SettingsBusinessClient({
   canEdit?: boolean;
 }) {
   const router = useRouter();
-  const [data, setData] = useState<Record<string, string>>(initialData ?? EMPTY);
+  const [data, setData] = useState<Record<string, string>>(() =>
+    mergeWithDefaults(initialData ?? EMPTY)
+  );
   const [loading, setLoading] = useState(!initialData || Object.keys(initialData).length === 0);
 
   const fetchSettings = useCallback(async () => {
@@ -28,9 +69,10 @@ export function SettingsBusinessClient({
       if (r.ok && typeof json === "object" && json !== null) {
         const normalized: Record<string, string> = {};
         for (const [k, v] of Object.entries(json)) {
+          if (k === "id" || k === "updatedAt") continue;
           normalized[k] = typeof v === "string" ? v : String(v ?? "");
         }
-        setData(normalized);
+        setData(mergeWithDefaults(normalized));
       }
     } finally {
       setLoading(false);
@@ -42,6 +84,15 @@ export function SettingsBusinessClient({
       fetchSettings();
     }
   }, [loading, initialData, fetchSettings]);
+
+  // When initialData arrives later (e.g. RSC stream) with keys, seed state once so edit form can show saved values
+  const hasSyncedFromProps = useRef(false);
+  useEffect(() => {
+    if (initialData && Object.keys(initialData).length > 0 && !hasSyncedFromProps.current) {
+      hasSyncedFromProps.current = true;
+      setData(mergeWithDefaults(initialData));
+    }
+  }, [initialData]);
 
   const update = useCallback((key: string, value: string) => {
     setData((prev) => ({ ...prev, [key]: value }));
@@ -76,7 +127,6 @@ export function SettingsBusinessClient({
               { label: "Trading name", value: getStr(data, "tradingName") || "PrintHub (An Ezana Group Company)" },
               { label: "Tagline", value: getStr(data, "tagline") || "Professional Printing. Nairobi. Kenya." },
               { label: "Website", value: getStr(data, "website") || "printhub.africa" },
-              { label: "Favicon", value: getStr(data, "favicon") || "—" },
             ].map((row, i) => (
               <div
                 key={i}
@@ -86,6 +136,22 @@ export function SettingsBusinessClient({
                 <span className="text-sm font-medium text-foreground">{row.value}</span>
               </div>
             ))}
+            <div className="flex flex-wrap items-center justify-between gap-2 py-2 border-b border-border/50 hover:bg-muted/30 rounded px-1 -mx-1">
+              <span className="text-sm text-muted-foreground">Logo</span>
+              {getStr(data, "logo") ? (
+                <img src={getStr(data, "logo")} alt="Logo" className="h-10 w-auto object-contain max-w-[200px]" />
+              ) : (
+                <span className="text-sm font-medium text-muted-foreground">—</span>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 py-2 border-b border-border/50 last:border-0 hover:bg-muted/30 rounded px-1 -mx-1">
+              <span className="text-sm text-muted-foreground">Favicon</span>
+              {getStr(data, "favicon") ? (
+                <img src={getStr(data, "favicon")} alt="Favicon" className="h-8 w-8 object-contain" />
+              ) : (
+                <span className="text-sm font-medium text-muted-foreground">—</span>
+              )}
+            </div>
           </div>
         }
         editContent={({ setHasChanges }) => (
@@ -124,16 +190,67 @@ export function SettingsBusinessClient({
               />
             </div>
             <div className="space-y-1.5">
-              <Label>Favicon</Label>
-              <Input
-                value={getStr(data, "favicon")}
-                onChange={(e) => update("favicon", e.target.value)}
-                placeholder="32×32px ICO or PNG"
-                className="focus-visible:ring-orange-500"
+              <Label>Logo</Label>
+              <p className="text-xs text-muted-foreground">Min 400×400px recommended. PNG, JPG or WEBP. Used in header and invoices.</p>
+              {getStr(data, "logo") && (
+                <div className="flex items-center gap-3 py-2">
+                  <img src={getStr(data, "logo")} alt="Current logo" className="h-14 w-auto object-contain rounded border border-border" />
+                  <button
+                    type="button"
+                    onClick={() => update("logo", "")}
+                    className="text-sm text-muted-foreground hover:text-foreground underline"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
+              <FileUploader
+                context="ADMIN_LOGO"
+                accept={["image/png", "image/jpeg", "image/webp"]}
+                maxSizeMB={10}
+                maxFiles={1}
+                label="Upload logo"
+                onUploadComplete={(files) => {
+                  const url = files[0]?.publicUrl;
+                  if (url) {
+                    update("logo", url);
+                    setHasChanges(true);
+                  }
+                }}
+                onUploadError={(err) => console.error(err)}
               />
             </div>
-            {/* AUDIT-FIX: wire FileUploader ADMIN_LOGO when ready */}
-            <p className="text-sm text-muted-foreground">Logo: Min 400×400px, PNG. <Button type="button" variant="outline" size="sm" disabled title="Coming soon">Upload</Button></p>
+            <div className="space-y-1.5">
+              <Label>Favicon</Label>
+              <p className="text-xs text-muted-foreground">32×32px ICO or PNG. Shown in browser tab.</p>
+              {getStr(data, "favicon") && (
+                <div className="flex items-center gap-3 py-2">
+                  <img src={getStr(data, "favicon")} alt="Current favicon" className="h-8 w-8 object-contain rounded border border-border" />
+                  <button
+                    type="button"
+                    onClick={() => update("favicon", "")}
+                    className="text-sm text-muted-foreground hover:text-foreground underline"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
+              <FileUploader
+                context="ADMIN_FAVICON"
+                accept={["image/png", "image/x-icon"]}
+                maxSizeMB={1}
+                maxFiles={1}
+                label="Upload favicon"
+                onUploadComplete={(files) => {
+                  const url = files[0]?.publicUrl;
+                  if (url) {
+                    update("favicon", url);
+                    setHasChanges(true);
+                  }
+                }}
+                onUploadError={(err) => console.error(err)}
+              />
+            </div>
           </div>
         )}
         onSave={saveFull}

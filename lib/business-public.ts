@@ -5,6 +5,8 @@ export type BusinessPublic = {
   tradingName: string;
   tagline: string;
   website: string;
+  logo: string | null;
+  favicon: string | null;
   primaryPhone: string | null;
   whatsapp: string | null;
   primaryEmail: string;
@@ -30,6 +32,8 @@ const DEFAULTS: BusinessPublic = {
   tradingName: "PrintHub (An Ezana Group Company)",
   tagline: "Printing the Future, Made in Kenya",
   website: "printhub.africa",
+  logo: null,
+  favicon: null,
   primaryPhone: null,
   whatsapp: null,
   primaryEmail: "hello@printhub.africa",
@@ -60,6 +64,8 @@ export async function getBusinessPublic(): Promise<BusinessPublic> {
     tradingName: row.tradingName ?? DEFAULTS.tradingName,
     tagline: row.tagline ?? DEFAULTS.tagline,
     website: row.website ?? DEFAULTS.website,
+    logo: row.logo ?? null,
+    favicon: row.favicon ?? null,
     primaryPhone: row.primaryPhone ?? null,
     whatsapp: row.whatsapp ?? null,
     primaryEmail: row.primaryEmail ?? DEFAULTS.primaryEmail,
