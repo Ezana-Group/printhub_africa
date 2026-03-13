@@ -25,7 +25,7 @@ export async function POST(req: Request) {
 
   if (!isStripeConfigured()) {
     return NextResponse.json(
-      { error: "Stripe is not configured. Add Stripe keys to enable saving cards." },
+      { error: "Card saving is not available. Use Pay with Card at checkout (PesaPal) to pay by card." },
       { status: 503 }
     );
   }

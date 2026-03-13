@@ -1,11 +1,12 @@
 # R2 CORS configuration (browser uploads)
 
-When the app uploads files from the browser via **presigned PUT URLs**, the browser sends a **preflight (OPTIONS)** request to the R2 URL. Without CORS rules on the bucket, R2 returns **403** and you see:
+When the app uploads files from the browser via **presigned PUT URLs**, the browser sends a **preflight (OPTIONS)** request to the R2 URL (e.g. `*.r2.cloudflarestorage.com`). Without CORS rules on the bucket, R2 returns **403** and you see:
 
-- `XMLHttpRequest cannot load ... due to access control checks`
+- `XMLHttpRequest cannot load https://...r2.cloudflarestorage.com/... due to access control checks`
 - `Preflight response is not successful. Status code: 403`
+- `Failed to load resource: ... (line 0)`
 
-Fix this by adding a **CORS policy** to **both** R2 buckets used for uploads: **printhub-uploads** and **printhub-public**.
+**Fix:** Add a CORS policy to **both** R2 buckets used for uploads: **printhub-uploads** and **printhub-public**. The URL in the error (`printhub-public.b9453de11...r2.cloudflarestorage.com`) is the **printhub-public** bucket.
 
 ## Steps (Cloudflare Dashboard)
 
@@ -54,7 +55,21 @@ Use one of the following.
 ```
 
 - **AllowedMethods**: `PUT` is required for uploads; `GET`/`HEAD` are useful for follow-up requests.
-- **AllowedHeaders**: must include **Content-Type** (and **Content-Length** if the client sends it).
-- **AllowedOrigins**: replace with your real app URL(s); avoid `*` in production if you care about restricting origins.
+- **AllowedHeaders**: must include **Content-Type**. If you still get 403 on preflight, try allowing all headers (see below).
+- **AllowedOrigins**: replace with your real app URL(s) — e.g. the domain where you see the error (e.g. `https://printhub.africa` or `http://localhost:3000`). Avoid `*` in production if you care about restricting origins.
 
-After saving, try the upload again; the preflight should succeed and the PUT to the presigned URL should complete.
+**If preflight still returns 403:** Some presigned URLs include `x-amz-*` query params; the browser may send extra headers. Use a permissive AllowedHeaders once to confirm CORS is the only issue:
+
+```json
+[
+  {
+    "AllowedOrigins": ["https://printhub.africa", "http://localhost:3000"],
+    "AllowedMethods": ["GET", "PUT", "HEAD", "OPTIONS"],
+    "AllowedHeaders": ["*"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+Replace origins with your actual app origin(s). After saving CORS on **both** buckets, try the upload again; the preflight should succeed and the PUT should complete.

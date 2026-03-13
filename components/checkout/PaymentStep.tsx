@@ -431,14 +431,23 @@ export function PaymentStep({
             disabled={submitting}
             onClick={async () => {
               setSubmitting(true);
-              const res = await fetch("/api/payments/pesapal/initiate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ orderId: order.id }),
-              });
-              const data = await res.json();
-              if (data.redirectUrl) window.location.href = data.redirectUrl;
-              setSubmitting(false);
+              try {
+                const res = await fetch("/api/payments/pesapal/initiate", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ orderId: order.id }),
+                });
+                const data = await res.json();
+                if (data.redirectUrl) {
+                  window.location.href = data.redirectUrl;
+                  return;
+                }
+                if (!res.ok) {
+                  alert(data.error ?? "Could not start card payment");
+                }
+              } finally {
+                setSubmitting(false);
+              }
             }}
           >
             {submitting ? (
