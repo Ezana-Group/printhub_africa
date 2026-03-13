@@ -6,11 +6,12 @@ import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
   Package,
-  MapPin,
   Settings,
   LogOut,
   FileText,
   Upload,
+  MessageCircle,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +20,8 @@ const NAV = [
   { href: "/account/orders", label: "My Orders", icon: Package },
   { href: "/account/quotes", label: "My Quotes", icon: FileText, badgeKey: "quotes" },
   { href: "/account/uploads", label: "My Uploads", icon: Upload },
-  { href: "/account/addresses", label: "Addresses", icon: MapPin },
+  { href: "/account/corporate", label: "Corporate", icon: Building2 },
+  { href: "/account/support", label: "Support", icon: MessageCircle },
   { href: "/account/settings", label: "Settings", icon: Settings },
 ];
 

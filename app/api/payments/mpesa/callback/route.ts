@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { capturePaymentFailure, capturePaymentSuccess } from "@/lib/sentry-events";
+import { createInvoiceForOrder } from "@/lib/invoice-create";
+import { decrementStockForOrder } from "@/lib/stock";
+import { addOrderToProductionQueue } from "@/lib/production-queue";
 
 interface CallbackBody {
   Body: {
@@ -95,6 +98,21 @@ export async function POST(req: Request) {
       amount,
       mpesaRef: receipt,
     });
+    try {
+      await createInvoiceForOrder(mpesa.payment.orderId, mpesa.paymentId);
+    } catch (e) {
+      console.error("Invoice create on M-Pesa callback:", e);
+    }
+    try {
+      await decrementStockForOrder(mpesa.payment.orderId);
+    } catch (e) {
+      console.error("Stock decrement on M-Pesa callback:", e);
+    }
+    try {
+      await addOrderToProductionQueue(mpesa.payment.orderId);
+    } catch (e) {
+      console.error("Production queue add on M-Pesa callback:", e);
+    }
   } else {
     await prisma.mpesaTransaction.update({
       where: { id: mpesa.id },

@@ -439,3 +439,387 @@ export async function sendCareerOfferMadeEmail(
     `,
   });
 }
+
+/** Abandoned cart — first reminder (e.g. 1 hour after leaving checkout) */
+export async function sendAbandonedCartEmail1(
+  email: string,
+  firstName: string,
+  cartUrl: string
+) {
+  const { businessName, footer } = await getEmailBranding();
+  return sendEmail({
+    to: email,
+    subject: `You left something in your cart – ${businessName}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h1 style="color: #FF4D00;">${businessName}</h1>
+        <p>Hi ${firstName || "there"},</p>
+        <p>You left items in your cart. Complete your order when you're ready – your cart is saved.</p>
+        <p><a href="${cartUrl}" style="color: #FF4D00; font-weight: bold;">Return to cart</a></p>
+        <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
+      </div>
+    `,
+  });
+}
+
+/** Abandoned cart — second reminder (e.g. 24 hours). unsubscribeUrl optional for "Unsubscribe from cart reminders". */
+export async function sendAbandonedCartEmail2(
+  email: string,
+  firstName: string,
+  cartUrl: string,
+  unsubscribeUrl?: string
+) {
+  const { businessName, footer } = await getEmailBranding();
+  const unsubscribeLine = unsubscribeUrl
+    ? `<p style="font-size: 11px; color: #9CA3AF;"><a href="${unsubscribeUrl}">Unsubscribe from cart reminders</a></p>`
+    : "";
+  return sendEmail({
+    to: email,
+    subject: `Still thinking? Your cart is waiting – ${businessName}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h1 style="color: #FF4D00;">${businessName}</h1>
+        <p>Hi ${firstName || "there"},</p>
+        <p>Your saved cart is still here. If you have any questions, just reply to this email.</p>
+        <p><a href="${cartUrl}" style="color: #FF4D00; font-weight: bold;">Complete your order</a></p>
+        ${unsubscribeLine}
+        <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
+      </div>
+    `,
+  });
+}
+
+/** Corporate application received — to applicant */
+export async function sendCorporateApplicationReceivedEmail(
+  email: string,
+  applicantName: string,
+  companyName: string,
+  applicationRef: string
+) {
+  const { businessName, footer } = await getEmailBranding();
+  return sendEmail({
+    to: email,
+    subject: `Corporate account application received – ${businessName}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h1 style="color: #FF4D00;">${businessName}</h1>
+        <p>Hi ${applicantName || "there"},</p>
+        <p>We've received your corporate account application for <strong>${companyName}</strong>.</p>
+        <p>Reference: <strong>${applicationRef}</strong></p>
+        <p>Our team will review your application and respond within 1 business day.</p>
+        <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
+      </div>
+    `,
+  });
+}
+
+/** New corporate application — to admin */
+export async function sendCorporateApplicationNewAdminEmail(
+  adminEmail: string,
+  companyName: string,
+  contactPerson: string
+) {
+  const { businessName, footer } = await getEmailBranding();
+  const adminUrl = `${baseUrl}/admin/corporate/applications`;
+  return sendEmail({
+    to: adminEmail,
+    subject: `New corporate account application: ${companyName}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
+        <h2 style="color: #FF4D00;">${businessName}</h2>
+        <p>A new corporate account application has been submitted.</p>
+        <p><strong>Company:</strong> ${companyName}<br><strong>Contact:</strong> ${contactPerson}</p>
+        <p><a href="${adminUrl}" style="color: #FF4D00; font-weight: bold;">Review applications</a></p>
+        <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
+      </div>
+    `,
+  });
+}
+
+/** Corporate application approved — to applicant */
+export async function sendCorporateApplicationApprovedEmail(
+  email: string,
+  contactPerson: string,
+  companyName: string,
+  accountNumber: string
+) {
+  const { businessName, footer } = await getEmailBranding();
+  const dashboardUrl = `${baseUrl}/corporate/dashboard`;
+  return sendEmail({
+    to: email,
+    subject: `Your corporate account is approved – ${businessName}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
+        <h2 style="color: #FF4D00;">${businessName}</h2>
+        <p>Hi ${contactPerson || "there"},</p>
+        <p>Great news — your corporate account application for <strong>${companyName}</strong> has been approved.</p>
+        <p>Your account number: <strong>${accountNumber}</strong></p>
+        <p>You can now sign in and access your corporate dashboard, place orders with corporate pricing, and manage your team.</p>
+        <p><a href="${dashboardUrl}" style="color: #FF4D00; font-weight: bold;">Go to Corporate Dashboard</a></p>
+        <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
+      </div>
+    `,
+  });
+}
+
+/** Corporate application rejected — to applicant */
+export async function sendCorporateApplicationRejectedEmail(
+  email: string,
+  contactPerson: string,
+  companyName: string,
+  reason: string | null
+) {
+  const { businessName, footer } = await getEmailBranding();
+  const applyUrl = `${baseUrl}/corporate/apply`;
+  return sendEmail({
+    to: email,
+    subject: `Update on your corporate account application – ${businessName}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
+        <h2 style="color: #FF4D00;">${businessName}</h2>
+        <p>Hi ${contactPerson || "there"},</p>
+        <p>Thank you for your interest in a corporate account with ${businessName}. After review, we are unable to approve your application for <strong>${companyName}</strong> at this time.</p>
+        ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ""}
+        <p>If you have questions or would like to reapply in the future, please contact us or submit a new application.</p>
+        <p><a href="${applyUrl}" style="color: #FF4D00; font-weight: bold;">Apply again</a></p>
+        <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
+      </div>
+    `,
+  });
+}
+
+// ============== DELIVERY NOTIFICATIONS ==============
+
+export async function sendDeliveryDispatchedEmail(
+  email: string,
+  orderNumber: string,
+  trackingNumber?: string | null
+) {
+  const { businessName, footer } = await getEmailBranding();
+  const trackUrl = `${baseUrl}/track?ref=${encodeURIComponent(orderNumber)}`;
+  const trackingLine = trackingNumber
+    ? `<p><strong>Tracking:</strong> ${trackingNumber}</p>`
+    : "";
+  return sendEmail({
+    to: email,
+    subject: `Order ${orderNumber} is on its way – ${businessName}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h1 style="color: #FF4D00;">${businessName}</h1>
+        <p>Your order <strong>${orderNumber}</strong> has been dispatched and is on its way.</p>
+        ${trackingLine}
+        <p><a href="${trackUrl}" style="color: #FF4D00; font-weight: bold;">Track your order</a></p>
+        <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
+      </div>
+    `,
+  });
+}
+
+export async function sendDeliveryDeliveredEmail(email: string, orderNumber: string) {
+  const { businessName, footer } = await getEmailBranding();
+  const ordersUrl = `${baseUrl}/account/orders`;
+  return sendEmail({
+    to: email,
+    subject: `Order ${orderNumber} delivered – ${businessName}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h1 style="color: #FF4D00;">${businessName}</h1>
+        <p>Your order <strong>${orderNumber}</strong> has been delivered. Thank you for shopping with us!</p>
+        <p><a href="${ordersUrl}" style="color: #FF4D00; font-weight: bold;">View my orders</a></p>
+        <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
+      </div>
+    `,
+  });
+}
+
+export async function sendDeliveryFailedEmail(
+  email: string,
+  orderNumber: string,
+  failureReason?: string | null
+) {
+  const { businessName, footer } = await getEmailBranding();
+  const supportUrl = `${baseUrl}/contact`;
+  const reasonLine = failureReason ? `<p><strong>Reason:</strong> ${failureReason}</p>` : "";
+  return sendEmail({
+    to: email,
+    subject: `Delivery update – Order ${orderNumber} – ${businessName}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h1 style="color: #FF4D00;">${businessName}</h1>
+        <p>We're sorry – there was an issue delivering your order <strong>${orderNumber}</strong>.</p>
+        ${reasonLine}
+        <p>Our team will contact you to rearrange delivery. If you have questions, please <a href="${supportUrl}" style="color: #FF4D00;">contact us</a>.</p>
+        <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
+      </div>
+    `,
+  });
+}
+
+// ============== ORDER CANCELLATION & REFUNDS ==============
+
+export async function sendOrderCancelledEmail(
+  email: string,
+  orderNumber: string,
+  reason?: string | null
+) {
+  const { businessName, footer } = await getEmailBranding();
+  const ordersUrl = `${baseUrl}/account/orders`;
+  const reasonLine = reason ? `<p><strong>Reason:</strong> ${reason.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>` : "";
+  return sendEmail({
+    to: email,
+    subject: `Order ${orderNumber} cancelled – ${businessName}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h1 style="color: #FF4D00;">${businessName}</h1>
+        <p>Your order <strong>${orderNumber}</strong> has been cancelled.</p>
+        ${reasonLine}
+        <p>If you have questions or would like to place a new order, <a href="${ordersUrl}" style="color: #FF4D00;">visit your orders</a>.</p>
+        <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
+      </div>
+    `,
+  });
+}
+
+export async function sendRefundApprovedEmail(
+  email: string,
+  refundNumber: string,
+  orderNumber: string,
+  amountKes: number
+) {
+  const { businessName, footer } = await getEmailBranding();
+  const ordersUrl = `${baseUrl}/account/orders`;
+  return sendEmail({
+    to: email,
+    subject: `Refund ${refundNumber} approved – ${businessName}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h1 style="color: #FF4D00;">${businessName}</h1>
+        <p>Your refund request <strong>${refundNumber}</strong> for order ${orderNumber} has been approved.</p>
+        <p><strong>Amount:</strong> KES ${amountKes.toLocaleString()}</p>
+        <p>We will process the refund to your M-Pesa number shortly. You will receive another email when it is sent.</p>
+        <p><a href="${ordersUrl}" style="color: #FF4D00; font-weight: bold;">View my orders</a></p>
+        <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
+      </div>
+    `,
+  });
+}
+
+export async function sendRefundRejectedEmail(
+  email: string,
+  refundNumber: string,
+  orderNumber: string,
+  rejectionReason?: string | null
+) {
+  const { businessName, footer } = await getEmailBranding();
+  const supportUrl = `${baseUrl}/contact`;
+  const reasonLine = rejectionReason ? `<p><strong>Reason:</strong> ${rejectionReason.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>` : "";
+  return sendEmail({
+    to: email,
+    subject: `Refund ${refundNumber} – ${businessName}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h1 style="color: #FF4D00;">${businessName}</h1>
+        <p>Your refund request <strong>${refundNumber}</strong> for order ${orderNumber} could not be approved.</p>
+        ${reasonLine}
+        <p>If you have questions, please <a href="${supportUrl}" style="color: #FF4D00;">contact us</a>.</p>
+        <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
+      </div>
+    `,
+  });
+}
+
+export async function sendRefundProcessedEmail(
+  email: string,
+  refundNumber: string,
+  orderNumber: string,
+  amountKes: number,
+  mpesaReceiptNo?: string | null
+) {
+  const { businessName, footer } = await getEmailBranding();
+  const receiptLine = mpesaReceiptNo ? `<p><strong>M-Pesa receipt:</strong> ${mpesaReceiptNo}</p>` : "";
+  return sendEmail({
+    to: email,
+    subject: `Refund ${refundNumber} sent – ${businessName}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h1 style="color: #FF4D00;">${businessName}</h1>
+        <p>Your refund <strong>${refundNumber}</strong> for order ${orderNumber} has been sent to your M-Pesa account.</p>
+        <p><strong>Amount:</strong> KES ${amountKes.toLocaleString()}</p>
+        ${receiptLine}
+        <p>Thank you for your patience.</p>
+        <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
+      </div>
+    `,
+  });
+}
+
+// ============== SUPPORT TICKET NOTIFICATIONS ==============
+
+export async function sendTicketCreatedEmail(
+  email: string,
+  ticketNumber: string,
+  subject: string
+) {
+  const { businessName, footer } = await getEmailBranding();
+  const supportUrl = `${baseUrl}/account/support`;
+  return sendEmail({
+    to: email,
+    subject: `Support request ${ticketNumber} received – ${businessName}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h1 style="color: #FF4D00;">${businessName}</h1>
+        <p>We've received your support request.</p>
+        <p><strong>Ticket:</strong> ${ticketNumber}<br><strong>Subject:</strong> ${subject}</p>
+        <p>Our team will respond as soon as possible. You can view and reply in your account.</p>
+        <p><a href="${supportUrl}" style="color: #FF4D00; font-weight: bold;">View my tickets</a></p>
+        <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
+      </div>
+    `,
+  });
+}
+
+export async function sendTicketRepliedEmail(
+  email: string,
+  ticketNumber: string,
+  subject: string,
+  messagePreview: string
+) {
+  const { businessName, footer } = await getEmailBranding();
+  const supportUrl = `${baseUrl}/account/support`;
+  const preview = messagePreview.length > 200 ? messagePreview.slice(0, 200) + "…" : messagePreview;
+  return sendEmail({
+    to: email,
+    subject: `New reply on ${ticketNumber} – ${businessName}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h1 style="color: #FF4D00;">${businessName}</h1>
+        <p>We've replied to your support request <strong>${ticketNumber}</strong> (${subject}).</p>
+        <p style="background: #f5f5f5; padding: 12px; border-radius: 6px; font-size: 14px;">${preview.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+        <p><a href="${supportUrl}" style="color: #FF4D00; font-weight: bold;">View ticket &amp; reply</a></p>
+        <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
+      </div>
+    `,
+  });
+}
+
+export async function sendTicketResolvedEmail(
+  email: string,
+  ticketNumber: string,
+  subject: string
+) {
+  const { businessName, footer } = await getEmailBranding();
+  const supportUrl = `${baseUrl}/account/support`;
+  return sendEmail({
+    to: email,
+    subject: `Ticket ${ticketNumber} resolved – ${businessName}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h1 style="color: #FF4D00;">${businessName}</h1>
+        <p>Your support request <strong>${ticketNumber}</strong> (${subject}) has been marked as resolved.</p>
+        <p>If you need further help, you can reopen the ticket or create a new one.</p>
+        <p><a href="${supportUrl}" style="color: #FF4D00; font-weight: bold;">View my tickets</a></p>
+        <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
+      </div>
+    `,
+  });
+}

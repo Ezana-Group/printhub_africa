@@ -46,6 +46,9 @@ export async function GET(
       shippingAddress: true,
       payments: { orderBy: { createdAt: "desc" }, include: { mpesaTransaction: true } },
       timeline: { orderBy: { timestamp: "desc" } },
+      delivery: { include: { assignedCourier: true, deliveryZone: true } },
+      deliveryZone: true,
+      trackingEvents: { orderBy: { createdAt: "desc" } },
     },
   });
   if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });

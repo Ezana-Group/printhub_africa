@@ -6,6 +6,15 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 interface OrderDetail {
   id: string;
@@ -18,6 +27,10 @@ interface OrderDetail {
   total: number;
   currency: string;
   createdAt: string;
+  estimatedDelivery?: string | null;
+  shippedAt?: string | null;
+  deliveredAt?: string | null;
+  trackingNumber?: string | null;
   items: Array<{
     id: string;
     quantity: number;
@@ -25,6 +38,18 @@ interface OrderDetail {
     product: { name: string; slug: string; images: string[] } | null;
   }>;
   shippingAddress: { fullName: string; email: string; phone: string; street: string; city: string; county: string; postalCode?: string } | null;
+  delivery?: {
+    status: string;
+    estimatedDelivery?: string | null;
+    dispatchedAt?: string | null;
+    deliveredAt?: string | null;
+    rescheduledTo?: string | null;
+    trackingNumber?: string | null;
+    assignedCourier?: { name: string; trackingUrl?: string | null; phone?: string | null } | null;
+  } | null;
+  trackingEvents?: Array<{ status: string; title: string; description?: string | null; createdAt: string; isPublic?: boolean }>;
+  invoices?: Array<{ id: string; invoiceNumber: string; issuedAt: string }>;
+  refunds?: Array<{ id: string; refundNumber?: string | null; amount: number; status: string; createdAt: string }>;
 }
 
 export default function OrderDetailPage() {
@@ -34,6 +59,8 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   useEffect(() => {
     if (authStatus !== "authenticated" || !params.id) return;
@@ -56,13 +83,19 @@ export default function OrderDetailPage() {
 
   async function handleCancel() {
     if (!order?.id || !canCancel) return;
-    if (!confirm("Cancel this order? This cannot be undone.")) return;
+    setShowCancelModal(true);
+  }
+
+  async function confirmCancel() {
+    if (!order?.id || !canCancel) return;
+    const reason = cancelReason.trim() || "Cancelled by customer";
     setCancelling(true);
+    setShowCancelModal(false);
     try {
       const res = await fetch(`/api/orders/${order.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "cancel", cancelReason: "Cancelled by customer" }),
+        body: JSON.stringify({ action: "cancel", cancelReason: reason }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -72,6 +105,7 @@ export default function OrderDetailPage() {
       setOrder((o) => (o ? { ...o, status: "CANCELLED" } : null));
     } finally {
       setCancelling(false);
+      setCancelReason("");
     }
   }
 
@@ -117,6 +151,60 @@ export default function OrderDetailPage() {
               </p>
             </div>
           )}
+          {(order.delivery || order.trackingEvents?.length) ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-6">
+              <h2 className="font-semibold text-slate-900">Delivery</h2>
+              {/* Delivery timeline */}
+              <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
+                {[
+                  { key: "placed", label: "Order placed", date: order.createdAt, done: true },
+                  { key: "dispatched", label: "Dispatched", date: order.delivery?.dispatchedAt ?? null, done: ["DISPATCHED", "IN_TRANSIT", "DELIVERED"].includes(order.delivery?.status ?? "") },
+                  { key: "transit", label: "In transit", date: null, done: ["IN_TRANSIT", "DELIVERED"].includes(order.delivery?.status ?? "") },
+                  { key: "delivered", label: "Delivered", date: order.delivery?.deliveredAt ?? null, done: order.delivery?.status === "DELIVERED" },
+                ].map((step) => (
+                  <div key={step.key} className="flex items-center gap-2">
+                    <span className={`inline-block w-2.5 h-2.5 rounded-full shrink-0 ${step.done ? "bg-green-500" : "bg-slate-200"}`} />
+                    <span className={`text-sm ${step.done ? "text-slate-900 font-medium" : "text-slate-400"}`}>
+                      {step.label}
+                      {step.date && <span className="text-slate-500 font-normal"> · {new Date(step.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {(order.delivery?.rescheduledTo || order.estimatedDelivery) && (
+                <p className="mt-2 text-slate-600 text-sm">
+                  {order.delivery?.rescheduledTo ? (
+                    <>Rescheduled to: {new Date(order.delivery.rescheduledTo).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</>
+                  ) : (
+                    <>Estimated: {new Date(order.estimatedDelivery!).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}</>
+                  )}
+                </p>
+              )}
+              {order.trackingNumber && (
+                <p className="mt-1 text-slate-600">
+                  Tracking: {order.delivery?.assignedCourier?.trackingUrl ? (
+                    <a href={order.delivery.assignedCourier.trackingUrl.replace("{tracking}", order.trackingNumber)} target="_blank" rel="noopener noreferrer" className="text-primary underline">{order.trackingNumber}</a>
+                  ) : (
+                    order.trackingNumber
+                  )}
+                </p>
+              )}
+              {order.delivery?.assignedCourier?.name && !order.trackingNumber && (
+                <p className="mt-1 text-slate-600">Courier: {order.delivery.assignedCourier.name}</p>
+              )}
+              {order.trackingEvents && order.trackingEvents.length > 0 && (
+                <ul className="mt-4 space-y-2 border-t border-slate-100 pt-4">
+                  {order.trackingEvents.filter((e) => e.isPublic !== false).map((ev, i) => (
+                    <li key={i} className="flex gap-2 text-sm">
+                      <span className="text-slate-400 shrink-0">{new Date(ev.createdAt).toLocaleDateString()}</span>
+                      <span className="font-medium">{ev.title}</span>
+                      {ev.description && <span className="text-slate-600">— {ev.description}</span>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : null}
         </div>
         <div className="w-full lg:w-80">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 sticky top-24">
@@ -134,6 +222,16 @@ export default function OrderDetailPage() {
                 <Link href={`/pay/${order.id}`}>Pay now</Link>
               </Button>
             )}
+            {(order.refunds?.length ?? 0) > 0 && (
+              <div className="mt-4 p-3 rounded-xl border border-amber-200 bg-amber-50 text-sm">
+                <p className="font-medium text-amber-900">Refund status</p>
+                {order.refunds!.map((r) => (
+                  <p key={r.id} className="text-amber-800 mt-0.5">
+                    {r.refundNumber ? `${r.refundNumber} · ` : ""}KES {r.amount.toLocaleString()} — {r.status}
+                  </p>
+                ))}
+              </div>
+            )}
             {canCancel && (
               <Button
                 variant="destructive"
@@ -144,17 +242,55 @@ export default function OrderDetailPage() {
                 {cancelling ? "Cancelling..." : "Cancel order"}
               </Button>
             )}
-            <Button asChild variant="outline" className="mt-4 w-full rounded-xl" size="sm">
-              <a href={`/api/orders/${order.id}/invoice`} target="_blank" rel="noopener noreferrer">
-                Download invoice
-              </a>
-            </Button>
+            {(order.invoices?.length ?? 0) > 0 ? (
+              <Button asChild variant="outline" className="mt-4 w-full rounded-xl" size="sm">
+                <a href={`/api/invoices/${order.invoices![0].id}/download`} target="_blank" rel="noopener noreferrer">
+                  Download Tax Invoice ({order.invoices![0].invoiceNumber})
+                </a>
+              </Button>
+            ) : (
+              <Button asChild variant="outline" className="mt-4 w-full rounded-xl" size="sm">
+                <a href={`/api/orders/${order.id}/invoice`} target="_blank" rel="noopener noreferrer">
+                  Download invoice
+                </a>
+              </Button>
+            )}
             <Button asChild variant="outline" className="mt-6 w-full rounded-xl">
               <Link href="/shop">Order again</Link>
             </Button>
           </div>
         </div>
       </div>
+
+      <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel order</DialogTitle>
+            <DialogDescription>This cannot be undone. Optionally select a reason.</DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <Label className="text-sm">Reason (optional)</Label>
+            <select
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="">— Select —</option>
+              <option value="Changed my mind">Changed my mind</option>
+              <option value="Found better price elsewhere">Found better price elsewhere</option>
+              <option value="Ordered by mistake">Ordered by mistake</option>
+              <option value="Delivery address wrong">Delivery address wrong</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCancelModal(false)}>Back</Button>
+            <Button variant="destructive" onClick={confirmCancel} disabled={cancelling}>
+              {cancelling ? "Cancelling..." : "Confirm cancel"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -96,6 +96,21 @@ type ShippingAddress = {
   deliveryMethod?: string | null;
 };
 
+type DeliveryRecord = {
+  id: string;
+  orderId: string;
+  method: string;
+  status: string;
+  estimatedDelivery?: string | null;
+  dispatchedAt?: string | null;
+  deliveredAt?: string | null;
+  trackingNumber?: string | null;
+  failureReason?: string | null;
+  rescheduledTo?: string | null;
+  assignedCourierId?: string | null;
+  assignedCourier?: { id: string; name: string; trackingUrl?: string | null; phone?: string | null } | null;
+};
+
 type Order = {
   id: string;
   orderNumber: string;
@@ -126,6 +141,8 @@ type Order = {
   paymentStatus?: string | null;
   pickupCode?: string | null;
   timeline: { id: string; status: string; message?: string | null; timestamp: string; updatedBy?: string | null }[];
+  delivery?: DeliveryRecord | null;
+  trackingEvents?: Array<{ status: string; title: string; description?: string | null; createdAt: string; isPublic?: boolean }>;
 };
 
 type TimelineEvent = {
@@ -218,6 +235,12 @@ export function OrderDetailClient({ orderId, initialOrder }: { orderId: string; 
   const [refundReason, setRefundReason] = useState("");
   const [refundLoading, setRefundLoading] = useState(false);
   const [refundError, setRefundError] = useState<string | null>(null);
+  const [deliveryTracking, setDeliveryTracking] = useState("");
+  const [deliveryCourierId, setDeliveryCourierId] = useState("");
+  const [deliveryFailureReason, setDeliveryFailureReason] = useState("");
+  const [deliveryRescheduleTo, setDeliveryRescheduleTo] = useState("");
+  const [deliveryUpdateLoading, setDeliveryUpdateLoading] = useState(false);
+  const [couriers, setCouriers] = useState<{ id: string; name: string; trackingUrl?: string | null }[]>([]);
 
   const fetchOrder = useCallback(async () => {
     const res = await fetch(`/api/admin/orders/${orderId}`);
@@ -244,6 +267,15 @@ export function OrderDetailClient({ orderId, initialOrder }: { orderId: string; 
   useEffect(() => {
     if (order) fetchTimeline();
   }, [order, fetchTimeline]);
+
+  useEffect(() => {
+    if (order?.delivery) {
+      fetch("/api/admin/settings/couriers")
+        .then((r) => r.json())
+        .then((data) => setCouriers(Array.isArray(data?.couriers) ? data.couriers : []))
+        .catch(() => {});
+    }
+  }, [order?.delivery]);
 
   if (loading || !order) {
     return (
@@ -340,7 +372,26 @@ export function OrderDetailClient({ orderId, initialOrder }: { orderId: string; 
     }
   };
 
-  const cancelOrder = (reason: string) => updateStatus("CANCELLED", { cancelReason: reason });
+  const cancelOrder = async (reason: string) => {
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Failed");
+      }
+      setCancelModalOpen(false);
+      setCancelReason("");
+      await fetchOrder();
+      fetchTimeline();
+      router.refresh();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Failed to cancel order");
+    }
+  };
 
   const confirmPaymentAction = async (action: "CONFIRM" | "REJECT") => {
     setConfirmPaymentLoading(true);
@@ -713,6 +764,9 @@ export function OrderDetailClient({ orderId, initialOrder }: { orderId: string; 
             <Card>
               <CardHeader>
                 <CardTitle>Delivery</CardTitle>
+                {order.delivery && (
+                  <Badge variant="secondary" className="ml-2">{order.delivery.status}</Badge>
+                )}
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <div className="flex gap-2">
@@ -731,9 +785,9 @@ export function OrderDetailClient({ orderId, initialOrder }: { orderId: string; 
                 <div className="flex gap-2">
                   <Truck className="w-4 h-4 text-gray-400" />
                   <span className="text-gray-600">
-                    {addr.deliveryMethod === "STANDARD"
+                    {addr.deliveryMethod === "Standard"
                       ? "Standard Delivery"
-                      : addr.deliveryMethod === "EXPRESS"
+                      : addr.deliveryMethod === "Express"
                         ? "Express Delivery"
                         : addr.deliveryMethod ?? "Pickup"}
                     {order.estimatedDelivery &&
@@ -744,6 +798,196 @@ export function OrderDetailClient({ orderId, initialOrder }: { orderId: string; 
                   <div className="flex gap-2">
                     <Package className="w-4 h-4 text-gray-400" />
                     <span className="font-mono text-sm">{order.trackingNumber}</span>
+                  </div>
+                )}
+                {order.delivery?.failureReason && (
+                  <p className="text-amber-700 text-xs">Failed: {order.delivery.failureReason}</p>
+                )}
+                {order.delivery && ["PENDING", "DISPATCHED", "IN_TRANSIT"].includes(order.delivery.status) && (
+                  <div className="pt-4 border-t space-y-3">
+                    {order.delivery.status === "PENDING" && (
+                      <>
+                        <div className="flex gap-2 flex-wrap items-center">
+                          <Input
+                            placeholder="Tracking number"
+                            value={deliveryTracking}
+                            onChange={(e) => setDeliveryTracking(e.target.value)}
+                            className="max-w-[200px] h-8 text-sm"
+                          />
+                          <select
+                            value={deliveryCourierId}
+                            onChange={(e) => setDeliveryCourierId(e.target.value)}
+                            className="border rounded px-2 py-1.5 text-sm h-8 max-w-[180px]"
+                          >
+                            <option value="">Select courier</option>
+                            {couriers.map((c) => (
+                              <option key={c.id} value={c.id}>{c.name}</option>
+                            ))}
+                          </select>
+                          <Button
+                            size="sm"
+                            disabled={deliveryUpdateLoading}
+                            onClick={async () => {
+                              setDeliveryUpdateLoading(true);
+                              try {
+                                const res = await fetch(`/api/admin/deliveries/${order.delivery!.id}`, {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    status: "DISPATCHED",
+                                    trackingNumber: deliveryTracking.trim() || undefined,
+                                    assignedCourierId: deliveryCourierId || null,
+                                  }),
+                                });
+                                if (!res.ok) throw new Error("Failed");
+                                setDeliveryTracking("");
+                                setDeliveryCourierId("");
+                                await fetchOrder();
+                                fetchTimeline();
+                                router.refresh();
+                              } catch {
+                                alert("Failed to mark dispatched");
+                              }
+                              setDeliveryUpdateLoading(false);
+                            }}
+                          >
+                            Mark Dispatched
+                          </Button>
+                        </div>
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Failure reason (if failed)"
+                            value={deliveryFailureReason}
+                            onChange={(e) => setDeliveryFailureReason(e.target.value)}
+                            className="max-w-[220px] h-8 text-sm"
+                          />
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            disabled={deliveryUpdateLoading}
+                            onClick={async () => {
+                              setDeliveryUpdateLoading(true);
+                              try {
+                                const res = await fetch(`/api/admin/deliveries/${order.delivery!.id}`, {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    status: "FAILED",
+                                    failureReason: deliveryFailureReason.trim() || undefined,
+                                  }),
+                                });
+                                if (!res.ok) throw new Error("Failed");
+                                setDeliveryFailureReason("");
+                                await fetchOrder();
+                                fetchTimeline();
+                                router.refresh();
+                              } catch {
+                                alert("Failed to mark failed");
+                              }
+                              setDeliveryUpdateLoading(false);
+                            }}
+                          >
+                            Mark Failed
+                          </Button>
+                        </div>
+                        <div className="flex gap-2 items-center flex-wrap">
+                          <input
+                            type="date"
+                            value={deliveryRescheduleTo}
+                            onChange={(e) => setDeliveryRescheduleTo(e.target.value)}
+                            className="border rounded px-2 py-1.5 text-sm h-8"
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={deliveryUpdateLoading || !deliveryRescheduleTo}
+                            onClick={async () => {
+                              setDeliveryUpdateLoading(true);
+                              try {
+                                const res = await fetch(`/api/admin/deliveries/${order.delivery!.id}`, {
+                                  method: "PATCH",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    rescheduledTo: new Date(deliveryRescheduleTo).toISOString(),
+                                  }),
+                                });
+                                if (!res.ok) throw new Error("Failed");
+                                setDeliveryRescheduleTo("");
+                                await fetchOrder();
+                                router.refresh();
+                              } catch {
+                                alert("Failed to reschedule");
+                              }
+                              setDeliveryUpdateLoading(false);
+                            }}
+                          >
+                            Reschedule
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                    {(order.delivery.status === "DISPATCHED" || order.delivery.status === "IN_TRANSIT") && (
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700"
+                          disabled={deliveryUpdateLoading}
+                          onClick={async () => {
+                            setDeliveryUpdateLoading(true);
+                            try {
+                              const res = await fetch(`/api/admin/deliveries/${order.delivery!.id}`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ status: "DELIVERED" }),
+                              });
+                              if (!res.ok) throw new Error("Failed");
+                              await fetchOrder();
+                              fetchTimeline();
+                              router.refresh();
+                            } catch {
+                              alert("Failed to mark delivered");
+                            }
+                            setDeliveryUpdateLoading(false);
+                          }}
+                        >
+                          Mark Delivered
+                        </Button>
+                        <Input
+                          placeholder="Failure reason"
+                          value={deliveryFailureReason}
+                          onChange={(e) => setDeliveryFailureReason(e.target.value)}
+                          className="max-w-[180px] h-8 text-sm"
+                        />
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          disabled={deliveryUpdateLoading}
+                          onClick={async () => {
+                            setDeliveryUpdateLoading(true);
+                            try {
+                              const res = await fetch(`/api/admin/deliveries/${order.delivery!.id}`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  status: "FAILED",
+                                  failureReason: deliveryFailureReason.trim() || undefined,
+                                }),
+                              });
+                              if (!res.ok) throw new Error("Failed");
+                              setDeliveryFailureReason("");
+                              await fetchOrder();
+                              fetchTimeline();
+                              router.refresh();
+                            } catch {
+                              alert("Failed to mark failed");
+                            }
+                            setDeliveryUpdateLoading(false);
+                          }}
+                        >
+                          Mark Failed
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>

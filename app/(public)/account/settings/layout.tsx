@@ -9,6 +9,7 @@ import {
   MapPin,
   CreditCard,
   Building2,
+  ShieldCheck,
 } from "lucide-react";
 
 const CUSTOMER_SETTINGS_NAV = [
@@ -18,6 +19,7 @@ const CUSTOMER_SETTINGS_NAV = [
   { href: "/account/settings/addresses", label: "Addresses", icon: MapPin },
   { href: "/account/settings/payment-methods", label: "Payment Methods", icon: CreditCard },
   { href: "/account/settings/corporate", label: "Corporate Account", icon: Building2 },
+  { href: "/account/settings/privacy", label: "Privacy & data", icon: ShieldCheck },
 ];
 
 export default async function CustomerSettingsLayout({

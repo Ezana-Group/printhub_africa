@@ -145,6 +145,25 @@ export const authOptions: NextAuthOptions = {
         const role = (user as { role?: string }).role ?? "CUSTOMER";
         token.role = role;
       }
+      // Corporate: add corporate membership to token for approved accounts
+      const userId = token.id as string;
+      if (userId) {
+        const membership = await prisma.corporateTeamMember.findFirst({
+          where: { userId, isActive: true },
+          include: { corporate: { select: { id: true, status: true, tier: true } } },
+        });
+        if (membership?.corporate?.status === "APPROVED") {
+          token.isCorporate = true;
+          token.corporateId = membership.corporateId;
+          token.corporateRole = membership.role;
+          token.corporateTier = membership.corporate.tier;
+        } else {
+          token.isCorporate = false;
+          token.corporateId = undefined;
+          token.corporateRole = undefined;
+          token.corporateTier = undefined;
+        }
+      }
       // STAFF: use cached permissions (5 min TTL) to avoid DB on every request; invalidate via invalidateStaffPermissionsCache when admin changes permissions
       const role = token.role as string;
       if (role === "STAFF" && token.id) {
@@ -171,6 +190,10 @@ export const authOptions: NextAuthOptions = {
         (session.user as { id?: string }).id = token.id as string;
         (session.user as { role?: string }).role = token.role as string;
         (session.user as { permissions?: string[] }).permissions = token.permissions as string[] | undefined;
+        (session.user as { isCorporate?: boolean }).isCorporate = token.isCorporate as boolean | undefined;
+        (session.user as { corporateId?: string }).corporateId = token.corporateId as string | undefined;
+        (session.user as { corporateRole?: string }).corporateRole = token.corporateRole as string | undefined;
+        (session.user as { corporateTier?: string }).corporateTier = token.corporateTier as string | undefined;
       }
       return session;
     },

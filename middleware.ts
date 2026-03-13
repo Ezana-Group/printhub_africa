@@ -56,12 +56,23 @@ function checkApiOrigin(req: Request): NextResponse | null {
 }
 
 function innerMiddleware(req: Request) {
-  const token = (req as Request & { nextauth?: { token?: { role?: string } } }).nextauth?.token;
+  const token = (req as Request & { nextauth?: { token?: { role?: string; isCorporate?: boolean } } }).nextauth?.token;
   const path = new URL(req.url).pathname;
 
   if (path.startsWith("/admin")) {
     if (!token?.role || !ADMIN_ROLES.includes(token.role)) {
       return NextResponse.redirect(new URL("/login", req.url));
+    }
+  }
+
+  // Corporate portal: require auth; if not a corporate member, redirect to apply
+  const isCorporateApply = path.startsWith("/corporate/apply") || path.startsWith("/corporate/invite");
+  if (path.startsWith("/corporate") && !isCorporateApply) {
+    if (!token) {
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
+    if (!token.isCorporate) {
+      return NextResponse.redirect(new URL("/corporate/apply", req.url));
     }
   }
 
@@ -91,6 +102,12 @@ export default withAuth(
         if (path.startsWith("/account")) {
           return !!token;
         }
+        if (path.startsWith("/corporate")) {
+          if (path.startsWith("/corporate/apply") || path.startsWith("/corporate/invite")) {
+            return true; // apply and invite pages: allow (apply may require login in page)
+          }
+          return !!token;
+        }
         return true;
       },
     },
@@ -102,6 +119,7 @@ export const config = {
   matcher: [
     "/admin/:path*",
     "/account/:path*",
+    "/corporate/:path*",
     "/api/:path*",
   ],
 };

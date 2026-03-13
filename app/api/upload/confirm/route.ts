@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getObjectBuffer, headObject, publicFileUrl } from "@/lib/r2";
 import { scanFile } from "@/lib/virustotal";
+import { validateLargeFormatImage } from "@/lib/file-validation/large-format";
+import { validateStl } from "@/lib/file-validation/stl";
 import type { UploadedFile } from "@prisma/client";
+
+const VALIDATION_MAX_BYTES = 50 * 1024 * 1024;
 
 const VT_MAX_BYTES = 32 * 1024 * 1024;
 
@@ -114,6 +118,22 @@ export async function POST(req: Request) {
 
   processUploadAsync(updated).catch((e) => console.error("processUploadAsync", e));
 
+  let validation: { ok: boolean; errors: string[]; warnings: string[] } | undefined;
+  if (updated.size <= VALIDATION_MAX_BYTES && updated.storageKey) {
+    const buf = await getObjectBuffer(bucket, updated.storageKey);
+    if (buf) {
+      const mt = (updated.mimeType ?? "").toLowerCase();
+      const name = updated.originalName ?? "";
+      if (mt.startsWith("image/") && mt !== "image/svg+xml") {
+        const res = await validateLargeFormatImage(buf, name);
+        validation = { ok: res.ok, errors: res.errors, warnings: res.warnings };
+      } else if (mt === "model/stl" || (mt === "application/octet-stream" && /\.stl$/i.test(name))) {
+        const res = await validateStl(buf, name);
+        validation = { ok: res.ok, errors: res.errors, warnings: res.warnings };
+      }
+    }
+  }
+
   return NextResponse.json({
     success: true,
     file: {
@@ -125,5 +145,6 @@ export async function POST(req: Request) {
       size: updated.size,
       mimeType: updated.mimeType,
     },
+    ...(validation && { validation }),
   });
 }

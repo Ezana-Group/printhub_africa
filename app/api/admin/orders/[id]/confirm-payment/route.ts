@@ -4,6 +4,9 @@ import { sendOrderConfirmationEmail, sendPaymentRejectedEmail } from "@/lib/emai
 import { z } from "zod";
 import { requireAdminApi } from "@/lib/admin-api-guard";
 import { writeAudit } from "@/lib/audit";
+import { createInvoiceForOrder } from "@/lib/invoice-create";
+import { decrementStockForOrder } from "@/lib/stock";
+import { addOrderToProductionQueue } from "@/lib/production-queue";
 
 const schema = z.object({
   action: z.enum(["CONFIRM", "REJECT"]),
@@ -85,6 +88,22 @@ export async function POST(
       details: `Manual payment confirmed for order ${order.orderNumber}`,
       request: req,
     });
+
+    try {
+      await createInvoiceForOrder(orderId, latestPayment.id);
+    } catch (e) {
+      console.error("Invoice create on confirm-payment:", e);
+    }
+    try {
+      await decrementStockForOrder(orderId);
+    } catch (e) {
+      console.error("Stock decrement on confirm-payment:", e);
+    }
+    try {
+      await addOrderToProductionQueue(orderId);
+    } catch (e) {
+      console.error("Production queue add on confirm-payment:", e);
+    }
 
     return NextResponse.json({ success: true });
   }

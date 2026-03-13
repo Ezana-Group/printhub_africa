@@ -14,6 +14,12 @@ import {
 
 // ── TYPES ────────────────────────────────────────────────────────
 
+export interface FileValidationResult {
+  ok: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
 export interface UploadedFileResult {
   uploadId: string;
   storageKey: string;
@@ -22,6 +28,7 @@ export interface UploadedFileResult {
   mimeType: string;
   previewUrl?: string;
   publicUrl?: string;
+  validation?: FileValidationResult;
 }
 
 export interface FileUploaderProps {
@@ -201,6 +208,7 @@ export function FileUploader({
           body: JSON.stringify({ uploadId, storageKey }),
         });
         if (!confirmRes.ok) throw new Error("Upload confirmation failed");
+        const confirmData = await confirmRes.json();
 
         const result: UploadedFileResult = {
           uploadId,
@@ -215,6 +223,7 @@ export function FileUploader({
             bucket === "public" && process.env.NEXT_PUBLIC_R2_PUBLIC_URL
               ? `${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/${storageKey}`
               : undefined,
+          validation: confirmData.validation,
         };
 
         update({ state: "done", progress: 100, result });
@@ -474,6 +483,25 @@ function FileEntryRow({
               <span className="text-xs text-green-700 font-medium">
                 Uploaded successfully
               </span>
+            </div>
+          )}
+
+          {entry.state === "done" && entry.result?.validation && (
+            <div className="mt-1.5 space-y-0.5">
+              {entry.result.validation.errors.length > 0 && (
+                <ul className="text-xs text-red-600 list-disc list-inside">
+                  {entry.result.validation.errors.map((msg, i) => (
+                    <li key={i}>{msg}</li>
+                  ))}
+                </ul>
+              )}
+              {entry.result.validation.warnings.length > 0 && (
+                <ul className="text-xs text-amber-600 list-disc list-inside">
+                  {entry.result.validation.warnings.map((msg, i) => (
+                    <li key={i}>{msg}</li>
+                  ))}
+                </ul>
+              )}
             </div>
           )}
 

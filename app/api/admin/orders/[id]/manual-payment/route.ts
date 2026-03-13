@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { requireAdminApi } from "@/lib/admin-api-guard";
 import { writeAudit } from "@/lib/audit";
+import { createInvoiceForOrder } from "@/lib/invoice-create";
+import { decrementStockForOrder } from "@/lib/stock";
 
 const schema = z.object({
   method: z.enum(["MPESA_MANUAL", "CASH", "BANK_TRANSFER", "OTHER"]),
@@ -50,6 +52,17 @@ export async function POST(
     details: `Manual payment: ${method}, ref: ${reference ?? "—"}, amount: KSh ${amountKes}`,
     request: req,
   });
+
+  try {
+    await createInvoiceForOrder(id);
+  } catch (e) {
+    console.error("Invoice create on manual-payment:", e);
+  }
+  try {
+    await decrementStockForOrder(id);
+  } catch (e) {
+    console.error("Stock decrement on manual-payment:", e);
+  }
 
   return NextResponse.json({ success: true });
 }

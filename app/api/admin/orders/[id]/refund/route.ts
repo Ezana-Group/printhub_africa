@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { requireAdminApi } from "@/lib/admin-api-guard";
 import { createTrackingEvent } from "@/lib/tracking";
+import { restoreStockForOrder } from "@/lib/stock";
+import { getNextRefundNumber } from "@/lib/next-invoice-number";
 
 const refundSchema = z.object({
   amount: z.number().min(0.01),
@@ -45,9 +47,11 @@ export async function POST(
       );
     }
     const refundStatus = markCompleted ? "COMPLETED" : "PENDING";
+    const refundNumber = await getNextRefundNumber();
     const refund = await prisma.refund.create({
       data: {
         orderId,
+        refundNumber,
         amount,
         reason: reason ?? null,
         status: refundStatus,
@@ -70,6 +74,11 @@ export async function POST(
         paymentStatus: "REFUNDED",
       },
     });
+    try {
+      await restoreStockForOrder(orderId);
+    } catch (e) {
+      console.error("Stock restore on refund:", e);
+    }
     await createTrackingEvent(orderId, "REFUNDED", {
       description: reason ?? `Refund of KES ${amount.toLocaleString()} has been processed.`,
       createdBy: session.user?.id,

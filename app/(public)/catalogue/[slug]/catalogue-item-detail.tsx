@@ -59,13 +59,12 @@ interface Item {
 }
 
 interface CatalogueItemDetailProps {
-  slugPromise: Promise<string>;
+  slug: string;
 }
 
-export function CatalogueItemDetail({ slugPromise }: CatalogueItemDetailProps) {
+export function CatalogueItemDetail({ slug }: CatalogueItemDetailProps) {
   const router = useRouter();
   const addItem = useCartStore((s) => s.addItem);
-  const [slug, setSlug] = useState<string | null>(null);
   const [item, setItem] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -76,25 +75,29 @@ export function CatalogueItemDetail({ slugPromise }: CatalogueItemDetailProps) {
   const [addingToCart, setAddingToCart] = useState(false);
 
   useEffect(() => {
-    slugPromise.then(setSlug);
-  }, [slugPromise]);
-
-  useEffect(() => {
-    if (!slug) return;
+    if (!slug) {
+      setLoading(false);
+      setError(true);
+      return;
+    }
     setLoading(true);
     setError(false);
-    fetch(`/api/catalogue/${slug}`)
+    fetch(`/api/catalogue/${encodeURIComponent(slug)}`)
       .then((r) => {
         if (!r.ok) throw new Error("Not found");
         return r.json();
       })
       .then((data) => {
-        setItem(data);
-        const defaultMat = data.availableMaterials?.find((m: MaterialOption) => m.isDefault) ?? data.availableMaterials?.[0];
-        setSelectedMaterial(defaultMat ?? null);
-        if (defaultMat?.availableColours?.length) {
-          setSelectedColour(defaultMat.availableColours[0]);
+        if (data?.error) {
+          setError(true);
+          return;
         }
+        setItem(data);
+        const materials = Array.isArray(data?.availableMaterials) ? data.availableMaterials : [];
+        const defaultMat = materials.find((m: MaterialOption) => m.isDefault) ?? materials[0];
+        setSelectedMaterial(defaultMat ?? null);
+        const colours = defaultMat && Array.isArray(defaultMat.availableColours) ? defaultMat.availableColours : [];
+        if (colours.length) setSelectedColour(colours[0]);
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -132,7 +135,7 @@ export function CatalogueItemDetail({ slugPromise }: CatalogueItemDetailProps) {
     }
   };
 
-  if (loading || !slug) {
+  if (loading && !item) {
     return (
       <div className="container max-w-7xl mx-auto px-4 py-8">
         <div className="animate-pulse grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -158,7 +161,7 @@ export function CatalogueItemDetail({ slugPromise }: CatalogueItemDetailProps) {
     );
   }
 
-  const photos = item.photos?.length ? item.photos : [];
+  const photos = Array.isArray(item.photos) ? item.photos : [];
   const primaryPhoto = photos[primaryPhotoIndex] ?? photos[0];
 
   return (
@@ -215,7 +218,7 @@ export function CatalogueItemDetail({ slugPromise }: CatalogueItemDetailProps) {
               <div>
                 <p className="text-sm font-medium text-slate-700">Material</p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {item.availableMaterials.map((m) => (
+                  {(Array.isArray(item.availableMaterials) ? item.availableMaterials : []).map((m) => (
                     <Button
                       key={m.id}
                       variant={selectedMaterial?.id === m.id ? "default" : "outline"}
@@ -233,11 +236,11 @@ export function CatalogueItemDetail({ slugPromise }: CatalogueItemDetailProps) {
                 </div>
               </div>
 
-              {selectedMaterial && selectedMaterial.availableColours?.length > 0 && (
+              {selectedMaterial && Array.isArray(selectedMaterial.availableColours) && selectedMaterial.availableColours.length > 0 && (
                 <div>
                   <p className="text-sm font-medium text-slate-700">Colour</p>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {selectedMaterial.availableColours.map((hex) => (
+                    {selectedMaterial.availableColours.map((hex: string) => (
                       <button
                         key={hex}
                         type="button"

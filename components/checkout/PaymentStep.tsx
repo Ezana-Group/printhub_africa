@@ -157,7 +157,16 @@ export function PaymentStep({
     }
   };
 
-  const methods = [
+  type MethodItem = {
+    id: string;
+    icon: React.ComponentType<{ className?: string }>;
+    label: string;
+    desc: string;
+    color: string;
+    bg: string;
+    comingSoon?: boolean;
+  };
+  const methods: MethodItem[] = [
     {
       id: "mpesa_stk",
       icon: Smartphone,
@@ -167,12 +176,22 @@ export function PaymentStep({
       bg: "bg-green-50",
     },
     {
+      id: "airtel_money",
+      icon: Smartphone,
+      label: "Airtel Money",
+      desc: "Coming soon",
+      color: "text-red-600",
+      bg: "bg-red-50",
+      comingSoon: true,
+    },
+    {
       id: "mpesa_paybill",
       icon: Building2,
       label: "Paybill / Till",
       desc: "Pay manually, enter reference",
       color: "text-green-700",
       bg: "bg-green-50",
+      comingSoon: false,
     },
     {
       id: "card",
@@ -181,6 +200,7 @@ export function PaymentStep({
       desc: "Visa or Mastercard via Pesapal",
       color: "text-blue-600",
       bg: "bg-blue-50",
+      comingSoon: false,
     },
     {
       id: "pickup",
@@ -189,6 +209,7 @@ export function PaymentStep({
       desc: "Pay cash when you collect",
       color: "text-amber-600",
       bg: "bg-amber-50",
+      comingSoon: false,
     },
   ];
 
@@ -204,16 +225,20 @@ export function PaymentStep({
           <button
             key={m.id}
             type="button"
+            disabled={m.comingSoon}
             onClick={() => {
+              if (m.comingSoon) return;
               setMethod(m.id);
               setStkSent(false);
               setStkFailed(false);
               setManualRef("");
             }}
             className={`rounded-xl border-2 p-4 text-left transition ${
-              method === m.id
-                ? "border-primary bg-primary/5"
-                : "border-border hover:border-muted-foreground/30"
+              m.comingSoon
+                ? "cursor-not-allowed border-border bg-muted/30 opacity-75"
+                : method === m.id
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:border-muted-foreground/30"
             }`}
           >
             <div className={`mb-2 flex h-9 w-9 items-center justify-center rounded-lg ${m.bg}`}>

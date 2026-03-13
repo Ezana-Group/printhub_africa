@@ -53,8 +53,10 @@ model User {
   couponUsages     CouponUsage[]
   wishlists        Wishlist[]
   notifications    Notification[]
-  corporateAccount CorporateAccount?
-  staff            Staff?
+  primaryCorporateAccount  CorporateAccount?       @relation("CorporatePrimaryContact")
+  corporateTeamMemberships CorporateTeamMember[]
+  corporateApplications    CorporateApplication[]
+  staff                    Staff?
   supportTickets   SupportTicket[]
   ticketMessages   TicketMessage[]
   auditLogs        AuditLog[]
@@ -507,6 +509,19 @@ model Order {
   pickupLocation   PickupLocation? @relation(fields: [pickupLocationId], references: [id])
   courierId        String?   // Customer's preferred courier location (from checkout) or assigned courier
   courier          Courier? @relation(fields: [courierId], references: [id])
+  deliveryZoneId   String?   // Zone used for shipping fee (STANDARD/EXPRESS)
+  deliveryZone     DeliveryZone? @relation(fields: [deliveryZoneId], references: [id])
+  delivery         Delivery? // Full delivery record (status, dispatched, proof, etc.)
+
+  corporateId         String?
+  corporate           CorporateAccount? @relation(fields: [corporateId], references: [id])
+  poReference         String?
+  corporatePOId       String?
+  corporatePO         CorporatePO?      @relation(fields: [corporatePOId], references: [id])
+  corporateInvoiceId  String?
+  corporateInvoice    CorporateInvoice? @relation(fields: [corporateInvoiceId], references: [id])
+  placedBy            String?
+  isNetTerms          Boolean           @default(false)
 
   items              OrderItem[]
   timeline           OrderTimeline[]
@@ -515,6 +530,7 @@ model Order {
   payments           Payment[]
   refunds            Refund[]
   invoices           Invoice[]
+  cancellation       Cancellation?
 }
 
 model OrderItem {
@@ -583,22 +599,74 @@ model ShippingAddress {
 }
 
 model Refund {
-  id          String    @id @default(cuid())
-  orderId     String
-  order       Order     @relation(fields: [orderId], references: [id])
-  amount      Decimal   @db.Decimal(12, 2)
-  reason      String?
-  status      String // PENDING, COMPLETED, FAILED
-  processedBy String?
-  processedAt DateTime?
-  createdAt   DateTime  @default(now())
+  id             String    @id @default(cuid())
+  orderId        String
+  order          Order     @relation(fields: [orderId], references: [id])
+  refundNumber   String?   @unique // REF-00001
+  amount         Decimal   @db.Decimal(12, 2)
+  reason         String?
+  status         String    // PENDING, APPROVED, REJECTED, COMPLETED, FAILED
+  processedBy    String?
+  processedAt    DateTime?
+  reviewedBy     String?
+  rejectionReason String?
+  mpesaPhone           String?
+  mpesaReceiptNo       String?
+  mpesaConversationId  String?   // B2C callback matching
+  createdAt            DateTime  @default(now())
 
   @@index([orderId])
+  @@index([status])
+}
+
+model Cancellation {
+  id           String   @id @default(cuid())
+  orderId      String   @unique
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  reason       String
+  cancelledBy  String?  // userId or "admin"
+  createdAt    DateTime @default(now())
+
+  @@index([orderId])
+}
+
+// Delivery & logistics — one per order when shipping (STANDARD/EXPRESS)
+enum DeliveryStatus {
+  PENDING
+  DISPATCHED
+  IN_TRANSIT
+  DELIVERED
+  FAILED
+}
+
+model Delivery {
+  id                 String         @id @default(cuid())
+  orderId            String         @unique
+  order              Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  deliveryZoneId     String?
+  deliveryZone       DeliveryZone?  @relation(fields: [deliveryZoneId], references: [id])
+  method             String         // STANDARD | EXPRESS
+  status             DeliveryStatus @default(PENDING)
+  estimatedDelivery  DateTime?
+  dispatchedAt       DateTime?
+  deliveredAt        DateTime?
+  assignedCourierId  String?
+  assignedCourier    Courier?       @relation(fields: [assignedCourierId], references: [id])
+  trackingNumber     String?
+  proofPhotoKey      String?
+  failureReason      String?
+  rescheduledTo      DateTime?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  @@index([status])
+  @@index([deliveryZoneId])
 }
 
 // ============== PAYMENTS ==============
 enum PaymentProvider {
   MPESA
+  AIRTEL_MONEY
   PESAPAL
   FLUTTERWAVE
   STRIPE
@@ -717,10 +785,21 @@ model Invoice {
   issuedAt      DateTime  @default(now())
   dueAt         DateTime?
   pdfUrl        String?
+  pdfKey        String?   // R2/storage key for generated PDF
   vatAmount     Decimal   @db.Decimal(12, 2)
   totalAmount   Decimal   @db.Decimal(12, 2)
+  subtotal      Decimal?  @db.Decimal(12, 2)
+  sentAt        DateTime?
+  sentBy        String?
 
   @@index([orderId])
+}
+
+// Sequence counters for INV-00001, QUO-00001
+model Counter {
+  id    String @id // "invoice" | "quote_pdf"
+  value Int    @default(0)
+  updatedAt DateTime @updatedAt
 }
 
 // ============== CUSTOM FILE UPLOADS ==============
@@ -899,12 +978,25 @@ model Quote {
   updatedAt         DateTime         @updatedAt
 
   uploadedFiles     UploadedFile[]
+  quotePdfs         QuotePdf[]
 
   @@index([customerId])
   @@index([assignedStaffId])
   @@index([status])
   @@index([type])
   @@index([createdAt])
+}
+
+model QuotePdf {
+  id          String   @id @default(cuid())
+  quoteId     String
+  quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  pdfKey      String   // R2/storage key
+  pdfUrl      String?
+  generatedAt DateTime @default(now())
+  sentAt      DateTime?
+
+  @@index([quoteId])
 }
 
 // ============== MARKETING & CRM ==============
@@ -966,15 +1058,24 @@ model Wishlist {
 }
 
 model Cart {
-  id        String   @id @default(cuid())
-  userId    String?
-  sessionId String? // for guests
-  items     Json // array of { productId, variantId, quantity, customizations }
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                    String    @id @default(cuid())
+  userId                String?
+  sessionId             String?   // for guests
+  email                 String?
+  phone                 String?
+  items                 Json     // array of { productId, variantId, quantity, customizations }
+  lastActivityAt        DateTime? @default(now())
+  recoveryEmailSent1At  DateTime?
+  recoveryEmailSent2At  DateTime?
+  recoveryOptOutAt      DateTime? // user opted out of abandoned-cart emails
+  convertedAt           DateTime? // set when order placed
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   @@index([userId])
   @@index([sessionId])
+  @@index([convertedAt])
+  @@index([lastActivityAt])
 }
 
 model Notification {
@@ -993,29 +1094,307 @@ model Notification {
 
 // ============== B2B / CORPORATE ==============
 enum PaymentTerms {
+  PREPAID
+  ON_DELIVERY
+  NET_14
   NET_30
   NET_60
-  PREPAID
+}
+
+enum CorporateIndustry {
+  ADVERTISING_MARKETING
+  ARCHITECTURE_CONSTRUCTION
+  EDUCATION
+  EVENTS_HOSPITALITY
+  FINANCIAL_SERVICES
+  GOVERNMENT
+  HEALTHCARE
+  LOGISTICS_TRANSPORT
+  MANUFACTURING
+  NGO_NONPROFIT
+  REAL_ESTATE
+  RETAIL_ECOMMERCE
+  TECHNOLOGY
+  MEDIA_PUBLISHING
+  OTHER
+}
+
+enum CompanySize {
+  SOLO
+  SMALL
+  MEDIUM
+  LARGE
+  ENTERPRISE
+}
+
+enum CorporateStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+  CLOSED
+}
+
+enum CorporateTier {
+  STANDARD
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+enum CorporateRole {
+  OWNER
+  ADMIN
+  FINANCE
+  MEMBER
+}
+
+enum AssetCategory {
+  LOGO
+  BRAND_GUIDELINES
+  LETTERHEAD
+  COLOUR_PALETTE
+  FONTS
+  PHOTOGRAPHY
+  ILLUSTRATIONS
+  TEMPLATES
+  OTHER
+}
+
+enum POStatus {
+  OPEN
+  PARTIAL
+  FULFILLED
+  CANCELLED
+}
+
+enum CorporateInvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  VOID
+}
+
+enum CorporateApplicationStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
 }
 
 model CorporateAccount {
-  id           String        @id @default(cuid())
-  userId       String        @unique
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  companyName  String
-  kraPin       String?
-  industry     String?
-  creditLimit  Decimal?      @db.Decimal(12, 2)
-  paymentTerms PaymentTerms? @default(PREPAID)
-  isApproved   Boolean       @default(false)
-  approvedBy   String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id                  String              @id @default(cuid())
+  accountNumber       String              @unique
+  companyName         String
+  tradingName         String?
+  kraPin              String              @unique
+  vatNumber           String?
+  industry            CorporateIndustry
+  companySize         CompanySize
+  website             String?
+
+  primaryUserId       String              @unique
+  primaryUser         User                @relation("CorporatePrimaryContact", fields: [primaryUserId], references: [id])
+
+  billingAddress      String
+  billingCity         String
+  billingCounty       String
+  billingPostalCode   String?
+
+  physicalAddress     String?
+  physicalCity        String?
+  physicalCounty      String?
+
+  paymentTerms        PaymentTerms        @default(PREPAID)
+  creditLimit         Int                 @default(0)
+  creditUsed          Int                 @default(0)
+  discountPercent     Int                 @default(0)
+  taxExempt           Boolean             @default(false)
+
+  status              CorporateStatus     @default(PENDING)
+  tier                CorporateTier       @default(STANDARD)
+  accountManagerId    String?
+  approvedBy          String?
+  approvedAt          DateTime?
+  rejectedAt          DateTime?
+  rejectedReason      String?
+  suspendedAt         DateTime?
+  suspendedReason     String?
+  estimatedMonthlySpend String?
+
+  teamMembers         CorporateTeamMember[]
+  brandAssets         CorporateBrandAsset[]
+  orders              Order[]
+  invoices            CorporateInvoice[]
+  purchaseOrders      CorporatePO[]
+  notes               CorporateNote[]
+  applications        CorporateApplication[]
+  bulkQuotes          BulkQuote[]
+
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@index([status])
+  @@index([kraPin])
+}
+
+model CorporateTeamMember {
+  id              String            @id @default(cuid())
+  corporateId     String
+  corporate       CorporateAccount  @relation(fields: [corporateId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User              @relation(fields: [userId], references: [id])
+  role            CorporateRole     @default(MEMBER)
+  jobTitle        String?
+  department      String?
+  canPlaceOrders  Boolean           @default(true)
+  canViewInvoices Boolean           @default(false)
+  canManageTeam   Boolean           @default(false)
+  spendingLimit   Int?
+  isActive        Boolean           @default(true)
+  invitedBy       String?
+  invitedAt       DateTime          @default(now())
+  acceptedAt      DateTime?
+
+  @@unique([corporateId, userId])
+  @@index([corporateId])
+}
+
+model CorporateBrandAsset {
+  id              String            @id @default(cuid())
+  corporateId     String
+  corporate       CorporateAccount  @relation(fields: [corporateId], references: [id], onDelete: Cascade)
+  uploadedBy      String
+  name            String
+  description     String?
+  category        AssetCategory
+  fileUrl         String
+  fileKey         String
+  fileName        String
+  fileSize        Int
+  mimeType        String
+  thumbnailUrl    String?
+  tags            String[]
+  isActive        Boolean           @default(true)
+  downloadCount   Int               @default(0)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([corporateId])
+}
+
+model CorporatePO {
+  id              String            @id @default(cuid())
+  corporateId     String
+  corporate       CorporateAccount  @relation(fields: [corporateId], references: [id])
+  poNumber        String
+  description     String?
+  amount          Int
+  orders          Order[]
+  status          POStatus          @default(OPEN)
+  expiresAt       DateTime?
+  createdAt       DateTime          @default(now())
+
+  @@unique([corporateId, poNumber])
+  @@index([corporateId])
+}
+
+model CorporateInvoice {
+  id              String                @id @default(cuid())
+  invoiceNumber   String                @unique
+  corporateId     String
+  corporate       CorporateAccount      @relation(fields: [corporateId], references: [id])
+  periodStart     DateTime
+  periodEnd       DateTime
+  orders          Order[]
+  subtotal        Int
+  vatAmount       Int
+  discountAmount  Int                   @default(0)
+  totalAmount     Int
+  dueAt           DateTime
+  status          CorporateInvoiceStatus @default(DRAFT)
+  pdfUrl          String?
+  pdfKey          String?
+  sentAt          DateTime?
+  paidAt          DateTime?
+  paymentRef      String?
+  notes           String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  @@index([corporateId])
+  @@index([status])
+}
+
+model CorporateApplication {
+  id                      String                      @id @default(cuid())
+  corporateId             String?
+  corporate               CorporateAccount?           @relation(fields: [corporateId], references: [id])
+  applicantUserId         String
+  applicant               User                        @relation(fields: [applicantUserId], references: [id])
+
+  companyName             String
+  tradingName             String?
+  kraPin                  String
+  vatNumber               String?
+  industry                CorporateIndustry
+  companySize             CompanySize
+  website                 String?
+  contactPerson           String
+  contactPhone            String
+  contactEmail            String
+  billingAddress          String
+  billingCity             String
+  billingCounty           String
+  estimatedMonthlySpend   String
+  creditRequested         Int?
+  paymentTermsRequested   PaymentTerms?
+  additionalNotes         String?
+
+  status                  CorporateApplicationStatus  @default(PENDING)
+  reviewedBy              String?
+  reviewedAt              DateTime?
+  rejectedReason          String?
+
+  createdAt               DateTime                    @default(now())
+  updatedAt               DateTime                    @updatedAt
+
+  @@index([applicantUserId])
+  @@index([status])
+}
+
+model CorporateNote {
+  id              String            @id @default(cuid())
+  corporateId     String
+  corporate       CorporateAccount  @relation(fields: [corporateId], references: [id], onDelete: Cascade)
+  authorId        String
+  body            String
+  createdAt       DateTime          @default(now())
+
+  @@index([corporateId])
+}
+
+model CorporateInvite {
+  id          String          @id @default(cuid())
+  corporateId String
+  email       String
+  role        CorporateRole
+  jobTitle    String?
+  invitedBy   String
+  token       String          @unique @default(cuid())
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime        @default(now())
+
+  @@index([corporateId])
+  @@index([email])
 }
 
 model BulkQuote {
   id            String    @id @default(cuid())
   corporateId   String
+  corporate     CorporateAccount @relation(fields: [corporateId], references: [id])
   items         Json
   totalEstimate Decimal?  @db.Decimal(12, 2)
   status        String
@@ -1311,15 +1690,22 @@ model AuditLog {
 }
 
 model SupportTicket {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orderId   String?
-  subject   String
-  status    String
-  priority  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String    @id @default(cuid())
+  ticketNumber String    @unique // e.g. TKT-00001
+  userId       String?   // null for guest tickets
+  user         User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  guestEmail   String?
+  guestName    String?
+  guestPhone   String?
+  orderId      String?
+  subject      String
+  status       String    // OPEN, IN_PROGRESS, RESOLVED, CLOSED
+  priority     String?   // LOW, MEDIUM, HIGH, URGENT
+  assignedTo   String?
+  resolvedAt   DateTime?
+  closedAt     DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   messages TicketMessage[]
 }
@@ -1328,12 +1714,13 @@ model TicketMessage {
   id          String        @id @default(cuid())
   ticketId    String
   ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  senderId    String
-  sender      User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
-  senderType  String // CUSTOMER, STAFF
-  message     String
+  senderId    String?   // null for system or guest (use ticket guest fields)
+  sender      User?     @relation(fields: [senderId], references: [id], onDelete: SetNull)
+  senderType  String    // CUSTOMER, STAFF, SYSTEM
+  message     String    @db.Text
   attachments String[]
-  createdAt   DateTime      @default(now())
+  isInternal  Boolean   @default(false)
+  createdAt   DateTime  @default(now())
 
   @@index([ticketId])
 }
@@ -1426,6 +1813,7 @@ model Courier {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   orders       Order[]
+  deliveries   Delivery[]
 }
 
 model DeliveryZone {
@@ -1442,6 +1830,9 @@ model DeliveryZone {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  orders    Order[]
+  deliveries Delivery[]
 }
 
 model PickupLocation {

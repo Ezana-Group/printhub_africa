@@ -225,9 +225,19 @@ export async function POST(req: Request) {
         },
       });
     } catch (dbErr) {
-      console.error("Presign DB error:", dbErr);
+      const err = dbErr as { code?: string; message?: string };
+      console.error("Presign DB error:", err?.code ?? "unknown", err?.message ?? dbErr);
+      const isConnection =
+        err?.code === "P1001" ||
+        err?.code === "P1002" ||
+        err?.code === "P1017" ||
+        err?.message?.toLowerCase().includes("connect") ||
+        err?.message?.toLowerCase().includes("reachable");
+      const message = isConnection
+        ? "Database is unreachable. Check DATABASE_URL and that the database is running (e.g. Neon, Supabase)."
+        : "Database error while saving upload record. Check server logs and that migrations are applied.";
       return NextResponse.json(
-        { error: "Database error. Check DATABASE_URL and that the database is reachable." },
+        { error: message, code: "UPLOAD_DB_ERROR" },
         { status: 503 }
       );
     }

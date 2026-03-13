@@ -431,7 +431,11 @@ export function QuoteDetailClient({
               </a>
             </p>
           )}
-          <p className="text-xs text-muted-foreground">Attach quote PDF via file upload (coming soon).</p>
+          <p className="text-xs text-muted-foreground">
+            <a href={`/api/quotes/${quoteId}/pdf`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+              Download / generate quote PDF
+            </a>
+          </p>
           <Button onClick={handleSendQuote} disabled={saving} className="bg-[#E8440A] hover:bg-[#E8440A]/90">
             Send quote
           </Button>

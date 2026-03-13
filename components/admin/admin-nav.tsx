@@ -23,6 +23,7 @@ import {
   Scale,
   Briefcase,
   Layers,
+  Truck,
 } from "lucide-react";
 import { canAccessRoute } from "@/lib/admin-permissions";
 import { cn } from "@/lib/utils";
@@ -44,7 +45,10 @@ const NAV_GROUPS: NavGroup[] = [
     label: "SHOP",
     items: [
       { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
+      { href: "/admin/deliveries", label: "Deliveries", icon: Truck },
+      { href: "/admin/support", label: "Support", icon: HelpCircle },
       { href: "/admin/products", label: "Products", icon: Package },
+      { href: "/admin/reviews", label: "Reviews", icon: BarChart3 },
       { href: "/admin/categories", label: "Categories", icon: FolderTree },
       { href: "/admin/catalogue", label: "Catalogue", icon: Layers },
     ],
@@ -61,6 +65,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "CUSTOMERS & SALES",
     items: [
       { href: "/admin/customers", label: "Customers", icon: Users },
+      { href: "/admin/corporate", label: "Corporate", icon: Handshake },
       { href: "/admin/corporate-accounts", label: "Corporate Accounts", icon: Handshake },
       { href: "/admin/reports/sales", label: "Sales Reports", icon: TrendingUp },
     ],
@@ -70,6 +75,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/inventory", label: "Inventory", icon: Warehouse },
       { href: "/admin/finance", label: "Finance", icon: DollarSign },
+      { href: "/admin/refunds", label: "Refunds", icon: DollarSign },
       { href: "/admin/marketing", label: "Marketing", icon: Megaphone },
     ],
   },

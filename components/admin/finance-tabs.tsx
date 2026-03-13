@@ -83,6 +83,12 @@ export function FinanceTabs({
         >
           Revenue
         </button>
+        <Link
+          href="/admin/finance/invoices"
+          className="px-3 py-2 text-sm font-medium border-b-2 -mb-px border-transparent text-muted-foreground hover:text-foreground"
+        >
+          Invoices
+        </Link>
       </div>
 
       {tab === "overview" && (

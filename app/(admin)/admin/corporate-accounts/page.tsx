@@ -7,7 +7,7 @@ export default async function AdminCorporateAccountsPage() {
   await requireAdminSection("/admin/corporate-accounts");
 
   const corporateAccounts = await prisma.corporateAccount.findMany({
-    include: { user: { select: { name: true, email: true } } },
+    include: { primaryUser: { select: { id: true, name: true, email: true } } },
     orderBy: { createdAt: "desc" },
   });
 
@@ -37,11 +37,11 @@ export default async function AdminCorporateAccountsPage() {
                   {corporateAccounts.map((acc) => (
                     <tr key={acc.id} className="border-b hover:bg-muted/30">
                       <td className="p-4 font-medium">{acc.companyName}</td>
-                      <td className="p-4">{acc.user?.name ?? acc.user?.email ?? "—"}</td>
+                      <td className="p-4">{acc.primaryUser?.name ?? acc.primaryUser?.email ?? "—"}</td>
                       <td className="p-4">{acc.creditLimit != null ? `KES ${Number(acc.creditLimit).toLocaleString("en-KE")}` : "—"}</td>
                       <td className="p-4">{acc.paymentTerms ?? "—"}</td>
                       <td className="p-4">
-                        <Link href={`/admin/customers/${acc.userId}`} className="text-primary hover:underline">
+                        <Link href={acc.primaryUserId ? `/admin/customers/${acc.primaryUserId}` : "#"} className="text-primary hover:underline">
                           View
                         </Link>
                       </td>

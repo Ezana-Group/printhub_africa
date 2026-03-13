@@ -35,6 +35,12 @@ const createOrderSchema = z.object({
   pickupLocationId: z.string().optional(),
   preferredCourierId: z.string().optional(),
   deliveryNotes: z.string().optional(),
+  deliveryZoneId: z.string().optional(),
+  estimatedDelivery: z.string().datetime().optional(),
+  cartId: z.string().optional(),
+  corporateId: z.string().optional(),
+  isNetTerms: z.boolean().optional(),
+  poReference: z.string().max(200).optional(),
 });
 
 export async function POST(req: Request) {
@@ -53,8 +59,10 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
-  const { items, shippingAddress: reqAddress, shippingCost: reqShipping = 0, discount: reqDiscount = 0, notes, pickupLocationId, preferredCourierId, deliveryNotes } = parsed.data;
+  const { items, shippingAddress: reqAddress, shippingCost: reqShipping = 0, discount: reqDiscount = 0, notes, pickupLocationId, preferredCourierId, deliveryNotes, deliveryZoneId: reqDeliveryZoneId, estimatedDelivery: reqEstimatedDelivery, cartId: reqCartId, corporateId: reqCorporateId, isNetTerms: reqIsNetTerms, poReference: reqPoReference } = parsed.data;
   const isPickup = reqAddress.deliveryMethod?.toLowerCase() === "pickup";
+  const isShipping = !isPickup && (reqAddress.deliveryMethod === "Standard" || reqAddress.deliveryMethod === "Express");
+  const deliveryMethod = reqAddress.deliveryMethod === "Express" ? "EXPRESS" : "STANDARD";
 
   let orderCourierId: string | null = null;
   if (preferredCourierId && !isPickup) {
@@ -79,16 +87,75 @@ export async function POST(req: Request) {
     }
   }
 
+  // Re-validate stock before creating order
+  for (const item of items) {
+    if (item.productId) {
+      let stock: number;
+      if (item.variantId) {
+        const variant = await prisma.productVariant.findUnique({
+          where: { id: item.variantId },
+          select: { stock: true },
+        });
+        if (!variant) {
+          return NextResponse.json({ error: "One or more items are no longer available." }, { status: 400 });
+        }
+        stock = variant.stock;
+      } else {
+        const product = await prisma.product.findUnique({
+          where: { id: item.productId },
+          select: { stock: true },
+        });
+        if (!product) {
+          return NextResponse.json({ error: "One or more products are no longer available." }, { status: 400 });
+        }
+        stock = product.stock;
+      }
+      if (item.quantity > stock) {
+        return NextResponse.json(
+          { error: `Insufficient stock for one or more items. Maximum available: ${stock}.` },
+          { status: 400 }
+        );
+      }
+    }
+  }
+
+  // Corporate: validate membership and apply discount
+  let orderCorporateId: string | null = null;
+  let orderIsNetTerms = false;
+  let orderPoReference: string | null = null;
+  let orderPlacedBy: string | null = session?.user?.id ?? null;
+  let effectiveDiscount = reqDiscount;
+
+  if (reqCorporateId && session?.user?.id) {
+    const membership = await prisma.corporateTeamMember.findFirst({
+      where: {
+        userId: session.user.id,
+        corporateId: reqCorporateId,
+        isActive: true,
+        corporate: { status: "APPROVED" },
+      },
+      include: { corporate: { select: { id: true, discountPercent: true, paymentTerms: true } } },
+    });
+    if (membership?.corporate) {
+      orderCorporateId = membership.corporate.id;
+      orderIsNetTerms = !!reqIsNetTerms;
+      orderPoReference = (reqPoReference?.trim() || null) ?? null;
+      const subtotalBeforeCorporate = items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+      const corporateDiscountKes = Math.round(subtotalBeforeCorporate * (membership.corporate.discountPercent / 100));
+      effectiveDiscount = reqDiscount + corporateDiscountKes;
+    }
+  }
+
   // Prices are VAT-inclusive — use same calculation as cart/checkout
   const { subtotalInclVat, vatAmount, total } = calculateCartTotals(
     items.map((i) => ({ unitPrice: i.unitPrice, quantity: i.quantity })),
     reqShipping,
-    reqDiscount
+    effectiveDiscount
   );
   const subtotal = subtotalInclVat;
   const tax = vatAmount;
   const shippingCost = reqShipping;
-  const discount = reqDiscount;
+  const discount = effectiveDiscount;
 
   const hasPOD = items.some((i) => i.catalogueItemId);
   const orderType = hasPOD ? "POD" : "SHOP";
@@ -101,6 +168,22 @@ export async function POST(req: Request) {
       { error: "Unable to generate order number. Please try again." },
       { status: 500 }
     );
+  }
+
+  let orderEstimatedDelivery: Date | undefined;
+  if (reqEstimatedDelivery) {
+    try {
+      orderEstimatedDelivery = new Date(reqEstimatedDelivery);
+    } catch {
+      // ignore invalid date
+    }
+  }
+
+  // Resolve delivery zone when shipping (for display and delivery record)
+  let orderDeliveryZoneId: string | null = null;
+  if (isShipping && reqDeliveryZoneId) {
+    const zone = await prisma.deliveryZone.findFirst({ where: { id: reqDeliveryZoneId, isActive: true } });
+    if (zone) orderDeliveryZoneId = zone.id;
   }
 
   try {
@@ -119,6 +202,12 @@ export async function POST(req: Request) {
         notes: [notes, deliveryNotes].filter(Boolean).join(" — ") || undefined,
         pickupLocationId: orderPickupLocationId,
         courierId: orderCourierId ?? undefined,
+        deliveryZoneId: orderDeliveryZoneId ?? undefined,
+        estimatedDelivery: orderEstimatedDelivery ?? undefined,
+        corporateId: orderCorporateId ?? undefined,
+        isNetTerms: orderIsNetTerms || undefined,
+        poReference: orderPoReference ?? undefined,
+        placedBy: orderPlacedBy ?? undefined,
         items: {
           create: items.map((i) => ({
             productId: i.productId ?? null,
@@ -132,14 +221,37 @@ export async function POST(req: Request) {
         shippingAddress: {
           create: shippingAddress,
         },
+        ...(isShipping && {
+          delivery: {
+            create: {
+              deliveryZoneId: orderDeliveryZoneId ?? undefined,
+              method: deliveryMethod,
+              status: "PENDING",
+              estimatedDelivery: orderEstimatedDelivery ?? undefined,
+              assignedCourierId: orderCourierId ?? undefined,
+            },
+          },
+        }),
       },
       include: {
         items: true,
         shippingAddress: true,
+        delivery: true,
       },
     });
 
     await createTrackingEvent(order.id, "PENDING");
+
+    if (reqCartId) {
+      try {
+        await prisma.cart.updateMany({
+          where: { id: reqCartId, convertedAt: null },
+          data: { convertedAt: new Date() },
+        });
+      } catch {
+        // non-fatal
+      }
+    }
 
     // Save shipping address to user's profile (SavedAddress) when logged in and delivery is not pickup
     const isPickupDelivery = reqAddress.deliveryMethod?.toLowerCase() === "pickup";

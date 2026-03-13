@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { stkPush } from "@/lib/mpesa";
+import { checkMpesaHealth } from "@/lib/mpesa-health";
 import { z } from "zod";
 import { rateLimit, getRateLimitClientIp } from "@/lib/rate-limit";
 
@@ -37,6 +38,14 @@ export async function POST(req: Request) {
 
   const amount = Number(order.total);
   if (amount < 1) return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
+
+  const mpesaHealth = await checkMpesaHealth();
+  if (!mpesaHealth.ok) {
+    return NextResponse.json(
+      { error: "M-Pesa is temporarily unavailable. Please try again shortly." },
+      { status: 503 }
+    );
+  }
 
   try {
     const result = await stkPush(

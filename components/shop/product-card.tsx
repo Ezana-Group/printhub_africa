@@ -7,6 +7,26 @@ import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/store/cart-store";
 import type { CartItem } from "@/store/cart-store";
 
+function StarRating({ rating, count }: { rating: number; count: number }) {
+  const full = Math.floor(rating);
+  const half = rating % 1 >= 0.5 ? 1 : 0;
+  const empty = 5 - full - half;
+  return (
+    <div className="flex items-center gap-1">
+      <span className="flex" aria-label={`${rating} out of 5 stars`}>
+        {[...Array(full)].map((_, i) => (
+          <span key={i} className="text-amber-500">★</span>
+        ))}
+        {half ? <span className="text-amber-500">½</span> : null}
+        {[...Array(empty)].map((_, i) => (
+          <span key={i} className="text-slate-300">★</span>
+        ))}
+      </span>
+      {count > 0 && <span className="text-xs text-slate-500">({count})</span>}
+    </div>
+  );
+}
+
 interface ProductCardProps {
   id: string;
   name: string;
@@ -17,9 +37,11 @@ interface ProductCardProps {
   comparePrice: number | null;
   category?: { name: string; slug: string };
   stock: number;
+  averageRating?: number;
+  reviewCount?: number;
 }
 
-export function ProductCard({ id, name, slug, image, imagesCount, basePrice, comparePrice, category, stock }: ProductCardProps) {
+export function ProductCard({ id, name, slug, image, imagesCount, basePrice, comparePrice, category, stock, averageRating, reviewCount = 0 }: ProductCardProps) {
   const addItem = useCartStore((s) => s.addItem);
 
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -74,12 +96,22 @@ export function ProductCard({ id, name, slug, image, imagesCount, basePrice, com
       </div>
       <div className="mt-3">
         <h3 className="font-semibold text-slate-900 line-clamp-2">{name}</h3>
+        {averageRating != null && averageRating > 0 && (
+          <div className="mt-1">
+            <StarRating rating={averageRating} count={reviewCount} />
+          </div>
+        )}
         <div className="mt-1 flex items-center gap-2">
           <span className="text-lg font-bold text-primary">KES {basePrice.toLocaleString()}</span>
           {comparePrice != null && comparePrice > basePrice && (
             <span className="text-sm text-slate-500 line-through">KES {comparePrice.toLocaleString()}</span>
           )}
         </div>
+        {stock < 1 ? (
+          <p className="mt-3 text-sm font-medium text-amber-700 rounded-xl border border-amber-200 bg-amber-50 py-2 text-center">Out of stock</p>
+        ) : stock <= 5 ? (
+          <p className="mt-2 text-xs text-slate-500">Only {stock} left</p>
+        ) : null}
         <Button
           size="sm"
           className="mt-3 w-full rounded-xl"

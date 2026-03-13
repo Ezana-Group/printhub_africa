@@ -7,8 +7,67 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FileUploader } from "@/components/upload/FileUploader";
+import { Loader2 } from "lucide-react";
 
 type TabId = "details" | "photos" | "stl";
+
+function ImportPhotosFromPrintablesButton({
+  itemId,
+  sourceUrl,
+  currentPhotoCount,
+  onSuccess,
+}: {
+  itemId: string;
+  sourceUrl: string;
+  currentPhotoCount: number;
+  onSuccess: () => Promise<void>;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const canAdd = currentPhotoCount < 8;
+
+  async function handleImport() {
+    if (!canAdd) return;
+    setLoading(true);
+    setMessage(null);
+    try {
+      const res = await fetch(`/api/admin/catalogue/${itemId}/import-photos-from-printables`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: sourceUrl }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMessage(data?.error ?? "Import failed");
+        return;
+      }
+      setMessage(data?.message ?? `Imported ${data?.photosImported ?? 0} photo(s).`);
+      await onSuccess();
+      if (typeof (window as unknown as { refresh?: () => void }).refresh === "function") (window as unknown as { refresh: () => void }).refresh();
+    } catch {
+      setMessage("Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="rounded-xl"
+        onClick={handleImport}
+        disabled={loading || !canAdd}
+      >
+        {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+        {loading ? "Importing…" : "Import photos from Printables"}
+      </Button>
+      {message && <span className="text-sm text-slate-600">{message}</span>}
+    </div>
+  );
+}
 
 interface Category {
   id: string;
@@ -293,6 +352,23 @@ export function CatalogueEditForm({
 
       {tab === "photos" && (
         <div className="space-y-6">
+          {item.sourceUrl?.toLowerCase().includes("printables.com") && (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-sm font-medium text-slate-700 mb-2">Import from Printables</p>
+              <p className="text-xs text-slate-500 mb-3">
+                Fetch images from the Printables link (saved in Details). New photos are added up to 8 total.
+              </p>
+              <ImportPhotosFromPrintablesButton
+                itemId={initialItem.id}
+                sourceUrl={item.sourceUrl}
+                currentPhotoCount={item.photos.length}
+                onSuccess={async () => {
+                  await refetchItem();
+                  router.refresh();
+                }}
+              />
+            </div>
+          )}
           {item.photos.length > 0 && (
             <div>
               <p className="text-sm font-medium text-slate-700 mb-3">

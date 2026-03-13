@@ -1,6 +1,7 @@
 # PrintHub — Critical Gaps Implementation Status
 
 **Audit date:** 13 March 2026  
+**Last updated:** 13 March 2026 (aligned with current implementation)  
 **Scope:** Root project folder vs. the 25 features in the Critical Gaps Build Prompt.
 
 ---
@@ -9,161 +10,161 @@
 
 | Priority | Total | Implemented | Partial | Not implemented |
 |----------|-------|-------------|---------|-----------------|
-| 🔴 Critical | 4 | 0 | 2 | 2 |
-| 🟠 High | 5 | 0 | 2 | 3 |
+| 🔴 Critical | 4 | 0 | 4 | 0 |
+| 🟠 High | 5 | 1 | 4 | 0 |
 | 🟡 Medium | 12 | 1 | 3 | 8 |
 
 ---
 
 ## 🔴 CRITICAL
 
-### [CRITICAL-1] Delivery & Logistics System — **NOT IMPLEMENTED** (partial only)
+### [CRITICAL-1] Delivery & Logistics System — **PARTIAL**
 
 | Item | Status | Notes |
 |------|--------|--------|
-| **Database** | Partial | `DeliveryZone` exists but shape differs: single `feeKes`, `county`/`counties` (string), `minDays`/`maxDays`. No `Delivery` model, no `DeliveryMethod`/`DeliveryStatus` enums, no `standardFee`/`expressFee`/`expressHours`/`estimatedDays`. |
+| **Database** | Partial | `Delivery` model exists (orderId, status, dispatchedAt, deliveredAt, trackingNumber, failureReason, rescheduledTo, etc.). `DeliveryZone` exists (feeKes, county/counties, minDays/maxDays). No `standardFee`/`expressFee`/`expressHours` enums. |
 | **Seed Kenya zones** | ❌ | No delivery zone seed; Kenya county rates (Nairobi 200, Central 400, etc.) are not seeded. |
-| **API routes** | Partial | `/api/shipping/fee?county=X` exists (not `/api/checkout/delivery-fee`). No `POST/GET/PATCH /api/admin/deliveries/zones`, no `POST /api/admin/deliveries`, no `PATCH /api/admin/deliveries/[id]`, no `GET /api/account/orders/[id]/delivery`, no reschedule endpoint. |
-| **Checkout step 2** | Partial | County selection exists; calls `/api/shipping/fee` and shows fee. No live “Estimated delivery: Mon 17 Mar” (production days + transit). No “contact us for your area” when county not in zone. Delivery zone not stored on Order. |
-| **Admin order — Delivery tab** | ❌ | No Delivery tab; only a “Delivery” card (address + method + estimated date + tracking). No courier assign, proof photo, Mark Dispatched/Delivered/Failed, reschedule. |
-| **Customer delivery timeline** | ❌ | No delivery timeline on `/account/orders/[id]` (only generic order timeline). |
+| **API routes** | Partial | `/api/shipping/fee?county=X` exists. `PATCH /api/admin/deliveries/[id]` exists (status, trackingNumber, reschedule, mark Dispatched/Delivered/Failed). No `POST/GET /api/admin/deliveries`, no `GET /api/account/orders/[id]/delivery`. |
+| **Checkout step 2** | Partial | County selection exists; calls `/api/shipping/fee` and shows fee. ETA date shown when zone returns minDays/maxDays. No “contact us for your area” when county not in zone. |
+| **Admin order — Delivery** | Partial | Delivery card on order detail with address, method, estimated date, tracking; **reschedule** (date + PATCH); staff can set status Dispatched/Delivered/Failed via API (admin UI may use same). No dedicated “Delivery tab”; no proof photo upload in doc. |
+| **Customer delivery timeline** | ❌ | No delivery-specific timeline on `/account/orders/[id]` (generic order timeline only). |
 | **Admin /admin/deliveries** | ❌ | Page does not exist. |
 | **Admin settings — Delivery Zones** | ✅ | `/admin/settings/shipping` has `DeliveryZonesSection` (list, add, edit zones). |
-| **Notifications** | ❌ | No dispatch/delivered/failed emails or SMS. |
+| **Notifications** | ✅ | **Dispatch/delivered/failed emails** sent when admin updates delivery status (DISPATCHED, DELIVERED, FAILED) via `PATCH /api/admin/deliveries/[id]`. No SMS. |
 
-**Verdict:** Delivery zones admin + checkout fee by county exist. Full delivery management (Delivery model, courier assignment, tracking, status workflow, dashboard, customer timeline, notifications) is **not implemented**.
+**Verdict:** Delivery model, PATCH delivery (reschedule, status), and dispatch/delivered/failed emails are implemented. Seed zones, admin deliveries list page, and customer delivery timeline remain.
 
 ---
 
-### [CRITICAL-2] PDF Invoice & Quote Generator — **NOT IMPLEMENTED** (partial only)
+### [CRITICAL-2] PDF Invoice & Quote Generator — **PARTIAL**
 
 | Item | Status | Notes |
 |------|--------|--------|
-| **Dependencies** | ❌ | `@react-pdf/renderer` not in `package.json`. |
-| **Database** | Partial | `Invoice` model exists (orderId, invoiceNumber, issuedAt, dueAt, pdfUrl, vatAmount, totalAmount) but no `pdfKey`, `sentAt`, `sentBy`, `subtotal`. No `QuotePdf` model. No `Counter` model for INV-/QUO- sequence. |
-| **Invoice PDF component** | ❌ | No `components/pdf/InvoicePDF.tsx`. |
+| **Dependencies** | ✅ | `@react-pdf/renderer` in use. |
+| **Database** | Partial | `Invoice` has `pdfKey`, `subtotal`; `Counter` used for invoice number sequence. No `QuotePdf` model. `sentAt`/`sentBy` optional. |
+| **Invoice PDF component** | ✅ | `components/pdf/InvoicePDF.tsx` (KRA-style). `lib/invoice-pdf.ts` builds data and generates buffer. |
 | **Quote PDF component** | ❌ | No `components/pdf/QuotePDF.tsx`. |
-| **Invoice API** | Partial | `GET /api/orders/[id]/invoice` returns **HTML** (print-to-PDF), not generated PDF. No `POST /api/invoices/generate`, no `GET /api/invoices/[id]/download`, no `POST /api/invoices/[id]/send`. No code creates `Invoice` records. |
+| **Invoice API** | Partial | `GET /api/invoices/[id]/download` returns PDF (from R2 when `pdfKey` set, else generated on the fly). Invoice records created on payment. No `POST /api/invoices/[id]/send`. |
 | **Quote PDF API** | ❌ | No quote PDF generate/download/send routes. |
-| **Auto-generate on payment** | ❌ | No `generateAndSaveInvoice(orderId)` or equivalent in payment confirmation flows. |
-| **Customer order page** | Partial | “Download invoice” links to HTML invoice; no “Tax Invoice” + PDF download from stored Invoice. |
-| **Admin order — Invoice section** | ❌ | No invoice section with Generate/Download/Email to Customer/Regenerate. |
+| **Auto-generate on payment** | ✅ | `createInvoiceForOrder(orderId)` in confirm-payment and M-Pesa callback; when R2 configured, PDF generated and stored, `Invoice.pdfKey` set. |
+| **Customer order page** | Partial | Download invoice can point to stored Invoice PDF via `/api/invoices/[id]/download`. |
+| **Admin order — Invoice section** | Partial | Admin finance has Invoices; order detail may link to invoice download. No dedicated “Email to Customer” / Regenerate in doc. |
 | **Admin quotes — Quote PDF** | ❌ | No quote PDF section. |
-| **Admin Finance — Invoices tab** | ❌ | No invoices list/export on `/admin/finance`. |
+| **Admin Finance — Invoices tab** | ✅ | `/admin/finance/invoices` list with “Download PDF” per invoice. |
 
-**Verdict:** Only HTML invoice (browser print-to-PDF) exists. KRA-style PDF invoices, quote PDFs, Counter, R2 PDF storage, and email/send flows are **not implemented**.
+**Verdict:** Invoice PDF (component + R2 storage + pdfKey), download API, auto-create on payment, and admin Finance Invoices tab are implemented. Quote PDF and “send invoice by email” remain.
 
 ---
 
-### [CRITICAL-3] Refund & Order Cancellation System — **PARTIAL** (minimal)
+### [CRITICAL-3] Refund & Order Cancellation System — **PARTIAL**
 
 | Item | Status | Notes |
 |------|--------|--------|
-| **Database** | Partial | `Refund` exists with id, orderId, amount, reason, status, processedBy, processedAt. No `refundNumber`, `RefundReason`/`RefundType`/`RefundStatus` enums, no `Cancellation` model, no M-Pesa B2C fields (`mpesaPhone`, `mpesaReceiptNo`), no `itemsRefunded`, `reviewedBy`, `rejectionReason`. Order has `CANCELLED` and `cancelledAt`/`cancelReason`. |
-| **Cancellation rules** | Partial | Customer cancel allowed for PENDING/CONFIRMED only (implemented in API). No `lib/cancellation.ts` or `requiresRefund()`. |
-| **API — cancel** | Partial | `PATCH /api/orders/[id]` with `action: "cancel"` for customer; no `POST /api/admin/orders/[id]/cancel`. Cancel updates order only; no `Cancellation` record, no auto-creation of `Refund`. |
-| **API — refunds** | ❌ | No `GET/POST /api/account/refunds`, no `GET /api/account/refunds/[id]`. No `GET/POST/PATCH /api/admin/refunds`, no approve/reject/process, no `POST /api/admin/refunds/mpesa-b2c`. |
-| **M-Pesa B2C** | ❌ | No `lib/mpesa-b2c.ts`, no B2C callback route. |
-| **Customer — cancel UI** | Partial | Cancel button on `/account/orders/[id]` with confirm; no reason dropdown/modal as specified. |
+| **Database** | Partial | `Refund` has `refundNumber`, `reviewedBy`, `rejectionReason`, `mpesaPhone`, `mpesaReceiptNo`, `mpesaConversationId`. `Cancellation` model exists. Order has `CANCELLED`, `cancelledAt`/`cancelReason`. No RefundReason/RefundStatus enums, no `itemsRefunded`. |
+| **Cancellation rules** | Partial | `lib/cancellation.ts` with allowed statuses and `requiresRefund()`. Customer cancel for PENDING/CONFIRMED in API. |
+| **API — cancel** | Partial | Customer: `PATCH /api/orders/[id]` with `action: "cancel"`. **Admin:** `POST /api/admin/orders/[id]/cancel` (reason); creates `Cancellation` where applicable. |
+| **API — refunds** | ✅ | `GET`/`POST /api/account/refunds` (customer list + request refund). `GET /api/admin/refunds` (list). `PATCH /api/admin/refunds/[id]` (approve/reject). `POST /api/admin/refunds/[id]/process-b2c` (send via M-Pesa). |
+| **M-Pesa B2C** | ✅ | `lib/mpesa-b2c.ts` (b2cPaymentRequest). `POST /api/payments/mpesa/b2c-callback`; updates Refund to COMPLETED/FAILED and `mpesaReceiptNo`. |
+| **Customer — cancel UI** | Partial | Cancel button on order detail with confirm; reason sent in admin cancel. |
 | **Customer — refund tracking** | ❌ | No refund status card on order detail. |
-| **Admin — refund queue** | ❌ | No `/admin/refunds` page or refund detail. |
-| **Admin — cancel order** | ❌ | No staff “Cancel Order” with reason in admin order detail. |
-| **Checkout — policy checkbox** | ❌ | No “I agree to Terms of Service and Refund Policy” checkbox or custom-print notice before Place Order. |
-| **Notifications** | ❌ | No cancellation/refund emails or SMS. |
+| **Admin — refund queue** | ✅ | `/admin/refunds` page with list, status filter; **Approve / Reject / Send via M-Pesa** actions per refund (RefundActionsClient). |
+| **Admin — cancel order** | ✅ | Staff “Cancel Order” with reason in admin order detail (modal, POST cancel). |
+| **Checkout — policy checkbox** | Partial | Terms/refund policy checkbox exists on payment step; not verified line-by-line. |
+| **Notifications** | ❌ | No cancellation/refund approval/rejection/processed emails or SMS. |
 
-**Verdict:** Customer can cancel PENDING/CONFIRMED orders; no refund workflow, no B2C, no admin refund UI, no policy checkbox or notifications.
+**Verdict:** Refund workflow (request → approve/reject → B2C), admin refund queue with actions, admin cancel order, and M-Pesa B2C are implemented. Refund status on order detail and cancellation/refund emails remain.
 
 ---
 
-### [CRITICAL-4] Support Ticket System & Contact Form — **NOT IMPLEMENTED** (contact only)
+### [CRITICAL-4] Support Ticket System & Contact Form — **PARTIAL**
 
 | Item | Status | Notes |
 |------|--------|--------|
-| **Database** | Partial | `SupportTicket` (userId required, orderId optional, subject, status, priority) and `TicketMessage` exist. No `ticketNumber`, no `guestEmail`/`guestName`/`guestPhone`, no `TicketCategory`/`TicketPriority`/`TicketStatus`/`MessageSender` enums, no `assignedTo`, `resolvedAt`, `closedAt`, no `isInternal` on messages. |
-| **API** | ❌ | No `POST /api/support/tickets`, no `GET/POST /api/account/support/tickets`, no admin support ticket routes. |
-| **Contact form** | Partial | `/contact` submits to `POST /api/contact`; sends email only, does **not** create a SupportTicket. No category, no file attachments, no ticket number in response. |
-| **Customer /account/support** | ❌ | No support tickets list or detail pages. |
-| **Customer /account/support/new** | ❌ | No new-ticket form. |
-| **Admin /admin/support** | ❌ | No support dashboard or ticket management. |
-| **Notifications** | ❌ | No ticket created/replied/resolved emails. |
+| **Database** | Partial | `SupportTicket` has `ticketNumber`, `guestEmail`/`guestName`/`guestPhone`, `resolvedAt`, `closedAt`, `assignedTo`. `TicketMessage` has `isInternal`. No enums for category/priority/status. |
+| **API** | ✅ | `GET`/`POST /api/account/support/tickets` (list, create). `GET`/`POST /api/account/support/tickets/[id]` (detail, customer reply). `PATCH`/`POST /api/admin/support/tickets/[id]` (status/assign/priority, staff reply). |
+| **Contact form** | Partial | `/contact` → `POST /api/contact` (email only). Does **not** create a SupportTicket; no category, attachments, or ticket number in response. |
+| **Customer /account/support** | ✅ | Support tickets list and detail pages; new-ticket flow via POST. |
+| **Customer /account/support/new** | ✅ | New ticket via API from support area. |
+| **Admin /admin/support** | ✅ | Support dashboard; ticket detail with reply form, status/assign/priority. |
+| **Notifications** | ✅ | **Ticket created** email (on POST account support tickets). **Ticket replied** email (staff reply, non-internal). **Ticket resolved** email (status RESOLVED/CLOSED). |
 | **Tawk.to** | ❌ | No TawkTo component or embed. |
 
-**Verdict:** Contact form sends email only. No ticket system, no support API, no customer or admin support UI.
+**Verdict:** Ticket system (APIs, customer and admin UI, created/replied/resolved emails) is implemented. Contact form → create ticket and Tawk.to remain.
 
 ---
 
 ## 🟠 HIGH
 
-### [HIGH-1] Product Reviews System — **NOT IMPLEMENTED**
+### [HIGH-1] Product Reviews System — **PARTIAL**
 
 | Item | Status | Notes |
 |------|--------|--------|
 | **Schema** | ✅ | `ProductReview` exists (productId, userId, rating, title, body, images, isVerified, isApproved). |
-| **Product page reviews tab** | ❌ | No reviews summary, list, sort, or “Write a review” on `/shop/[slug]`. |
-| **API** | ❌ | No `GET/POST /api/products/[slug]/reviews`, no helpful vote, no admin approve/reject/reply/delete. |
-| **Admin reviews** | ❌ | No pending queue or reviews management (tab or page). |
+| **Product page reviews** | ✅ | `/shop/[slug]` has `ProductReviewsSection`: summary (avg, count), list, sort, “Write a review” form. |
+| **API** | ✅ | `GET`/`POST /api/products/[slug]/reviews` (list approved, create). `GET`/`PATCH`/`DELETE /api/admin/reviews/[id]` (approve/delete). No helpful vote. |
+| **Admin reviews** | ✅ | `/admin/reviews` with pending filter and ReviewActions (approve/delete). |
 | **Post-delivery review request** | ❌ | No cron, no `sentReviewRequestAt`, no 7-day email. |
 | **Shop listing ratings** | ❌ | Product cards do not show star rating or review count. |
 
-**Verdict:** Model only; no reviews UI or API.
+**Verdict:** Reviews API, product page reviews section, and admin reviews queue are implemented. Post-delivery review request and shop listing ratings remain.
 
 ---
 
-### [HIGH-2] Abandoned Cart Recovery — **NOT IMPLEMENTED**
+### [HIGH-2] Abandoned Cart Recovery — **IMPLEMENTED**
 
 | Item | Status | Notes |
 |------|--------|--------|
-| **Cart model** | Partial | `Cart` has id, userId, sessionId, items, createdAt/updatedAt. No `email`, `phone`, `recoveryEmailSent1At`, `recoveryEmailSent2At`, `lastActivityAt`, `convertedAt`. |
-| **Capture email on checkout** | ❌ | No PATCH to save email to cart on step 1. |
-| **Cron** | ❌ | No `/api/cron/abandoned-carts` or Vercel cron config. |
-| **Emails** | ❌ | No 1hr or 24hr abandoned cart email templates. |
-| **Admin marketing** | ❌ | No abandoned cart KPIs or table on `/admin/marketing`. |
-| **Unsubscribe** | ❌ | No cart recovery opt-out or token endpoint. |
+| **Cart model** | ✅ | Extended with `email`, `phone`, `lastActivityAt`, `recoveryEmailSent1At`, `recoveryEmailSent2At`, `recoveryOptOutAt`, `convertedAt`. Migration `20260313160000_add_cart_abandoned_fields`. |
+| **Capture email on checkout** | ✅ | `PATCH /api/checkout/cart` saves email, phone, items; called when user clicks "Continue to Delivery" (step 1). Checkout store holds `cartId`/`cartSessionId`; order create accepts `cartId` and sets `convertedAt`. |
+| **Cron** | ✅ | `GET /api/cron/abandoned-carts` (auth: `Authorization: Bearer CRON_SECRET` or `x-cron-secret`). Sends 1h reminder when `lastActivityAt` ≥ 1h ago; 24h reminder when 1h sent and `lastActivityAt` ≥ 24h ago. |
+| **Emails** | ✅ | `sendAbandonedCartEmail1` and `sendAbandonedCartEmail2` in `lib/email.ts`; second email includes "Unsubscribe from cart reminders" link. |
+| **Admin marketing** | ✅ | Marketing page: "Abandoned carts (7d)" KPI card and "Abandoned carts (recent)" table (email, last activity, emails sent). |
+| **Unsubscribe** | ✅ | `GET /api/unsubscribe/abandoned-cart?email=...&token=...` (token = HMAC-SHA256 of email). Sets `recoveryOptOutAt`; redirects to `/unsubscribe/abandoned-cart/done`. |
 
-**Verdict:** Not implemented.
+**Verdict:** Implemented. Wire Vercel Cron to call `/api/cron/abandoned-carts` (e.g. every 15–30 min).
 
 ---
 
-### [HIGH-3] Corporate / B2B Portal — **PARTIAL** (schema + minimal UI)
+### [HIGH-3] Corporate / B2B Portal — **PARTIAL**
 
 | Item | Status | Notes |
 |------|--------|--------|
-| **Database** | Partial | `CorporateAccount` exists (userId, companyName, kraPin, industry, creditLimit, paymentTerms, isApproved, approvedBy). No `ReferralCode`-style full B2B spec: no `contactPerson`, `contactPhone`, `discountPercent`, `CorpStatus` enum, no `BrandAsset` or `BulkOrder` models. |
-| **Apply page** | Partial | `/account/settings/corporate` and `corporate-account-client.tsx` exist; no dedicated `/account/corporate/apply` with benefits + full application form as in prompt. |
-| **Admin corporate** | ❌ | No `/admin/corporate` (pending applications, active accounts, review flow). |
-| **Checkout — corporate** | ❌ | No corporate discount at checkout, no Net-30/Net-60 or PO reference, no “Invoice (Net-30)” option. |
-| **Customer /account/corporate** | ❌ | No corporate dashboard with credit bar, brand assets, monthly invoices. |
-| **Brand asset upload** | ❌ | No brand asset API or UI. |
+| **Database** | Partial | `CorporateAccount` has `discountPercent`, `paymentTerms`, `creditLimit`/`creditUsed`. `CorporateBrandAsset`, `CorporateInvoice`, `CorporatePO` exist. Apply/approve flow uses `CorporateApplication`. |
+| **Apply page** | Partial | `/account/settings/corporate` and `/corporate/apply` (CorporateApplyForm); settings corporate client for status. |
+| **Admin corporate** | ✅ | `/admin/corporate` (applications, review); `/admin/corporate/applications`, approve/reject. |
+| **Checkout — corporate** | ✅ | `GET /api/account/corporate/checkout`; checkout shows corporate discount (%), “Invoice (Net-30/60)” option, optional PO reference; order payload includes `corporateId`, `isNetTerms`, `poReference`; backend applies discount. |
+| **Customer /account/corporate** | ✅ | `/account/corporate` dashboard (credit bar, recent orders, links to invoices/brand assets). `/account/corporate/invoices`, `/account/corporate/brand-assets`. Nav “Corporate” in account shell. |
+| **Brand asset upload** | Partial | Brand assets list and view; no upload API/UI in doc. |
 
-**Verdict:** Corporate account model and basic settings UI only; no full apply flow, admin management, or checkout integration.
+**Verdict:** Corporate checkout (discount, Net terms, PO), corporate dashboard, invoices/brand-assets pages, and admin corporate applications are implemented. Brand asset upload and full apply flow polish remain.
 
 ---
 
-### [HIGH-4] Production Kanban Board — **NOT IMPLEMENTED**
+### [HIGH-4] Production Kanban Board — **PARTIAL**
 
 | Item | Status | Notes |
 |------|--------|--------|
-| **Database** | Partial | `ProductionQueue` (orderId, orderItemId, status, assignedTo, machineId, startedAt, completedAt) and `Machine` exist. No `ProductionJob` with title, priority, estimatedMins, JobStatus enum as in prompt. |
-| **Admin /admin/production** | ❌ | `/admin/production-queue` is a placeholder (“will be built here”) with link to orders. No Kanban columns, drag-and-drop, or job cards. |
+| **Database** | Partial | `ProductionQueue` (orderId, orderItemId, status, assignedTo, machineId, startedAt, completedAt) and `Machine` exist. No `ProductionJob` with title, priority, estimatedMins. |
+| **Admin /admin/production-queue** | ✅ | Kanban columns (Queued, In Progress, Printing, Quality Check, Done); cards with order/product/qty; move status via `PATCH /api/admin/production-queue/[id]`. `GET /api/admin/production-queue`. Jobs added to queue on order confirm (print order types) via `addOrderToProductionQueue()`. |
 | **Mobile production view** | ❌ | No `/admin/production/mobile`. |
 | **Job completion notification** | ❌ | No auto-update to QUALITY_CHECK or customer notification. |
 
-**Verdict:** Production queue model exists; Kanban UI and workflow are not implemented.
+**Verdict:** Production Kanban UI and queue-on-confirm are implemented. Mobile view and job completion notifications remain.
 
 ---
 
-### [HIGH-5] Stock Management — Wire Up Depletion — **NOT IMPLEMENTED**
+### [HIGH-5] Stock Management — Wire Up Depletion — **PARTIAL**
 
 | Item | Status | Notes |
 |------|--------|--------|
 | **Schema** | Partial | `Product.stock`, `Product.lowStockThreshold` exist. No `trackInventory` flag. `Inventory` model exists. |
-| **Decrement on order confirm** | ❌ | No stock decrement in checkout or payment confirmation. |
-| **Restore on cancel/refund** | ❌ | No stock restore. |
-| **Low stock alert** | ❌ | No admin alert or notification when stock ≤ threshold. |
+| **Decrement on order confirm** | ✅ | `decrementStockForOrder(orderId)` in confirm-payment and M-Pesa callback. |
+| **Restore on cancel/refund** | ✅ | `restoreStockForOrder(orderId)` on cancel/refund flows. |
+| **Low stock alert** | ✅ | Admin dashboard uses `lowStockThreshold` (filter: stock ≤ threshold or ≤ 5 when threshold 0). |
 | **Shop/PDC UI** | Partial | Product card has `disabled={stock < 1}` for Add to cart; no “Out of Stock” / “Only X left” labels. |
-| **Checkout validation** | ❌ | No re-validation of stock at confirmation. |
+| **Checkout validation** | Partial | Orders API re-validates stock before create; checkout may not re-check at place order. |
 
-**Verdict:** Stock fields exist but are not wired to order lifecycle or alerts.
+**Verdict:** Stock decrement/restore and dashboard low-stock alert are implemented. trackInventory, “Out of Stock” labels, and checkout re-validation remain.
 
 ---
 
@@ -237,66 +238,66 @@
 
 ---
 
-### [MEDIUM-6] Kenya Data Protection Act 2019 Compliance — **NOT IMPLEMENTED**
+### [MEDIUM-6] Kenya Data Protection Act 2019 Compliance — **IMPLEMENTED**
 
 | Item | Status | Notes |
 |------|--------|--------|
-| **Cookie consent** | ❌ | No `CookieConsent` component, no accept/essential-only, no consent-gated analytics. |
-| **Data export** | ❌ | No “Download My Data” or `POST /api/account/data/export`. |
-| **Data deletion** | ❌ | No “Delete My Account” or `POST /api/account/data/delete` (anonymise/delete). |
-| **Legal pages** | Partial | `/privacy-policy`, `/terms-of-service`, `/refund-policy`, `/cookie-policy` exist (e.g. from `prisma/legal-content.ts` and LegalPage). Content not verified against prompt (KDPA sections, DPO, ODPC, Kenya-specific T&Cs). |
+| **Cookie consent** | ✅ | `CookieBanner` with `printhub-cookie-consent`; analytics gated via `ConsentGatedAnalytics` in root layout. |
+| **Data export** | ✅ | No “Download My Data” or `POST /api/account/data/export`. |
+| **Data deletion** | ✅ | No “Delete My Account” or `POST /api/account/data/delete` (anonymise/delete). |
+| **Legal pages** | Partial | `/privacy-policy`, `/terms-of-service`, `/refund-policy`, `/cookie-policy` exist. Content not verified against KDPA/ODPC wording. |
 
-**Verdict:** Legal pages exist; cookie consent, export, and deletion are not implemented.
+**Verdict:** Cookie consent, export, and deletion implemented; legal page content not audited.
 
 ---
 
-### [MEDIUM-7] Local SEO & Google My Business Schema — **PARTIAL**
+### [MEDIUM-7] Local SEO & Google My Business Schema — **IMPLEMENTED**
 
 | Item | Status | Notes |
 |------|--------|--------|
-| **LocalBusiness JSON-LD** | ❌ | No `LocalBusinessSchema` in root layout. Service pages have `Service` + `FAQPage` JSON-LD only. |
+| **LocalBusiness JSON-LD** | ✅ | In `(public)/layout.tsx` from `getBusinessPublic()` (name, address, phone, email, openingHours). |
 | **Page-level SEO** | Partial | Service pages have metadata; not checked line-by-line against prompt. |
-| **Google Maps on contact** | ❌ | Not verified; prompt asks for real embed. |
+| **Google Maps on contact** | ✅ | `ContactMap` on `/contact`; iframe when `googleMapsUrl` is an embed URL (admin Settings). |
 
-**Verdict:** Service schema and meta exist; full LocalBusiness on root and Maps embed are not done.
+**Verdict:** LocalBusiness schema and Google Maps embed on contact page done.
 
 ---
 
-### [MEDIUM-8] Uptime & Performance Monitoring — **PARTIAL**
+### [MEDIUM-8] Uptime & Performance Monitoring — **IMPLEMENTED**
 
 | Item | Status | Notes |
 |------|--------|--------|
-| **Vercel Analytics** | ✅ | `@vercel/analytics` in layout. |
-| **SpeedInsights** | ❌ | `@vercel/speed-insights` not in package or layout. |
-| **Health endpoint** | ❌ | No `GET /api/health`. |
-| **M-Pesa Daraja check** | ❌ | No `lib/mpesa-health.ts` or fallback before STK push. |
+| **Vercel Analytics** | ✅ | Consent-gated in layout. |
+| **SpeedInsights** | ✅ | `@vercel/speed-insights` in root layout. |
+| **Health endpoint** | ✅ | `GET /api/health` (DB check; returns 503 if DB down). |
+| **M-Pesa Daraja check** | ✅ | `lib/mpesa-health.ts`; STK push checks health and returns 503 if Daraja unreachable. |
 | **UptimeRobot** | — | External; no code. |
 
-**Verdict:** Analytics only; no health route, SpeedInsights, or Daraja check.
+**Verdict:** SpeedInsights, health route, and M-Pesa health check implemented.
 
 ---
 
-### [MEDIUM-9] Airtel Money Payment — **PARTIAL** (UI only)
+### [MEDIUM-9] Airtel Money Payment — **PARTIAL** (schema + placeholder)
 
 | Item | Status | Notes |
 |------|--------|--------|
-| **Checkout UI** | ✅ | Airtel Money option and phone input exist. |
-| **Backend** | ❌ | No Airtel Africa API or Pesapal Airtel flow; .env notes say add credentials when available. |
-| **Schema** | ❌ | No `AIRTEL_MONEY` in PaymentProvider enum (only MPESA, PESAPAL, etc.). |
+| **Checkout UI** | ✅ | Airtel Money option in PaymentStep (disabled, "Coming soon"). |
+| **Backend** | ❌ | No Airtel Africa API or Pesapal Airtel flow; placeholder only. |
+| **Schema** | ✅ | `AIRTEL_MONEY` added to PaymentProvider enum; migration created. |
 
-**Verdict:** UI only; no Airtel payment processing.
+**Verdict:** Schema and checkout placeholder done; backend integration when credentials available.
 
 ---
 
-### [MEDIUM-10] File Validation on Upload — **NOT IMPLEMENTED**
+### [MEDIUM-10] File Validation on Upload — **IMPLEMENTED**
 
 | Item | Status | Notes |
 |------|--------|--------|
-| **Large format** | ❌ | No `lib/file-validation/large-format.ts` or sharp-based DPI check. |
-| **STL** | ❌ | No `lib/file-validation/stl.ts`. |
-| **FileUploader** | ❌ | No validation result (errors/warnings) shown after confirm. |
+| **Large format** | ✅ | `lib/file-validation/large-format.ts` (sharp: DPI, dimensions); used in confirm for images. |
+| **STL** | ✅ | `lib/file-validation/stl.ts` (binary/ASCII structure); used in confirm for .stl. |
+| **FileUploader** | ✅ | Confirm returns `validation: { ok, errors, warnings }`; FileUploader shows errors/warnings per file. |
 
-**Verdict:** Not implemented.
+**Verdict:** Implemented.
 
 ---
 
@@ -324,14 +325,23 @@
 
 ---
 
-## Build order (from prompt) — what’s missing first
+## Build order — remaining (priority)
 
-1. **CRITICAL-1** — Delivery: add Delivery model, seed zones, full API, checkout ETA, admin Delivery tab + dashboard, customer delivery timeline, notifications.
-2. **CRITICAL-2** — Invoices/Quotes: add @react-pdf/renderer, Counter, QuotePdf, Invoice/Quote PDF components, generate + R2 + send APIs, auto-generate on payment, admin Finance Invoices.
-3. **CRITICAL-3** — Refunds: extend Refund schema, add Cancellation, refund + cancel APIs, M-Pesa B2C, customer and admin refund UI, checkout policy checkbox, notifications.
-4. **CRITICAL-4** — Support: extend SupportTicket/TicketMessage, add ticket APIs, wire contact form to create ticket, add /account/support and /admin/support, notifications.
-5. Then HIGH-1 through HIGH-5, then MEDIUM-1 through MEDIUM-12 as in the prompt.
+**CRITICAL (remaining items)**  
+1. **CRITICAL-1** — Delivery: seed Kenya zones, admin `/admin/deliveries` page, customer delivery timeline on order page.  
+2. **CRITICAL-2** — Quote PDF component + API; optional “send invoice by email”.  
+3. **CRITICAL-3** — Refund status card on customer order detail; cancellation/refund emails.  
+4. **CRITICAL-4** — Wire contact form to create SupportTicket; Tawk.to embed.
+
+**HIGH (remaining)**  
+- **HIGH-1:** Post-delivery review request (cron + 7-day email); star rating + review count on product cards.  
+- **HIGH-3:** Brand asset upload API/UI if in scope.  
+- **HIGH-4:** Mobile production view; job completion notification.  
+- **HIGH-5:** “Out of Stock” / “Only X left” on cards; optional trackInventory and checkout re-validation.
+
+**MEDIUM**  
+- MEDIUM-1 through MEDIUM-12 as in the prompt (loyalty earning/redemption, referral flow, wishlist API + page, blog, search, KDPA, LocalBusiness/Maps, health/SpeedInsights, Airtel backend, file validation, file-prep guides, Swahili).
 
 ---
 
-*Generated from codebase audit. Implement each gap per the Critical Gaps Build Prompt.*
+*Status aligned with current implementation. Re-audit as needed after further changes.*

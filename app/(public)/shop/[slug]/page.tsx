@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getBusinessPublic } from "@/lib/business-public";
 import { AddToCartButton } from "./add-to-cart-button";
 import { ProductImageGallery } from "@/components/shop/product-image-gallery";
+import { ProductReviewsSection } from "./reviews-section";
 import { formatPrice } from "@/lib/utils";
 
 const DEFAULT_WHATSAPP = "254700000000";
@@ -115,6 +116,8 @@ export default async function ProductPage({ params }: Props) {
           <p className="mt-4 text-slate-700 whitespace-pre-wrap">{product.description}</p>
         </div>
       )}
+
+      <ProductReviewsSection productSlug={product.slug} />
     </div>
   );
 }

@@ -46,15 +46,20 @@ export async function GET(req: Request) {
     const z = matchingZone;
     const standardFee = Number(z.feeKes);
     const isNairobi = county.toLowerCase() === "nairobi";
+    const minDays = z.minDays ?? 3;
+    const maxDays = z.maxDays ?? 5;
     return NextResponse.json({
       standard: standardFee,
       express: isNairobi ? standardFee * 2 : null,
       pickup: 0,
+      zoneId: z.id,
       zoneName: z.name,
       estimatedDays: {
-        standard: z.minDays != null && z.maxDays != null ? `${z.minDays}-${z.maxDays}` : "3-5",
+        standard: `${minDays}-${maxDays}`,
         express: "1-2",
       },
+      minDays,
+      maxDays,
     });
   } catch (e) {
     console.error("Shipping fee error:", e);

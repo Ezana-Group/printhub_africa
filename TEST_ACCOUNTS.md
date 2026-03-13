@@ -6,6 +6,7 @@ Admin	admin2@printhub.africa	Test@12345
 Staff (Sales)	sales@printhub.africa	Test@12345
 Staff (Marketing)	marketing@printhub.africa	Test@12345
 Customer	customer@printhub.africa	Test@12345
+Corporate (approved)	corporate@printhub.africa	Test@12345
 
 
 Run the database seed to create these users. Then log in at **/login** with email + password.
@@ -65,10 +66,12 @@ Start ERPNext with `npm run erpnext:start`.
 | **Staff (Sales)** | sales@printhub.africa | Test@12345 | Admin dashboard; department: Sales |
 | **Staff (Marketing)** | marketing@printhub.africa | Test@12345 | Admin dashboard; department: Marketing |
 | **Customer** | customer@printhub.africa | Test@12345 | Shop, account, checkout only (no /admin) |
+| **Corporate (approved)** | corporate@printhub.africa | Test@12345 | Approved corporate account (CORP-001). Account → Corporate, NET-30, place orders on account. Use for review and testing. |
 
 ## Notes
 
 - **CUSTOMER** – Can use shop, cart, checkout, account (orders, addresses, profile). Cannot open `/admin`.
+- **CORPORATE** – Same as customer, plus an **approved** corporate account (CORP-001, NET-30). Log in and go to **Account → Settings → Corporate Account** to see the dashboard, team, and place orders on account. Use **corporate@printhub.africa** / **Test@12345** for review and testing.
 - **STAFF**, **ADMIN**, **SUPER_ADMIN** – Can open `/admin` (Dashboard, Orders, Products, etc.). Sales/Marketing are STAFF with different departments in the `Staff` table (for future permissions or display).
 - If the database was already seeded before, `upsert` will not change existing users’ passwords. To reset a password, update it in the database or re-seed (seed uses `update: {}` so existing rows are not updated).
 

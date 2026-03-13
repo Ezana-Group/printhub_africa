@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
+import { Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -166,6 +167,13 @@ export default function RegisterPage() {
           <Button type="button" variant="ghost" className="w-full" asChild>
             <Link href="/login">Already have an account? Sign in</Link>
           </Button>
+          <p className="text-xs text-center text-muted-foreground">
+            Registering for a business?{" "}
+            <Link href="/corporate/apply" className="inline-flex items-center gap-1 text-[#FF4D00] hover:underline">
+              <Building2 className="w-3.5 h-3.5" />
+              Apply for a Corporate Account
+            </Link>
+          </p>
         </CardFooter>
       </form>
     </Card>

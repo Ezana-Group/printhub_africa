@@ -6,7 +6,7 @@ const root = path.resolve(__dirname, "..");
 config({ path: path.join(root, ".env.local") });
 config({ path: path.join(root, ".env") });
 
-import { PrismaClient, UserRole, ProductType, PrintMaterialType, PrinterType } from "@prisma/client";
+import { PrismaClient, UserRole, ProductType, PrintMaterialType, PrinterType, CorporateIndustry, CompanySize, CorporateStatus, PaymentTerms, CorporateRole } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import * as bcrypt from "bcryptjs";
 
@@ -588,6 +588,38 @@ async function main() {
   });
   console.log("Seed coupon WELCOME10 created");
 
+  // Kenya delivery zones (county rates: Nairobi 200, Central 400, etc.)
+  const kenyaZones = [
+    { name: "Nairobi", county: "Nairobi", counties: null, feeKes: 200, minDays: 1, maxDays: 2, sortOrder: 0 },
+    { name: "Central", county: null, counties: "Kiambu,Murang'a,Nyeri,Kirinyaga,Nyandarua", feeKes: 400, minDays: 2, maxDays: 4, sortOrder: 1 },
+    { name: "Coast", county: null, counties: "Mombasa,Kilifi,Kwale,Lamu,Taita-Taveta,Tana River", feeKes: 450, minDays: 3, maxDays: 5, sortOrder: 2 },
+    { name: "Eastern", county: null, counties: "Embu,Machakos,Makueni,Meru,Tharaka-Nithi,Kitui,Isiolo", feeKes: 450, minDays: 3, maxDays: 5, sortOrder: 3 },
+    { name: "Rift Valley", county: null, counties: "Nakuru,Eldoret,Uasin Gishu,Kericho,Bomet,Narok,Kajiado,Baringo", feeKes: 500, minDays: 3, maxDays: 6, sortOrder: 4 },
+    { name: "Western", county: null, counties: "Kakamega,Bungoma,Busia,Vihiga", feeKes: 500, minDays: 4, maxDays: 6, sortOrder: 5 },
+    { name: "Nyanza", county: null, counties: "Kisumu,Siaya,Kisii,Migori,Homa Bay,Nyamira", feeKes: 500, minDays: 4, maxDays: 6, sortOrder: 6 },
+    { name: "North Eastern", county: null, counties: "Garissa,Wajir,Mandera", feeKes: 600, minDays: 5, maxDays: 8, sortOrder: 7 },
+  ];
+  for (const z of kenyaZones) {
+    const existing = await prisma.deliveryZone.findFirst({
+      where: { name: z.name, county: z.county ?? undefined },
+    });
+    if (!existing) {
+      await prisma.deliveryZone.create({
+        data: {
+          name: z.name,
+          county: z.county ?? undefined,
+          counties: z.counties ?? undefined,
+          feeKes: z.feeKes,
+          minDays: z.minDays,
+          maxDays: z.maxDays,
+          sortOrder: z.sortOrder,
+          isActive: true,
+        },
+      });
+    }
+  }
+  console.log("Kenya delivery zones seeded");
+
   // Legal pages (full content from legal-content.ts)
   const { getLegalContent } = await import("./legal-content");
   const legalPages = [
@@ -827,6 +859,74 @@ async function main() {
     });
   }
   console.log("Catalogue categories seeded");
+
+  // Corporate portal counters (for CORP-001, CINV-2026-0001)
+  await prisma.counter.upsert({
+    where: { id: "corporate_account" },
+    update: {},
+    create: { id: "corporate_account", value: 0 },
+  });
+  await prisma.counter.upsert({
+    where: { id: "corporate_invoice" },
+    update: {},
+    create: { id: "corporate_invoice", value: 0 },
+  });
+  console.log("Corporate counters seeded");
+
+  // Corporate test account — approved account for review and testing (Account → Corporate, NET-30, place orders)
+  const corporateUser = await prisma.user.upsert({
+    where: { email: "corporate@printhub.africa" },
+    update: {},
+    create: {
+      email: "corporate@printhub.africa",
+      name: "Corporate Test Contact",
+      passwordHash: defaultHash,
+      role: UserRole.CUSTOMER,
+      emailVerified: new Date(),
+    },
+  });
+  const existingCorp = await prisma.corporateAccount.findFirst({
+    where: { primaryUserId: corporateUser.id },
+  });
+  if (!existingCorp) {
+    const corp = await prisma.corporateAccount.create({
+      data: {
+        accountNumber: "CORP-001",
+        companyName: "PrintHub Test Company Ltd",
+        tradingName: "Test Corp",
+        kraPin: "P051V123456X",
+        industry: CorporateIndustry.TECHNOLOGY,
+        companySize: CompanySize.SMALL,
+        primaryUserId: corporateUser.id,
+        billingAddress: "123 Test Street",
+        billingCity: "Nairobi",
+        billingCounty: "Nairobi",
+        paymentTerms: PaymentTerms.NET_30,
+        creditLimit: 100000,
+        status: CorporateStatus.APPROVED,
+        approvedAt: new Date(),
+        approvedBy: admin.id,
+      },
+    });
+    await prisma.corporateTeamMember.create({
+      data: {
+        corporateId: corp.id,
+        userId: corporateUser.id,
+        role: CorporateRole.OWNER,
+        jobTitle: "Primary Contact",
+        canPlaceOrders: true,
+        canViewInvoices: true,
+        canManageTeam: true,
+        isActive: true,
+        acceptedAt: new Date(),
+      },
+    });
+    await prisma.counter.update({
+      where: { id: "corporate_account" },
+      data: { value: 1 },
+    });
+  }
+  console.log("Corporate test account: corporate@printhub.africa (approved, CORP-001)");
 
   console.log("Seed completed.");
 }

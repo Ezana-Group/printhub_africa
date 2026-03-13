@@ -26,7 +26,7 @@ export default async function AccountPage() {
           status: { notIn: ["DELIVERED", "CANCELLED", "REFUNDED"] },
         },
       }),
-      prisma.address.count({ where: { userId } }),
+      prisma.savedAddress.count({ where: { userId } }),
       prisma.order.findMany({
         where: { userId },
         orderBy: { createdAt: "desc" },
@@ -113,7 +113,7 @@ export default async function AccountPage() {
           </div>
         </Link>
         <Link
-          href="/account/addresses"
+          href="/account/settings/addresses"
           className="group rounded-2xl bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)]"
           style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}
         >

@@ -24,6 +24,8 @@ interface ProductItem {
   sku: string | null;
   stock: number;
   isFeatured: boolean;
+  averageRating?: number | null;
+  reviewCount?: number;
 }
 
 export function ShopContent() {
@@ -171,6 +173,8 @@ export function ShopContent() {
                     comparePrice={p.comparePrice}
                     category={p.category}
                     stock={p.stock}
+                    averageRating={p.averageRating ?? undefined}
+                    reviewCount={p.reviewCount ?? 0}
                   />
                 ))}
               </div>

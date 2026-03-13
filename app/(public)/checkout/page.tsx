@@ -78,6 +78,22 @@ function normalizePhone(val: string): string {
   return val;
 }
 
+/** Add business days (skip Sat/Sun) to a date */
+function addBusinessDays(date: Date, days: number): Date {
+  const d = new Date(date);
+  let added = 0;
+  while (added < days) {
+    d.setDate(d.getDate() + 1);
+    const day = d.getDay();
+    if (day !== 0 && day !== 6) added++;
+  }
+  return d;
+}
+
+function formatEstimatedDelivery(date: Date): string {
+  return date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { data: session } = useSession();
@@ -92,6 +108,9 @@ export default function CheckoutPage() {
     payment,
     setPayment,
     setOrderId,
+    cartId,
+    cartSessionId,
+    setCartId,
     reset: resetCheckout,
   } = useCheckoutStore();
 
@@ -111,6 +130,9 @@ export default function CheckoutPage() {
     express: number | null;
     pickup: number;
     noZonesConfigured?: boolean;
+    zoneId?: string;
+    minDays?: number;
+    maxDays?: number;
   }>({ standard: null, express: null, pickup: 0 });
   const [pickupLocations, setPickupLocations] = useState<{ sameCounty: PickupLoc[]; other: PickupLoc[]; all: PickupLoc[] }>({ sameCounty: [], other: [], all: [] });
   const [pickupLocationsLoading, setPickupLocationsLoading] = useState(false);
@@ -132,6 +154,13 @@ export default function CheckoutPage() {
   const [orderForSelf, setOrderForSelf] = useState(true);
   const [profileData, setProfileData] = useState<{ name?: string | null; email?: string | null; phone?: string | null } | null>(null);
   const hasPrefilledContactFromProfile = useRef(false);
+  const [corporate, setCorporate] = useState<{
+    id: string;
+    companyName: string;
+    discountPercent: number;
+    paymentTerms: string;
+    canUseNetTerms: boolean;
+  } | null>(null);
 
   const shippingFee =
     delivery.method === "PICKUP"
@@ -140,11 +169,23 @@ export default function CheckoutPage() {
         ? (shippingRates.express ?? shippingRates.standard ?? 0)
         : (delivery.fee ?? shippingRates.standard ?? 0);
 
-  const totals = calculateCartTotals(
+  const couponDiscount = appliedCoupon?.discountAmount ?? 0;
+  const baseTotals = calculateCartTotals(
     items.map((i) => ({ unitPrice: i.unitPrice, quantity: i.quantity })),
     shippingFee,
-    appliedCoupon?.discountAmount ?? 0
+    couponDiscount
   );
+  const corporateDiscountKes = corporate
+    ? Math.round(baseTotals.subtotalInclVat * (corporate.discountPercent / 100))
+    : 0;
+  const totals =
+    corporateDiscountKes === 0
+      ? baseTotals
+      : calculateCartTotals(
+          items.map((i) => ({ unitPrice: i.unitPrice, quantity: i.quantity })),
+          shippingFee,
+          couponDiscount + corporateDiscountKes
+        );
 
   useEffect(() => {
     if (items.length === 0) router.push("/cart");
@@ -168,6 +209,16 @@ export default function CheckoutPage() {
       .then((r) => (r.ok ? r.json() : null))
       .then((data: { name?: string | null; email?: string | null; phone?: string | null } | null) => {
         if (data) setProfileData(data);
+      })
+      .catch(() => {});
+  }, [session?.user]);
+
+  useEffect(() => {
+    if (!session?.user) return;
+    fetch("/api/account/corporate/checkout")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { corporate?: { id: string; companyName: string; discountPercent: number; paymentTerms: string; canUseNetTerms: boolean } } | null) => {
+        if (data?.corporate) setCorporate(data.corporate);
       })
       .catch(() => {});
   }, [session?.user]);
@@ -225,14 +276,17 @@ export default function CheckoutPage() {
     if (!delivery.county) return;
     fetch(`/api/shipping/fee?county=${encodeURIComponent(delivery.county)}`)
       .then((r) => r.json())
-      .then((data) =>
+      .then((data) => {
         setShippingRates({
           standard: data.standard ?? null,
           express: data.express ?? null,
           pickup: data.pickup ?? 0,
           noZonesConfigured: data.noZonesConfigured ?? false,
-        })
-      )
+          zoneId: data.zoneId ?? undefined,
+          minDays: data.minDays ?? undefined,
+          maxDays: data.maxDays ?? undefined,
+        });
+      })
       .catch(() => setShippingRates({ standard: null, express: null, pickup: 0, noZonesConfigured: true }));
   }, [delivery.county]);
 
@@ -270,7 +324,7 @@ export default function CheckoutPage() {
       .finally(() => setCourierLocationsLoading(false));
   }, [delivery.county]);
 
-  // Sync delivery fee when method or shipping rates change; switch to PICKUP if delivery not available for county
+  // Sync delivery fee, zoneId, and estimated delivery date when method or shipping rates change
   useEffect(() => {
     const standardAvailable = shippingRates.standard != null;
     if (!standardAvailable && (delivery.method === "STANDARD" || delivery.method === "EXPRESS")) {
@@ -283,8 +337,22 @@ export default function CheckoutPage() {
         : delivery.method === "EXPRESS"
           ? shippingRates.express ?? shippingRates.standard ?? 0
           : shippingRates.standard ?? 0;
-    setDelivery({ fee });
-  }, [delivery.method, shippingRates.standard, shippingRates.express, setDelivery]);
+    const productionDays = 3;
+    const transitDays =
+      delivery.method === "EXPRESS"
+        ? 1
+        : shippingRates.minDays != null
+          ? Math.ceil(((shippingRates.minDays + (shippingRates.maxDays ?? shippingRates.minDays)) / 2))
+          : 3;
+    const totalBusinessDays = productionDays + transitDays;
+    const estimatedDate = addBusinessDays(new Date(), totalBusinessDays);
+    setDelivery({
+      fee,
+      estimatedDays: delivery.method === "EXPRESS" ? "1-2" : (shippingRates.minDays != null && shippingRates.maxDays != null ? `${shippingRates.minDays}-${shippingRates.maxDays}` : "3-5"),
+      deliveryZoneId: shippingRates.zoneId,
+      estimatedDelivery: standardAvailable && (delivery.method === "STANDARD" || delivery.method === "EXPRESS") ? estimatedDate.toISOString() : undefined,
+    });
+  }, [delivery.method, shippingRates.standard, shippingRates.express, shippingRates.zoneId, shippingRates.minDays, shippingRates.maxDays, setDelivery]);
 
   const canContinueStep1 =
     contact.email &&
@@ -303,6 +371,11 @@ export default function CheckoutPage() {
       (delivery.city ?? "").trim();
 
   const buildOrderPayload = () => ({
+    cartId: cartId ?? undefined,
+    corporateId: corporate?.id ?? undefined,
+    isNetTerms:
+      payment.method === "INVOICE_NET_30" || payment.method === "INVOICE_NET_60",
+    poReference: payment.poReference?.trim() || undefined,
     items: items.map((i) =>
       isCatalogueCartItem(i)
         ? {
@@ -341,8 +414,10 @@ export default function CheckoutPage() {
     pickupLocationId: isPickup ? delivery.pickupLocationId ?? undefined : undefined,
     preferredCourierId: !isPickup ? (delivery.preferredCourierId ?? undefined) : undefined,
     deliveryNotes: delivery.notes || undefined,
+    deliveryZoneId: !isPickup ? (delivery.deliveryZoneId ?? undefined) : undefined,
+    estimatedDelivery: !isPickup && delivery.estimatedDelivery ? delivery.estimatedDelivery : undefined,
     shippingCost: shippingFee,
-    discount: appliedCoupon?.discountAmount ?? 0,
+    discount: couponDiscount,
   });
 
   const createOrder = async (): Promise<{ id: string; orderNumber: string } | null> => {
@@ -455,6 +530,20 @@ export default function CheckoutPage() {
       useCartStore.getState().clearCart();
       resetCheckout();
       router.push(`/pay/${order.id}`);
+    }
+  };
+
+  const handlePlaceOrderWithInvoice = async () => {
+    if (!termsAccepted) {
+      setError("Please accept the terms to continue.");
+      return;
+    }
+    const order = await createOrder();
+    if (order) {
+      setPlacedOrderId(order.id);
+      setPlacedOrderNumber(order.orderNumber);
+      useCartStore.getState().clearCart();
+      setStep(4);
     }
   };
 
@@ -610,8 +699,34 @@ export default function CheckoutPage() {
                   )}
                   <Button
                     className="w-full bg-primary hover:bg-primary/90"
-                    onClick={() => setStep(2)}
                     disabled={!canContinueStep1}
+                    onClick={async () => {
+                      try {
+                        const cartPayload = {
+                          sessionId: cartSessionId ?? undefined,
+                          cartId: cartId ?? undefined,
+                          email: contact.email ?? undefined,
+                          phone: contact.phone ?? undefined,
+                          items: items.map((i) =>
+                            isCatalogueCartItem(i)
+                              ? { catalogueItemId: i.catalogueItemId, quantity: i.quantity, unitPrice: i.unitPrice, name: i.name, slug: i.slug, type: "CATALOGUE" }
+                              : { productId: i.productId, variantId: i.variantId, quantity: i.quantity, unitPrice: i.unitPrice, name: i.name, slug: i.slug }
+                          ),
+                        };
+                        const res = await fetch("/api/checkout/cart", {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify(cartPayload),
+                        });
+                        if (res.ok) {
+                          const data = await res.json();
+                          if (data.cartId) setCartId(data.cartId, data.sessionId ?? data.cartId);
+                        }
+                      } catch {
+                        // non-blocking
+                      }
+                      setStep(2);
+                    }}
                   >
                     Continue to Delivery →
                   </Button>
@@ -791,18 +906,26 @@ export default function CheckoutPage() {
                             checked={delivery.method === "STANDARD"}
                             onChange={() => setDelivery({ method: "STANDARD", fee: shippingRates.standard ?? 0 })}
                           />
-                          <span>Standard Delivery — {formatPrice(shippingRates.standard ?? 0)} — 3–5 business days</span>
+                          <span>Standard Delivery — {formatPrice(shippingRates.standard ?? 0)} — {shippingRates.minDays != null && shippingRates.maxDays != null ? `${shippingRates.minDays}–${shippingRates.maxDays}` : "3–5"} business days</span>
                         </label>
+                        {(delivery.method === "STANDARD" && delivery.estimatedDelivery) && (
+                          <p className="text-sm text-muted-foreground pl-6">Estimated delivery: {formatEstimatedDelivery(new Date(delivery.estimatedDelivery))}</p>
+                        )}
                         {(shippingRates.express ?? 0) > 0 && (
-                          <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                            <input
-                              type="radio"
-                              name="deliveryMethod"
-                              checked={delivery.method === "EXPRESS"}
-                              onChange={() => setDelivery({ method: "EXPRESS", fee: shippingRates.express ?? shippingRates.standard ?? 0 })}
-                            />
-                            <span>Express — {formatPrice(shippingRates.express ?? 0)} — 1–2 business days</span>
-                          </label>
+                          <>
+                            <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                              <input
+                                type="radio"
+                                name="deliveryMethod"
+                                checked={delivery.method === "EXPRESS"}
+                                onChange={() => setDelivery({ method: "EXPRESS", fee: shippingRates.express ?? shippingRates.standard ?? 0 })}
+                              />
+                              <span>Express — {formatPrice(shippingRates.express ?? 0)} — 1–2 business days</span>
+                            </label>
+                            {(delivery.method === "EXPRESS" && delivery.estimatedDelivery) && (
+                              <p className="text-sm text-muted-foreground pl-6">Estimated delivery: {formatEstimatedDelivery(new Date(delivery.estimatedDelivery))}</p>
+                            )}
+                          </>
                         )}
                         <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
                           <input
@@ -1041,6 +1164,27 @@ export default function CheckoutPage() {
                         <p className="mt-0.5 text-xs text-muted-foreground">Pay with Google</p>
                       </button>
                     )}
+                    {corporate?.canUseNetTerms && (corporate.paymentTerms === "NET_30" || corporate.paymentTerms === "NET_60" || corporate.paymentTerms === "NET_14") && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPayment({
+                            method: corporate.paymentTerms === "NET_60" ? "INVOICE_NET_60" : "INVOICE_NET_30",
+                          })
+                        }
+                        className={`rounded-xl border-2 p-4 text-left transition ${payment.method === "INVOICE_NET_30" || payment.method === "INVOICE_NET_60" ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"}`}
+                      >
+                        <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100">
+                          <Building2 className="h-5 w-5 text-slate-600" />
+                        </div>
+                        <p className="text-sm font-semibold text-foreground">
+                          Invoice (Net-{corporate.paymentTerms === "NET_60" ? "60" : corporate.paymentTerms === "NET_14" ? "14" : "30"})
+                        </p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          Pay within {corporate.paymentTerms === "NET_60" ? "60" : corporate.paymentTerms === "NET_14" ? "14" : "30"} days
+                        </p>
+                      </button>
+                    )}
                   </div>
                   {payment.method === "CARD" && (
                     <div className="space-y-3 rounded-xl border border-border bg-muted/20 p-4">
@@ -1129,6 +1273,21 @@ export default function CheckoutPage() {
                       </p>
                     </div>
                   )}
+                  {(payment.method === "INVOICE_NET_30" || payment.method === "INVOICE_NET_60") && (
+                    <div className="pt-2">
+                      <Label>PO / Reference (optional)</Label>
+                      <Input
+                        type="text"
+                        value={payment.poReference ?? ""}
+                        onChange={(e) => setPayment({ poReference: e.target.value })}
+                        placeholder="e.g. PO-12345"
+                        className="mt-1"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        We&apos;ll send an invoice to your account email. Pay within the agreed terms.
+                      </p>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 pt-2">
                     <input
                       type="checkbox"
@@ -1137,7 +1296,7 @@ export default function CheckoutPage() {
                       onChange={(e) => setTermsAccepted(e.target.checked)}
                       className="rounded border-input"
                     />
-                    <Label htmlFor="terms-step3">I agree to PrintHub&apos;s Terms of Service and Privacy Policy *</Label>
+                    <Label htmlFor="terms-step3">I agree to the Terms of Service and Refund Policy *</Label>
                   </div>
                   <div className="flex gap-2 pt-2">
                     <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
@@ -1150,6 +1309,14 @@ export default function CheckoutPage() {
                         disabled={placingOrder || !termsAccepted || !(payment.mpesaPhone || contact.phone)}
                       >
                         {placingOrder ? "Creating order…" : "Pay with M-Pesa"}
+                      </Button>
+                    ) : payment.method === "INVOICE_NET_30" || payment.method === "INVOICE_NET_60" ? (
+                      <Button
+                        className="flex-1 bg-primary hover:bg-primary/90"
+                        onClick={handlePlaceOrderWithInvoice}
+                        disabled={placingOrder || !termsAccepted}
+                      >
+                        {placingOrder ? "Creating order…" : "Place order (pay by invoice)"}
                       </Button>
                     ) : (
                       <Button
@@ -1167,7 +1334,7 @@ export default function CheckoutPage() {
               </Card>
             )}
 
-            {/* Step 4 — Order placed (only shown after payment succeeds) */}
+            {/* Step 4 — Order placed (after payment or invoice order) */}
             {step === 4 && placedOrderId && (
               <Card>
                 <CardHeader>
@@ -1175,7 +1342,9 @@ export default function CheckoutPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    Thank you. Your payment was successful and your order has been placed.
+                    {payment.method === "INVOICE_NET_30" || payment.method === "INVOICE_NET_60"
+                      ? "Thank you. Your order has been placed. We'll send an invoice to your email; please pay within the agreed terms."
+                      : "Thank you. Your payment was successful and your order has been placed."}
                   </p>
                   <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
                     <p className="text-sm font-medium text-foreground">Order number</p>
@@ -1208,6 +1377,7 @@ export default function CheckoutPage() {
           <div className="lg:sticky lg:top-8 lg:self-start">
             <CheckoutOrderSummary
               shippingFee={shippingFee}
+              corporate={corporate ? { discountPercent: corporate.discountPercent, companyName: corporate.companyName } : undefined}
               paymentMethod={
                 step >= 3
                   ? payment.method === "MPESA"
@@ -1224,7 +1394,9 @@ export default function CheckoutPage() {
                               ? "Google Pay"
                               : payment.method === "BANK_TRANSFER"
                                 ? "Bank Transfer"
-                                : payment.method
+                                : payment.method === "INVOICE_NET_30" || payment.method === "INVOICE_NET_60"
+                                  ? "Invoice (Net terms)"
+                                  : payment.method
                   : undefined
               }
             />

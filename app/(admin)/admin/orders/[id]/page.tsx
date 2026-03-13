@@ -24,6 +24,9 @@ export default async function AdminOrderDetailPage({
       shippingAddress: true,
       payments: { orderBy: { createdAt: "desc" }, include: { mpesaTransaction: true } },
       timeline: { orderBy: { timestamp: "desc" } },
+      delivery: { include: { assignedCourier: true, deliveryZone: true } },
+      deliveryZone: true,
+      trackingEvents: { orderBy: { createdAt: "desc" } },
     },
   });
 
@@ -68,6 +71,16 @@ export default async function AdminOrderDetailPage({
       ...t,
       timestamp: t.timestamp.toISOString(),
     })),
+    delivery: order.delivery
+      ? {
+          ...order.delivery,
+          estimatedDelivery: order.delivery.estimatedDelivery?.toISOString() ?? null,
+          dispatchedAt: order.delivery.dispatchedAt?.toISOString() ?? null,
+          deliveredAt: order.delivery.deliveredAt?.toISOString() ?? null,
+          rescheduledTo: order.delivery.rescheduledTo?.toISOString() ?? null,
+        }
+      : null,
+    trackingEvents: order.trackingEvents?.map((e) => ({ ...e, createdAt: e.createdAt.toISOString() })) ?? [],
   };
 
   return <OrderDetailClient orderId={id} initialOrder={serialized} />;

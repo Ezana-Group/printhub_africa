@@ -72,10 +72,29 @@ export async function GET(req: NextRequest) {
       prisma.product.count({ where }),
     ]);
 
+    const productIds = products.map((p) => p.id);
+    const reviewStats =
+      productIds.length > 0
+        ? await prisma.productReview.groupBy({
+            by: ["productId"],
+            where: { productId: { in: productIds }, isApproved: true },
+            _count: { id: true },
+            _avg: { rating: true },
+          })
+        : [];
+    const statsByProductId: Record<string, { avg: number; count: number }> = {};
+    for (const s of reviewStats) {
+      statsByProductId[s.productId] = {
+        avg: s._avg.rating != null ? Math.round(s._avg.rating * 10) / 10 : 0,
+        count: s._count.id,
+      };
+    }
+
     const items = products.map((p) => {
       const imgs = p.productImages ?? [];
       const featured = imgs.find((i) => i.isPrimary) ?? imgs[0];
       const image = p.images?.[0] ?? featured?.url ?? null;
+      const stats = statsByProductId[p.id];
       return {
         id: p.id,
         name: p.name,
@@ -90,6 +109,8 @@ export async function GET(req: NextRequest) {
         sku: p.sku,
         stock: p.stock,
         isFeatured: p.isFeatured,
+        averageRating: stats?.avg ?? null,
+        reviewCount: stats?.count ?? 0,
       };
     });
 
