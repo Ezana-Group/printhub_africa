@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { FileUploader } from "@/components/upload/FileUploader";
 import { Loader2 } from "lucide-react";
 
@@ -98,6 +99,7 @@ interface Item {
   priceOverrideKes: number | null;
   minQuantity: number;
   maxQuantity: number;
+  isFeatured: boolean;
   category?: { id: string; name: string; slug: string };
   photos: Photo[];
 }
@@ -135,6 +137,7 @@ export function CatalogueEditForm({
     initialItem.priceOverrideKes != null ? String(initialItem.priceOverrideKes) : ""
   );
   const [sourceUrl, setSourceUrl] = useState(initialItem.sourceUrl ?? "");
+  const [isFeatured, setIsFeatured] = useState(initialItem.isFeatured ?? false);
 
   useEffect(() => {
     setItem(initialItem);
@@ -152,6 +155,7 @@ export function CatalogueEditForm({
         : ""
     );
     setSourceUrl(initialItem.sourceUrl ?? "");
+    setIsFeatured(initialItem.isFeatured ?? false);
   }, [initialItem]);
 
   const refetchItem = useCallback(async () => {
@@ -181,6 +185,7 @@ export function CatalogueEditForm({
           priceOverrideKes: priceOverrideKes
             ? parseFloat(priceOverrideKes)
             : null,
+          isFeatured,
         }),
       });
       if (!res.ok) {
@@ -343,6 +348,16 @@ export function CatalogueEditForm({
                 className="mt-1"
               />
             </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Switch
+              id="isFeatured"
+              checked={isFeatured}
+              onCheckedChange={setIsFeatured}
+            />
+            <Label htmlFor="isFeatured" className="cursor-pointer text-sm font-medium">
+              Featured on homepage (show in Print on Demand section)
+            </Label>
           </div>
           <Button type="submit" disabled={loading} className="rounded-xl">
             {loading ? "Saving…" : "Save details"}

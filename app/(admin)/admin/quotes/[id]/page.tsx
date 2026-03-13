@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Lock, XCircle } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSection } from "@/lib/admin-route-guard";
 import { AdminBreadcrumbs } from "@/components/admin/admin-breadcrumbs";
@@ -69,12 +70,15 @@ export default async function AdminQuoteDetailPage({
     acceptedAt: quote.acceptedAt?.toISOString() ?? null,
     createdAt: quote.createdAt.toISOString(),
     updatedAt: quote.updatedAt.toISOString(),
+    closedAt: quote.closedAt?.toISOString() ?? null,
     staffList: staffList.map((s) => ({
       id: s.id,
       name: s.user?.name ?? "",
       email: s.user?.email ?? "",
     })),
   };
+
+  const isCancelledStatus = quote.status === "cancelled" || quote.status === "rejected";
 
   return (
     <div className="p-6 space-y-6">
@@ -84,6 +88,35 @@ export default async function AdminQuoteDetailPage({
           { label: quote.quoteNumber },
         ]}
       />
+
+      {isCancelledStatus && (
+        <div className="mb-6 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-100">
+            <XCircle className="h-5 w-5 text-red-600" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-red-800">
+              {quote.status === "cancelled" && quote.closedBy === "CUSTOMER"
+                ? "Customer withdrew this quote request"
+                : quote.status === "rejected"
+                  ? "Customer declined this quote"
+                  : "This quote was cancelled by a staff member"}
+            </p>
+            <div className="mt-1 space-y-0.5 text-sm text-red-700">
+              {quote.cancelledAt && (
+                <p>Cancelled: {new Date(quote.cancelledAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}</p>
+              )}
+              {(quote.closedReason ?? quote.cancellationReason) && (
+                <p>Reason: <span className="font-medium">&quot;{quote.closedReason ?? quote.cancellationReason}&quot;</span></p>
+              )}
+              {quote.closedBy === "CUSTOMER" && (
+                <p>The customer cancelled from their account portal.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold text-[#111]">{quote.quoteNumber}</h1>
@@ -167,6 +200,25 @@ export default async function AdminQuoteDetailPage({
         </div>
 
         <div>
+          {quote.closedBy === "CUSTOMER" && (
+            <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 mb-6">
+              <Lock className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="font-semibold text-red-800 text-sm">
+                  Customer closed this quote — no changes allowed
+                </p>
+                <p className="text-red-600 text-sm mt-0.5">
+                  {quote.closedReason ?? "This quote was withdrawn or declined by the customer."}
+                  {quote.closedAt && (
+                    <> Closed on {new Date(quote.closedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}.</>
+                  )}
+                </p>
+                <p className="text-red-500 text-xs mt-1">
+                  The customer&apos;s decision is final. To reopen, the customer must submit a new quote request.
+                </p>
+              </div>
+            </div>
+          )}
           <QuoteDetailClient
             quoteId={quote.id}
             quoteNumber={quote.quoteNumber}
@@ -185,6 +237,9 @@ export default async function AdminQuoteDetailPage({
             customerEstimateLow={specEstimateLow}
             customerEstimateHigh={specEstimateHigh}
             deadlineHint={deadlineHint}
+            closedBy={quote.closedBy}
+            closedAt={serialized.closedAt}
+            closedReason={quote.closedReason}
           />
           <AdminQuoteCancelRestore
             quoteId={quote.id}
@@ -193,6 +248,7 @@ export default async function AdminQuoteDetailPage({
             cancellationReason={quote.cancellationReason}
             cancellationNotes={quote.cancellationNotes}
             cancelledByAdminName={quote.cancelledByAdmin?.name}
+            closedBy={quote.closedBy}
           />
         </div>
       </div>

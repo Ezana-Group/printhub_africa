@@ -110,17 +110,19 @@ function extToFileType(ext: string): UploadedFileType {
 type SessionLike = { user?: { id?: string; role?: string } } | null;
 
 export async function POST(req: Request) {
-  try {
-    if (!isR2Configured()) {
-      return NextResponse.json(
-        {
-          error: "File upload is not configured. Set R2_ENDPOINT, R2_ACCESS_KEY_ID, and R2_SECRET_ACCESS_KEY in your environment. If uploads fail in the browser with a CORS/preflight error, configure CORS on your R2 buckets (see docs/R2_CORS.md).",
-          code: "R2_NOT_CONFIGURED",
-        },
-        { status: 503 }
-      );
-    }
+  // Check R2 env vars first so we never crash with an unhandled error before returning a clear 503
+  if (!isR2Configured()) {
+    return NextResponse.json(
+      {
+        error:
+          "File upload is not configured. Set R2_ENDPOINT, R2_ACCESS_KEY_ID, and R2_SECRET_ACCESS_KEY in your environment. If uploads fail in the browser with a CORS/preflight error, configure CORS on your R2 buckets (see docs/R2_CORS.md).",
+        code: "R2_NOT_CONFIGURED",
+      },
+      { status: 503 }
+    );
+  }
 
+  try {
     let session: SessionLike = null;
     try {
       session = (await getServerSession(authOptions)) as SessionLike;
@@ -207,6 +209,14 @@ export async function POST(req: Request) {
       );
     }
 
+    const sizeInt = Math.floor(Number(sizeBytes));
+    if (!Number.isFinite(sizeInt) || sizeInt < 1) {
+      return NextResponse.json(
+        { error: "Invalid file size." },
+        { status: 400 }
+      );
+    }
+
     let uploadedFile;
     try {
       uploadedFile = await prisma.uploadedFile.create({
@@ -214,11 +224,11 @@ export async function POST(req: Request) {
           userId: session?.user?.id ?? null,
           guestEmail: context.startsWith("CUSTOMER_") && !session ? guestEmail ?? null : null,
           originalName: filename,
-          filename: filename,
+          filename,
           storageKey,
           bucket: params.bucket,
           mimeType,
-          size: sizeBytes,
+          size: sizeInt,
           ext,
           fileType: extToFileType(ext),
           uploadContext: context as UploadContext,
@@ -230,19 +240,24 @@ export async function POST(req: Request) {
         },
       });
     } catch (dbErr) {
-      const err = dbErr as { code?: string; message?: string };
-      console.error("Presign DB error:", err?.code ?? "unknown", err?.message ?? dbErr);
+      const err = dbErr as { code?: string; message?: string; meta?: unknown };
+      console.error("Presign DB error:", err?.code ?? "unknown", err?.message ?? dbErr, err?.meta);
       const isConnection =
         err?.code === "P1001" ||
         err?.code === "P1002" ||
         err?.code === "P1017" ||
         err?.message?.toLowerCase().includes("connect") ||
         err?.message?.toLowerCase().includes("reachable");
+      const rawMessage = err?.message ?? String(dbErr);
       const message = isConnection
         ? "Database is unreachable. Check DATABASE_URL and that the database is running (e.g. Neon, Supabase)."
         : "Database error while saving upload record. Check server logs and that migrations are applied.";
       return NextResponse.json(
-        { error: message, code: "UPLOAD_DB_ERROR" },
+        {
+          error: message,
+          code: "UPLOAD_DB_ERROR",
+          details: process.env.NODE_ENV === "development" ? rawMessage : undefined,
+        },
         { status: 503 }
       );
     }

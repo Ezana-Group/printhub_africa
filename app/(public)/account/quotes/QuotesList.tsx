@@ -1,24 +1,38 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import {
   ChevronDown,
-  ChevronUp,
   FileText,
   Download,
   MessageCircle,
-  X,
   Check,
   Clock,
   AlertCircle,
   CheckCircle,
-  XCircle,
-  RefreshCw,
   Loader2,
+  Tag,
+  Inbox,
+  CheckSquare,
+  Printer,
+  Archive,
+  FileQuestion,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  getStatusBadgeStyle,
+  getStatusIcon,
+  getStatusIconBg,
+  canCustomerWithdraw,
+} from '@/lib/quote-status-display'
 
 function formatDistanceToNow(date: Date): string {
   const now = new Date()
@@ -41,73 +55,6 @@ function formatDate(date: Date, pattern: 'dd MMM yyyy' | 'EEEE d MMMM yyyy'): st
   return date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-// Status config for Quote model: new | reviewing | quoted | accepted | rejected | in_production | completed | cancelled
-const STATUS_CONFIG: Record<
-  string,
-  { label: string; color: string; icon: typeof Clock; description: string; pulse?: boolean }
-> = {
-  new: {
-    label: 'Submitted',
-    color: 'bg-blue-100 text-blue-700',
-    icon: Clock,
-    description:
-      "Your quote request has been received. We'll review it shortly.",
-  },
-  reviewing: {
-    label: 'Under Review',
-    color: 'bg-amber-100 text-amber-700',
-    icon: RefreshCw,
-    description:
-      'Our team is reviewing your request and preparing a quote.',
-  },
-  quoted: {
-    label: 'Quote Ready',
-    color: 'bg-green-100 text-green-700',
-    icon: CheckCircle,
-    description:
-      "We've sent you a price. Review and accept or decline below.",
-    pulse: true,
-  },
-  accepted: {
-    label: 'Accepted',
-    color: 'bg-green-100 text-green-800',
-    icon: Check,
-    description:
-      "You've accepted this quote. We'll be in touch to arrange payment.",
-  },
-  rejected: {
-    label: 'Declined / Withdrawn',
-    color: 'bg-gray-100 text-gray-600',
-    icon: XCircle,
-    description: 'This quote request was closed.',
-  },
-  cancelled: {
-    label: 'Withdrawn',
-    color: 'bg-gray-100 text-gray-600',
-    icon: XCircle,
-    description: 'This quote request was withdrawn.',
-  },
-  in_production: {
-    label: 'In Production',
-    color: 'bg-purple-100 text-purple-700',
-    icon: RefreshCw,
-    description: 'Your order is being produced.',
-  },
-  completed: {
-    label: 'Order Placed',
-    color: 'bg-purple-100 text-purple-700',
-    icon: CheckCircle,
-    description: 'This quote was completed.',
-  },
-  expired: {
-    label: 'Expired',
-    color: 'bg-red-100 text-red-600',
-    icon: AlertCircle,
-    description:
-      'This quote has expired. Submit a new request if you still need it.',
-  },
-}
-
 const TYPE_LABELS: Record<string, string> = {
   large_format: '🖼 Large Format',
   three_d_print: '🖨 3D Printing',
@@ -124,13 +71,16 @@ type QuoteItem = {
   quotedAmount: number | null
   quoteBreakdown: string | null
   quotedAt: string | null
+  quotedValidUntil?: string | null
   acceptedAt?: string | null
   rejectedAt?: string | null
-  validUntil?: string | null
   deadline: string | null
   budgetRange: string | null
   specifications: Record<string, unknown> | null
   createdAt: string
+  cancellationReason?: string | null
+  cancellationBy?: string | null
+  cancelledAt?: string | null
   assignedUser: { name: string } | null
   files: Array<{
     id: string
@@ -142,17 +92,45 @@ type QuoteItem = {
   }>
 }
 
-type StatusTab = { key: string; label: string; countKey: keyof typeof defaultCounts }
+type TabCounts = { all: number; active: number; awaiting_you: number; in_progress: number; closed: number }
+type StatusTab = { id: string; label: string; countKey: keyof TabCounts }
 const TABS: StatusTab[] = [
-  { key: 'all', label: 'All', countKey: 'all' },
-  { key: 'active', label: 'Active', countKey: 'active' },
-  { key: 'quoted', label: 'Quoted', countKey: 'quoted' },
-  { key: 'accepted', label: 'Accepted', countKey: 'accepted' },
-  { key: 'cancelled', label: 'Cancelled', countKey: 'cancelled' },
-  { key: 'completed', label: 'Completed', countKey: 'completed' },
+  { id: 'all', label: 'All', countKey: 'all' },
+  { id: 'active', label: 'Active', countKey: 'active' },
+  { id: 'awaiting_you', label: 'Awaiting You', countKey: 'awaiting_you' },
+  { id: 'in_progress', label: 'In Progress', countKey: 'in_progress' },
+  { id: 'closed', label: 'Closed', countKey: 'closed' },
 ]
 
-const defaultCounts = { all: 0, active: 0, new: 0, reviewing: 0, quoted: 0, accepted: 0, cancelled: 0, completed: 0, rejected: 0, in_production: 0 }
+const defaultCounts: TabCounts = { all: 0, active: 0, awaiting_you: 0, in_progress: 0, closed: 0 }
+
+const EMPTY_STATES: Record<string, { icon: React.ReactNode; title: string; subtitle: string }> = {
+  all: {
+    icon: <FileQuestion className="h-12 w-12 text-gray-300" />,
+    title: "No quote requests yet",
+    subtitle: "Submit a request for custom printing and we'll send you a price.",
+  },
+  active: {
+    icon: <Inbox className="h-12 w-12 text-gray-300" />,
+    title: "No active quotes",
+    subtitle: "All your current quotes will appear here.",
+  },
+  awaiting_you: {
+    icon: <CheckSquare className="h-12 w-12 text-gray-300" />,
+    title: "Nothing waiting for you",
+    subtitle: "When we send you a price, it'll appear here for you to accept or decline.",
+  },
+  in_progress: {
+    icon: <Printer className="h-12 w-12 text-gray-300" />,
+    title: "Nothing in production yet",
+    subtitle: "Accepted quotes that are being printed will appear here.",
+  },
+  closed: {
+    icon: <Archive className="h-12 w-12 text-gray-300" />,
+    title: "No closed quotes",
+    subtitle: "Withdrawn, cancelled, and expired quotes are archived here.",
+  },
+}
 
 export function QuotesList({
   initialQuotes,
@@ -161,7 +139,7 @@ export function QuotesList({
 }: {
   initialQuotes: QuoteItem[]
   initialStatus?: string
-  counts?: typeof defaultCounts
+  counts?: TabCounts
 }) {
   const searchParams = useSearchParams()
   const [quotes, setQuotes] = useState(initialQuotes)
@@ -170,10 +148,17 @@ export function QuotesList({
   )
   const [loading, setLoading] = useState<string | null>(null)
   const [withdrawId, setWithdrawId] = useState<string | null>(null)
+  const [withdrawReason, setWithdrawReason] = useState('')
   const [rejectId, setRejectId] = useState<string | null>(null)
-  const currentStatus = searchParams?.get('status') ?? initialStatus
+  const activeTab = (searchParams?.get('status') ?? initialStatus) as string
 
-  const quotedItems = quotes.filter((q) => q.status === 'quoted')
+  useEffect(() => {
+    setQuotes(initialQuotes)
+    setExpanded(initialQuotes.find((q) => q.status === 'quoted')?.id ?? null)
+  }, [initialQuotes, initialStatus])
+
+  const quotedQuotes = quotes.filter((q) => q.status === 'quoted')
+  const selectedQuote = withdrawId ? quotes.find((q) => q.id === withdrawId) : null
 
   const performAction = async (
     quoteId: string,
@@ -239,150 +224,159 @@ export function QuotesList({
     return String(v)
   }
 
+  const confirmWithdraw = () => {
+    if (!withdrawId) return
+    performAction(withdrawId, 'WITHDRAW', withdrawReason.trim() || undefined)
+    setWithdrawId(null)
+    setWithdrawReason('')
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-1 rounded-xl border border-gray-200 bg-gray-50/80 p-1">
+      <div className="-mx-1 flex gap-1 overflow-x-auto border-b border-gray-100 pb-0 px-1">
         {TABS.map((tab) => {
           const count = counts[tab.countKey] ?? 0
-          const isActive = currentStatus === tab.key
+          const isActive = activeTab === tab.id
           return (
             <Link
-              key={tab.key}
-              href={tab.key === 'all' ? '/account/quotes' : `/account/quotes?status=${tab.key}`}
-              className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+              key={tab.id}
+              href={tab.id === 'all' ? '/account/quotes' : `/account/quotes?status=${tab.id}`}
+              className={`flex shrink-0 items-center gap-2 rounded-t-xl border-b-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors -mb-px ${
                 isActive
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  ? 'border-[#FF4D00] text-[#FF4D00] bg-orange-50/50'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
               }`}
             >
               {tab.label}
-              <span className="ml-1.5 text-gray-400">({count})</span>
+              {count > 0 && (
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-xs font-semibold ${
+                    isActive ? 'bg-[#FF4D00] text-white' : 'bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  {count}
+                </span>
+              )}
             </Link>
           )
         })}
       </div>
 
+      {activeTab === 'awaiting_you' && quotedQuotes.length > 0 && (
+        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <AlertCircle className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800">
+              {quotedQuotes.length === 1
+                ? 'You have 1 quote waiting for your response'
+                : `You have ${quotedQuotes.length} quotes waiting for your response`}
+            </p>
+            <p className="mt-0.5 text-xs text-amber-700">
+              Review the pricing below and accept or decline each quote. Quotes expire after 14 days if not responded to.
+            </p>
+          </div>
+        </div>
+      )}
+
       {quotes.length === 0 ? (
-        <div className="text-center py-20 border-2 border-dashed border-gray-200 rounded-2xl">
-          <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-600 mb-2">
-            {currentStatus === 'all' ? 'No quote requests yet' : `No ${currentStatus} quotes`}
+        <div className="rounded-2xl border-2 border-dashed border-gray-200 py-20 text-center">
+          <div className="mx-auto mb-4 flex justify-center">
+            {EMPTY_STATES[activeTab]?.icon ?? <FileQuestion className="h-12 w-12 text-gray-300" />}
+          </div>
+          <h3 className="mb-2 text-lg font-semibold text-gray-600">
+            {EMPTY_STATES[activeTab]?.title ?? 'No quotes'}
           </h3>
-          <p className="text-gray-400 mb-6 max-w-sm mx-auto">
-            {currentStatus === 'all'
-              ? 'Submit a quote request for large format printing, 3D printing, or any custom job.'
-              : 'Try another tab or submit a new quote.'}
+          <p className="mx-auto mb-6 max-w-sm text-gray-400">
+            {EMPTY_STATES[activeTab]?.subtitle ?? 'Try another tab or submit a new quote.'}
           </p>
           <a
             href="/get-a-quote"
-            className="bg-[#FF4D00] text-white px-6 py-3 rounded-xl font-medium hover:bg-[#e64400] transition inline-block"
+            className="inline-block rounded-xl bg-[#FF4D00] px-6 py-3 font-medium text-white transition hover:bg-[#e64400]"
           >
-            Get your first quote →
+            {activeTab === 'all' ? 'Get your first quote →' : 'New quote request'}
           </a>
         </div>
       ) : (
         <>
-          {quotedItems.length > 0 && (
-        <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 flex items-center gap-3">
-          <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-          <p className="text-sm text-green-800 font-medium">
-            {quotedItems.length === 1
-              ? 'Your quote is ready! Review the price below.'
-              : `${quotedItems.length} quotes are ready for your review.`}
-          </p>
-        </div>
-          )}
-
           {quotes.map((quote) => {
-        const cfg = STATUS_CONFIG[quote.status] ?? {
-          label: quote.status.replace('_', ' '),
-          color: 'bg-slate-100 text-slate-700',
-          icon: FileText,
-          description: 'Quote request.',
-        }
-        const isOpen = expanded === quote.id
-        const isLoading = loading === quote.id
+            const badgeStyle = getStatusBadgeStyle(quote.status)
+            const isOpen = expanded === quote.id
+            const isLoading = loading === quote.id
 
-        return (
-          <div
-            key={quote.id}
-            className={`border rounded-2xl overflow-hidden transition ${
-              quote.status === 'quoted'
-                ? 'border-green-300 shadow-sm shadow-green-100'
-                : 'border-gray-200'
-            }`}
-          >
-            <button
-              type="button"
-              className="w-full text-left p-5 hover:bg-gray-50 transition"
-              onClick={() => setExpanded(isOpen ? null : quote.id)}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="font-mono font-bold text-gray-900">
-                      {quote.quoteNumber}
-                    </span>
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${cfg.color} ${
-                        cfg.pulse ? 'animate-pulse' : ''
-                      }`}
+            return (
+              <div
+                key={quote.id}
+                className={`overflow-hidden rounded-2xl border transition-all ${
+                  isOpen ? 'border-[#FF4D00]/30 shadow-sm' : 'border-gray-100'
+                } ${quote.status === 'quoted' ? 'border-amber-300 bg-amber-50/30' : 'bg-white'}`}
+              >
+                <button
+                  type="button"
+                  className="flex w-full items-start justify-between gap-4 px-5 py-4 text-left"
+                  onClick={() => setExpanded(isOpen ? null : quote.id)}
+                >
+                  <div className="flex min-w-0 items-start gap-3">
+                    <div
+                      className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${getStatusIconBg(quote.status)}`}
                     >
-                      {cfg.label}
-                    </span>
-                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                      {TYPE_LABELS[quote.type] ?? quote.type}
-                    </span>
+                      {getStatusIcon(quote.status)}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-sm font-bold text-gray-900">
+                          {quote.quoteNumber}
+                        </span>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${badgeStyle.bg} ${badgeStyle.text}`}
+                        >
+                          {badgeStyle.label}
+                        </span>
+                        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                          {TYPE_LABELS[quote.type] ?? quote.type}
+                        </span>
+                      </div>
+                      <p className="mt-1 line-clamp-1 text-sm text-gray-500">
+                        {quote.description ?? quote.projectName ?? 'No description'}
+                      </p>
+                      <div className="mt-1.5 flex items-center gap-3 text-xs text-gray-400">
+                        <span>Submitted {formatDistanceToNow(new Date(quote.createdAt))}</span>
+                        {quote.deadline && (
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            Deadline: {formatDate(new Date(quote.deadline), 'dd MMM yyyy')}
+                          </span>
+                        )}
+                        {quote.quotedAmount != null && (
+                          <span className="flex items-center gap-1 font-semibold text-[#FF4D00]">
+                            <Tag className="h-3 w-3" />
+                            KES {quote.quotedAmount.toLocaleString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-600 truncate">
-                    {quote.description
-                      ? quote.description.slice(0, 80) +
-                        (quote.description.length > 80 ? '...' : '')
-                      : quote.projectName ?? quote.type.replace('_', ' ')}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Submitted{' '}
-                    {formatDistanceToNow(new Date(quote.createdAt))}
-                    {quote.assignedUser &&
-                      ` · Assigned to ${quote.assignedUser.name}`}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  {quote.status === 'quoted' && quote.quotedAmount != null && (
-                    <span className="text-lg font-bold text-[#FF4D00]">
-                      KSh {quote.quotedAmount.toLocaleString()}
-                    </span>
-                  )}
-                  {isOpen ? (
-                    <ChevronUp className="w-5 h-5 text-gray-400" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-gray-400" />
-                  )}
-                </div>
-              </div>
-            </button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {quote.status === 'quoted' && (
+                      <span className="hidden rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700 sm:block">
+                        Response needed
+                      </span>
+                    )}
+                    <ChevronDown
+                      className={`h-4 w-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                    />
+                  </div>
+                </button>
 
             {isOpen && (
-              <div className="border-t border-gray-100 bg-gray-50">
-                <div className="px-5 py-4 border-b border-gray-100">
-                  <div className="flex items-start gap-2">
-                    <cfg.icon className="w-4 h-4 mt-0.5 flex-shrink-0 text-gray-500" />
-                    <p className="text-sm text-gray-600">{cfg.description}</p>
+              <div className="border-t border-gray-100 px-5 pb-5 pt-4">
+                {quote.quoteBreakdown && (
+                  <div className="mb-4 rounded-xl border border-gray-200 bg-white p-3">
+                    <p className="mb-1 text-xs font-semibold text-gray-500">Message from PrintHub team</p>
+                    <p className="whitespace-pre-wrap text-sm text-gray-700">{quote.quoteBreakdown}</p>
                   </div>
-                  {quote.quoteBreakdown && (
-                    <div className="mt-3 bg-white border border-gray-200 rounded-xl p-3">
-                      <p className="text-xs font-semibold text-gray-500 mb-1">
-                        Message from PrintHub team:
-                      </p>
-                      <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                        {quote.quoteBreakdown}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="px-5 py-4 border-b border-gray-100">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                )}
+                <div className="mb-4">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
                     Quote Details
                   </p>
                   <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
@@ -473,32 +467,25 @@ export function QuotesList({
                   )}
                 </div>
 
-                {quote.files?.length > 0 && (
-                  <div className="px-5 py-4 border-b border-gray-100">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-                      Your Files ({quote.files.length})
+                {quote.files && quote.files.length > 0 && (
+                  <div className="mt-4">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      Attached Files
                     </p>
-                    <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
                       {quote.files.map((file) => (
                         <div
                           key={file.id}
-                          className="flex items-center gap-3 bg-white border border-gray-200 rounded-lg px-3 py-2"
+                          className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2"
                         >
-                          <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                          <span className="flex-1 text-sm text-gray-700 truncate">
-                            {file.originalName}
-                          </span>
-                          <span className="text-xs text-gray-400 flex-shrink-0">
-                            {file.fileType}
-                          </span>
+                          <FileText className="h-4 w-4 shrink-0 text-gray-400" />
+                          <span className="truncate text-sm text-gray-700">{file.originalName}</span>
                           <button
                             type="button"
-                            onClick={() =>
-                              downloadFile(file.id, file.originalName)
-                            }
-                            className="text-gray-400 hover:text-gray-600 flex-shrink-0"
+                            onClick={() => downloadFile(file.id, file.originalName)}
+                            className="shrink-0 text-gray-400 hover:text-gray-600"
                           >
-                            <Download className="w-4 h-4" />
+                            <Download className="h-4 w-4" />
                           </button>
                         </div>
                       ))}
@@ -506,209 +493,140 @@ export function QuotesList({
                   </div>
                 )}
 
-                {quote.status === 'quoted' && quote.quotedAmount != null && (
-                  <div className="px-5 py-4 border-b border-gray-100 bg-green-50">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-                      Our Quote
+                {quote.status === 'quoted' && (
+                  <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-amber-800">
+                      Your quote is ready
                     </p>
-                    <div className="space-y-1 text-sm">
-                      <div className="flex justify-between font-bold text-gray-900 text-base pt-2 border-t border-green-200">
-                        <span>Total</span>
-                        <span className="text-[#FF4D00]">
-                          KSh {quote.quotedAmount.toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-                    {quote.quotedAt && (
-                      <p className="text-xs text-gray-500 mt-2">
-                        Quoted on{' '}
-                        {formatDate(new Date(quote.quotedAt), 'EEEE d MMMM yyyy')}
+                    <p className="text-2xl font-bold text-gray-900">
+                      KES {quote.quotedAmount?.toLocaleString() ?? '—'}
+                    </p>
+                    {quote.quoteBreakdown && (
+                      <p className="mt-0.5 text-xs text-gray-500">{quote.quoteBreakdown}</p>
+                    )}
+                    {quote.quotedValidUntil && (
+                      <p className="mt-1 text-xs text-amber-700">
+                        Valid until {formatDate(new Date(quote.quotedValidUntil), 'dd MMM yyyy')}
                       </p>
                     )}
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button
+                        className="bg-[#FF4D00] hover:bg-[#e64400]"
+                        disabled={!!isLoading}
+                        onClick={() => performAction(quote.id, 'ACCEPT')}
+                      >
+                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+                        Accept & Proceed
+                      </Button>
+                      <Button
+                        variant="outline"
+                        disabled={!!isLoading}
+                        onClick={() => setRejectId(quote.id)}
+                      >
+                        Decline
+                      </Button>
+                    </div>
+                    <a
+                      href={`https://wa.me/254727410320?text=${encodeURIComponent(`Hi PrintHub, I have a question about quote ${quote.quoteNumber}.`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-3 flex items-center justify-center gap-2 py-2 text-sm text-gray-600 hover:bg-amber-100/50 rounded-xl transition"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      Chat about this quote
+                    </a>
                   </div>
                 )}
 
                 {quote.status === 'accepted' && (
-                  <div className="px-5 py-4 border-b border-gray-100 bg-green-50">
+                  <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4">
                     <div className="flex items-start gap-2">
-                      <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                      <CheckCircle className="h-4 w-4 shrink-0 text-green-600 mt-0.5" />
                       <div className="text-sm text-green-800">
-                        <p className="font-medium">
-                          You&apos;ve accepted this quote!
-                        </p>
+                        <p className="font-medium">You&apos;ve accepted this quote!</p>
                         <p className="mt-1 text-green-700">
-                          Our team will contact you shortly to arrange payment
-                          and confirm the order. You can also reach us on
-                          WhatsApp.
+                          Our team will contact you shortly to arrange payment and confirm the order.
                         </p>
                       </div>
                     </div>
                     <a
-                      href={`https://wa.me/254727410320?text=${encodeURIComponent(
-                        `Hi PrintHub, I've accepted quote ${quote.quoteNumber}. Please let me know the next steps.`
-                      )}`}
+                      href={`https://wa.me/254727410320?text=${encodeURIComponent(`Hi PrintHub, I've accepted quote ${quote.quoteNumber}. Please let me know the next steps.`)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-3 flex items-center justify-center gap-2 w-full py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium transition"
+                      className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-2.5 text-sm font-medium text-white transition hover:bg-green-700"
                     >
-                      <MessageCircle className="w-4 h-4" />
+                      <MessageCircle className="h-4 w-4" />
                       Chat on WhatsApp to confirm
                     </a>
                   </div>
                 )}
 
-                <div className="px-5 py-4">
-                  {quote.status === 'quoted' && (
-                    <div className="space-y-2">
-                      {rejectId === quote.id ? (
-                        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                          <p className="text-sm font-medium text-red-800 mb-3">
-                            Decline this quote?
-                          </p>
-                          <p className="text-xs text-red-600 mb-3">
-                            If you&apos;d like a different price or have
-                            questions, chat with us on WhatsApp first.
-                          </p>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setRejectId(null)}
-                            >
-                              Keep it
-                            </Button>
-                            <Button
-                              size="sm"
-                              className="bg-red-600 hover:bg-red-700 text-white"
-                              disabled={!!isLoading}
-                              onClick={() =>
-                                performAction(quote.id, 'REJECT', 'Customer declined')
-                              }
-                            >
-                              {isLoading ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                'Yes, decline'
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex gap-2">
-                          <Button
-                            className="flex-1 bg-[#FF4D00] hover:bg-[#e64400] text-white"
-                            disabled={!!isLoading}
-                            onClick={() => performAction(quote.id, 'ACCEPT')}
-                          >
-                            {isLoading ? (
-                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                            ) : (
-                              <Check className="w-4 h-4 mr-2" />
-                            )}
-                            Accept Quote
-                          </Button>
-                          <Button
-                            variant="outline"
-                            className="flex-1"
-                            onClick={() => setRejectId(quote.id)}
-                          >
-                            Decline
-                          </Button>
-                        </div>
-                      )}
-                      <a
-                        href={`https://wa.me/254727410320?text=${encodeURIComponent(
-                          `Hi PrintHub, I have a question about quote ${quote.quoteNumber}.`
-                        )}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 w-full py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl transition"
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                        Chat about this quote
-                      </a>
-                    </div>
-                  )}
-
-                  {(quote.status === 'new' || quote.status === 'reviewing') && (
-                    <div>
-                      {withdrawId === quote.id ? (
-                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                          <p className="text-sm font-medium text-amber-800 mb-1">
-                            Withdraw this quote request?
-                          </p>
-                          <p className="text-xs text-amber-700 mb-3">
-                            {quote.status === 'reviewing'
-                              ? 'Our team is already reviewing this. Are you sure you want to withdraw?'
-                              : 'Your request will be cancelled and removed from our queue.'}
-                          </p>
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setWithdrawId(null)}
-                            >
-                              Keep it
-                            </Button>
-                            <Button
-                              size="sm"
-                              className="bg-amber-600 hover:bg-amber-700 text-white"
-                              disabled={!!isLoading}
-                              onClick={() =>
-                                performAction(quote.id, 'WITHDRAW')
-                              }
-                            >
-                              {isLoading ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                'Yes, withdraw'
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between">
-                          <a
-                            href={`https://wa.me/254727410320?text=${encodeURIComponent(
-                              `Hi PrintHub, I have a question about quote ${quote.quoteNumber}.`
-                            )}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800"
-                          >
-                            <MessageCircle className="w-4 h-4" />
-                            Chat with us about this
-                          </a>
-                          <button
-                            type="button"
-                            onClick={() => setWithdrawId(quote.id)}
-                            className="text-xs text-gray-400 hover:text-red-500 flex items-center gap-1 transition"
-                          >
-                            <X className="w-3 h-3" />
-                            Withdraw request
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {(quote.status === 'completed' || quote.status === 'in_production') && (
-                    <p className="text-sm text-gray-600">
-                      Our team is handling your order. Contact us on WhatsApp if
-                      you have questions.
+                {quote.status === 'quoted' && rejectId === quote.id && (
+                  <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4">
+                    <p className="mb-3 text-sm font-medium text-red-800">Decline this quote?</p>
+                    <p className="mb-3 text-xs text-red-600">
+                      If you&apos;d like a different price or have questions, chat with us on WhatsApp first.
                     </p>
-                  )}
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => setRejectId(null)}>
+                        Keep it
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-red-600 text-white hover:bg-red-700"
+                        disabled={!!isLoading}
+                        onClick={() => performAction(quote.id, 'REJECT', 'Customer declined')}
+                      >
+                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Yes, decline'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
-                  {(quote.status === 'rejected' ||
-                    quote.status === 'cancelled') && (
-                    <a
-                      href="/get-a-quote"
-                      className="flex items-center justify-center gap-2 w-full py-2.5 border border-gray-300 rounded-xl text-sm font-medium hover:bg-gray-50 transition"
+                {canCustomerWithdraw(quote.status) && (
+                  <div className="mt-4 border-t border-gray-100 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setWithdrawId(quote.id)}
+                      className="text-sm text-gray-400 transition-colors hover:text-red-500"
                     >
-                      Submit a new request →
-                    </a>
-                  )}
-                </div>
+                      Withdraw this quote request
+                    </button>
+                  </div>
+                )}
+
+                {(quote.status === 'in_production' || quote.status === 'completed') && (
+                  <p className="mt-4 text-sm text-gray-600">
+                    Our team is handling your order. Contact us on{' '}
+                    <a
+                      href="https://wa.me/254727410320"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#FF4D00] hover:underline"
+                    >
+                      WhatsApp
+                    </a>{' '}
+                    if you have questions.
+                  </p>
+                )}
+
+                {['rejected', 'cancelled'].includes(quote.status) && quote.cancellationReason && (
+                  <div className="mt-4 rounded-xl bg-gray-50 p-3">
+                    <p className="mb-1 text-xs font-semibold text-gray-500">
+                      {quote.cancellationBy === 'ADMIN' ? 'Cancelled by PrintHub' : 'Reason'}
+                    </p>
+                    <p className="text-sm text-gray-600">{quote.cancellationReason}</p>
+                  </div>
+                )}
+
+                {['rejected', 'cancelled'].includes(quote.status) && (
+                  <a
+                    href="/get-a-quote"
+                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 py-2.5 text-sm font-medium transition hover:bg-gray-50"
+                  >
+                    Submit a new request →
+                  </a>
+                )}
               </div>
             )}
           </div>
@@ -716,6 +634,47 @@ export function QuotesList({
           })}
         </>
       )}
+
+      <Dialog open={!!withdrawId} onOpenChange={(open) => !open && setWithdrawId(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Withdraw Quote Request</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600">
+            Are you sure you want to withdraw <strong>{selectedQuote?.quoteNumber}</strong>? You can always submit a new request.
+          </p>
+          {selectedQuote?.status === 'accepted' && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+              <p className="text-sm text-amber-800">
+                <strong>Heads up:</strong> You&apos;ve already accepted this quote. Withdrawing after acceptance may incur a cancellation fee if materials have been prepared. Our team will review and contact you.
+              </p>
+            </div>
+          )}
+          <label className="block text-sm font-medium text-gray-700 mb-1">Reason (optional)</label>
+          <textarea
+            value={withdrawReason}
+            onChange={(e) => setWithdrawReason(e.target.value)}
+            placeholder="e.g. Changed my mind, found another supplier, budget constraints..."
+            rows={3}
+            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-[#FF4D00] focus:outline-none focus:ring-2 focus:ring-[#FF4D00]/20"
+          />
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => { setWithdrawId(null); setWithdrawReason('') }}
+            >
+              Keep it
+            </Button>
+            <Button
+              className="flex-1 bg-red-500 text-white hover:bg-red-600"
+              onClick={confirmWithdraw}
+            >
+              Yes, withdraw
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

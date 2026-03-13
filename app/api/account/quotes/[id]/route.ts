@@ -109,10 +109,28 @@ export async function PATCH(
     return NextResponse.json({ error: 'Quote not found' }, { status: 404 })
   }
 
+  // Customer cannot cancel/withdraw once in production or completed
+  const CUSTOMER_CANCELLABLE = ['new', 'reviewing', 'quoted', 'accepted']
+  if (
+    (action === 'WITHDRAW' || action === 'REJECT') &&
+    !CUSTOMER_CANCELLABLE.includes(existing.status)
+  ) {
+    return NextResponse.json(
+      {
+        error: 'This quote can no longer be cancelled from your account.',
+        message:
+          'Please contact us on WhatsApp: https://wa.me/254727410320',
+        code: 'CANCELLATION_CUTOFF',
+      },
+      { status: 400 }
+    )
+  }
+
   const allowedActions: Record<string, string[]> = {
     new: ['WITHDRAW'],
     reviewing: ['WITHDRAW'],
     quoted: ['ACCEPT', 'REJECT'],
+    accepted: ['WITHDRAW'],
   }
 
   const allowed = allowedActions[existing.status]
@@ -135,6 +153,9 @@ export async function PATCH(
     updateData.cancelledBy = 'customer'
     updateData.cancellationReason = 'customer_cancelled'
     updateData.cancellationNotes = reason ?? null
+    updateData.closedBy = 'CUSTOMER'
+    updateData.closedAt = new Date()
+    updateData.closedReason = reason?.trim() ? `Withdrawn by customer: ${reason}` : 'Withdrawn by customer'
   }
   if (action === 'ACCEPT') {
     updateData.status = 'accepted'
@@ -144,6 +165,9 @@ export async function PATCH(
     updateData.status = 'rejected'
     updateData.rejectedAt = new Date()
     updateData.rejectionReason = reason ?? 'Declined by customer'
+    updateData.closedBy = 'CUSTOMER'
+    updateData.closedAt = new Date()
+    updateData.closedReason = reason?.trim() ? `Declined by customer: ${reason}` : 'Declined by customer'
   }
 
   const updated = await prisma.quote.update({

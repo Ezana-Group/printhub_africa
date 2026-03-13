@@ -164,8 +164,17 @@ export function FileUploader({
           }),
         });
         if (!presignRes.ok) {
-          const err = await presignRes.json().catch(() => ({}));
-          throw new Error((err as { error?: string }).error ?? "Could not start upload");
+          const err = (await presignRes.json().catch(() => ({}))) as { error?: string; code?: string };
+          const msg =
+            presignRes.status === 503
+              ? "Upload service is temporarily unavailable. Please try again in a moment."
+              : presignRes.status === 413
+                ? "File is too large. Please use a smaller file."
+                : presignRes.status === 400
+                  ? "Upload request was invalid. Please try again or contact support."
+                  : err?.error ?? "Could not start upload";
+          console.error("[FileUploader] Presign failed:", presignRes.status, err);
+          throw new Error(msg);
         }
         const {
           uploadId,
@@ -207,7 +216,17 @@ export function FileUploader({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ uploadId, storageKey }),
         });
-        if (!confirmRes.ok) throw new Error("Upload confirmation failed");
+        if (!confirmRes.ok) {
+          const err = (await confirmRes.json().catch(() => ({}))) as { error?: string; code?: string };
+          const msg =
+            confirmRes.status === 503
+              ? "Upload service temporarily unavailable. Please try again in a moment."
+              : confirmRes.status === 400
+                ? "Upload could not be saved. Please try again or contact support."
+                : err?.error ?? "Upload confirmation failed";
+          console.error("[FileUploader] Confirm failed:", confirmRes.status, err);
+          throw new Error(msg);
+        }
         const confirmData = await confirmRes.json();
 
         const result: UploadedFileResult = {

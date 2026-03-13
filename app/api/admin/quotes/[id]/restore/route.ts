@@ -24,6 +24,16 @@ export async function POST(
       { status: 400 }
     );
   }
+  if (quote.closedBy === "CUSTOMER") {
+    return NextResponse.json(
+      {
+        error: "This quote was closed by the customer and cannot be restored.",
+        code: "QUOTE_CUSTOMER_CLOSED",
+        detail: quote.closedReason ?? "Closed by the customer.",
+      },
+      { status: 403 }
+    );
+  }
 
   await prisma.quote.update({
     where: { id },
@@ -36,6 +46,9 @@ export async function POST(
       cancelledByAdminId: null,
       rejectedAt: null,
       rejectionReason: null,
+      closedBy: null,
+      closedAt: null,
+      closedReason: null,
     },
   });
 

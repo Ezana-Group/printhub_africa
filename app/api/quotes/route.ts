@@ -89,6 +89,7 @@ export async function GET(req: NextRequest) {
     quoteNumber: q.quoteNumber,
     type: q.type,
     status: q.status,
+    closedBy: q.closedBy,
     customerName: q.customerName,
     customerEmail: q.customerEmail,
     customerId: q.customerId,

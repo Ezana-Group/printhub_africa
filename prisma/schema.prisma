@@ -939,6 +939,12 @@ enum QuoteStatus {
   cancelled
 }
 
+enum QuoteClosedBy {
+  CUSTOMER  // customer withdrew or declined — admin cannot reopen
+  STAFF     // staff cancelled — admin can reopen if needed
+  SYSTEM    // auto-expired — admin can reopen if needed
+}
+
 enum PreferredContact {
   email
   whatsapp
@@ -982,6 +988,9 @@ model Quote {
   cancellationNotes String?          @db.Text
   cancelledByAdminId String?
   cancelledByAdmin  User?            @relation("QuoteCancelledByAdmin", fields: [cancelledByAdminId], references: [id])
+  closedBy          QuoteClosedBy?   // who set final status — CUSTOMER = locked for admin
+  closedAt          DateTime?
+  closedReason      String?          @db.Text // e.g. "Withdrawn by customer", "Declined by customer"
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 

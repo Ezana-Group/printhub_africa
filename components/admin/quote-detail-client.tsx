@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Lock } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -35,6 +36,7 @@ export function QuoteDetailClient({
   customerEstimateLow,
   customerEstimateHigh,
   deadlineHint,
+  closedBy,
 }: {
   quoteId: string;
   quoteNumber: string;
@@ -53,7 +55,11 @@ export function QuoteDetailClient({
   customerEstimateLow?: number | null;
   customerEstimateHigh?: number | null;
   deadlineHint?: string | null;
+  closedBy?: string | null;
+  closedAt?: string | null;
+  closedReason?: string | null;
 }) {
+  const isCustomerClosed = closedBy === "CUSTOMER";
   void quoteNumber;
   void notes;
   const [status, setStatus] = useState(currentStatus);
@@ -258,6 +264,7 @@ export function QuoteDetailClient({
       </Card>
 
       {/* Status pipeline stepper — vertical timeline on small screens, horizontal on md+ */}
+      <div className={isCustomerClosed ? "opacity-60 pointer-events-none select-none" : ""}>
       <Card>
         <CardHeader>
           <h2 className="font-semibold">Status pipeline</h2>
@@ -330,8 +337,16 @@ export function QuoteDetailClient({
           </div>
         </CardContent>
       </Card>
+      {isCustomerClosed && (
+        <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
+          <Lock className="w-3 h-3" />
+          Actions disabled — customer closed this quote
+        </p>
+      )}
+      </div>
 
       {/* Assign to staff */}
+      <div className={isCustomerClosed ? "opacity-60 pointer-events-none select-none" : ""}>
       <Card>
         <CardHeader>
           <h2 className="font-semibold">Assign to staff</h2>
@@ -355,6 +370,7 @@ export function QuoteDetailClient({
           </Button>
         </CardContent>
       </Card>
+      </div>
 
       {/* Customer's price estimate */}
       <Card className="border-amber-200 bg-[#FFFBEB]">
@@ -386,7 +402,7 @@ export function QuoteDetailClient({
       </Card>
 
       {/* Send quote to customer */}
-      <Card id="send-quote">
+      <Card id="send-quote" className={isCustomerClosed ? "opacity-60 pointer-events-none select-none" : ""}>
         <CardHeader>
           <h2 className="font-semibold">Send quote to customer</h2>
           <p className="text-xs text-muted-foreground">Customer will receive an email with quote details and a link to accept/decline.</p>
@@ -436,7 +452,12 @@ export function QuoteDetailClient({
               Download / generate quote PDF
             </a>
           </p>
-          <Button onClick={handleSendQuote} disabled={saving} className="bg-[#E8440A] hover:bg-[#E8440A]/90">
+          <Button
+            onClick={handleSendQuote}
+            disabled={saving || isCustomerClosed}
+            className={isCustomerClosed ? "opacity-50 cursor-not-allowed bg-[#E8440A] hover:bg-[#E8440A]/90" : "bg-[#E8440A] hover:bg-[#E8440A]/90"}
+            title={isCustomerClosed ? "Cannot send — customer closed this quote" : undefined}
+          >
             Send quote
           </Button>
         </CardContent>

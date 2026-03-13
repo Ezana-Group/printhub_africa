@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 
 interface Category {
   id: string;
@@ -26,6 +27,7 @@ export function CatalogueItemForm({ categories }: CatalogueItemFormProps) {
   const [shortDescription, setShortDescription] = useState("");
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
+  const [isFeatured, setIsFeatured] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -49,6 +51,7 @@ export function CatalogueItemForm({ categories }: CatalogueItemFormProps) {
           shortDescription: shortDescription.trim() || undefined,
           description: description.trim() || undefined,
           sourceType: "MANUAL",
+          isFeatured,
         }),
       });
       const data = await res.json();
@@ -118,6 +121,16 @@ export function CatalogueItemForm({ categories }: CatalogueItemFormProps) {
           placeholder="Full description (optional)"
           rows={4}
         />
+      </div>
+      <div className="flex items-center gap-3">
+        <Switch
+          id="isFeatured"
+          checked={isFeatured}
+          onCheckedChange={setIsFeatured}
+        />
+        <Label htmlFor="isFeatured" className="cursor-pointer text-sm font-medium">
+          Featured on homepage (show in Print on Demand section)
+        </Label>
       </div>
       <div className="flex gap-3">
         <Button type="submit" disabled={loading}>
