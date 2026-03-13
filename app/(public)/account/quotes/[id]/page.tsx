@@ -28,7 +28,10 @@ export default async function AccountQuoteDetailPage({
   const userId = session.user.id as string;
   const userEmail = (session.user.email as string) ?? "";
   const [quoteByAccount, quoteByEmail, business] = await Promise.all([
-    prisma.quote.findFirst({ where: { id, customerId: userId } }),
+    prisma.quote.findFirst({
+      where: { id, customerId: userId },
+      include: { cancelledByAdmin: { select: { name: true } } },
+    }),
     userEmail
       ? prisma.quote.findFirst({
           where: {
@@ -36,6 +39,7 @@ export default async function AccountQuoteDetailPage({
             customerId: null,
             customerEmail: { equals: userEmail, mode: "insensitive" },
           },
+          include: { cancelledByAdmin: { select: { name: true } } },
         })
       : Promise.resolve(null),
     getBusinessPublic(),
@@ -44,9 +48,38 @@ export default async function AccountQuoteDetailPage({
 
   if (!quote) notFound();
   const businessName = business.businessName;
+  const cancellationReasonLabel =
+    quote.cancellationReason === "customer_cancelled"
+      ? "Withdrawn by you"
+      : quote.cancellationReason === "out_of_stock"
+        ? "Out of stock"
+        : quote.cancellationReason === "technical_issue"
+          ? "Technical issue"
+          : quote.cancellationReason === "customer_request"
+            ? "Customer request"
+            : quote.cancellationReason === "pricing_error"
+              ? "Pricing error"
+              : quote.cancellationReason === "material_unavailable"
+                ? "Material unavailable"
+                : quote.cancellationReason === "other"
+                  ? "Other"
+                  : quote.cancellationReason ?? "Cancelled";
 
   return (
     <div className="space-y-6">
+      {quote.cancelledAt && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
+          <p className="font-semibold">This quote was cancelled</p>
+          <p className="mt-1 text-sm">
+            Reason: {cancellationReasonLabel}
+            {quote.cancelledByAdmin?.name && ` · Cancelled by ${quote.cancelledByAdmin.name}`}
+          </p>
+          {quote.cancellationNotes && (
+            <p className="mt-1 text-sm">{quote.cancellationNotes}</p>
+          )}
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <Link

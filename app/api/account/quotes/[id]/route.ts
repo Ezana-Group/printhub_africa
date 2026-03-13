@@ -35,6 +35,7 @@ export async function GET(
     include: {
       uploadedFiles: true,
       assignedStaff: { select: { user: { select: { name: true } } } },
+      cancelledByAdmin: { select: { name: true } },
     },
   })
 
@@ -53,6 +54,11 @@ export async function GET(
     acceptedAt: quote.acceptedAt?.toISOString() ?? null,
     rejectedAt: quote.rejectedAt?.toISOString() ?? null,
     deadline: quote.deadline?.toISOString() ?? null,
+    cancelledAt: quote.cancelledAt?.toISOString() ?? null,
+    cancellationReason: quote.cancellationReason ?? null,
+    cancellationNotes: quote.cancellationNotes ?? null,
+    cancelledBy: quote.cancelledBy ?? null,
+    cancelledByAdminName: quote.cancelledByAdmin?.name ?? null,
     createdAt: quote.createdAt.toISOString(),
     updatedAt: quote.updatedAt.toISOString(),
     uploadedFiles: quote.uploadedFiles.map((f) => ({
@@ -125,6 +131,10 @@ export async function PATCH(
     updateData.status = 'cancelled'
     updateData.rejectedAt = new Date()
     updateData.rejectionReason = reason ?? 'Withdrawn by customer'
+    updateData.cancelledAt = new Date()
+    updateData.cancelledBy = 'customer'
+    updateData.cancellationReason = 'customer_cancelled'
+    updateData.cancellationNotes = reason ?? null
   }
   if (action === 'ACCEPT') {
     updateData.status = 'accepted'
@@ -140,6 +150,19 @@ export async function PATCH(
     where: { id },
     data: updateData,
   })
+
+  if (action === 'WITHDRAW') {
+    await prisma.quoteCancellation.create({
+      data: {
+        quoteId: id,
+        cancelledBy: 'customer',
+        cancelledByUserId: session?.user?.id ?? null,
+        reason: 'customer_cancelled',
+        notes: reason ?? null,
+        notificationSent: false,
+      },
+    })
+  }
 
   if (action === 'ACCEPT') {
     const staffEmail = existing.assignedStaff?.user?.email

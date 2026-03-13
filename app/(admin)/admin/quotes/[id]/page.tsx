@@ -9,6 +9,7 @@ import { QuoteSubmissionDetails } from "@/components/admin/quote-submission-deta
 import { QuoteFilesSection } from "@/components/admin/quote-files-section";
 import { QuoteUploadedFilesCard } from "@/components/admin/quote-uploaded-files-card";
 import { QuoteThreadCard } from "@/components/admin/quote-thread-card";
+import { AdminQuoteCancelRestore } from "@/components/admin/quote-cancel-restore";
 
 const TYPE_LABELS: Record<string, string> = {
   large_format: "Large Format",
@@ -35,6 +36,7 @@ export default async function AdminQuoteDetailPage({
     include: {
       customer: { select: { id: true, name: true, email: true, phone: true } },
       assignedStaff: { select: { id: true, user: { select: { name: true, email: true } } } },
+      cancelledByAdmin: { select: { name: true } },
       uploadedFiles: {
         orderBy: { createdAt: "asc" },
         select: { id: true, originalName: true, filename: true, mimeType: true, size: true, fileType: true, createdAt: true },
@@ -183,6 +185,14 @@ export default async function AdminQuoteDetailPage({
             customerEstimateLow={specEstimateLow}
             customerEstimateHigh={specEstimateHigh}
             deadlineHint={deadlineHint}
+          />
+          <AdminQuoteCancelRestore
+            quoteId={quote.id}
+            quoteNumber={quote.quoteNumber}
+            status={quote.status}
+            cancellationReason={quote.cancellationReason}
+            cancellationNotes={quote.cancellationNotes}
+            cancelledByAdminName={quote.cancelledByAdmin?.name}
           />
         </div>
       </div>

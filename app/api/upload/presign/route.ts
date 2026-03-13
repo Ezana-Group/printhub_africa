@@ -111,7 +111,10 @@ export async function POST(req: Request) {
   try {
     if (!isR2Configured()) {
       return NextResponse.json(
-        { error: "File upload is not configured. Set R2_ENDPOINT, R2_ACCESS_KEY_ID, and R2_SECRET_ACCESS_KEY." },
+        {
+          error: "File upload is not configured. Set R2_ENDPOINT, R2_ACCESS_KEY_ID, and R2_SECRET_ACCESS_KEY in your environment. If uploads fail in the browser with a CORS/preflight error, configure CORS on your R2 buckets (see docs/R2_CORS.md).",
+          code: "R2_NOT_CONFIGURED",
+        },
         { status: 503 }
       );
     }

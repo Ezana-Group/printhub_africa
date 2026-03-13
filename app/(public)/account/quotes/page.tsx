@@ -1,21 +1,37 @@
+import { Suspense } from 'react'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+import type { QuoteStatus } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { QuotesList } from './QuotesList'
 
 export const metadata = { title: 'My Quotes | PrintHub' }
 
-export default async function QuotesPage() {
+type StatusFilter = 'all' | 'active' | 'new' | 'reviewing' | 'quoted' | 'accepted' | 'cancelled' | 'completed' | 'rejected' | 'in_production'
+
+export default async function QuotesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>
+}) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) redirect('/login?next=/account/quotes')
 
   const userId = session.user.id as string
   const userEmail = (session.user.email as string) ?? ''
+  const { status: statusParam } = await searchParams
+  const statusFilter = (statusParam ?? 'all') as StatusFilter
 
   let quotes: Awaited<ReturnType<typeof fetchQuotes>> = []
+  let counts: Awaited<ReturnType<typeof fetchCounts>> = { all: 0, active: 0, new: 0, reviewing: 0, quoted: 0, accepted: 0, cancelled: 0, completed: 0, rejected: 0, in_production: 0 }
   try {
-    quotes = await fetchQuotes(userId, userEmail)
+    const [quotesList, countsResult] = await Promise.all([
+      fetchQuotes(userId, userEmail, statusFilter),
+      fetchCounts(userId, userEmail),
+    ])
+    quotes = quotesList
+    counts = countsResult
   } catch {
     quotes = []
   }
@@ -37,14 +53,45 @@ export default async function QuotesPage() {
         </a>
       </div>
 
-      <QuotesList initialQuotes={quotes} />
+      <Suspense fallback={<div className="animate-pulse rounded-xl h-12 bg-gray-100" />}>
+        <QuotesList initialQuotes={quotes} initialStatus={statusFilter} counts={counts} />
+      </Suspense>
     </div>
   )
 }
 
-async function fetchQuotes(userId: string, userEmail: string) {
+async function fetchCounts(userId: string, userEmail: string) {
+  const baseWhere = {
+    OR: [
+      { customerId: userId },
+      ...(userEmail ? [{ customerId: null, customerEmail: { equals: userEmail, mode: 'insensitive' as const } }] : []),
+    ],
+  }
+  const [all, newCount, reviewing, quoted, accepted, cancelled, completed, rejected, inProduction] = await Promise.all([
+    prisma.quote.count({ where: baseWhere }),
+    prisma.quote.count({ where: { ...baseWhere, status: 'new' } }),
+    prisma.quote.count({ where: { ...baseWhere, status: 'reviewing' } }),
+    prisma.quote.count({ where: { ...baseWhere, status: 'quoted' } }),
+    prisma.quote.count({ where: { ...baseWhere, status: 'accepted' } }),
+    prisma.quote.count({ where: { ...baseWhere, status: 'cancelled' } }),
+    prisma.quote.count({ where: { ...baseWhere, status: 'completed' } }),
+    prisma.quote.count({ where: { ...baseWhere, status: 'rejected' } }),
+    prisma.quote.count({ where: { ...baseWhere, status: 'in_production' } }),
+  ])
+  const active = newCount + reviewing + quoted
+  return { all, active, new: newCount, reviewing, quoted, accepted, cancelled, completed, rejected, in_production: inProduction }
+}
+
+async function fetchQuotes(userId: string, userEmail: string, statusFilter: StatusFilter) {
+  const statusWhere =
+    statusFilter === "all"
+      ? undefined
+      : statusFilter === "active"
+        ? { status: { in: ["new", "reviewing", "quoted"] as QuoteStatus[] } }
+        : { status: statusFilter }
+
   const linkedQuotes = await prisma.quote.findMany({
-    where: { customerId: userId },
+    where: { customerId: userId, ...statusWhere },
     include: {
       uploadedFiles: {
         select: {
@@ -70,6 +117,7 @@ async function fetchQuotes(userId: string, userEmail: string) {
         where: {
           customerId: null,
           customerEmail: { equals: userEmail, mode: "insensitive" },
+          ...statusWhere,
         },
         include: {
           uploadedFiles: {

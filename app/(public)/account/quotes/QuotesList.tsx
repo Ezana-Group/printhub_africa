@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import {
   ChevronDown,
   ChevronUp,
@@ -140,7 +142,28 @@ type QuoteItem = {
   }>
 }
 
-export function QuotesList({ initialQuotes }: { initialQuotes: QuoteItem[] }) {
+type StatusTab = { key: string; label: string; countKey: keyof typeof defaultCounts }
+const TABS: StatusTab[] = [
+  { key: 'all', label: 'All', countKey: 'all' },
+  { key: 'active', label: 'Active', countKey: 'active' },
+  { key: 'quoted', label: 'Quoted', countKey: 'quoted' },
+  { key: 'accepted', label: 'Accepted', countKey: 'accepted' },
+  { key: 'cancelled', label: 'Cancelled', countKey: 'cancelled' },
+  { key: 'completed', label: 'Completed', countKey: 'completed' },
+]
+
+const defaultCounts = { all: 0, active: 0, new: 0, reviewing: 0, quoted: 0, accepted: 0, cancelled: 0, completed: 0, rejected: 0, in_production: 0 }
+
+export function QuotesList({
+  initialQuotes,
+  initialStatus = 'all',
+  counts = defaultCounts,
+}: {
+  initialQuotes: QuoteItem[]
+  initialStatus?: string
+  counts?: typeof defaultCounts
+}) {
+  const searchParams = useSearchParams()
   const [quotes, setQuotes] = useState(initialQuotes)
   const [expanded, setExpanded] = useState<string | null>(
     initialQuotes.find((q) => q.status === 'quoted')?.id ?? null
@@ -148,27 +171,7 @@ export function QuotesList({ initialQuotes }: { initialQuotes: QuoteItem[] }) {
   const [loading, setLoading] = useState<string | null>(null)
   const [withdrawId, setWithdrawId] = useState<string | null>(null)
   const [rejectId, setRejectId] = useState<string | null>(null)
-
-  if (quotes.length === 0) {
-    return (
-      <div className="text-center py-20 border-2 border-dashed border-gray-200 rounded-2xl">
-        <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-600 mb-2">
-          No quote requests yet
-        </h3>
-        <p className="text-gray-400 mb-6 max-w-sm mx-auto">
-          Submit a quote request for large format printing, 3D printing, or any
-          custom job.
-        </p>
-        <a
-          href="/get-a-quote"
-          className="bg-[#FF4D00] text-white px-6 py-3 rounded-xl font-medium hover:bg-[#e64400] transition inline-block"
-        >
-          Get your first quote →
-        </a>
-      </div>
-    )
-  }
+  const currentStatus = searchParams?.get('status') ?? initialStatus
 
   const quotedItems = quotes.filter((q) => q.status === 'quoted')
 
@@ -238,7 +241,48 @@ export function QuotesList({ initialQuotes }: { initialQuotes: QuoteItem[] }) {
 
   return (
     <div className="space-y-4">
-      {quotedItems.length > 0 && (
+      <div className="flex flex-wrap gap-1 rounded-xl border border-gray-200 bg-gray-50/80 p-1">
+        {TABS.map((tab) => {
+          const count = counts[tab.countKey] ?? 0
+          const isActive = currentStatus === tab.key
+          return (
+            <Link
+              key={tab.key}
+              href={tab.key === 'all' ? '/account/quotes' : `/account/quotes?status=${tab.key}`}
+              className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+                isActive
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              {tab.label}
+              <span className="ml-1.5 text-gray-400">({count})</span>
+            </Link>
+          )
+        })}
+      </div>
+
+      {quotes.length === 0 ? (
+        <div className="text-center py-20 border-2 border-dashed border-gray-200 rounded-2xl">
+          <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-600 mb-2">
+            {currentStatus === 'all' ? 'No quote requests yet' : `No ${currentStatus} quotes`}
+          </h3>
+          <p className="text-gray-400 mb-6 max-w-sm mx-auto">
+            {currentStatus === 'all'
+              ? 'Submit a quote request for large format printing, 3D printing, or any custom job.'
+              : 'Try another tab or submit a new quote.'}
+          </p>
+          <a
+            href="/get-a-quote"
+            className="bg-[#FF4D00] text-white px-6 py-3 rounded-xl font-medium hover:bg-[#e64400] transition inline-block"
+          >
+            Get your first quote →
+          </a>
+        </div>
+      ) : (
+        <>
+          {quotedItems.length > 0 && (
         <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 flex items-center gap-3">
           <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
           <p className="text-sm text-green-800 font-medium">
@@ -247,9 +291,9 @@ export function QuotesList({ initialQuotes }: { initialQuotes: QuoteItem[] }) {
               : `${quotedItems.length} quotes are ready for your review.`}
           </p>
         </div>
-      )}
+          )}
 
-      {quotes.map((quote) => {
+          {quotes.map((quote) => {
         const cfg = STATUS_CONFIG[quote.status] ?? {
           label: quote.status.replace('_', ' '),
           color: 'bg-slate-100 text-slate-700',
@@ -669,7 +713,9 @@ export function QuotesList({ initialQuotes }: { initialQuotes: QuoteItem[] }) {
             )}
           </div>
         )
-      })}
+          })}
+        </>
+      )}
     </div>
   )
 }

@@ -50,6 +50,8 @@ model User {
   uploadedFiles    UploadedFile[]
   printQuotes      PrintQuote[]
   quotes           Quote[]
+  quotesCancelledByAdmin Quote[]        @relation("QuoteCancelledByAdmin")
+  quoteCancellations    QuoteCancellation[]
   couponUsages     CouponUsage[]
   wishlists        Wishlist[]
   notifications    Notification[]
@@ -974,17 +976,39 @@ model Quote {
   notes             String?           @db.Text // internal staff notes
   adminNotes        String?           @db.Text
   referralSource    String?           // UTM / marketing
+  cancelledAt       DateTime?
+  cancelledBy       String?           // 'customer' or admin userId
+  cancellationReason String?         // out_of_stock, technical_issue, customer_request, pricing_error, material_unavailable, other, customer_cancelled
+  cancellationNotes String?          @db.Text
+  cancelledByAdminId String?
+  cancelledByAdmin  User?            @relation("QuoteCancelledByAdmin", fields: [cancelledByAdminId], references: [id])
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 
   uploadedFiles     UploadedFile[]
   quotePdfs         QuotePdf[]
+  quoteCancellations QuoteCancellation[]
 
   @@index([customerId])
   @@index([assignedStaffId])
   @@index([status])
   @@index([type])
   @@index([createdAt])
+}
+
+model QuoteCancellation {
+  id                  String   @id @default(cuid())
+  quoteId             String
+  quote               Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  cancelledBy         String   // 'customer' | 'admin'
+  cancelledByUserId   String?
+  cancelledByUser     User?    @relation(fields: [cancelledByUserId], references: [id])
+  reason              String
+  notes               String?  @db.Text
+  notificationSent    Boolean  @default(false)
+  createdAt           DateTime @default(now())
+
+  @@index([quoteId])
 }
 
 model QuotePdf {
