@@ -2,8 +2,6 @@
  * POST /api/admin/orders/[id]/cancel — admin cancel order with reason
  */
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createTrackingEvent } from "@/lib/tracking";
 import { restoreStockForOrder } from "@/lib/stock";

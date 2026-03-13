@@ -24,7 +24,8 @@ export interface LargeFormatValidationResult {
 
 export async function validateLargeFormatImage(
   buffer: Buffer,
-  filename: string
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- kept for API consistency
+  _filename: string
 ): Promise<LargeFormatValidationResult> {
   const errors: string[] = [];
   const warnings: string[] = [];

@@ -41,7 +41,7 @@ export async function generateQuotePdfBuffer(quoteId: string): Promise<Buffer | 
   const data = await buildQuotePdfData(quoteId);
   if (!data) return null;
   const doc = React.createElement(QuotePDF, { data });
-  const stream = await renderToStream(doc);
+  const stream = await renderToStream(doc as React.ReactElement);
   const { buffer } = await import("node:stream/consumers");
   return buffer(stream as import("stream").Readable) as Promise<Buffer>;
 }

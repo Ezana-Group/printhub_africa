@@ -123,7 +123,7 @@ export async function POST(req: Request) {
   let orderCorporateId: string | null = null;
   let orderIsNetTerms = false;
   let orderPoReference: string | null = null;
-  let orderPlacedBy: string | null = session?.user?.id ?? null;
+  const orderPlacedBy: string | null = session?.user?.id ?? null;
   let effectiveDiscount = reqDiscount;
 
   if (reqCorporateId && session?.user?.id) {

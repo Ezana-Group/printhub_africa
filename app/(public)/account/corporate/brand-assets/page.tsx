@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCorporateAccount } from "@/lib/corporate";
 import { prisma } from "@/lib/prisma";
-import { Image, ChevronLeft } from "lucide-react";
+import { Image as ImageIcon, ChevronLeft } from "lucide-react";
 
 export default async function CorporateBrandAssetsPage() {
   const session = await getServerSession(authOptions);
@@ -33,7 +33,7 @@ export default async function CorporateBrandAssetsPage() {
       </p>
       {assets.length === 0 ? (
         <div className="rounded-2xl bg-white p-8 shadow-[0_2px_12px_rgba(0,0,0,0.06)] text-center">
-          <Image className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+          <ImageIcon className="h-12 w-12 text-slate-300 mx-auto mb-4" aria-hidden="true" />
           <p className="text-slate-600">No brand assets yet.</p>
         </div>
       ) : (

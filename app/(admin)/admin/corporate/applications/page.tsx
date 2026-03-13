@@ -1,8 +1,6 @@
-import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSection } from "@/lib/admin-route-guard";
 import { AdminBreadcrumbs } from "@/components/admin/admin-breadcrumbs";
-import { Card, CardContent } from "@/components/ui/card";
 import { CorporateApplicationsList } from "./corporate-applications-list";
 
 export default async function AdminCorporateApplicationsPage({

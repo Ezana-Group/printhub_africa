@@ -12,6 +12,7 @@ import { z } from "zod";
 
 const ADMIN_ROLES = ["STAFF", "ADMIN", "SUPER_ADMIN"];
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- signature kept for API consistency
 async function requireAdmin(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const role = (session?.user as { role?: string })?.role;

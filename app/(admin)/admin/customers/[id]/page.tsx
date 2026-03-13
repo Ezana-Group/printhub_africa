@@ -23,7 +23,7 @@ export default async function AdminCustomerDetailPage({
         },
       },
       addresses: { select: { id: true, label: true, street: true, city: true } },
-      corporateAccount: { select: { companyName: true, kraPin: true } },
+      primaryCorporateAccount: { select: { companyName: true, kraPin: true } },
       printQuotes: { orderBy: { createdAt: "desc" }, take: 50 },
       quotes: { orderBy: { createdAt: "desc" }, take: 50 },
       uploadedFiles: { orderBy: { createdAt: "desc" }, take: 50 },
@@ -99,10 +99,10 @@ export default async function AdminCustomerDetailPage({
       street: a.street,
       city: a.city,
     })),
-    corporateAccount: user.corporateAccount
+    corporateAccount: user.primaryCorporateAccount
       ? {
-          companyName: user.corporateAccount.companyName,
-          kraPin: user.corporateAccount.kraPin,
+          companyName: user.primaryCorporateAccount.companyName,
+          kraPin: user.primaryCorporateAccount.kraPin,
         }
       : null,
     quotes: user.printQuotes.map((q) => ({

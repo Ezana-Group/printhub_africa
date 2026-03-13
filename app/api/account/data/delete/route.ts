@@ -30,7 +30,7 @@ export async function POST(req: Request) {
       data: {
         name: "Deleted User",
         email: deletedEmail,
-        image: null,
+        profileImage: null,
         loyaltyPoints: 0,
         emailVerified: null,
       },

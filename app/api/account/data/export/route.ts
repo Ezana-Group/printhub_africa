@@ -20,7 +20,7 @@ export async function POST() {
         id: true,
         name: true,
         email: true,
-        image: true,
+        profileImage: true,
         createdAt: true,
         loyaltyPoints: true,
       },
@@ -54,7 +54,7 @@ export async function POST() {
     profile: {
       name: user.name,
       email: user.email,
-      image: user.image,
+      profileImage: user.profileImage,
       createdAt: user.createdAt,
       loyaltyPoints: user.loyaltyPoints,
     },

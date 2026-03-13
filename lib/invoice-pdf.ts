@@ -64,7 +64,7 @@ export async function generateInvoicePdfBuffer(invoiceId: string): Promise<Buffe
   const data = await buildInvoicePdfData(invoiceId);
   if (!data) return null;
   const doc = React.createElement(InvoicePDF, { data });
-  const stream = await renderToStream(doc);
+  const stream = await renderToStream(doc as React.ReactElement);
   const { buffer } = await import("node:stream/consumers");
   return buffer(stream as import("stream").Readable) as Promise<Buffer>;
 }

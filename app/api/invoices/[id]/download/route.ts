@@ -51,7 +51,7 @@ export async function GET(
     try {
       const pdfBuffer = await getObjectBuffer("private", invoice.pdfKey);
       if (pdfBuffer) {
-        return new NextResponse(pdfBuffer, { headers });
+        return new NextResponse(new Uint8Array(pdfBuffer), { headers });
       }
     } catch (e) {
       console.error("Invoice PDF R2 fetch failed, falling back to generate:", e);
@@ -63,7 +63,7 @@ export async function GET(
     if (!pdfBuffer) {
       return NextResponse.json({ error: "Failed to generate PDF" }, { status: 500 });
     }
-    return new NextResponse(pdfBuffer, { headers });
+    return new NextResponse(new Uint8Array(pdfBuffer), { headers });
   } catch (e) {
     console.error("PDF generation error:", e);
     return NextResponse.json({ error: "Failed to generate PDF" }, { status: 500 });

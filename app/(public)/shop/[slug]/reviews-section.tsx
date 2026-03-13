@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +26,7 @@ function Stars({ value, onChange }: { value: number; onChange: (n: number) => vo
 }
 
 export function ProductReviewsSection({ productSlug }: { productSlug: string }) {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const [data, setData] = useState<{
     reviews: Array<{ id: string; rating: number; title: string | null; body: string | null; userName: string; createdAt: string; isVerified: boolean }>;
     summary: { averageRating: number | null; totalCount: number };
@@ -40,7 +40,7 @@ export function ProductReviewsSection({ productSlug }: { productSlug: string }) 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
-  const fetchReviews = () => {
+  const fetchReviews = useCallback(() => {
     setLoading(true);
     fetch(`/api/products/${productSlug}/reviews?page=${page}&limit=10`)
       .then((r) => r.json())
@@ -49,11 +49,11 @@ export function ProductReviewsSection({ productSlug }: { productSlug: string }) 
       })
       .catch(() => setData(null))
       .finally(() => setLoading(false));
-  };
+  }, [productSlug, page]);
 
   useEffect(() => {
     fetchReviews();
-  }, [productSlug, page]);
+  }, [fetchReviews]);
 
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,7 +96,7 @@ export function ProductReviewsSection({ productSlug }: { productSlug: string }) 
             <span className="flex text-2xl text-amber-500">
               {summary.averageRating != null
                 ? [...Array(5)].map((_, i) => (
-                    <span key={i}>{i < Math.round(summary.averageRating) ? "★" : "☆"}</span>
+                    <span key={i}>{i < Math.round(summary.averageRating ?? 0) ? "★" : "☆"}</span>
                   ))
                 : "—"}
             </span>

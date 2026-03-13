@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCorporateAccount, getTermsDays, getTierColour } from "@/lib/corporate";
-import { Building2, CreditCard, FileText, Image, Package, ChevronRight } from "lucide-react";
+import { Building2, FileText, Image as ImageIcon, Package, ChevronRight } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 
 export default async function CorporateDashboardPage() {
@@ -153,7 +153,7 @@ export default async function CorporateDashboardPage() {
               <p className="text-sm font-medium text-slate-500">Brand assets</p>
               <p className="mt-1 text-2xl font-semibold text-slate-900">{brandAssetsCount}</p>
             </div>
-            <Image className="h-6 w-6 text-slate-400 group-hover:text-[#E8440A]" />
+            <ImageIcon className="h-6 w-6 text-slate-400 group-hover:text-[#E8440A]" aria-hidden="true" />
           </div>
           <p className="text-xs text-slate-500 mt-2">Logos & files</p>
         </Link>

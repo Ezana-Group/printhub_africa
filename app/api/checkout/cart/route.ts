@@ -72,7 +72,7 @@ export async function PATCH(req: Request) {
     sessionId?: string | null;
     email?: string | null;
     phone?: string | null;
-    items?: unknown;
+    items?: import("@prisma/client").Prisma.InputJsonValue;
     lastActivityAt?: Date;
   } = { lastActivityAt: now };
 

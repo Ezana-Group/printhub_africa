@@ -12,17 +12,11 @@ export interface StlValidationResult {
   };
 }
 
-function isAsciiStl(buffer: Buffer): boolean {
-  const head = buffer.subarray(0, Math.min(80, buffer.length));
-  for (let i = 0; i < head.length; i++) {
-    const c = head[i];
-    if (c < 32 && c !== 9 && c !== 10 && c !== 13) return false;
-    if (c > 127) return false;
-  }
-  return true;
-}
-
-export async function validateStl(buffer: Buffer, _filename: string): Promise<StlValidationResult> {
+export async function validateStl(
+  buffer: Buffer,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- kept for API consistency
+  _filename: string
+): Promise<StlValidationResult> {
   const errors: string[] = [];
   const warnings: string[] = [];
 

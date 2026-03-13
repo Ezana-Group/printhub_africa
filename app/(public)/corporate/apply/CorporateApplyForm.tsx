@@ -114,6 +114,7 @@ export function CorporateApplyForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- applicationRef used in success JSX below
   const [applicationRef, setApplicationRef] = useState("");
 
   const update = (patch: Partial<FormData>) => setForm((f) => ({ ...f, ...patch }));
@@ -186,7 +187,8 @@ export function CorporateApplyForm() {
         <h1 className="text-2xl font-bold text-slate-900 mb-3">Application Submitted!</h1>
         <p className="text-slate-600 mb-2">
           Thank you, {form.contactPerson || "there"}. We&apos;ve received your corporate account application for{" "}
-          <strong>{form.companyName}</strong>.
+          <strong>{form.companyName}</strong>
+          {applicationRef ? ` (ref: ${applicationRef})` : ""}.
         </p>
         <p className="text-slate-600 mb-6">
           Our team will review your application and respond to <strong>{form.contactEmail}</strong> within 1 business day.
