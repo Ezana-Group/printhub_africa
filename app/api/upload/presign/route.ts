@@ -249,13 +249,22 @@ export async function POST(req: Request) {
         err?.message?.toLowerCase().includes("connect") ||
         err?.message?.toLowerCase().includes("reachable");
       const rawMessage = err?.message ?? String(dbErr);
+      const isSchemaSync =
+        err?.code === "P2011" || // null constraint
+        err?.code === "P2003" || // foreign key
+        err?.message?.includes("column") ||
+        err?.message?.includes("does not exist") ||
+        err?.message?.includes("Unknown arg");
       const message = isConnection
         ? "Database is unreachable. Check DATABASE_URL and that the database is running (e.g. Neon, Supabase)."
-        : "Database error while saving upload record. Check server logs and that migrations are applied.";
+        : isSchemaSync
+          ? "Database schema may be out of date. Run: npx prisma migrate deploy (or migrate dev locally)."
+          : "Database error while saving upload record. Check server logs and that migrations are applied.";
       return NextResponse.json(
         {
           error: message,
           code: "UPLOAD_DB_ERROR",
+          prismaCode: err?.code ?? undefined,
           details: process.env.NODE_ENV === "development" ? rawMessage : undefined,
         },
         { status: 503 }
