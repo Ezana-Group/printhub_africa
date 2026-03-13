@@ -251,16 +251,31 @@ export function ProductImagesTab({
             onUploadComplete={(files) => {
               const baseUrl =
                 typeof process !== "undefined" && process.env.NEXT_PUBLIC_R2_PUBLIC_URL
-                  ? process.env.NEXT_PUBLIC_R2_PUBLIC_URL
+                  ? process.env.NEXT_PUBLIC_R2_PUBLIC_URL.replace(/\/$/, "")
                   : "";
-              const newImages: ProductImage[] = files.map((f, idx) => ({
-                url: f.publicUrl ?? (f.storageKey && baseUrl ? `${baseUrl}/${f.storageKey}` : f.storageKey),
-                storageKey: f.storageKey,
-                uploadId: f.uploadId,
-                isMain: images.length === 0 && idx === 0,
-                sortOrder: images.length + idx,
-                source: "uploaded",
-              }));
+              const newImages: ProductImage[] = files
+                .map((f, idx) => {
+                  const url =
+                    f.publicUrl ?? (f.storageKey && baseUrl ? `${baseUrl}/${f.storageKey}` : "");
+                  if (!url || !url.startsWith("http")) return null;
+                  return {
+                    url,
+                    storageKey: f.storageKey,
+                    uploadId: f.uploadId,
+                    isMain: images.length === 0 && idx === 0,
+                    sortOrder: images.length + idx,
+                    source: "uploaded" as const,
+                  };
+                })
+                .filter((img): img is ProductImage => img !== null)
+                .map((img, i) => ({ ...img, sortOrder: images.length + i }));
+              if (newImages.length < files.length) {
+                setUrlError(
+                  "Some images had no public URL. Set R2_PUBLIC_URL and NEXT_PUBLIC_R2_PUBLIC_URL so uploads display correctly."
+                );
+              } else {
+                setUrlError("");
+              }
               setImages((prev) => [...prev, ...newImages]);
             }}
           />

@@ -229,6 +229,14 @@ export function FileUploader({
           throw new Error(msg);
         }
         const confirmData = await confirmRes.json();
+        const serverUrl =
+          bucket === "public" && confirmData?.file?.url && typeof confirmData.file.url === "string"
+            ? confirmData.file.url
+            : undefined;
+        const clientBuiltUrl =
+          bucket === "public" && process.env.NEXT_PUBLIC_R2_PUBLIC_URL
+            ? `${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/${storageKey}`
+            : undefined;
 
         const result: UploadedFileResult = {
           uploadId,
@@ -239,10 +247,7 @@ export function FileUploader({
           previewUrl: isImageType(entry.file.type)
             ? URL.createObjectURL(entry.file)
             : undefined,
-          publicUrl:
-            bucket === "public" && process.env.NEXT_PUBLIC_R2_PUBLIC_URL
-              ? `${process.env.NEXT_PUBLIC_R2_PUBLIC_URL}/${storageKey}`
-              : undefined,
+          publicUrl: serverUrl ?? clientBuiltUrl,
           validation: confirmData.validation,
         };
 
