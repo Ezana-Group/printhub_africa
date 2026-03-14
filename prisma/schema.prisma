@@ -868,6 +868,7 @@ enum UploadContext {
   ADMIN_OG_IMAGE
   USER_AVATAR
   STAFF_AVATAR
+  STAFF_PROFILE_PHOTO
 }
 
 model UploadedFile {
