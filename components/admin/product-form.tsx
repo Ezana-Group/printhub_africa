@@ -42,6 +42,7 @@ interface ProductFormProps {
     isFeatured: boolean;
     metaTitle: string | null;
     metaDescription: string | null;
+    tags?: string[];
   };
 }
 
@@ -74,6 +75,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const [isFeatured, setIsFeatured] = useState(product?.isFeatured ?? false);
   const [metaTitle, setMetaTitle] = useState(product?.metaTitle ?? "");
   const [metaDescription, setMetaDescription] = useState(product?.metaDescription ?? "");
+  const [tagsStr, setTagsStr] = useState((product?.tags ?? []).join(", "));
 
   const handleNameChange = (v: string) => {
     setName(v);
@@ -375,15 +377,28 @@ export function ProductForm({ categories, product }: ProductFormProps) {
           <h2 className="font-semibold">Status & SEO</h2>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-6">
-            <label className="flex items-center gap-2">
+          <div className="flex flex-col gap-2">
+            <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
-              Active
+              <span className="text-sm font-medium">Visible on storefront</span>
+              <span className="text-xs text-muted-foreground">(hide to remove from shop)</span>
             </label>
-            <label className="flex items-center gap-2">
+            <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)} />
-              Featured
+              <span className="text-sm font-medium">Featured</span>
+              <span className="text-xs text-muted-foreground">(show in Shop section on homepage)</span>
             </label>
+          </div>
+          <div>
+            <Label htmlFor="tags">Tags</Label>
+            <Input
+              id="tags"
+              value={tagsStr}
+              onChange={(e) => setTagsStr(e.target.value)}
+              placeholder="New arrival, New design, Bestseller"
+              className="mt-1"
+            />
+            <p className="text-xs text-muted-foreground mt-1">Comma-separated. Shown on cards and used for homepage sections.</p>
           </div>
           <div>
             <Label htmlFor="metaTitle">Meta title</Label>

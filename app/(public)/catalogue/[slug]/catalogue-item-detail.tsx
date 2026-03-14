@@ -111,8 +111,13 @@ export function CatalogueItemDetail({ slug }: CatalogueItemDetailProps) {
         ? Math.round(basePrice)
         : null;
 
+  const hasMaterials = Array.isArray(item?.availableMaterials) && item.availableMaterials.length > 0;
+  const canAddToCart = Boolean(
+    item && unitPrice != null && (!hasMaterials || (selectedMaterial && selectedColour))
+  );
+
   const handleAddToCart = async () => {
-    if (!item || !selectedMaterial || !selectedColour || unitPrice == null) return;
+    if (!item || unitPrice == null || !canAddToCart) return;
     setAddingToCart(true);
     try {
       const res = await fetch("/api/cart/add-catalogue-item", {
@@ -120,8 +125,8 @@ export function CatalogueItemDetail({ slug }: CatalogueItemDetailProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           catalogueItemId: item.id,
-          materialCode: selectedMaterial.materialCode,
-          colourHex: selectedColour,
+          materialCode: selectedMaterial?.materialCode ?? "",
+          colourHex: selectedColour || "#000000",
           quantity,
         }),
       });
@@ -294,7 +299,7 @@ export function CatalogueItemDetail({ slug }: CatalogueItemDetailProps) {
                 className="mt-4 w-full rounded-xl"
                 size="lg"
                 onClick={handleAddToCart}
-                disabled={!selectedMaterial || !selectedColour || unitPrice == null || addingToCart}
+                disabled={!canAddToCart || addingToCart}
               >
                 <ShoppingCart className="mr-2 h-5 w-5" />
                 {addingToCart ? "Adding…" : "Add to Cart"}

@@ -24,6 +24,7 @@ const updateSchema = z.object({
   isFeatured: z.boolean().optional(),
   metaTitle: z.string().max(200).nullable().optional(),
   metaDescription: z.string().max(500).nullable().optional(),
+  tags: z.array(z.string().max(50)).optional(),
 });
 
 export async function PATCH(
@@ -84,6 +85,7 @@ export async function PATCH(
         ...(data.isFeatured != null && { isFeatured: data.isFeatured }),
         ...(data.metaTitle !== undefined && { metaTitle: data.metaTitle }),
         ...(data.metaDescription !== undefined && { metaDescription: data.metaDescription }),
+        ...(data.tags != null && { tags: data.tags }),
       },
     });
     return NextResponse.json({ product });

@@ -47,6 +47,7 @@ const updateSchema = z.object({
   buildVolumeY: z.number().optional().nullable(),
   buildVolumeZ: z.number().optional().nullable(),
   isFeatured: z.boolean().optional(),
+  status: z.enum(["DRAFT", "PENDING_REVIEW", "LIVE", "PAUSED", "RETIRED"]).optional(),
   isNewArrival: z.boolean().optional(),
   isStaffPick: z.boolean().optional(),
   isPopular: z.boolean().optional(),

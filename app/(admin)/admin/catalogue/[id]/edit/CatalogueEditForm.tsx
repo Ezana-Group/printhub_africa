@@ -109,6 +109,10 @@ interface Item {
   minQuantity: number;
   maxQuantity: number;
   isFeatured: boolean;
+  isNewArrival?: boolean;
+  isStaffPick?: boolean;
+  isPopular?: boolean;
+  status?: string;
   category?: { id: string; name: string; slug: string };
   photos: Photo[];
 }
@@ -147,6 +151,11 @@ export function CatalogueEditForm({
   );
   const [sourceUrl, setSourceUrl] = useState(initialItem.sourceUrl ?? "");
   const [isFeatured, setIsFeatured] = useState(initialItem.isFeatured ?? false);
+  const isVisibleOnStorefront = (initialItem.status ?? "LIVE") === "LIVE";
+  const [visibleOnStorefront, setVisibleOnStorefront] = useState(isVisibleOnStorefront);
+  const [isNewArrival, setIsNewArrival] = useState(initialItem.isNewArrival ?? false);
+  const [isStaffPick, setIsStaffPick] = useState(initialItem.isStaffPick ?? false);
+  const [isPopular, setIsPopular] = useState(initialItem.isPopular ?? false);
 
   useEffect(() => {
     setItem(initialItem);
@@ -165,6 +174,10 @@ export function CatalogueEditForm({
     );
     setSourceUrl(initialItem.sourceUrl ?? "");
     setIsFeatured(initialItem.isFeatured ?? false);
+    setVisibleOnStorefront((initialItem.status ?? "LIVE") === "LIVE");
+    setIsNewArrival(initialItem.isNewArrival ?? false);
+    setIsStaffPick(initialItem.isStaffPick ?? false);
+    setIsPopular(initialItem.isPopular ?? false);
   }, [initialItem]);
 
   const refetchItem = useCallback(async () => {
@@ -195,6 +208,10 @@ export function CatalogueEditForm({
             ? parseFloat(priceOverrideKes)
             : null,
           isFeatured,
+          status: visibleOnStorefront ? "LIVE" : "PAUSED",
+          isNewArrival,
+          isStaffPick,
+          isPopular,
         }),
       });
       if (!res.ok) {
@@ -358,15 +375,42 @@ export function CatalogueEditForm({
               />
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Switch
-              id="isFeatured"
-              checked={isFeatured}
-              onCheckedChange={setIsFeatured}
-            />
-            <Label htmlFor="isFeatured" className="cursor-pointer text-sm font-medium">
-              Featured on homepage (show in Print on Demand section)
-            </Label>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <Switch
+                id="visibleOnStorefront"
+                checked={visibleOnStorefront}
+                onCheckedChange={setVisibleOnStorefront}
+              />
+              <Label htmlFor="visibleOnStorefront" className="cursor-pointer text-sm font-medium">
+                Visible on storefront (customers can see and order this item)
+              </Label>
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch
+                id="isFeatured"
+                checked={isFeatured}
+                onCheckedChange={setIsFeatured}
+              />
+              <Label htmlFor="isFeatured" className="cursor-pointer text-sm font-medium">
+                Featured on homepage (show in Print on Demand section)
+              </Label>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">Tags (shown on cards and can be advertised on homepage)</p>
+            <div className="flex flex-wrap gap-4">
+              <div className="flex items-center gap-2">
+                <Switch id="isNewArrival" checked={isNewArrival} onCheckedChange={setIsNewArrival} />
+                <Label htmlFor="isNewArrival" className="cursor-pointer text-sm">New arrival</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch id="isStaffPick" checked={isStaffPick} onCheckedChange={setIsStaffPick} />
+                <Label htmlFor="isStaffPick" className="cursor-pointer text-sm">Staff pick</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch id="isPopular" checked={isPopular} onCheckedChange={setIsPopular} />
+                <Label htmlFor="isPopular" className="cursor-pointer text-sm">Popular</Label>
+              </div>
+            </div>
           </div>
           <Button type="submit" disabled={loading} className="rounded-xl">
             {loading ? "Saving…" : "Save details"}

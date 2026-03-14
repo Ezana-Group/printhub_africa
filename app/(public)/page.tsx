@@ -3,6 +3,7 @@ import { ServicesOverview } from "@/components/marketing/services-overview";
 import { HowItWorks } from "@/components/marketing/how-it-works";
 import { FeaturedProducts } from "@/components/marketing/featured-products";
 import { FeaturedCatalogueSection } from "@/components/marketing/featured-catalogue";
+import { NewArrivalsSection } from "@/components/marketing/new-arrivals-section";
 import { WhyPrintHub } from "@/components/marketing/why-printhub";
 import { PriceCalculatorTeaser } from "@/components/marketing/price-calculator-teaser";
 import { CTABanner } from "@/components/marketing/cta-banner";
@@ -15,6 +16,7 @@ export default async function HomePage() {
       <Hero />
       <ServicesOverview />
       <HowItWorks />
+      <NewArrivalsSection />
       <FeaturedProducts />
       <FeaturedCatalogueSection />
       <PriceCalculatorTeaser />

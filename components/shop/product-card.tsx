@@ -37,11 +37,12 @@ interface ProductCardProps {
   comparePrice: number | null;
   category?: { name: string; slug: string };
   stock: number;
+  tags?: string[];
   averageRating?: number;
   reviewCount?: number;
 }
 
-export function ProductCard({ id, name, slug, image, imagesCount, basePrice, comparePrice, category, stock, averageRating, reviewCount = 0 }: ProductCardProps) {
+export function ProductCard({ id, name, slug, image, imagesCount, basePrice, comparePrice, category, stock, tags, averageRating, reviewCount = 0 }: ProductCardProps) {
   const addItem = useCartStore((s) => s.addItem);
 
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -80,11 +81,18 @@ export function ProductCard({ id, name, slug, image, imagesCount, basePrice, com
             1/{imagesCount}
           </span>
         )}
-        {category && (
-          <span className="absolute left-2 top-2 rounded-lg bg-white/90 px-2 py-0.5 text-xs font-medium text-slate-700">
-            {category.name}
-          </span>
-        )}
+        <div className="absolute left-2 top-2 flex flex-wrap gap-1">
+          {category && (
+            <span className="rounded-lg bg-white/90 px-2 py-0.5 text-xs font-medium text-slate-700">
+              {category.name}
+            </span>
+          )}
+          {Array.isArray(tags) && tags.slice(0, 2).map((t) => (
+            <span key={t} className="rounded-md bg-primary/90 px-1.5 py-0.5 text-[10px] font-medium text-white">
+              {t}
+            </span>
+          ))}
+        </div>
         <Button
           variant="secondary"
           size="icon"

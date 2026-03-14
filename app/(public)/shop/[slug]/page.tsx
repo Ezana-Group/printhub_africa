@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
@@ -11,6 +12,35 @@ const DEFAULT_WHATSAPP = "254700000000";
 
 interface Props {
   params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  try {
+    const { slug } = await params;
+    const product = await prisma.product.findFirst({
+      where: { slug, isActive: true },
+      select: {
+        name: true,
+        shortDescription: true,
+        metaTitle: true,
+        metaDescription: true,
+        images: true,
+        productImages: { where: { isPrimary: true }, take: 1, select: { url: true } },
+      },
+    });
+    if (!product) return { title: "Shop | PrintHub Kenya" };
+    const primaryUrl = product.images?.[0] ?? product.productImages?.[0]?.url;
+    return {
+      title: product.metaTitle ?? `${product.name} | PrintHub Kenya`,
+      description: product.metaDescription ?? product.shortDescription ?? undefined,
+      openGraph: {
+        title: product.metaTitle ?? product.name,
+        images: primaryUrl ? [primaryUrl] : undefined,
+      },
+    };
+  } catch {
+    return { title: "Shop | PrintHub Kenya" };
+  }
 }
 
 export default async function ProductPage({ params }: Props) {

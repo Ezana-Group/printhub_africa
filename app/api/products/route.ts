@@ -116,6 +116,7 @@ export async function GET(req: NextRequest) {
         sku: p.sku,
         stock: p.stock,
         isFeatured: p.isFeatured,
+        tags: p.tags ?? [],
         averageRating: stats?.avg ?? null,
         reviewCount: stats?.count ?? 0,
       };
