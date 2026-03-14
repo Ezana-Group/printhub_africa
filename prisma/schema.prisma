@@ -41,6 +41,10 @@ model User {
   isAnonymised        Boolean?  @default(false)
   anonymisedAt        DateTime?
   stripeCustomerId    String?   // Stripe Customer ID for saved cards
+  acceptedTermsAt    DateTime?  // When user accepted Account Registration Terms at signup
+  termsVersion       String?   // Version of terms accepted (e.g. "1.0")
+  marketingConsent   Boolean   @default(false)
+  marketingConsentAt DateTime?
 
   accounts         Account[]
   sessions         Session[]
@@ -1385,13 +1389,15 @@ model CorporateApplication {
   paymentTermsRequested   PaymentTerms?
   additionalNotes         String?
 
-  status                  CorporateApplicationStatus  @default(PENDING)
-  reviewedBy              String?
-  reviewedAt              DateTime?
-  rejectedReason          String?
+  status                     CorporateApplicationStatus  @default(PENDING)
+  reviewedBy                 String?
+  reviewedAt                 DateTime?
+  rejectedReason             String?
+  acceptedCorporateTermsAt   DateTime?
+  corporateTermsVersion      String?
 
-  createdAt               DateTime                    @default(now())
-  updatedAt               DateTime                    @updatedAt
+  createdAt                  DateTime                    @default(now())
+  updatedAt                  DateTime                    @updatedAt
 
   @@index([applicantUserId])
   @@index([status])

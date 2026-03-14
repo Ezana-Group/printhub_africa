@@ -92,3 +92,111 @@
     text-wrap: balance;
   }
 }
+
+/* Legal pages — Kenya legal documents (.legal-document class in DB content) */
+.legal-document {
+  max-width: 800px;
+  margin: 0 auto;
+  color: #1a1a1a;
+  font-size: 0.9375rem;
+  line-height: 1.75;
+}
+.legal-document h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-top: 2.5rem;
+  margin-bottom: 0.75rem;
+  color: #0a0a0a;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--primary, #e8440a);
+}
+.legal-document h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: #1a1a1a;
+}
+.legal-document p {
+  margin-bottom: 1rem;
+  color: #374151;
+}
+.legal-document ul,
+.legal-document ol {
+  margin: 0.75rem 0 1rem 1.5rem;
+}
+.legal-document li {
+  margin-bottom: 0.4rem;
+  color: #374151;
+}
+.legal-document table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.25rem 0;
+  font-size: 0.875rem;
+}
+.legal-document thead th {
+  background-color: #f9fafb;
+  font-weight: 600;
+  text-align: left;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid #e5e7eb;
+  color: #111827;
+}
+.legal-document tbody td {
+  padding: 0.625rem 0.75rem;
+  border: 1px solid #e5e7eb;
+  vertical-align: top;
+  color: #374151;
+}
+.legal-document tbody tr:nth-child(even) td {
+  background-color: #fafafa;
+}
+.legal-document a {
+  color: var(--primary, #e8440a);
+  text-decoration: underline;
+}
+.legal-document a:hover {
+  color: #c73a09;
+}
+.legal-document code {
+  background-color: #f3f4f6;
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  font-size: 0.85em;
+  font-family: monospace;
+}
+.legal-document strong {
+  font-weight: 600;
+  color: #111827;
+}
+.legal-document .effective-date {
+  background-color: #f9fafb;
+  border-left: 4px solid var(--primary, #e8440a);
+  padding: 0.75rem 1rem;
+  border-radius: 0 8px 8px 0;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+}
+.legal-document .important-notice {
+  background-color: #fef3c7;
+  border-left: 4px solid #f59e0b;
+  padding: 0.75rem 1rem;
+  border-radius: 0 8px 8px 0;
+  margin-bottom: 1.5rem;
+  font-size: 0.875rem;
+  color: #92400e;
+}
+@media (max-width: 640px) {
+  .legal-document {
+    font-size: 0.875rem;
+  }
+  .legal-document h2 {
+    font-size: 1.125rem;
+  }
+  .legal-document table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}

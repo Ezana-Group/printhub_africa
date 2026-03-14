@@ -13,6 +13,8 @@ export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -20,12 +22,22 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    if (!acceptTerms) {
+      setError("You must accept the Account Registration Terms to continue.");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, name: name || undefined }),
+        body: JSON.stringify({
+          email,
+          password,
+          name: name || undefined,
+          acceptTerms: true,
+          marketingConsent,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -113,9 +125,45 @@ export default function RegisterPage() {
               autoComplete="new-password"
             />
           </div>
+          <label className="flex items-start gap-3 cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={acceptTerms}
+              onChange={(e) => setAcceptTerms(e.target.checked)}
+              className="mt-1 accent-primary rounded"
+              required
+            />
+            <span className="text-sm text-muted-foreground leading-relaxed">
+              I am 18 years of age or older and I agree to PrintHub&apos;s{" "}
+              <Link href="/account-terms" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:no-underline">
+                Account Registration Terms
+              </Link>
+              , which incorporate our{" "}
+              <Link href="/terms-of-service" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:no-underline">
+                Terms of Service
+              </Link>
+              {" "}and{" "}
+              <Link href="/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-primary underline hover:no-underline">
+                Privacy Policy
+              </Link>
+              .
+            </span>
+          </label>
+          <label className="flex items-start gap-3 cursor-pointer group">
+            <input
+              type="checkbox"
+              checked={marketingConsent}
+              onChange={(e) => setMarketingConsent(e.target.checked)}
+              className="mt-1 accent-primary rounded"
+            />
+            <span className="text-sm text-muted-foreground leading-relaxed">
+              I&apos;d like to receive news, promotions, and product updates from PrintHub by email.
+              You can unsubscribe at any time.
+            </span>
+          </label>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" className="w-full" disabled={loading || !acceptTerms}>
             {loading ? "Creating account…" : "Create account"}
           </Button>
           {(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||

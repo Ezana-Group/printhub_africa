@@ -139,8 +139,10 @@ export function Footer({ business }: { business: BusinessPublic }) {
           <div className="mt-6 flex flex-wrap gap-6 text-xs text-slate-500">
             <Link href="/privacy-policy" className="hover:text-slate-400 transition-colors">Privacy Policy</Link>
             <Link href="/terms-of-service" className="hover:text-slate-400 transition-colors">Terms of Service</Link>
-            <Link href="/cookie-policy" className="hover:text-slate-400 transition-colors">Cookie Policy</Link>
             <Link href="/refund-policy" className="hover:text-slate-400 transition-colors">Refund Policy</Link>
+            <Link href="/cookie-policy" className="hover:text-slate-400 transition-colors">Cookie Policy</Link>
+            <Link href="/account-terms" className="hover:text-slate-400 transition-colors">Account Terms</Link>
+            <Link href="/corporate-terms" className="hover:text-slate-400 transition-colors">Corporate Terms</Link>
             <button type="button" id="cookie-settings-trigger" className="hover:text-slate-400 transition-colors">
               Cookie Settings
             </button>

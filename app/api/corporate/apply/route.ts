@@ -35,6 +35,7 @@ const applySchema = z.object({
   creditRequested: z.number().int().min(0).optional(),
   paymentTermsRequested: z.string().optional() as z.ZodType<PaymentTerms | undefined>,
   additionalNotes: z.string().max(2000).optional(),
+  termsAccepted: z.literal(true).optional(), // frontend sends when checkbox checked
 });
 
 function normalizeKraPin(value: string): string {
@@ -100,6 +101,7 @@ export async function POST(req: Request) {
     );
   }
 
+  const now = new Date();
   const application = await prisma.corporateApplication.create({
     data: {
       applicantUserId: session.user.id,
@@ -121,6 +123,8 @@ export async function POST(req: Request) {
       paymentTermsRequested: parsed.data.paymentTermsRequested ?? null,
       additionalNotes: parsed.data.additionalNotes?.trim() || null,
       status: "PENDING",
+      acceptedCorporateTermsAt: now,
+      corporateTermsVersion: "1.0",
     },
   });
 

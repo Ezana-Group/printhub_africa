@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-
-const LEGAL_SLUGS = ["privacy-policy", "terms-of-service", "cookie-policy", "refund-policy"] as const;
+import { isLegalSlug } from "@/lib/legal";
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
-  if (!LEGAL_SLUGS.includes(slug as (typeof LEGAL_SLUGS)[number])) {
+  if (!isLegalSlug(slug)) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 

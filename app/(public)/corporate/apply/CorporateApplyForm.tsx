@@ -162,6 +162,7 @@ export function CorporateApplyForm() {
           creditRequested: form.creditRequested ? parseInt(form.creditRequested, 10) : undefined,
           paymentTermsRequested: form.paymentTermsRequested === "PREPAID" ? undefined : form.paymentTermsRequested,
           additionalNotes: form.additionalNotes.trim() || undefined,
+          termsAccepted: true,
         }),
       });
       const data = await res.json();
@@ -485,12 +486,15 @@ export function CorporateApplyForm() {
                 type="checkbox"
                 checked={form.termsAccepted}
                 onChange={(e) => update({ termsAccepted: e.target.checked })}
-                className="mt-1 rounded"
+                className="mt-1 rounded accent-[#FF4D00]"
+                required
               />
-              <span className="text-sm">
-                I confirm that the information provided is accurate and I am authorised to apply on behalf of {form.companyName}. I agree to PrintHub&apos;s{" "}
-                <Link href="/terms-of-service" className="text-[#FF4D00] underline">Terms of Service</Link> and{" "}
-                <Link href="/privacy-policy" className="text-[#FF4D00] underline">Privacy Policy</Link>.
+              <span className="text-sm text-slate-600 leading-relaxed">
+                I confirm I have authority to bind <strong>{form.companyName}</strong> to PrintHub&apos;s{" "}
+                <Link href="/corporate-terms" target="_blank" rel="noopener noreferrer" className="text-[#FF4D00] underline">Corporate Account Terms and Conditions</Link>
+                {" "}and the incorporated{" "}
+                <Link href="/terms-of-service" target="_blank" rel="noopener noreferrer" className="text-[#FF4D00] underline">Terms of Service</Link>.
+                I confirm the information I have provided is accurate and complete.
               </span>
             </label>
             <div className="flex gap-4">

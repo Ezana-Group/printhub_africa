@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/admin-api-guard";
-
-const LEGAL_SLUGS = ["privacy-policy", "terms-of-service", "cookie-policy", "refund-policy"] as const;
+import { isLegalSlug } from "@/lib/legal";
 
 function requireContentAdmin(auth: { role: string }) {
   if (auth.role !== "ADMIN" && auth.role !== "SUPER_ADMIN") {
@@ -20,7 +19,7 @@ export async function PATCH(
   if (forbidden) return forbidden;
 
   const { slug } = await params;
-  if (!LEGAL_SLUGS.includes(slug as (typeof LEGAL_SLUGS)[number])) {
+  if (!isLegalSlug(slug)) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 

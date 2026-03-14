@@ -2,17 +2,10 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getBusinessPublic } from "@/lib/business-public";
+import { LEGAL_NAV, isLegalSlug } from "@/lib/legal";
 import type { Metadata } from "next";
 import type { BusinessPublic } from "@/lib/business-public";
 import { Mail, MapPin, Phone } from "lucide-react";
-
-const LEGAL_SLUGS = ["privacy-policy", "terms-of-service", "cookie-policy", "refund-policy"] as const;
-const LEGAL_NAV: { slug: (typeof LEGAL_SLUGS)[number]; label: string }[] = [
-  { slug: "privacy-policy", label: "Privacy Policy" },
-  { slug: "terms-of-service", label: "Terms of Service" },
-  { slug: "cookie-policy", label: "Cookie Policy" },
-  { slug: "refund-policy", label: "Refund & Returns Policy" },
-];
 
 type Props = { params: Promise<{ legalSlug: string }> };
 
@@ -55,7 +48,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { legalSlug } = await params;
   const business = await getBusinessPublic();
   const site = business.website?.replace(/^https?:\/\//, "") ?? "printhub.africa";
-  if (!LEGAL_SLUGS.includes(legalSlug as (typeof LEGAL_SLUGS)[number])) {
+  if (!isLegalSlug(legalSlug)) {
     return { title: `Not Found | ${business.businessName}` };
   }
   const page = await getLegalPage(legalSlug);
@@ -69,7 +62,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function LegalPage({ params }: Props) {
   const { legalSlug } = await params;
-  if (!LEGAL_SLUGS.includes(legalSlug as (typeof LEGAL_SLUGS)[number])) {
+  if (!isLegalSlug(legalSlug)) {
     notFound();
   }
 

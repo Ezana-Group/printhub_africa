@@ -620,26 +620,35 @@ async function main() {
   }
   console.log("Kenya delivery zones seeded");
 
-  // Legal pages (full content from legal-content.ts)
+  // Legal pages (full content from legal-content.ts; upsert updates content so re-seed refreshes)
   const { getLegalContent } = await import("./legal-content");
   const legalPages = [
-    { slug: "privacy-policy", title: "Privacy Policy" },
-    { slug: "terms-of-service", title: "Terms of Service" },
-    { slug: "cookie-policy", title: "Cookie Policy" },
-    { slug: "refund-policy", title: "Refund & Returns Policy" },
+    { slug: "privacy-policy" as const, title: "Privacy Policy" },
+    { slug: "terms-of-service" as const, title: "Terms of Service" },
+    { slug: "refund-policy" as const, title: "Refund and Returns Policy" },
+    { slug: "cookie-policy" as const, title: "Cookie Policy" },
+    { slug: "account-terms" as const, title: "Account Registration Terms" },
+    { slug: "corporate-terms" as const, title: "Corporate Account Terms and Conditions" },
   ];
   for (const page of legalPages) {
+    const content = getLegalContent(page.slug);
     await prisma.legalPage.upsert({
       where: { slug: page.slug },
-      update: {},
+      update: {
+        title: page.title,
+        content,
+        lastUpdated: new Date(),
+      },
       create: {
         slug: page.slug,
         title: page.title,
-        content: getLegalContent(page.slug as "privacy-policy" | "terms-of-service" | "cookie-policy" | "refund-policy"),
+        content,
         lastUpdated: new Date(),
         isPublished: true,
+        version: 1,
       },
     });
+    console.log(`✓ Seeded: ${page.slug}`);
   }
   console.log("Legal pages seeded");
 
