@@ -1559,6 +1559,12 @@ enum MaintenanceType {
   PART_REPLACEMENT
   FIRMWARE_UPDATE
   INSPECTION
+  // Prompt / log modal types
+  SCHEDULED
+  PREVENTIVE
+  CORRECTIVE
+  EMERGENCY
+  UPGRADE
 }
 
 model PrinterAsset {
@@ -1625,10 +1631,13 @@ model MaintenanceLog {
   description       String
   labourHours       Float           @default(0)
   labourCostKes     Float           @default(0)
+  partsCostKes      Float           @default(0)
   totalCostKes      Float           @default(0)
   nextServiceDate   DateTime?
   nextServiceHours  Float?
   notes             String?
+  hoursAtService    Float?          // machine hours counter at time of service
+  createdBy         String?         // admin userId who logged it
   createdAt         DateTime        @default(now())
 
   partsUsed         MaintenancePartUsed[]
@@ -1640,6 +1649,7 @@ model MaintenancePartUsed {
   id                String        @id @default(cuid())
   maintenanceLogId  String
   maintenanceLog    MaintenanceLog @relation(fields: [maintenanceLogId], references: [id], onDelete: Cascade)
+  partName          String?       // free text when not linked to LFStockItem
   lfStockItemId     String?
   lfStockItem       LFStockItem?  @relation(fields: [lfStockItemId], references: [id])
   quantityUsed      Float
@@ -1712,16 +1722,40 @@ model ThreeDConsumable {
 }
 
 // ============== STAFF & ADMIN ==============
+model Department {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  colour      String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  staff Staff[]
+}
+
 model Staff {
-  id             String   @id @default(cuid())
-  userId         String   @unique
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  department     String?
-  position       String?
-  permissions    String[] // granular permissions
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  assignedQuotes Quote[]
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department        String?   // denormalised name for display
+  departmentId      String?
+  departmentObj     Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  position          String?
+  permissions       String[]  // granular permissions
+  showOnAboutPage   Boolean   @default(false)
+  aboutPageOrder    Int       @default(0)
+  publicName        String?
+  publicRole        String?
+  publicBio         String?
+  profilePhotoUrl   String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  assignedQuotes    Quote[]
+
+  @@index([departmentId])
+  @@index([showOnAboutPage])
 }
 
 model AuditLog {
@@ -1946,6 +1980,10 @@ model BusinessSettings {
   socialLinkedIn       String?
   socialTikTok         String?
   socialYouTube        String?
+  hoursWeekdays        String?
+  hoursSaturday        String?
+  hoursSunday          String?
+  hoursHolidays        String?
   invoicePrefix        String?
   invoiceNotes         String?
   invoiceFooter        String?

@@ -16,6 +16,7 @@ const schema = z.object({
   name: z.string().min(1, "Name required"),
   role: z.enum(["STAFF", "ADMIN", "SUPER_ADMIN"]),
   department: z.string().optional(),
+  departmentId: z.string().optional(),
   position: z.string().optional(),
   phone: z.string().optional(),
   invite: z.boolean().optional(),
@@ -39,7 +40,7 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    const { email, password, name, role: newRole, department, position, invite } = parsed.data;
+    const { email, password, name, role: newRole, department, departmentId, position, invite } = parsed.data;
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -63,13 +64,23 @@ export async function POST(req: Request) {
       },
     });
 
-    if (department || position) {
+    const deptRecord = departmentId
+      ? await prisma.department.findUnique({ where: { id: departmentId } })
+      : null;
+    const departmentName = deptRecord?.name ?? department ?? null;
+
+    if (departmentName != null || position != null || departmentId != null) {
       await prisma.staff.upsert({
         where: { userId: user.id },
-        update: { department: department ?? null, position: position ?? null },
+        update: {
+          department: departmentName,
+          departmentId: departmentId ?? null,
+          position: position ?? null,
+        },
         create: {
           userId: user.id,
-          department: department ?? null,
+          department: departmentName,
+          departmentId: departmentId ?? null,
           position: position ?? null,
           permissions: [],
         },

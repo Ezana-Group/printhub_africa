@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -16,21 +16,9 @@ import {
   type SelectOption,
 } from "@/components/ui/select";
 
-// User roles (from schema). Use Department for Marketing, Sales, etc.
 const roleOptions: SelectOption[] = [
   { value: "STAFF", label: "Staff" },
   { value: "ADMIN", label: "Admin" },
-];
-
-const departmentOptions: SelectOption[] = [
-  { value: "", label: "Select department (optional)" },
-  { value: "Marketing", label: "Marketing" },
-  { value: "Sales", label: "Sales" },
-  { value: "Production", label: "Production" },
-  { value: "Design", label: "Design" },
-  { value: "Finance", label: "Finance" },
-  { value: "Operations", label: "Operations" },
-  { value: "Other", label: "Other" },
 ];
 
 export function InviteStaffSheet({
@@ -47,9 +35,18 @@ export function InviteStaffSheet({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"STAFF" | "ADMIN">("STAFF");
-  const [department, setDepartment] = useState("");
+  const [departmentId, setDepartmentId] = useState("");
   const [position, setPosition] = useState("");
   const [phone, setPhone] = useState("");
+  const [departments, setDepartments] = useState<{ id: string; name: string; isActive: boolean }[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    fetch("/api/admin/departments")
+      .then((r) => r.json())
+      .then((data) => setDepartments(data.departments ?? []))
+      .catch(() => setDepartments([]));
+  }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,7 +60,7 @@ export function InviteStaffSheet({
           name,
           email,
           role,
-          department: department || undefined,
+          departmentId: departmentId || undefined,
           position: position || undefined,
           phone: phone || undefined,
           invite: true,
@@ -76,7 +73,7 @@ export function InviteStaffSheet({
       }
       setName("");
       setEmail("");
-      setDepartment("");
+      setDepartmentId("");
       setPosition("");
       setPhone("");
       onSuccess();
@@ -149,13 +146,21 @@ export function InviteStaffSheet({
           </div>
           <div>
             <Label htmlFor="invite-department">Department</Label>
-            <Select
+            <select
               id="invite-department"
-              options={departmentOptions}
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-              className="mt-1"
-            />
+              value={departmentId}
+              onChange={(e) => setDepartmentId(e.target.value)}
+              className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="">Select department (optional)</option>
+              {departments
+                .filter((d) => d.isActive)
+                .map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+            </select>
           </div>
           <div>
             <Label htmlFor="invite-position">Position / Title</Label>

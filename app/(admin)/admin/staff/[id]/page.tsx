@@ -26,7 +26,11 @@ export default async function AdminStaffDetailPage({
   const user = await prisma.user.findFirst({
     where: { id, role: { in: ["STAFF", "ADMIN", "SUPER_ADMIN"] } },
     include: {
-      staff: true,
+      staff: {
+        include: {
+          departmentObj: { select: { id: true, name: true, colour: true } },
+        },
+      },
     },
   });
   if (!user) notFound();
@@ -44,8 +48,18 @@ export default async function AdminStaffDetailPage({
     staff: user.staff
       ? {
           department: user.staff.department,
+          departmentId: user.staff.departmentId,
+          departmentObj: user.staff.departmentObj
+            ? { id: user.staff.departmentObj.id, name: user.staff.departmentObj.name, colour: user.staff.departmentObj.colour }
+            : null,
           position: user.staff.position,
           permissions: user.staff.permissions,
+          showOnAboutPage: user.staff.showOnAboutPage,
+          aboutPageOrder: user.staff.aboutPageOrder,
+          publicName: user.staff.publicName,
+          publicRole: user.staff.publicRole,
+          publicBio: user.staff.publicBio,
+          profilePhotoUrl: user.staff.profilePhotoUrl,
         }
       : null,
   };

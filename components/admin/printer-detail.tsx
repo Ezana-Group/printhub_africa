@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MaintenanceTypeBadge } from "@/components/admin/inventory/hardware/MaintenanceTypeBadge";
 
 const TABS = ["Overview", "Specs & Costs", "Maintenance History", "Parts & Accessories", "Usage Stats"];
 const MAINTENANCE_TYPES = [
@@ -70,7 +71,9 @@ type Log = {
   labourCostKes: number;
   totalCostKes: number;
   nextServiceDate: string | null;
+  nextServiceHours: number | null;
   notes: string | null;
+  partsUsed?: { id: string; partName: string | null; quantityUsed: number; unitCostKes: number; totalCostKes: number }[];
 };
 
 type LinkedItem = {
@@ -85,13 +88,15 @@ export function PrinterDetail({
   asset,
   maintenanceLogs,
   linkedItems,
+  initialTab = 0,
 }: {
   asset: Asset;
   maintenanceLogs: Log[];
   linkedItems: LinkedItem[];
+  initialTab?: number;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState(0);
+  const [tab, setTab] = useState(initialTab);
   const [showLogForm, setShowLogForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [logType, setLogType] = useState("SCHEDULED_SERVICE");
@@ -344,9 +349,21 @@ export function PrinterDetail({
                 {maintenanceLogs.map((log) => (
                   <div key={log.id} className="flex flex-wrap items-start justify-between gap-2 py-2 border-b border-border last:border-0">
                     <div>
-                      <p className="font-medium text-sm">{log.type.replace(/_/g, " ")}</p>
-                      <p className="text-sm text-muted-foreground">{formatDate(log.date)} · {log.performedBy}</p>
-                      <p className="text-sm mt-0.5">{log.description}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <MaintenanceTypeBadge type={log.type} />
+                        <span className="font-medium text-sm">{log.description}</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">{formatDate(log.date)} · {log.performedBy}</p>
+                      {log.partsUsed && log.partsUsed.length > 0 && (
+                        <div className="mt-2 text-xs text-muted-foreground space-y-0.5">
+                          {log.partsUsed.map((p) => (
+                            <div key={p.id} className="flex justify-between gap-2">
+                              <span>{p.partName ?? "Part"} × {p.quantityUsed}</span>
+                              <span className="font-mono">{formatKes(p.totalCostKes)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <p className="text-sm font-medium">{formatKes(log.totalCostKes)}</p>
                   </div>

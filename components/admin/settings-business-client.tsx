@@ -29,6 +29,10 @@ const FORM_DEFAULTS: Record<string, string> = {
   county: "Nairobi County",
   country: "Kenya",
   googleMapsUrl: "",
+  hoursWeekdays: "",
+  hoursSaturday: "",
+  hoursSunday: "",
+  hoursHolidays: "",
   socialFacebook: "",
   socialInstagram: "",
   socialTwitter: "",
@@ -337,6 +341,52 @@ export function SettingsBusinessClient({
             <div className="space-y-1.5">
               <Label>Google Maps URL</Label>
               <Input value={getStr(data, "googleMapsUrl")} onChange={(e) => update("googleMapsUrl", e.target.value)} placeholder="Paste link for contact page" className="focus-visible:ring-orange-500" />
+            </div>
+          </div>
+        )}
+        onSave={saveFull}
+      />
+
+      <EditableSection
+        id="business-hours"
+        title="Opening Hours"
+        description="Displayed in footer and on contact. Leave blank to hide."
+        canEdit={canEdit}
+        viewContent={
+          <div className="space-y-0">
+            {[
+              { label: "Weekdays", value: getStr(data, "hoursWeekdays") },
+              { label: "Saturday", value: getStr(data, "hoursSaturday") },
+              { label: "Sunday", value: getStr(data, "hoursSunday") },
+              { label: "Public holidays", value: getStr(data, "hoursHolidays") },
+            ].map((row, i) => (
+              <div
+                key={i}
+                className="flex flex-wrap items-baseline justify-between gap-2 py-2 border-b border-border/50 last:border-0 hover:bg-muted/30 rounded px-1 -mx-1"
+              >
+                <span className="text-sm text-muted-foreground">{row.label}</span>
+                <span className="text-sm font-medium text-foreground">{row.value || "—"}</span>
+              </div>
+            ))}
+          </div>
+        }
+        editContent={({ setHasChanges }) => (
+          <div className="space-y-4" onChange={() => setHasChanges(true)} onInput={() => setHasChanges(true)}>
+            <div className="space-y-1.5">
+              <Label>Weekdays</Label>
+              <Input value={getStr(data, "hoursWeekdays")} onChange={(e) => update("hoursWeekdays", e.target.value)} placeholder="Monday – Friday: 8:00am – 6:00pm" className="focus-visible:ring-orange-500" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Saturday</Label>
+              <Input value={getStr(data, "hoursSaturday")} onChange={(e) => update("hoursSaturday", e.target.value)} placeholder="Saturday: 9:00am – 3:00pm" className="focus-visible:ring-orange-500" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Sunday</Label>
+              <Input value={getStr(data, "hoursSunday")} onChange={(e) => update("hoursSunday", e.target.value)} placeholder="Sunday: Closed" className="focus-visible:ring-orange-500" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Public holidays</Label>
+              <Input value={getStr(data, "hoursHolidays")} onChange={(e) => update("hoursHolidays", e.target.value)} placeholder="Public holidays: Closed" className="focus-visible:ring-orange-500" />
             </div>
           </div>
         )}

@@ -19,6 +19,10 @@ export type BusinessPublic = {
   country: string;
   googleMapsUrl: string | null;
   businessHours: string;
+  hoursWeekdays: string | null;
+  hoursSaturday: string | null;
+  hoursSunday: string | null;
+  hoursHolidays: string | null;
   socialFacebook: string | null;
   socialInstagram: string | null;
   socialTwitter: string | null;
@@ -46,6 +50,10 @@ const DEFAULTS: BusinessPublic = {
   country: "Kenya",
   googleMapsUrl: null,
   businessHours: "Mon–Fri 8am–6pm | Sat 9am–3pm",
+  hoursWeekdays: null,
+  hoursSaturday: null,
+  hoursSunday: null,
+  hoursHolidays: null,
   socialFacebook: null,
   socialInstagram: null,
   socialTwitter: null,
@@ -78,6 +86,10 @@ export async function getBusinessPublic(): Promise<BusinessPublic> {
     country: row.country ?? DEFAULTS.country,
     googleMapsUrl: row.googleMapsUrl ?? null,
     businessHours: row.businessHours ?? DEFAULTS.businessHours,
+    hoursWeekdays: row.hoursWeekdays ?? null,
+    hoursSaturday: row.hoursSaturday ?? null,
+    hoursSunday: row.hoursSunday ?? null,
+    hoursHolidays: row.hoursHolidays ?? null,
     socialFacebook: row.socialFacebook ?? null,
     socialInstagram: row.socialInstagram ?? null,
     socialTwitter: row.socialTwitter ?? null,

@@ -4,7 +4,11 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 const ADMIN_ROLES = ["STAFF", "ADMIN", "SUPER_ADMIN"];
-const MAINTENANCE_TYPES = ["SCHEDULED_SERVICE", "BREAKDOWN_REPAIR", "CLEANING", "CALIBRATION", "PART_REPLACEMENT", "FIRMWARE_UPDATE", "INSPECTION"] as const;
+const MAINTENANCE_TYPES = [
+  "SCHEDULED_SERVICE", "BREAKDOWN_REPAIR", "CLEANING", "CALIBRATION", "PART_REPLACEMENT",
+  "FIRMWARE_UPDATE", "INSPECTION",
+  "SCHEDULED", "PREVENTIVE", "CORRECTIVE", "EMERGENCY", "UPGRADE",
+] as const;
 
 /** GET: List maintenance logs for this printer */
 export async function GET(
@@ -70,47 +74,63 @@ export async function POST(
     if (!asset) return NextResponse.json({ error: "Printer not found" }, { status: 404 });
 
     const body = await req.json();
-    const type = MAINTENANCE_TYPES.includes(body.type) ? body.type : "INSPECTION";
+    const performedBy = String(body.performedBy ?? (session.user as { name?: string })?.name ?? "Staff").trim();
+    const description = String(body.description ?? "").trim() || "Maintenance";
+    if (!performedBy) return NextResponse.json({ error: "Performed by is required" }, { status: 400 });
+    if (!description) return NextResponse.json({ error: "Description is required" }, { status: 400 });
+
+    const type = MAINTENANCE_TYPES.includes(body.type as (typeof MAINTENANCE_TYPES)[number]) ? body.type : "INSPECTION";
     const labourHours = Number(body.labourHours) || 0;
-    const labourCostKes = Number(body.labourCostKes) || 0;
-    const partsUsed = Array.isArray(body.partsUsed) ? body.partsUsed : [];
-    let partsTotal = 0;
-    for (const p of partsUsed) {
-      const qty = Number(p.quantityUsed) || 0;
+    const labourCostKes = Number(body.labourCostKes) ?? 0;
+    const parts = Array.isArray(body.parts) ? body.parts : Array.isArray(body.partsUsed) ? body.partsUsed : [];
+    const partsToCreate: { partName?: string; quantity: number; unitCostKes: number; totalCostKes: number; lfStockItemId?: string }[] = [];
+    for (const p of parts) {
+      const qty = Number(p.quantity ?? p.quantityUsed) || 0;
       const unitCost = Number(p.unitCostKes) || 0;
-      partsTotal += qty * unitCost;
+      const totalCostKes = p.totalCostKes != null ? Number(p.totalCostKes) : qty * unitCost;
+      const partName = p.partName != null ? String(p.partName).trim() || undefined : undefined;
+      if (qty <= 0 && !partName) continue;
+      partsToCreate.push({
+        partName: partName ?? (p.lfStockItemId ? undefined : "Part"),
+        quantity: qty,
+        unitCostKes: unitCost,
+        totalCostKes,
+        lfStockItemId: p.lfStockItemId || undefined,
+      });
     }
-    const totalCostKes = labourCostKes + partsTotal;
+    const partsCostKes = partsToCreate.reduce((sum, p) => sum + p.totalCostKes, 0);
+    const totalCostKes = labourCostKes + partsCostKes;
 
     const log = await prisma.maintenanceLog.create({
       data: {
         printerAssetId: id,
         type,
-        date: body.date ? new Date(body.date) : new Date(),
-        performedBy: String(body.performedBy ?? (session.user as { name?: string })?.name ?? "Staff").trim(),
+        date: body.date ?? body.performedAt ? new Date(body.date ?? body.performedAt) : new Date(),
+        performedBy,
         isExternal: Boolean(body.isExternal),
         technicianCompany: body.technicianCompany ? String(body.technicianCompany).trim() : null,
-        description: String(body.description ?? "").trim() || "Maintenance",
+        description,
         labourHours,
         labourCostKes,
+        partsCostKes,
         totalCostKes,
         nextServiceDate: body.nextServiceDate ? new Date(body.nextServiceDate) : null,
         nextServiceHours: body.nextServiceHours != null ? Number(body.nextServiceHours) : null,
         notes: body.notes ? String(body.notes).trim() : null,
+        hoursAtService: body.hoursAtService != null ? Number(body.hoursAtService) : null,
+        createdBy: (session.user as { id?: string })?.id ?? null,
       },
     });
 
-    for (const p of partsUsed) {
-      const quantityUsed = Number(p.quantityUsed) || 0;
-      const unitCostKes = Number(p.unitCostKes) || 0;
-      if (quantityUsed <= 0 || !p.lfStockItemId) continue;
+    for (const p of partsToCreate) {
       await prisma.maintenancePartUsed.create({
         data: {
           maintenanceLogId: log.id,
-          lfStockItemId: p.lfStockItemId,
-          quantityUsed,
-          unitCostKes,
-          totalCostKes: quantityUsed * unitCostKes,
+          partName: p.partName,
+          lfStockItemId: p.lfStockItemId || null,
+          quantityUsed: p.quantity,
+          unitCostKes: p.unitCostKes,
+          totalCostKes: p.totalCostKes,
         },
       });
     }
@@ -126,7 +146,7 @@ export async function POST(
       where: { id: log.id },
       include: { partsUsed: true },
     });
-    return NextResponse.json(created ?? log);
+    return NextResponse.json({ success: true, log: created ?? log });
   } catch (e) {
     console.error("Maintenance POST error:", e);
     return NextResponse.json({ error: "Failed to log maintenance" }, { status: 500 });

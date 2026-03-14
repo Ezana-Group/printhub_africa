@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,8 +21,16 @@ export function AddStaffForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"STAFF" | "ADMIN">("STAFF");
-  const [department, setDepartment] = useState("");
+  const [departmentId, setDepartmentId] = useState("");
   const [position, setPosition] = useState("");
+  const [departments, setDepartments] = useState<{ id: string; name: string; isActive: boolean }[]>([]);
+
+  useEffect(() => {
+    fetch("/api/admin/departments")
+      .then((r) => r.json())
+      .then((data) => setDepartments(data.departments ?? []))
+      .catch(() => setDepartments([]));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +45,7 @@ export function AddStaffForm() {
           email,
           password,
           role,
-          department: department || undefined,
+          departmentId: departmentId || undefined,
           position: position || undefined,
         }),
       });
@@ -49,7 +57,7 @@ export function AddStaffForm() {
       setName("");
       setEmail("");
       setPassword("");
-      setDepartment("");
+      setDepartmentId("");
       setPosition("");
       router.refresh();
     } finally {
@@ -124,13 +132,21 @@ export function AddStaffForm() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label htmlFor="department">Department (optional)</Label>
-                <Input
+                <select
                   id="department"
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  placeholder="e.g. Sales, Marketing"
-                  className="mt-1"
-                />
+                  value={departmentId}
+                  onChange={(e) => setDepartmentId(e.target.value)}
+                  className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">Select department (optional)</option>
+                  {departments
+                    .filter((d) => d.isActive)
+                    .map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                </select>
               </div>
               <div>
                 <Label htmlFor="position">Position (optional)</Label>

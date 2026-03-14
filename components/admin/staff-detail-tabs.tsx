@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { EditableSection } from "@/components/admin/editable-section";
+import { FileUploader } from "@/components/upload/FileUploader";
 import { formatRelativeTime, formatDateForDisplay } from "@/lib/admin-utils";
 import {
   BarChart,
@@ -30,8 +31,16 @@ export interface StaffDetailUser {
   createdAt: string;
   staff?: {
     department: string | null;
+    departmentId: string | null;
+    departmentObj: { id: string; name: string; colour: string | null } | null;
     position: string | null;
     permissions?: string[];
+    showOnAboutPage?: boolean;
+    aboutPageOrder?: number;
+    publicName?: string | null;
+    publicRole?: string | null;
+    publicBio?: string | null;
+    profilePhotoUrl?: string | null;
   } | null;
 }
 
@@ -104,21 +113,29 @@ export function StaffDetailTabs({
 }) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<StaffDetailTab>("profile");
+  const [departments, setDepartments] = useState<{ id: string; name: string; isActive: boolean }[]>([]);
 
   const [profile, setProfile] = useState({
     name: user.name ?? "",
     email: user.email ?? "",
     phone: user.phone ?? "",
-    department: user.staff?.department ?? "",
+    departmentId: user.staff?.departmentId ?? "",
     position: user.staff?.position ?? "",
   });
+
+  useEffect(() => {
+    fetch("/api/admin/departments")
+      .then((r) => r.json())
+      .then((data) => setDepartments(data.departments ?? []))
+      .catch(() => setDepartments([]));
+  }, []);
 
   useEffect(() => {
     setProfile({
       name: user.name ?? "",
       email: user.email ?? "",
       phone: user.phone ?? "",
-      department: user.staff?.department ?? "",
+      departmentId: user.staff?.departmentId ?? "",
       position: user.staff?.position ?? "",
     });
   }, [user]);
@@ -171,7 +188,7 @@ export function StaffDetailTabs({
                   { label: "Name", value: user.name ?? "—" },
                   { label: "Email", value: user.email },
                   { label: "Phone", value: user.phone ?? "—" },
-                  { label: "Department", value: user.staff?.department ?? "—" },
+                  { label: "Department", value: user.staff?.departmentObj?.name ?? user.staff?.department ?? "—" },
                   { label: "Position", value: user.staff?.position ?? "—" },
                   { label: "Joined", value: formatDateForDisplay(user.createdAt) },
                 ].map((row, i) => (
@@ -201,7 +218,20 @@ export function StaffDetailTabs({
                 </div>
                 <div className="space-y-1.5">
                   <Label>Department</Label>
-                  <Input value={profile.department} onChange={(e) => setProfile((p) => ({ ...p, department: e.target.value }))} className="focus-visible:ring-orange-500" />
+                  <select
+                    value={profile.departmentId}
+                    onChange={(e) => setProfile((p) => ({ ...p, departmentId: e.target.value }))}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-orange-500 focus-visible:outline-none"
+                  >
+                    <option value="">No department</option>
+                    {departments
+                      .filter((d) => d.isActive)
+                      .map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name}
+                        </option>
+                      ))}
+                  </select>
                 </div>
                 <div className="space-y-1.5">
                   <Label>Position</Label>
@@ -219,7 +249,7 @@ export function StaffDetailTabs({
                     name: profile.name || undefined,
                     email: profile.email || undefined,
                     phone: profile.phone || null,
-                    department: profile.department || null,
+                    departmentId: profile.departmentId || null,
                     position: profile.position || null,
                   }),
                 });
@@ -231,6 +261,163 @@ export function StaffDetailTabs({
               router.refresh();
             }}
           />
+
+          {user.staff && (
+            <div className="border-t border-[#E5E7EB] pt-6 mt-6">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-sm font-semibold text-[#111]">About page visibility</p>
+                  <p className="text-xs text-[#6B7280]">Show this person in the Team section on /about</p>
+                </div>
+                <Switch
+                  checked={user.staff.showOnAboutPage ?? false}
+                  onCheckedChange={async (checked) => {
+                    try {
+                      const res = await fetch(`/api/admin/staff/${user.id}/public-profile`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ showOnAboutPage: checked }),
+                      });
+                      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "Failed");
+                      router.refresh();
+                    } catch (e) {
+                      alert(e instanceof Error ? e.message : "Failed to update");
+                    }
+                  }}
+                />
+              </div>
+              {(user.staff.showOnAboutPage ?? false) && (
+                <div className="space-y-4 mt-4">
+                  <div>
+                    <Label className="text-xs text-[#6B7280]">Profile photo</Label>
+                    <div className="flex items-center gap-3 mt-1">
+                      {user.staff.profilePhotoUrl ? (
+                        <img
+                          src={user.staff.profilePhotoUrl}
+                          alt={user.name ?? "Staff"}
+                          className="w-14 h-14 rounded-full object-cover border border-[#E5E7EB]"
+                        />
+                      ) : (
+                        <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center text-white font-semibold text-lg">
+                          {(user.staff.publicName ?? user.name ?? "S").charAt(0)}
+                        </div>
+                      )}
+                      <FileUploader
+                        context="STAFF_PROFILE_PHOTO"
+                        accept={["image/*"]}
+                        maxSizeMB={5}
+                        maxFiles={1}
+                        label="Upload photo"
+                        hint="Square photo, min 400×400px recommended"
+                        onUploadComplete={async (files) => {
+                          const url = files[0]?.publicUrl;
+                          if (!url) return;
+                          try {
+                            const res = await fetch(`/api/admin/staff/${user.id}/public-profile`, {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ profilePhotoUrl: url }),
+                            });
+                            if (!res.ok) throw new Error();
+                            router.refresh();
+                          } catch {
+                            alert("Failed to save photo");
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-[#6B7280]">Display name (leave blank to use account name)</Label>
+                    <Input
+                      defaultValue={user.staff.publicName ?? ""}
+                      onBlur={async (e) => {
+                        const v = e.target.value.trim() || null;
+                        try {
+                          await fetch(`/api/admin/staff/${user.id}/public-profile`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ publicName: v }),
+                          });
+                          router.refresh();
+                        } catch {
+                          // ignore
+                        }
+                      }}
+                      placeholder={user.name ?? "Full name"}
+                      className="mt-1 focus-visible:ring-orange-500"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-[#6B7280]">Public role / title *</Label>
+                    <Input
+                      defaultValue={user.staff.publicRole ?? ""}
+                      onBlur={async (e) => {
+                        const v = e.target.value.trim() || null;
+                        try {
+                          await fetch(`/api/admin/staff/${user.id}/public-profile`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ publicRole: v }),
+                          });
+                          router.refresh();
+                        } catch {
+                          // ignore
+                        }
+                      }}
+                      placeholder="e.g. Head of Production, Lead Designer"
+                      className="mt-1 focus-visible:ring-orange-500"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-[#6B7280]">Short bio (optional)</Label>
+                    <textarea
+                      defaultValue={user.staff.publicBio ?? ""}
+                      onBlur={async (e) => {
+                        const v = e.target.value.trim() || null;
+                        try {
+                          await fetch(`/api/admin/staff/${user.id}/public-profile`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ publicBio: v }),
+                          });
+                          router.refresh();
+                        } catch {
+                          // ignore
+                        }
+                      }}
+                      rows={2}
+                      placeholder="1–2 sentences about this person's role..."
+                      className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-orange-500 resize-none"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-[#6B7280]">Display order (lower = first)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      defaultValue={user.staff.aboutPageOrder ?? 0}
+                      onBlur={async (e) => {
+                        const n = parseInt(e.target.value, 10);
+                        if (Number.isNaN(n)) return;
+                        try {
+                          await fetch(`/api/admin/staff/${user.id}/public-profile`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ aboutPageOrder: n }),
+                          });
+                          router.refresh();
+                        } catch {
+                          // ignore
+                        }
+                      }}
+                      className="mt-1 w-24 focus-visible:ring-orange-500"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

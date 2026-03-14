@@ -149,9 +149,48 @@ export async function PATCH(
     });
 
     const refetched = await prisma.printerAsset.findUnique({ where: { id } });
-    return NextResponse.json(refetched ?? updated);
+    return NextResponse.json({ success: true, machine: refetched ?? updated });
   } catch (e) {
     console.error("Printer asset PATCH error:", e);
     return NextResponse.json({ error: "Failed to update asset" }, { status: 500 });
+  }
+}
+
+/** DELETE: Soft delete (set inactive) or hard delete if no production history */
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getServerSession(authOptions);
+  const role = (session?.user as { role?: string })?.role;
+  if (!session?.user || role !== "ADMIN" && role !== "SUPER_ADMIN") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  const { id } = await params;
+  try {
+    const asset = await prisma.printerAsset.findUnique({
+      where: { id },
+      include: {
+        _count: { select: { maintenanceLogs: true } },
+      },
+    });
+    if (!asset) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    // Check production queue for any jobs assigned to this asset (machineId may reference printer)
+    const productionCount = await (prisma as unknown as { productionQueue: { count: (args: { where: { machineId: string } }) => Promise<number> } }).productionQueue?.count?.({ where: { machineId: id } }).catch(() => 0) ?? 0;
+    if (productionCount > 0) {
+      return NextResponse.json({
+        error: "Cannot delete printer with production history. Set status to RETIRED instead.",
+        code: "HAS_PRODUCTION_HISTORY",
+        productionJobs: productionCount,
+      }, { status: 400 });
+    }
+
+    await prisma.maintenanceLog.deleteMany({ where: { printerAssetId: id } });
+    await prisma.printerAsset.delete({ where: { id } });
+    return NextResponse.json({ success: true });
+  } catch (e) {
+    console.error("Printer asset DELETE error:", e);
+    return NextResponse.json({ error: "Failed to delete asset" }, { status: 500 });
   }
 }

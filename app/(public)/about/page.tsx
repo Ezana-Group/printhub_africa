@@ -3,6 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { AboutHero } from "./about-hero";
 import { getBusinessPublic } from "@/lib/business-public";
+import { getCachedPublicTeamMembers } from "@/lib/cache/unstable-cache";
 
 export const revalidate = 3600; // 1 hour — about page changes rarely
 
@@ -25,7 +26,10 @@ export async function generateMetadata(): Promise<Metadata> {
 const STORY_IMAGE = "/images/about/production-floor.webp";
 
 export default async function AboutPage() {
-  const business = await getBusinessPublic();
+  const [business, teamMembers] = await Promise.all([
+    getBusinessPublic(),
+    getCachedPublicTeamMembers(),
+  ]);
   const whatsappDigits = (business.whatsapp ?? "").replace(/\D/g, "") || "254700000000";
   const whatsappHref = `https://wa.me/${whatsappDigits}`;
   return (
@@ -221,8 +225,8 @@ export default async function AboutPage() {
         </div>
       </section>
 
-      {/* SECTION 5 — TEAM (placeholder) */}
-      <section className="bg-[#0A0A0A] py-20 md:py-28 px-4 md:px-6 lg:px-8">
+      {/* SECTION 5 — TEAM (from admin-controlled staff) */}
+      <section id="team" className="bg-[#0A0A0A] py-20 md:py-28 px-4 md:px-6 lg:px-8">
         <div className="container max-w-6xl mx-auto">
           <p className="font-mono text-xs uppercase tracking-widest text-primary mb-4">
             THE TEAM
@@ -236,82 +240,112 @@ export default async function AboutPage() {
             Our team of print technicians, designers, and customer service
             specialists are dedicated to making your project a success.
           </p>
-          {/* TODO: Replace with real team photos — can be updated from Admin → Settings → Team Members */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-            {[
-              { name: "Team Member", role: "Leadership", initials: "TM" },
-              { name: "Team Member", role: "Production", initials: "TM" },
-              { name: "Team Member", role: "Customer Success", initials: "TM" },
-            ].map((member) => (
-              <div
-                key={member.role}
-                className="group text-center"
-              >
-                <div className="w-32 h-32 mx-auto rounded-full bg-[#1A1A1A] border border-white/10 flex items-center justify-center text-3xl font-display font-bold text-primary group-hover:border-primary/40 transition-colors">
-                  {member.initials}
-                </div>
-                <p className="font-display text-base text-white mt-4">
-                  {member.name}
-                </p>
-                <p className="font-body text-[13px] text-primary">{member.role}</p>
+            {teamMembers.length > 0 ? (
+              teamMembers.map((member) => {
+                const displayName = member.publicName ?? member.name ?? "Team Member";
+                const initials = displayName
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase() || "TM";
+                return (
+                  <div key={member.id} className="group text-center flex flex-col items-center">
+                    <div className="w-32 h-32 rounded-full overflow-hidden mb-4 relative bg-[#1A1A1A] border border-white/10 group-hover:border-primary/40 transition-colors">
+                      {member.profilePhotoUrl ? (
+                        <Image
+                          src={member.profilePhotoUrl}
+                          alt={displayName}
+                          fill
+                          className="object-cover grayscale group-hover:grayscale-0 transition-all duration-300"
+                          sizes="128px"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <span className="text-2xl font-display font-bold text-primary">
+                            {initials}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="font-display text-base text-white">{displayName}</p>
+                    <p className="font-body text-[13px] text-primary mt-1">
+                      {member.publicRole ?? "PrintHub Team"}
+                    </p>
+                    {member.publicBio && (
+                      <p className="font-body text-xs text-white/50 mt-2 leading-relaxed max-w-xs">
+                        {member.publicBio}
+                      </p>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="col-span-full text-center py-8 text-white/30 text-sm">
+                No team members configured to show yet. Admin can enable this in Settings → Users & Roles.
               </div>
-            ))}
+            )}
           </div>
         </div>
       </section>
 
-      {/* SECTION 6 — LOCATION & CONTACT CTA */}
+      {/* SECTION 6 — LOCATION (map + CTA; contact details are in footer) */}
       <section className="relative bg-primary py-20 md:py-28 px-4 md:px-6 lg:px-8 overflow-hidden">
         <div className="absolute inset-0">
           <Image src="/images/about/nairobi.webp" alt="" fill className="object-cover opacity-20" sizes="100vw" />
         </div>
         <div className="container max-w-6xl mx-auto relative z-10">
-          <h2 className="font-display text-3xl md:text-[48px] font-bold text-black leading-tight mb-4">
-            Come See Us in
-            <br />
-            {business.city || "Kenya"}.
-          </h2>
-          <p className="font-body text-lg text-black/70 mb-12">
-            We&apos;re based in {[business.city, business.country].filter(Boolean).join(", ") || "Kenya"}. Walk-ins welcome during business
-            hours.
-          </p>
-          <div className="grid md:grid-cols-2 gap-12">
-            <div className="space-y-4 font-body text-black/90">
-              <p className="flex items-center gap-2">
-                <span aria-hidden>📍</span> {[business.city, business.country].filter(Boolean).join(", ") || "Nairobi, Kenya"}
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="font-display text-3xl md:text-[48px] font-bold text-black leading-tight mb-4">
+                Come See Us in {business.city || "Kenya"}.
+              </h2>
+              <p className="font-body text-lg text-black/70 mb-6">
+                We&apos;re based in {[business.city, business.country].filter(Boolean).join(", ") || "Kenya"}. Walk-ins welcome during business hours.
               </p>
-              {business.primaryPhone && (
-                <p className="flex items-center gap-2">
-                  <span aria-hidden>📞</span> {business.primaryPhone}
+              {[business.address1, business.address2, business.city].filter(Boolean).length > 0 && (
+                <p className="text-black/80 text-base mb-8 font-medium">
+                  {[business.address1, business.address2, business.city].filter(Boolean).join(", ")}
                 </p>
               )}
-              <p className="flex items-center gap-2">
-                <span aria-hidden>✉</span> {business.primaryEmail}
-              </p>
-              <p className="flex items-center gap-2">
-                <span aria-hidden>🕐</span> {business.businessHours}
-              </p>
-              <div className="flex flex-wrap gap-3 mt-8">
+              <div className="flex flex-wrap gap-3">
                 <Link
                   href="/get-a-quote"
                   className="inline-flex items-center gap-2 rounded-lg bg-black text-white px-5 py-3 font-medium hover:bg-black/90 transition-colors"
                 >
-                  📋 Get a Quote
+                  Get a Quote
                 </Link>
-                <a
-                  href={whatsappHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg bg-black text-white px-5 py-3 font-medium hover:bg-black/90 transition-colors"
-                >
-                  💬 WhatsApp Us
-                </a>
+                {business.whatsapp && (
+                  <a
+                    href={whatsappHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-lg bg-black text-white px-5 py-3 font-medium hover:bg-black/90 transition-colors"
+                  >
+                    WhatsApp Us
+                  </a>
+                )}
               </div>
             </div>
-            <div className="aspect-video bg-black/10 rounded-lg flex items-center justify-center">
-              <span className="text-black/50 font-body text-sm">
-                Map placeholder
-              </span>
+            <div className="rounded-2xl overflow-hidden shadow-lg aspect-video bg-black/10">
+              {business.googleMapsUrl ? (
+                <iframe
+                  src={business.googleMapsUrl}
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0, minHeight: 280 }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title="Location map"
+                  className="w-full h-64 lg:h-80"
+                />
+              ) : (
+                <div className="w-full h-64 lg:h-80 flex items-center justify-center text-black/40 text-sm">
+                  Add Google Maps URL in Admin → Settings → Business Profile
+                </div>
+              )}
             </div>
           </div>
         </div>

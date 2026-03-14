@@ -58,6 +58,7 @@ export type UploadFolder =
   | "brand/og"
   | "categories/images"
   | "avatars"
+  | "staff-profile"
   | "blog";
 
 /** Generate a consistent storage key (date + optional user + safe filename + id). */

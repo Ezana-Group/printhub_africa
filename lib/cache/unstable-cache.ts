@@ -21,6 +21,10 @@ const DEFAULTS: BusinessPublic = {
   country: "Kenya",
   googleMapsUrl: null,
   businessHours: "Mon–Fri 8am–6pm | Sat 9am–3pm",
+  hoursWeekdays: null,
+  hoursSaturday: null,
+  hoursSunday: null,
+  hoursHolidays: null,
   socialFacebook: null,
   socialInstagram: null,
   socialTwitter: null,
@@ -55,6 +59,10 @@ export const getCachedBusinessPublic = unstable_cache(
       country: row.country ?? DEFAULTS.country,
       googleMapsUrl: row.googleMapsUrl ?? null,
       businessHours: row.businessHours ?? DEFAULTS.businessHours,
+      hoursWeekdays: row.hoursWeekdays ?? null,
+      hoursSaturday: row.hoursSaturday ?? null,
+      hoursSunday: row.hoursSunday ?? null,
+      hoursHolidays: row.hoursHolidays ?? null,
       socialFacebook: row.socialFacebook ?? null,
       socialInstagram: row.socialInstagram ?? null,
       socialTwitter: row.socialTwitter ?? null,
@@ -65,6 +73,41 @@ export const getCachedBusinessPublic = unstable_cache(
   },
   ["business-public"],
   { revalidate: 300, tags: ["homepage", "business"] }
+);
+
+export type PublicTeamMember = {
+  id: string;
+  publicName: string | null;
+  name: string | null;
+  publicRole: string | null;
+  publicBio: string | null;
+  profilePhotoUrl: string | null;
+  aboutPageOrder: number;
+};
+
+/** Team members shown on /about. Revalidate with tag 'team-members' when staff public profile changes. */
+export const getCachedPublicTeamMembers = unstable_cache(
+  async (): Promise<PublicTeamMember[]> => {
+    const staff = await prisma.staff.findMany({
+      where: {
+        showOnAboutPage: true,
+        user: { status: "ACTIVE" },
+      },
+      include: { user: { select: { id: true, name: true } } },
+      orderBy: { aboutPageOrder: "asc" },
+    });
+    return staff.map((s) => ({
+      id: s.userId,
+      publicName: s.publicName,
+      name: s.user.name,
+      publicRole: s.publicRole,
+      publicBio: s.publicBio,
+      profilePhotoUrl: s.profilePhotoUrl,
+      aboutPageOrder: s.aboutPageOrder,
+    }));
+  },
+  ["team-members"],
+  { revalidate: 300, tags: ["team-members"] }
 );
 
 /** Categories for nav/shop. Revalidate when categories change. */

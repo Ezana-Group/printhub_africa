@@ -12,6 +12,7 @@ const patchProfileSchema = z.object({
   email: z.string().email().optional(),
   phone: z.string().max(50).nullable().optional(),
   department: z.string().max(100).nullable().optional(),
+  departmentId: z.string().nullable().optional(),
   position: z.string().max(100).nullable().optional(),
 });
 
@@ -69,16 +70,25 @@ export async function PATCH(
   }
 
   try {
+    const deptRecord =
+      data.departmentId !== undefined && data.departmentId != null
+        ? await prisma.department.findUnique({ where: { id: data.departmentId } })
+        : null;
+    const departmentName = deptRecord?.name ?? (data.department !== undefined ? data.department : undefined);
+
     await prisma.staff.upsert({
       where: { userId: user.id },
       create: {
         userId: user.id,
-        department: data.department ?? null,
+        department: departmentName ?? null,
+        departmentId: data.departmentId ?? null,
         position: data.position ?? null,
         permissions: [],
       },
       update: {
-        ...(data.department !== undefined && { department: data.department }),
+        ...(data.departmentId !== undefined && { departmentId: data.departmentId }),
+        ...(departmentName !== undefined && { department: departmentName }),
+        ...(data.department !== undefined && data.departmentId == null && { department: data.department }),
         ...(data.position !== undefined && { position: data.position }),
       },
     });

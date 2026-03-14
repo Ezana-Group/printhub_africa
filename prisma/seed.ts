@@ -55,6 +55,26 @@ async function main() {
   });
   console.log("Admin:", admin2.email);
 
+  // Default departments (admin-managed list for staff invite/edit)
+  const defaultDepartments = [
+    { name: "Management", description: "Directors, managers, and senior leadership", colour: "#0A0A0A", sortOrder: 1 },
+    { name: "Production", description: "Print operators, machine operators, 3D print technicians", colour: "#FF4D00", sortOrder: 2 },
+    { name: "Design", description: "Graphic designers, pre-press, file preparation", colour: "#7C3AED", sortOrder: 3 },
+    { name: "Sales", description: "Sales representatives and account executives", colour: "#059669", sortOrder: 4 },
+    { name: "Delivery", description: "Riders, drivers, logistics, and dispatch", colour: "#2563EB", sortOrder: 5 },
+    { name: "Finance", description: "Accounting, invoicing, and financial operations", colour: "#D97706", sortOrder: 6 },
+    { name: "Customer Support", description: "Customer service and support team", colour: "#DB2777", sortOrder: 7 },
+    { name: "IT", description: "Systems, website, and technical operations", colour: "#0891B2", sortOrder: 8 },
+  ];
+  for (const dept of defaultDepartments) {
+    await prisma.department.upsert({
+      where: { name: dept.name },
+      update: {},
+      create: dept,
+    });
+  }
+  console.log("Departments seeded:", defaultDepartments.length);
+
   // Staff – Sales
   const staffSales = await prisma.user.upsert({
     where: { email: "sales@printhub.africa" },
@@ -67,12 +87,14 @@ async function main() {
       emailVerified: new Date(),
     },
   });
+  const salesDept = await prisma.department.findFirst({ where: { name: "Sales" } }).catch(() => null);
   await prisma.staff.upsert({
     where: { userId: staffSales.id },
-    update: { department: "Sales", position: "Sales Rep" },
+    update: { department: "Sales", departmentId: salesDept?.id ?? null, position: "Sales Rep" },
     create: {
       userId: staffSales.id,
       department: "Sales",
+      departmentId: salesDept?.id ?? null,
       position: "Sales Rep",
       permissions: ["orders_view", "orders_edit", "products_view", "inventory_view"],
     },
@@ -481,6 +503,22 @@ async function main() {
       },
     });
     console.log("Default printer assets (LF + 3D) created");
+  }
+
+  // One-time fix: Bambu Lab X1C typical power is ~400W (not 1300W max rated)
+  const bambuPrinterUpdated = await prisma.printerAsset.updateMany({
+    where: { name: { contains: "Bambu", mode: "insensitive" }, powerWatts: 1300 },
+    data: { powerWatts: 400 },
+  });
+  if (bambuPrinterUpdated.count > 0) console.log("Bambu printer powerWatts corrected to 400W (PrinterAsset)");
+  try {
+    const bambuHardwareUpdated = await prisma.inventoryHardwareItem.updateMany({
+      where: { name: { contains: "Bambu", mode: "insensitive" }, powerWatts: 1300 },
+      data: { powerWatts: 400 },
+    });
+    if (bambuHardwareUpdated.count > 0) console.log("Bambu hardware powerWatts corrected to 400W (InventoryHardwareItem)");
+  } catch {
+    // ignore if no matching records
   }
 
   // LF stock items (inventory-linked costs for calculator)

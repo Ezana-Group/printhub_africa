@@ -53,8 +53,9 @@ export type StaffRow = {
   role: string;
   department: string | null;
   position: string | null;
+  departmentObj: { id: string; name: string; colour: string | null } | null;
   createdAt: Date;
-  lastActiveAt: Date | null; // from session or placeholder
+  lastActiveAt: Date | null;
 };
 
 function RoleBadge({ role }: { role: string }) {
@@ -155,14 +156,36 @@ export function StaffAdminClient({
     {
       id: "department",
       header: "Department",
-      cell: ({ row }) => (
-        <div className="text-sm">
-          <span className="text-[#111]">{row.original.department ?? "—"}</span>
-          {row.original.position && (
-            <span className="block text-[12px] text-[#6B7280]">{row.original.position}</span>
-          )}
-        </div>
-      ),
+      cell: ({ row }) => {
+        const s = row.original;
+        const deptName = s.departmentObj?.name ?? s.department;
+        const colour = s.departmentObj?.colour ?? null;
+        return (
+          <div className="text-sm">
+            {deptName ? (
+              colour ? (
+                <span
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
+                  style={{
+                    background: `${colour}18`,
+                    color: colour,
+                    border: `1px solid ${colour}40`,
+                  }}
+                >
+                  {deptName}
+                </span>
+              ) : (
+                <span className="text-[#111]">{deptName}</span>
+              )
+            ) : (
+              <span className="text-[#6B7280]">—</span>
+            )}
+            {s.position && (
+              <span className="block text-[12px] text-[#6B7280]">{s.position}</span>
+            )}
+          </div>
+        );
+      },
     },
     {
       id: "status",
