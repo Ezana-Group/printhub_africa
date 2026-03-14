@@ -77,6 +77,15 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const [metaDescription, setMetaDescription] = useState(product?.metaDescription ?? "");
   const [tagsStr, setTagsStr] = useState((product?.tags ?? []).join(", "));
 
+  const tagsArray = tagsStr.split(",").map((s) => s.trim()).filter(Boolean);
+  const hasTag = (name: string) => tagsArray.some((t) => t.toLowerCase() === name.toLowerCase());
+  const setTagPreset = (name: string, checked: boolean) => {
+    const next = checked
+      ? [...tagsArray, name].filter((t, i, a) => a.findIndex((x) => x.toLowerCase() === t.toLowerCase()) === i)
+      : tagsArray.filter((t) => t.toLowerCase() !== name.toLowerCase());
+    setTagsStr(next.join(", "));
+  };
+
   const handleNameChange = (v: string) => {
     setName(v);
     if (autoSlug) setSlug(slugify(v));
@@ -389,16 +398,43 @@ export function ProductForm({ categories, product }: ProductFormProps) {
               <span className="text-xs text-muted-foreground">(show in Shop section on homepage)</span>
             </label>
           </div>
+          <p className="text-sm font-medium text-slate-700">Tags (shown on cards and homepage)</p>
+          <div className="flex flex-wrap gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={hasTag("New arrival")}
+                onChange={(e) => setTagPreset("New arrival", e.target.checked)}
+              />
+              <span className="text-sm">New arrival</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={hasTag("Staff pick")}
+                onChange={(e) => setTagPreset("Staff pick", e.target.checked)}
+              />
+              <span className="text-sm">Staff pick</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={hasTag("Popular")}
+                onChange={(e) => setTagPreset("Popular", e.target.checked)}
+              />
+              <span className="text-sm">Popular</span>
+            </label>
+          </div>
           <div>
-            <Label htmlFor="tags">Tags</Label>
+            <Label htmlFor="tags">Other tags</Label>
             <Input
               id="tags"
               value={tagsStr}
               onChange={(e) => setTagsStr(e.target.value)}
-              placeholder="New arrival, New design, Bestseller"
+              placeholder="New design, Bestseller"
               className="mt-1"
             />
-            <p className="text-xs text-muted-foreground mt-1">Comma-separated. Shown on cards and used for homepage sections.</p>
+            <p className="text-xs text-muted-foreground mt-1">Comma-separated. Use the toggles above or type your own.</p>
           </div>
           <div>
             <Label htmlFor="metaTitle">Meta title</Label>
