@@ -28,7 +28,7 @@ function ImportPhotosFromPrintablesButton({
   const canAdd = currentPhotoCount < 8;
 
   async function handleImport() {
-    if (!canAdd) return;
+    if (!canAdd || !itemId?.trim()) return;
     setLoading(true);
     setMessage(null);
     try {
@@ -37,16 +37,25 @@ function ImportPhotosFromPrintablesButton({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: sourceUrl }),
       });
-      const data = await res.json();
+      const contentType = res.headers.get("content-type");
+      const data =
+        contentType?.includes("application/json")
+          ? await res.json().catch(() => ({}))
+          : {};
       if (!res.ok) {
-        setMessage(data?.error ?? "Import failed");
+        setMessage(
+          data?.error ??
+            (res.status === 404
+              ? "Catalogue item not found. Re-open this item from the catalogue list and try again."
+              : "Import failed")
+        );
         return;
       }
       setMessage(data?.message ?? `Imported ${data?.photosImported ?? 0} photo(s).`);
       await onSuccess();
       if (typeof (window as unknown as { refresh?: () => void }).refresh === "function") (window as unknown as { refresh: () => void }).refresh();
     } catch {
-      setMessage("Something went wrong");
+      setMessage("Something went wrong. Check the network tab for details.");
     } finally {
       setLoading(false);
     }
@@ -60,7 +69,7 @@ function ImportPhotosFromPrintablesButton({
         size="sm"
         className="rounded-xl"
         onClick={handleImport}
-        disabled={loading || !canAdd}
+        disabled={loading || !canAdd || !itemId?.trim()}
       >
         {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
         {loading ? "Importing…" : "Import photos from Printables"}

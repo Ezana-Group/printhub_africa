@@ -103,10 +103,13 @@ export function CatalogueItemDetail({ slug }: CatalogueItemDetailProps) {
       .finally(() => setLoading(false));
   }, [slug]);
 
+  const basePrice = item ? (item.priceOverrideKes ?? item.basePriceKes ?? null) : null;
   const unitPrice =
     item && selectedMaterial
       ? Math.round((item.priceOverrideKes ?? item.basePriceKes ?? 0) + selectedMaterial.priceModifierKes)
-      : null;
+      : basePrice != null
+        ? Math.round(basePrice)
+        : null;
 
   const handleAddToCart = async () => {
     if (!item || !selectedMaterial || !selectedColour || unitPrice == null) return;
@@ -316,6 +319,16 @@ export function CatalogueItemDetail({ slug }: CatalogueItemDetailProps) {
             )}
           </div>
         </div>
+
+        {/* Full description — show complete description from catalogue (not cut off) */}
+        {item.description?.trim() && (
+          <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-8 border-t border-slate-200">
+            <h2 className="font-display text-xl font-bold text-slate-900 mb-3">Full description</h2>
+            <div className="prose prose-slate max-w-none text-slate-600 whitespace-pre-wrap">
+              {item.description.trim()}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

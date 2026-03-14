@@ -49,11 +49,22 @@ export async function POST(
   if (auth instanceof NextResponse) return auth;
 
   const { id } = await ctx.params;
+  if (!id || typeof id !== "string" || id.trim() === "") {
+    return NextResponse.json(
+      { error: "Catalogue item ID is missing. Re-open the item from the catalogue list and try again." },
+      { status: 400 }
+    );
+  }
   const item = await prisma.catalogueItem.findUnique({
     where: { id },
     select: { id: true, name: true, slug: true, sourceUrl: true },
   });
-  if (!item) return NextResponse.json({ error: "Catalogue item not found" }, { status: 404 });
+  if (!item) {
+    return NextResponse.json(
+      { error: "Catalogue item not found. The item may have been deleted. Re-open the catalogue and try again." },
+      { status: 404 }
+    );
+  }
 
   let url: string | null = item.sourceUrl;
   try {
