@@ -7,6 +7,8 @@ import type { Metadata } from "next";
 import type { BusinessPublic } from "@/lib/business-public";
 import { Mail, MapPin, Phone } from "lucide-react";
 
+export const revalidate = 86400; // 24 hours — legal pages change very rarely
+
 type Props = { params: Promise<{ legalSlug: string }> };
 
 async function getLegalPage(slug: string) {
@@ -17,6 +19,14 @@ async function getLegalPage(slug: string) {
   } catch {
     return null;
   }
+}
+
+export async function generateStaticParams() {
+  const pages = await prisma.legalPage.findMany({
+    where: { isPublished: true },
+    select: { slug: true },
+  });
+  return pages.map((p) => ({ legalSlug: p.slug }));
 }
 
 /** Replace hardcoded placeholders in legal HTML with current business data. */

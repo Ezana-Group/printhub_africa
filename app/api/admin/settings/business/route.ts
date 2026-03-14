@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/settings-api";
 import { writeAudit } from "@/lib/audit";
@@ -81,6 +82,8 @@ async function updateBusinessSettings(req: Request) {
     update: payload,
     create: { id: "default", ...stripUndefined(body.data ?? {}) },
   });
+  revalidateTag("homepage");
+  revalidateTag("business");
   await writeAudit({ userId: auth.userId, action: "BUSINESS_SETTINGS_UPDATED", category: "SETTINGS", request: req });
   return NextResponse.json({ success: true });
 }

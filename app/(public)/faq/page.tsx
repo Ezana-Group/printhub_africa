@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { getBusinessPublic } from "@/lib/business-public";
 import { FaqPageClient } from "./faq-client";
 
+export const revalidate = 3600; // 1 hour — FAQ changes rarely
+
 export const metadata = {
   title: "FAQ | PrintHub",
   description:

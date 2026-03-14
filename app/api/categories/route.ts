@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-
-export const dynamic = "force-dynamic";
+import { getCachedCategories } from "@/lib/cache/unstable-cache";
 
 export async function GET() {
-  const categories = await prisma.category.findMany({
-    where: { isActive: true },
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    select: { id: true, name: true, slug: true },
+  const categories = await getCachedCategories();
+  const list = categories.map((c) => ({ id: c.id, name: c.name, slug: c.slug }));
+  return NextResponse.json(list, {
+    headers: {
+      "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+    },
   });
-  return NextResponse.json(categories);
 }

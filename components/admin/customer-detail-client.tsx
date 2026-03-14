@@ -12,9 +12,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { formatPrice } from "@/lib/utils";
+import { formatKES } from "@/lib/utils";
 import { getInitials, nameToHue, formatDateForDisplay, formatDateTimeForDisplay } from "@/lib/admin-utils";
-import { Mail, Plus, MessageSquare, ShoppingBag, FileText, Upload, StickyNote, Activity } from "lucide-react";
+import { Mail, Plus, MessageSquare, ShoppingBag, FileText, Upload, StickyNote, Activity, Building2 } from "lucide-react";
 
 type OrderRow = {
   id: string;
@@ -75,7 +75,21 @@ export type CustomerDetailData = {
   totalSpent: number;
   totalRefunded: number;
   addresses: { id: string; label: string; street: string; city: string }[];
-  corporateAccount: { companyName: string; kraPin: string | null } | null;
+  corporateAccount: {
+    id: string;
+    accountNumber: string;
+    companyName: string;
+    tradingName: string | null;
+    tier: string;
+    status: string;
+    discountPercent: number;
+    creditLimit: number;
+    creditUsed: number;
+    paymentTerms: string;
+    kraPin: string;
+    industry: string;
+  } | null;
+  corporateRole: string | null;
   quotes: QuoteRow[];
   getAQuoteQuotes: GetAQuoteRow[];
   uploads: UploadRow[];
@@ -154,8 +168,15 @@ export function CustomerDetailClient({ data }: { data: CustomerDetailData }) {
             Send Email
           </Button>
           <Button variant="outline" size="sm" asChild>
-            <Link href="/admin/orders/new">
-              <Plus className="mr-2 h-4 w-4" />
+            <Link
+              href={
+                data.corporateAccount
+                  ? `/admin/orders/new?customerId=${data.id}&corporateId=${data.corporateAccount.id}`
+                  : `/admin/orders/new?customerId=${data.id}`
+              }
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
               Create Order
             </Link>
           </Button>
@@ -186,13 +207,13 @@ export function CustomerDetailClient({ data }: { data: CustomerDetailData }) {
         <Card className="bg-white border-[#E5E7EB]">
           <CardContent className="p-4">
             <p className="text-[12px] font-semibold uppercase tracking-wider text-[#6B7280]">Total Spent</p>
-            <p className="text-2xl font-bold text-[#111] mt-1">{formatPrice(data.totalSpent)}</p>
+            <p className="text-2xl font-bold text-[#111] mt-1">{formatKES(data.totalSpent)}</p>
           </CardContent>
         </Card>
         <Card className="bg-white border-[#E5E7EB]">
           <CardContent className="p-4">
             <p className="text-[12px] font-semibold uppercase tracking-wider text-[#6B7280]">Avg Order Value</p>
-            <p className="text-2xl font-bold text-[#111] mt-1">{data.ordersCount > 0 ? formatPrice(avgOrder) : "—"}</p>
+            <p className="text-2xl font-bold text-[#111] mt-1">{data.ordersCount > 0 ? formatKES(avgOrder) : "—"}</p>
           </CardContent>
         </Card>
         <Card className="bg-white border-[#E5E7EB]">
@@ -282,17 +303,107 @@ export function CustomerDetailClient({ data }: { data: CustomerDetailData }) {
               </Card>
               <Card className="bg-white border-[#E5E7EB]">
                 <CardHeader>
-                  <CardTitle className="text-[14px] font-semibold uppercase tracking-wider text-[#111]">
-                    Corporate Account
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-[14px] font-semibold uppercase tracking-wider text-[#111]">
+                      Corporate Account
+                    </CardTitle>
+                    {data.corporateAccount && (
+                      <Link
+                        href={`/admin/corporate/${data.corporateAccount.id}`}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        View account →
+                      </Link>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {data.corporateAccount ? (
-                    <p className="text-sm">{data.corporateAccount.companyName}</p>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                          <Building2 className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">
+                            {data.corporateAccount.companyName}
+                          </p>
+                          <p className="text-xs font-mono text-muted-foreground">
+                            {data.corporateAccount.accountNumber}
+                          </p>
+                        </div>
+                        <span
+                          className={`ml-auto rounded-full px-2 py-0.5 text-xs font-medium ${getTierBadgeClass(data.corporateAccount.tier)}`}
+                        >
+                          {data.corporateAccount.tier}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between border-t border-border/50 py-2 text-xs">
+                        <span className="text-muted-foreground">Role</span>
+                        <span className="font-medium">{data.corporateRole ?? "MEMBER"}</span>
+                      </div>
+                      <div className="flex items-center justify-between border-t border-border/50 py-2 text-xs">
+                        <span className="text-muted-foreground">Discount</span>
+                        <span className="font-medium text-primary">
+                          {data.corporateAccount.discountPercent > 0
+                            ? `${data.corporateAccount.discountPercent}% off`
+                            : "None"}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between border-t border-border/50 py-2 text-xs">
+                        <span className="text-muted-foreground">Payment terms</span>
+                        <span className="font-medium">{data.corporateAccount.paymentTerms}</span>
+                      </div>
+                      {data.corporateAccount.creditLimit > 0 && (
+                        <div className="border-t border-border/50 pt-3">
+                          <div className="mb-1.5 flex justify-between text-xs text-muted-foreground">
+                            <span>Credit used</span>
+                            <span>
+                              {formatKES(data.corporateAccount.creditUsed)} /{" "}
+                              {formatKES(data.corporateAccount.creditLimit)}
+                            </span>
+                          </div>
+                          <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                            <div
+                              className={`h-full rounded-full transition-all ${getCreditBarColor(
+                                data.corporateAccount.creditUsed,
+                                data.corporateAccount.creditLimit
+                              )}`}
+                              style={{
+                                width: `${Math.min(
+                                  100,
+                                  Math.round(
+                                    (data.corporateAccount.creditUsed /
+                                      data.corporateAccount.creditLimit) *
+                                      100
+                                )
+                                )}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex gap-2 border-t border-border/50 pt-3">
+                        <Link
+                          href={`/admin/corporate/${data.corporateAccount.id}`}
+                          className="flex-1 rounded-lg border border-border py-1.5 text-center text-xs text-muted-foreground hover:bg-muted"
+                        >
+                          Full account
+                        </Link>
+                        <Link
+                          href={`/admin/corporate/${data.corporateAccount.id}?tab=invoices`}
+                          className="flex-1 rounded-lg border border-border py-1.5 text-center text-xs text-muted-foreground hover:bg-muted"
+                        >
+                          Invoices
+                        </Link>
+                      </div>
+                    </div>
                   ) : (
                     <>
-                      <p className="text-sm text-[#6B7280]">Not applied.</p>
-                      <Button variant="outline" size="sm" className="mt-2">Set up corporate account</Button>
+                      <p className="text-sm text-muted-foreground">Not applied.</p>
+                      <Button variant="outline" size="sm" className="mt-2">
+                        Set up corporate account
+                      </Button>
                     </>
                   )}
                 </CardContent>
@@ -308,7 +419,15 @@ export function CustomerDetailClient({ data }: { data: CustomerDetailData }) {
                 <div className="py-12 text-center">
                   <p className="text-[#6B7280]">No orders yet</p>
                   <Button asChild className="mt-2">
-                    <Link href="/admin/orders/new">Create Order for this customer</Link>
+                    <Link
+                      href={
+                        data.corporateAccount
+                          ? `/admin/orders/new?customerId=${data.id}&corporateId=${data.corporateAccount.id}`
+                          : `/admin/orders/new?customerId=${data.id}`
+                      }
+                    >
+                      Create Order for this customer
+                    </Link>
                   </Button>
                 </div>
               ) : (
@@ -329,9 +448,9 @@ export function CustomerDetailClient({ data }: { data: CustomerDetailData }) {
                         <tr key={o.id} className="border-b border-[#E5E7EB] hover:bg-[#F9FAFB]">
                           <td className="px-4 py-3 font-medium">{o.orderNumber}</td>
                           <td className="px-4 py-3">{o.status}</td>
-                          <td className="px-4 py-3">{formatPrice(o.total)}</td>
+                          <td className="px-4 py-3">{formatKES(o.total)}</td>
                           <td className="px-4 py-3">
-                            {o.payments.length === 0 ? "—" : o.payments.map((p) => `${p.provider} ${formatPrice(p.amount)}`).join(", ")}
+                            {o.payments.length === 0 ? "—" : o.payments.map((p) => `${p.provider} ${formatKES(p.amount)}`).join(", ")}
                           </td>
                           <td className="px-4 py-3 text-[#6B7280]">{formatDateTimeForDisplay(o.createdAt)}</td>
                           <td className="px-4 py-3">
@@ -374,7 +493,7 @@ export function CustomerDetailClient({ data }: { data: CustomerDetailData }) {
                               <tr key={q.id} className="border-b border-[#E5E7EB] hover:bg-[#F9FAFB]">
                                 <td className="px-4 py-3 font-mono font-medium">{q.quoteNumber}</td>
                                 <td className="px-4 py-3 text-[#6B7280]">{QUOTE_TYPE_LABELS[q.type] ?? q.type}</td>
-                                <td className="px-4 py-3">{q.quotedAmount != null ? formatPrice(q.quotedAmount) : "—"}</td>
+                                <td className="px-4 py-3">{q.quotedAmount != null ? formatKES(q.quotedAmount) : "—"}</td>
                                 <td className="px-4 py-3"><Badge variant="secondary">{GET_A_QUOTE_STATUS_LABELS[q.status] ?? q.status.replace("_", " ")}</Badge></td>
                                 <td className="px-4 py-3 text-[#6B7280]">{formatDateForDisplay(q.createdAt)}</td>
                                 <td className="px-4 py-3">
@@ -407,7 +526,7 @@ export function CustomerDetailClient({ data }: { data: CustomerDetailData }) {
                             {data.quotes.map((q) => (
                               <tr key={q.id} className="border-b border-[#E5E7EB] hover:bg-[#F9FAFB]">
                                 <td className="px-4 py-3 font-mono">{q.id.slice(-8)}</td>
-                                <td className="px-4 py-3">{q.estimatedCost != null ? formatPrice(q.estimatedCost) : "—"}</td>
+                                <td className="px-4 py-3">{q.estimatedCost != null ? formatKES(q.estimatedCost) : "—"}</td>
                                 <td className="px-4 py-3"><Badge variant="secondary">{QUOTE_STATUS_LABELS[q.status] ?? q.status}</Badge></td>
                                 <td className="px-4 py-3 text-[#6B7280]">{formatDateForDisplay(q.createdAt)}</td>
                                 <td className="px-4 py-3"><Button variant="ghost" size="sm">View</Button></td>
@@ -478,6 +597,23 @@ export function CustomerDetailClient({ data }: { data: CustomerDetailData }) {
       </div>
     </div>
   );
+}
+
+function getTierBadgeClass(tier: string): string {
+  const map: Record<string, string> = {
+    STANDARD: "bg-muted text-muted-foreground",
+    SILVER: "bg-slate-100 text-slate-700",
+    GOLD: "bg-amber-50 text-amber-700",
+    PLATINUM: "bg-purple-50 text-purple-700",
+  };
+  return map[tier] ?? "bg-muted text-muted-foreground";
+}
+
+function getCreditBarColor(used: number, limit: number): string {
+  const pct = limit > 0 ? (used / limit) * 100 : 0;
+  if (pct >= 80) return "bg-destructive";
+  if (pct >= 60) return "bg-amber-400";
+  return "bg-green-500";
 }
 
 function SelectStatus() {

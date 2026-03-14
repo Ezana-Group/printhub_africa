@@ -5,13 +5,13 @@ import { Footer } from "@/components/layout/footer";
 import { WhatsAppFloat } from "@/components/layout/whatsapp-float";
 import { CookieBanner } from "@/components/CookieBanner";
 import { TawkTo } from "@/components/TawkTo";
-import { getBusinessPublic } from "@/lib/business-public";
+import { getCachedBusinessPublic } from "@/lib/cache/unstable-cache";
 
-// Always fetch fresh business data so saved contact/WhatsApp shows immediately
-export const dynamic = "force-dynamic";
+// Revalidate every 5 min so public pages can be cached (TTFB optimisation)
+export const revalidate = 300;
 
 export async function generateMetadata(): Promise<Metadata> {
-  const business = await getBusinessPublic();
+  const business = await getCachedBusinessPublic();
   return {
     icons: business.favicon ? { icon: business.favicon } : undefined,
   };
@@ -22,7 +22,7 @@ export default async function PublicLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const business = await getBusinessPublic();
+  const business = await getCachedBusinessPublic();
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://printhub.africa";
   const address = [business.address1, business.city, business.county, business.country].filter(Boolean).join(", ") || undefined;
   const localBusinessJsonLd = {

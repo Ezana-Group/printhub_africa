@@ -14,6 +14,14 @@ export function formatPrice(amount: number, currency = "KES"): string {
   }).format(amount);
 }
 
+/** Format amount as KES (always "KES" label, not locale symbol e.g. KSh). */
+export function formatKES(amount: number): string {
+  return `KES ${amount.toLocaleString("en-KE", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  })}`;
+}
+
 export function formatPhoneKenya(phone: string): string {
   const cleaned = phone.replace(/\D/g, "");
   if (cleaned.startsWith("254")) return `+${cleaned}`;

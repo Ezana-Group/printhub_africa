@@ -12,6 +12,8 @@ import {
 import { LargeFormatServiceGrid } from "@/components/services/LargeFormatServiceGrid";
 import { getBusinessPublic } from "@/lib/business-public";
 
+export const revalidate = 3600; // 1 hour — service page content changes rarely
+
 // Local images (WebP) — large format / print shop / signage
 const HERO_IMAGE = "/images/services/large-format-hero.webp";
 const CAPABILITIES_IMAGE = "/images/services/large-format-hero.webp";

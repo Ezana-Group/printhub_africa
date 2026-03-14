@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { getCachedFeaturedProducts } from "@/lib/cache/unstable-cache";
 import { safePublicFileUrl } from "@/lib/r2";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,21 +18,9 @@ function getProductImageUrl(p: {
 }
 
 export async function FeaturedProducts() {
-  let products: Array<
-    { id: string; name: string; slug: string; materials?: string[] | null; basePrice: unknown } & {
-      images?: string[] | null;
-      productImages?: Array<{ url: string; storageKey: string | null; isPrimary?: boolean }>;
-    }
-  > = [];
+  let products: Awaited<ReturnType<typeof getCachedFeaturedProducts>> = [];
   try {
-    products = await prisma.product.findMany({
-      where: { isFeatured: true, isActive: true },
-      take: 8,
-      orderBy: { createdAt: "desc" },
-      include: {
-        productImages: { orderBy: { sortOrder: "asc" } },
-      },
-    });
+    products = await getCachedFeaturedProducts();
   } catch {
     // Build-time or when DB unavailable: show empty state
   }

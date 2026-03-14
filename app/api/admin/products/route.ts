@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { requireAdminApi } from "@/lib/admin-api-guard";
@@ -87,6 +88,9 @@ export async function POST(req: Request) {
         metaDescription: data.metaDescription ?? null,
       },
     });
+    revalidateTag("products");
+    revalidateTag("homepage");
+    revalidatePath("/shop");
     return NextResponse.json({ product });
   } catch (e: unknown) {
     console.error("Admin create product error:", e);

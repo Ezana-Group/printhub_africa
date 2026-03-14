@@ -7,10 +7,13 @@ import { NewArrivalsSection } from "@/components/marketing/new-arrivals-section"
 import { WhyPrintHub } from "@/components/marketing/why-printhub";
 import { PriceCalculatorTeaser } from "@/components/marketing/price-calculator-teaser";
 import { CTABanner } from "@/components/marketing/cta-banner";
-import { getBusinessPublic } from "@/lib/business-public";
+import { getCachedBusinessPublic } from "@/lib/cache/unstable-cache";
+
+// ISR: revalidate every 5 minutes so homepage is served from edge cache
+export const revalidate = 300;
 
 export default async function HomePage() {
-  const business = await getBusinessPublic();
+  const business = await getCachedBusinessPublic();
   return (
     <>
       <Hero />

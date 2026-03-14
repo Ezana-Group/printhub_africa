@@ -12,6 +12,8 @@ import {
 } from "@/components/services";
 import { getBusinessPublic } from "@/lib/business-public";
 
+export const revalidate = 3600; // 1 hour — service page content changes rarely
+
 // Local images (WebP) — 3D printing hero and sections
 const HERO_IMAGE = "/images/services/3d-printing-hero.webp";
 const WHAT_IS_IMAGE = "/images/services/3d-objects.webp";

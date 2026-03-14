@@ -225,7 +225,16 @@ sequenceDiagram
 
 ### 4.5 Admin Routes (summary)
 
-Dashboard, orders, quotes, customers, catalogue (queue, import), categories, products, inventory (hardware/printers, LF, 3D consumables), production-queue, deliveries, finance/invoices, refunds, support, careers (listings, applications), corporate (applications), staff, reports (sales, lf-profitability), content (FAQ, legal), settings (business, payments, shipping, notifications, SEO, discounts, loyalty, referral, system, danger, users, integrations, security, audit-log, my-account, **my-activity**), accept-invite, access-denied, sales calculator, get-a-quote, uploads, **marketing**. Example/debug: **sentry-example-page** (app), **sentry-example-api** (API).
+Dashboard, orders (list, detail, **new**), quotes, customers (list, **detail**), catalogue (queue, import), categories, products, inventory (hardware/printers, LF, 3D consumables), production-queue, deliveries, finance/invoices, refunds, support, careers (listings, applications), corporate (applications, **account detail**), staff, reports (sales, lf-profitability), content (FAQ, legal), settings (business, payments, shipping, notifications, SEO, discounts, loyalty, referral, system, danger, users, integrations, security, audit-log, my-account, **my-activity**), accept-invite, access-denied, sales calculator, get-a-quote, uploads, **marketing**. Example/debug: **sentry-example-page** (app), **sentry-example-api** (API).
+
+**Admin order creation & corporate:**
+
+| Path | Purpose |
+|------|--------|
+| `/admin/orders/new` | Create order on behalf of a customer. Uses `AdminCreateOrderForm`: customer search (debounced), product search (debounced), line items, delivery (address, county, method), payment (method, PO ref, admin notes). Query params `customerId` and `corporateId` pre-select when linked from customer or corporate pages. Submit → `POST /api/admin/orders/create` → redirect to `/admin/orders/[id]`. |
+| `/admin/corporate/[id]` | Corporate account detail: breadcrumb, KPIs, account details (tier, status, discount, credit, payment terms), primary contact link to customer, **Create Order** link to `/admin/orders/new?customerId=…&corporateId=…`. |
+
+Customer detail (`/admin/customers/[id]`) shows full corporate account when applicable, **View account** → `/admin/corporate/[id]`, and **Create Order** / **Create Order for this customer** → `/admin/orders/new?customerId=…&corporateId=…`. All monetary amounts in admin customer/corporate context use **KES** via `formatKES()` from `lib/utils.ts` (e.g. "KES 1,234.00").
 
 ### 4.6 Components
 
@@ -463,7 +472,16 @@ All API handlers live under `app/api/`; each segment has a `route.ts` exporting 
 
 **Admin** (under `app/api/admin/`)
 
-228 API route files total. Admin routes include: settings (business, payments, shipping, notifications, SEO, users, coupons, loyalty, referral, danger, audit-log, **couriers**, **shipping/zones**, **shipping/pickup-locations**), **settings/[...section]** (catch-all), orders (**confirm-payment**, **payment-link**, **resend-stk**, cancel, refund, timeline, tracking), quotes (cancel, restore), catalogue (approve, reject, queue, import, designers, categories), products, categories, inventory (hardware-items, assets/printers, lf/items, lf/receive), production-queue, deliveries, refunds (**process-b2c**), support, careers (listings, applications, status, notes, cv), corporate (approve, reject), staff, reviews, reports, calculator (lf, 3d), lamination, 3d-consumables, machines, content (FAQ, legal, **legal restore**), and more. See `app/api/admin/**/route.ts` for the full list.
+228 API route files total. Admin routes include: settings (business, payments, shipping, notifications, SEO, users, coupons, loyalty, referral, danger, audit-log, **couriers**, **shipping/zones**, **shipping/pickup-locations**), **settings/[...section]** (catch-all), orders (**confirm-payment**, **payment-link**, **resend-stk**, cancel, refund, timeline, tracking, **create**), quotes (cancel, restore), **customers** (**[id]**, **search**), **products** (**search**), catalogue (approve, reject, queue, import, designers, categories), products, categories, inventory (hardware-items, assets/printers, lf/items, lf/receive), production-queue, deliveries, refunds (**process-b2c**), support, careers (listings, applications, status, notes, cv), corporate (approve, reject), staff, reviews, reports, calculator (lf, 3d), lamination, 3d-consumables, machines, content (FAQ, legal, **legal restore**), and more. See `app/api/admin/**/route.ts` for the full list.
+
+**Admin order creation & customer/product search APIs:**
+
+| Method | Path | Purpose |
+|--------|------|--------|
+| GET | `/api/admin/customers/[id]` | Customer detail including full `corporateAccount` (id, accountNumber, companyName, tier, status, discountPercent, creditLimit, creditUsed, paymentTerms, kraPin, industry) and `corporateRole` (from primaryCorporateAccount or first corporateTeamMemberships). |
+| GET | `/api/admin/customers/search` | Query `q` (min 2 chars). Returns customers with corporate account (primaryCorporateAccount or first membership); used by admin Create Order form. |
+| GET | `/api/admin/products/search` | Query `q`. Returns active products with basePrice, category, mainImageUrl (from productImages or R2); used by admin Create Order form. |
+| POST | `/api/admin/orders/create` | Body: `customerId`, optional `corporateId`, `items[]` (productId, productVariantId?, quantity, unitPrice), delivery (address, county, method), `paymentMethod`, optional `poReference`, optional `adminNotes`, amounts. Creates Order (source SHOP, unique order number), ShippingAddress, OrderItems, OrderTimeline (CONFIRMED), OrderTrackingEvent; if corporate + NET_TERMS, increments `corporateAccount.creditUsed`. |
 
 **Cron (internal)**
 

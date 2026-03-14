@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/admin-api-guard";
@@ -61,6 +62,9 @@ export async function POST(req: Request) {
         metaDescription: metaDescription ?? null,
       },
     });
+    revalidateTag("categories");
+    revalidateTag("homepage");
+    revalidatePath("/shop");
     return NextResponse.json(category);
   } catch (e) {
     console.error("Create category error:", e);

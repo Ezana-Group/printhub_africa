@@ -199,6 +199,9 @@ model Product {
   @@index([categoryId])
   @@index([slug])
   @@index([isFeatured, isActive])
+  @@index([isActive])
+  @@index([createdAt])
+  @@index([basePrice])
 }
 
 model ProductVariant {
@@ -537,6 +540,12 @@ model Order {
   refunds            Refund[]
   invoices           Invoice[]
   cancellation       Cancellation?
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([userId])
+  @@index([orderNumber])
+  @@index([paymentStatus])
 }
 
 model OrderItem {
@@ -924,6 +933,8 @@ model PrintQuote {
   createdAt      DateTime         @default(now())
 
   @@index([userId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 // ============== UNIFIED QUOTES (Get a Quote / Design+Print) ==============

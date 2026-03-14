@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { requireAdminApi } from "@/lib/admin-api-guard";
@@ -88,6 +89,10 @@ export async function PATCH(
         ...(data.tags != null && { tags: data.tags }),
       },
     });
+    revalidateTag("products");
+    revalidateTag("homepage");
+    revalidatePath("/shop");
+    revalidatePath(`/shop/${product.slug}`);
     return NextResponse.json({ product });
   } catch (e) {
     console.error("Admin update product error:", e);
@@ -103,7 +108,12 @@ export async function DELETE(
   if (auth instanceof NextResponse) return auth;
   const { id } = await ctx.params;
   try {
+    const product = await prisma.product.findUnique({ where: { id }, select: { slug: true } });
     await prisma.product.delete({ where: { id } });
+    revalidateTag("products");
+    revalidateTag("homepage");
+    revalidatePath("/shop");
+    if (product?.slug) revalidatePath(`/shop/${product.slug}`);
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("Admin delete product error:", e);

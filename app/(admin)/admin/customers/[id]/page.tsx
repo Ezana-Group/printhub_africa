@@ -23,7 +23,44 @@ export default async function AdminCustomerDetailPage({
         },
       },
       addresses: { select: { id: true, label: true, street: true, city: true } },
-      primaryCorporateAccount: { select: { companyName: true, kraPin: true } },
+      primaryCorporateAccount: {
+        select: {
+          id: true,
+          accountNumber: true,
+          companyName: true,
+          tradingName: true,
+          tier: true,
+          status: true,
+          discountPercent: true,
+          creditLimit: true,
+          creditUsed: true,
+          paymentTerms: true,
+          kraPin: true,
+          industry: true,
+        },
+      },
+      corporateTeamMemberships: {
+        where: { isActive: true },
+        include: {
+          corporate: {
+            select: {
+              id: true,
+              accountNumber: true,
+              companyName: true,
+              tradingName: true,
+              tier: true,
+              status: true,
+              discountPercent: true,
+              creditLimit: true,
+              creditUsed: true,
+              paymentTerms: true,
+              kraPin: true,
+              industry: true,
+            },
+          },
+        },
+        take: 1,
+      },
       printQuotes: { orderBy: { createdAt: "desc" }, take: 50 },
       quotes: { orderBy: { createdAt: "desc" }, take: 50 },
       uploadedFiles: { orderBy: { createdAt: "desc" }, take: 50 },
@@ -99,12 +136,28 @@ export default async function AdminCustomerDetailPage({
       street: a.street,
       city: a.city,
     })),
-    corporateAccount: user.primaryCorporateAccount
-      ? {
-          companyName: user.primaryCorporateAccount.companyName,
-          kraPin: user.primaryCorporateAccount.kraPin,
-        }
-      : null,
+    corporateAccount: (() => {
+      const acc =
+        user.primaryCorporateAccount ??
+        user.corporateTeamMemberships[0]?.corporate ??
+        null;
+      if (!acc) return null;
+      return {
+        id: acc.id,
+        accountNumber: acc.accountNumber,
+        companyName: acc.companyName,
+        tradingName: acc.tradingName,
+        tier: acc.tier,
+        status: acc.status,
+        discountPercent: acc.discountPercent,
+        creditLimit: acc.creditLimit,
+        creditUsed: acc.creditUsed,
+        paymentTerms: acc.paymentTerms,
+        kraPin: acc.kraPin,
+        industry: acc.industry,
+      };
+    })(),
+    corporateRole: user.corporateTeamMemberships[0]?.role ?? null,
     quotes: user.printQuotes.map((q) => ({
       id: q.id,
       status: q.status,

@@ -4,6 +4,8 @@ import Image from "next/image";
 import { AboutHero } from "./about-hero";
 import { getBusinessPublic } from "@/lib/business-public";
 
+export const revalidate = 3600; // 1 hour — about page changes rarely
+
 export async function generateMetadata(): Promise<Metadata> {
   const business = await getBusinessPublic();
   const location = [business.city, business.country].filter(Boolean).join(", ") || "Kenya";

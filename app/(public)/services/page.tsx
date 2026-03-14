@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { getBusinessPublic } from "@/lib/business-public";
 
+export const revalidate = 3600; // 1 hour — services overview changes rarely
+
 const MAIN_SERVICES = [
   {
     title: "Large Format Printing",

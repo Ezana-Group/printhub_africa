@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -24,7 +25,7 @@ export async function POST(
     );
   }
 
-  await prisma.catalogueItem.update({
+  const itemAfter = await prisma.catalogueItem.update({
     where: { id },
     data: {
       status: CatalogueStatus.LIVE,
@@ -33,6 +34,10 @@ export async function POST(
       rejectedBy: null,
       rejectionReason: null,
     },
+    select: { slug: true },
   });
+  revalidateTag("catalogue");
+  revalidatePath("/catalogue");
+  if (itemAfter.slug) revalidatePath(`/catalogue/${itemAfter.slug}`);
   return NextResponse.json({ success: true, status: "LIVE" });
 }

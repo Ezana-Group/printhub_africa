@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, startTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -95,7 +95,9 @@ export function SettingsBusinessClient({
   }, [initialData]);
 
   const update = useCallback((key: string, value: string) => {
-    setData((prev) => ({ ...prev, [key]: value }));
+    startTransition(() => {
+      setData((prev) => ({ ...prev, [key]: value }));
+    });
   }, []);
 
   const saveFull = useCallback(async () => {

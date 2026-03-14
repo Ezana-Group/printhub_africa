@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma";
 import { safePublicFileUrl } from "@/lib/r2";
 import type { ProductType } from "@prisma/client";
 
-export const dynamic = "force-dynamic";
 
 /** Prisma 7 expects orderBy as an array for multiple fields */
 const SORT_MAP: Record<string, { [k: string]: "asc" | "desc" }[]> = {
@@ -122,7 +121,14 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    return NextResponse.json({ items, total, page, limit, totalPages: Math.ceil(total / limit) });
+    return NextResponse.json(
+      { items, total, page, limit, totalPages: Math.ceil(total / limit) },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600",
+        },
+      }
+    );
   } catch (e) {
     console.error("Products API error:", e);
     return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 });

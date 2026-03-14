@@ -7,10 +7,11 @@ export function Hero() {
     <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-[#0A0A0A]">
       <Image
         src="/images/hero/hero-main.webp"
-        alt="Large format printing — PrintHub Nairobi"
+        alt="Large format and 3D printing services in Nairobi, Kenya"
         fill
         priority
-        quality={90}
+        quality={85}
+        sizes="100vw"
         className="object-cover object-center opacity-40"
       />
       <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0A] via-[#0A0A0A]/70 to-transparent" />
