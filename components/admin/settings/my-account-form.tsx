@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { SectionCard } from "@/components/settings/section-card";
 import { Button } from "@/components/ui/button";
@@ -15,17 +15,46 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+type Dept = { id: string; name: string; isActive?: boolean };
+
 interface MyAccountFormProps {
   name: string;
   email: string;
+  phone?: string | null;
   twoFaEnabled?: boolean;
+  role?: string;
+  position?: string | null;
+  departmentId?: string | null;
+  department?: string | null;
+  joinedAt?: Date | string | null;
 }
 
-export function MyAccountForm({ name, email, twoFaEnabled = false }: MyAccountFormProps) {
+export function MyAccountForm({
+  name,
+  email,
+  phone = null,
+  twoFaEnabled = false,
+  role = "STAFF",
+  position = null,
+  departmentId = null,
+  department = null,
+  joinedAt = null,
+}: MyAccountFormProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [departments, setDepartments] = useState<Dept[]>([]);
+  const isAdminOrAbove = ["ADMIN", "SUPER_ADMIN"].includes(role);
+
+  useEffect(() => {
+    if (isAdminOrAbove) {
+      fetch("/api/admin/departments")
+        .then((r) => r.json())
+        .then((data) => setDepartments(data.departments ?? []))
+        .catch(() => setDepartments([]));
+    }
+  }, [isAdminOrAbove]);
 
   const [twoFaOpen, setTwoFaOpen] = useState(false);
   const [twoFaSecret, setTwoFaSecret] = useState<string | null>(null);
@@ -41,7 +70,13 @@ export function MyAccountForm({ name, email, twoFaEnabled = false }: MyAccountFo
     try {
       const form = e.currentTarget;
       const formData = new FormData(form);
-      const body = Object.fromEntries(formData.entries());
+      const body: Record<string, unknown> = Object.fromEntries(formData.entries());
+      if (isAdminOrAbove) {
+        const posInput = form.querySelector<HTMLInputElement>('input[name="position"]');
+        const deptSelect = form.querySelector<HTMLSelectElement>('select[name="departmentId"]');
+        if (posInput) body.position = posInput.value;
+        if (deptSelect) body.departmentId = deptSelect.value || null;
+      }
       const res = await fetch("/api/admin/settings/my-account", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -118,7 +153,11 @@ export function MyAccountForm({ name, email, twoFaEnabled = false }: MyAccountFo
     <form id="settings-my-account" onSubmit={handleSaveProfile} className="space-y-6">
       <SectionCard
         title="Profile"
-        description="Your name, email, and position (position/department set by admin)."
+        description={
+          isAdminOrAbove
+            ? "Your name, email, position, and department."
+            : "Your name, email, and contact details. Position and department are set by your admin."
+        }
       >
         <div className="grid gap-2">
           <Label>Profile Photo</Label>
@@ -141,20 +180,61 @@ export function MyAccountForm({ name, email, twoFaEnabled = false }: MyAccountFo
           <p className="text-xs text-muted-foreground">Changing email may require admin approval.</p>
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="phone">Phone *</Label>
-          <Input id="phone" name="phone" type="tel" placeholder="+254 XXX XXX XXX" />
+          <Label htmlFor="phone">Phone</Label>
+          <Input id="phone" name="phone" type="tel" defaultValue={phone ?? ""} placeholder="+254 XXX XXX XXX" />
         </div>
         <div className="grid gap-2">
-          <Label>Position</Label>
-          <p className="text-sm text-muted-foreground">— (read-only, set by admin)</p>
+          <Label htmlFor="position">Position / Title</Label>
+          {isAdminOrAbove ? (
+            <Input
+              id="position"
+              name="position"
+              type="text"
+              defaultValue={position ?? ""}
+              placeholder="e.g. Super Admin, Head of Operations"
+              className="focus-visible:ring-primary"
+            />
+          ) : (
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-foreground">{position ?? "—"}</p>
+              <span className="text-xs text-muted-foreground">(set by admin)</span>
+            </div>
+          )}
         </div>
         <div className="grid gap-2">
-          <Label>Department</Label>
-          <p className="text-sm text-muted-foreground">— (read-only, set by admin)</p>
+          <Label htmlFor="departmentId">Department</Label>
+          {isAdminOrAbove ? (
+            <select
+              id="departmentId"
+              name="departmentId"
+              defaultValue={departmentId ?? ""}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
+            >
+              <option value="">Select department...</option>
+              {departments.filter((d) => d.isActive !== false).map((dept) => (
+                <option key={dept.id} value={dept.id}>
+                  {dept.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-foreground">{department ?? "—"}</p>
+              <span className="text-xs text-muted-foreground">(set by admin)</span>
+            </div>
+          )}
         </div>
         <div className="grid gap-2">
-          <Label>Start Date</Label>
-          <p className="text-sm text-muted-foreground">— (read-only)</p>
+          <Label>Joined</Label>
+          <p className="text-sm text-foreground">
+            {joinedAt
+              ? new Date(joinedAt).toLocaleDateString("en-KE", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })
+              : "—"}
+          </p>
         </div>
         <div className="flex flex-col gap-2">
           <Button type="submit" disabled={saving}>

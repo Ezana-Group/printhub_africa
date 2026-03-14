@@ -228,7 +228,9 @@ export function SettingsBusinessClient({
             </div>
             <div className="space-y-1.5">
               <Label>Favicon</Label>
-              <p className="text-xs text-muted-foreground">32×32px ICO or PNG. Shown in browser tab.</p>
+              <p className="text-xs text-muted-foreground">
+                Recommended: 32×32px or 64×64px PNG or ICO file. Use a square image. Appears in browser tabs and bookmarks.
+              </p>
               {getStr(data, "favicon") && (
                 <div className="flex items-center gap-3 py-2">
                   <img src={getStr(data, "favicon")} alt="Current favicon" className="h-8 w-8 object-contain rounded border border-border" />

@@ -11,9 +11,11 @@ const postSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   email: z.string().email().optional(),
   phone: z.string().max(50).optional(),
+  position: z.string().max(200).optional(),
+  departmentId: z.string().nullable().optional(),
 });
 
-/** GET: Return current user profile for my-account form (name, email, phone). */
+/** GET: Return current user profile for my-account form (name, email, phone, role, staff fields). */
 export async function GET() {
   const session = await getServerSession(authOptions);
   const role = (session?.user as { role?: string })?.role;
@@ -22,13 +24,40 @@ export async function GET() {
   }
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { name: true, email: true, phone: true },
+    select: {
+      name: true,
+      email: true,
+      phone: true,
+      createdAt: true,
+      staff: {
+        select: {
+          position: true,
+          departmentId: true,
+          department: true,
+          departmentObj: { select: { id: true, name: true } },
+        },
+      },
+    },
   });
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
-  return NextResponse.json(user);
+  return NextResponse.json({
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    role,
+    createdAt: user.createdAt,
+    position: user.staff?.position ?? null,
+    departmentId: user.staff?.departmentId ?? null,
+    department: user.staff?.department ?? null,
+    departmentObj: user.staff?.departmentObj
+      ? { id: user.staff.departmentObj.id, name: user.staff.departmentObj.name }
+      : null,
+  });
 }
 
-/** POST: Update current user profile (name, email, phone). Writes to User table. */
+const ADMIN_OR_ABOVE = ["ADMIN", "SUPER_ADMIN"];
+
+/** POST: Update current user profile. User: name, email, phone. Staff (admin only): position, departmentId. */
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   const role = (session?.user as { role?: string })?.role;
@@ -41,6 +70,7 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
+  const isAdminOrAbove = ADMIN_OR_ABOVE.includes(role);
   const parsed = postSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
@@ -64,6 +94,39 @@ export async function POST(req: Request) {
         ...(data.phone !== undefined && { phone: data.phone ?? null }),
       },
     });
+    if (isAdminOrAbove && (data.position !== undefined || data.departmentId !== undefined)) {
+      const staff = await prisma.staff.findUnique({ where: { userId: session.user.id } });
+      if (staff) {
+        const deptRecord =
+          data.departmentId != null
+            ? await prisma.department.findUnique({ where: { id: data.departmentId } })
+            : null;
+        const departmentName = deptRecord?.name ?? (data.departmentId ? null : undefined);
+        await prisma.staff.update({
+          where: { userId: session.user.id },
+          data: {
+            ...(data.position !== undefined && {
+              position: typeof data.position === "string" && data.position.trim() ? data.position.trim() : null,
+            }),
+            ...(data.departmentId !== undefined && { departmentId: data.departmentId ?? null }),
+            ...(departmentName !== undefined && { department: departmentName }),
+          },
+        });
+      } else {
+        const deptRecord =
+          data.departmentId != null
+            ? await prisma.department.findUnique({ where: { id: data.departmentId } })
+            : null;
+        await prisma.staff.create({
+          data: {
+            userId: session.user.id,
+            position: typeof data.position === "string" && data.position.trim() ? data.position.trim() : null,
+            departmentId: data.departmentId ?? null,
+            department: deptRecord?.name ?? null,
+          },
+        });
+      }
+    }
     return NextResponse.json({ success: true });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {

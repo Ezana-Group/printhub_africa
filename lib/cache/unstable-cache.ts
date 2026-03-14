@@ -33,6 +33,35 @@ const DEFAULTS: BusinessPublic = {
   socialYouTube: null,
 };
 
+/** Metadata-only cache for root layout (favicon, title, OG). Revalidate with tag 'business'. */
+export type BusinessMetadata = {
+  favicon: string | null;
+  updatedAt: Date | null;
+  businessName: string;
+  tagline: string | null;
+  logo: string | null;
+};
+
+export const getCachedBusinessMetadata = unstable_cache(
+  async (): Promise<BusinessMetadata> => {
+    const row = await prisma.businessSettings.findUnique({
+      where: { id: "default" },
+      select: { favicon: true, updatedAt: true, businessName: true, tagline: true, logo: true },
+    }).catch(() => null);
+    if (!row)
+      return { favicon: null, updatedAt: null, businessName: "PrintHub", tagline: null, logo: null };
+    return {
+      favicon: row.favicon ?? null,
+      updatedAt: row.updatedAt,
+      businessName: row.businessName ?? "PrintHub",
+      tagline: row.tagline ?? null,
+      logo: row.logo ?? null,
+    };
+  },
+  ["business-metadata"],
+  { revalidate: 300, tags: ["homepage", "business"] }
+);
+
 /** Cross-request cache for business settings. Call revalidateTag('homepage') when business settings change. */
 export const getCachedBusinessPublic = unstable_cache(
   async (): Promise<BusinessPublic> => {

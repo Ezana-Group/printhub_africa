@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidateTag } from "next/cache";
+import { revalidateTag, revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/settings-api";
 import { writeAudit } from "@/lib/audit";
@@ -88,6 +88,8 @@ async function updateBusinessSettings(req: Request) {
   });
   revalidateTag("homepage");
   revalidateTag("business");
+  revalidatePath("/", "layout");
+  revalidatePath("/admin/settings");
   await writeAudit({ userId: auth.userId, action: "BUSINESS_SETTINGS_UPDATED", category: "SETTINGS", request: req });
   return NextResponse.json({ success: true });
 }

@@ -5,15 +5,25 @@ import { Footer } from "@/components/layout/footer";
 import { WhatsAppFloat } from "@/components/layout/whatsapp-float";
 import { CookieBanner } from "@/components/CookieBanner";
 import { TawkTo } from "@/components/TawkTo";
-import { getCachedBusinessPublic } from "@/lib/cache/unstable-cache";
+import { getCachedBusinessPublic, getCachedBusinessMetadata } from "@/lib/cache/unstable-cache";
 
 // Revalidate every 5 min so public pages can be cached (TTFB optimisation)
 export const revalidate = 300;
 
 export async function generateMetadata(): Promise<Metadata> {
-  const business = await getCachedBusinessPublic();
+  const meta = await getCachedBusinessMetadata();
+  const faviconUrl =
+    meta.favicon && meta.updatedAt
+      ? `${meta.favicon}?v=${new Date(meta.updatedAt).getTime()}`
+      : meta.favicon ?? null;
   return {
-    icons: business.favicon ? { icon: business.favicon } : undefined,
+    icons: faviconUrl
+      ? {
+          icon: [{ url: faviconUrl, sizes: "any" }, { url: faviconUrl, type: "image/png", sizes: "32x32" }],
+          apple: [{ url: faviconUrl, sizes: "180x180" }],
+          shortcut: [{ url: faviconUrl }],
+        }
+      : undefined,
   };
 }
 
