@@ -6,7 +6,7 @@ An Ezana Group Company.
 ## Tech stack
 
 - **Frontend:** Next.js 14 (App Router), TypeScript, Tailwind CSS, shadcn/ui
-- **State:** Zustand, React Query
+- **State:** Zustand
 - **Backend:** Next.js API Routes, Prisma
 - **Database:** PostgreSQL
 - **Auth:** NextAuth.js (Email + Google)
