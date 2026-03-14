@@ -130,6 +130,13 @@ export function publicFileUrl(key: string): string {
   return `${base}/${key}`;
 }
 
+/** Public file URL when key is set; returns null if key or R2_PUBLIC_URL is missing. Use to resolve relative/broken image URLs. */
+export function safePublicFileUrl(key: string | null | undefined): string | null {
+  if (!key || !R2_PUBLIC_URL) return null;
+  const base = R2_PUBLIC_URL.replace(/\/$/, "");
+  return `${base}/${key}`;
+}
+
 /** Check if file exists in R2 (for confirm step). */
 export async function headObject(
   bucket: "private" | "public",

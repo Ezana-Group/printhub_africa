@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { safePublicFileUrl } from "@/lib/r2";
 import type { ProductType } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -93,7 +94,13 @@ export async function GET(req: NextRequest) {
     const items = products.map((p) => {
       const imgs = p.productImages ?? [];
       const featured = imgs.find((i) => i.isPrimary) ?? imgs[0];
-      const image = p.images?.[0] ?? featured?.url ?? null;
+      const rawImage = p.images?.[0] ?? featured?.url ?? null;
+      const image =
+        rawImage && rawImage.startsWith("http")
+          ? rawImage
+          : featured?.storageKey
+            ? safePublicFileUrl(featured.storageKey)
+            : null;
       const stats = statsByProductId[p.id];
       return {
         id: p.id,

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { safePublicFileUrl } from "@/lib/r2";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
@@ -12,7 +13,7 @@ export async function FeaturedCatalogueSection() {
     shortDescription: string | null;
     basePriceKes: number | null;
     priceOverrideKes: number | null;
-    photos: Array< { url: string; altText: string | null; isPrimary: boolean }>;
+    photos: Array<{ url: string; storageKey: string | null; altText: string | null; isPrimary: boolean }>;
   }> = [];
   try {
     const rows = await prisma.catalogueItem.findMany({
@@ -29,7 +30,7 @@ export async function FeaturedCatalogueSection() {
         photos: {
           orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
           take: 1,
-          select: { url: true, altText: true, isPrimary: true },
+          select: { url: true, storageKey: true, altText: true, isPrimary: true },
         },
       },
     });
@@ -69,6 +70,12 @@ export async function FeaturedCatalogueSection() {
           {items.map((item) => {
             const priceKes = item.priceOverrideKes ?? item.basePriceKes;
             const primaryPhoto = item.photos[0];
+            const photoUrl =
+              primaryPhoto?.url?.startsWith("http")
+                ? primaryPhoto.url
+                : primaryPhoto?.storageKey
+                  ? safePublicFileUrl(primaryPhoto.storageKey)
+                  : primaryPhoto?.url ?? null;
             return (
               <Card
                 key={item.id}
@@ -76,10 +83,10 @@ export async function FeaturedCatalogueSection() {
               >
                 <Link href={`/catalogue/${item.slug}`}>
                   <div className="aspect-square bg-slate-100 relative overflow-hidden">
-                    {primaryPhoto?.url ? (
+                    {photoUrl ? (
                       <img
-                        src={primaryPhoto.url}
-                        alt={primaryPhoto.altText ?? item.name}
+                        src={photoUrl}
+                        alt={primaryPhoto?.altText ?? item.name}
                         className="absolute inset-0 w-full h-full object-cover"
                       />
                     ) : null}
