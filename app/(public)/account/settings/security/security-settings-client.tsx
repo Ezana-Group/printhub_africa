@@ -25,8 +25,52 @@ function SupportEmailFallback() {
 
 export function SecuritySettingsClient() {
   const [passwordSaved, setPasswordSaved] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const { city, country } = useBusinessPublic();
   const sessionLocation = [city, country].filter(Boolean).join(", ") || "Nairobi, Kenya";
+
+  async function handleUpdatePassword() {
+    setPasswordError(null);
+    if (!currentPassword.trim()) {
+      setPasswordError("Enter your current password.");
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordError("New password must be at least 8 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New password and confirmation do not match.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/account/settings/password", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: currentPassword.trim(),
+          newPassword,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setPasswordError(data.error ?? "Failed to update password.");
+        return;
+      }
+      setPasswordSaved(true);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setTimeout(() => setPasswordSaved(false), 3000);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -36,30 +80,52 @@ export function SecuritySettingsClient() {
       >
         <div className="grid gap-2">
           <Label htmlFor="currentPassword">Current Password</Label>
-          <Input id="currentPassword" name="currentPassword" type="password" />
+          <Input
+            id="currentPassword"
+            name="currentPassword"
+            type="password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            autoComplete="current-password"
+          />
         </div>
         <div className="grid gap-2">
           <Label htmlFor="newPassword">New Password</Label>
-          <Input id="newPassword" name="newPassword" type="password" />
+          <Input
+            id="newPassword"
+            name="newPassword"
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            autoComplete="new-password"
+          />
           <p className="text-xs text-muted-foreground">
-            Min 8 characters, 1 uppercase, 1 number. Strength: —
+            Min 8 characters. Use a mix of letters, numbers and symbols for strength.
           </p>
         </div>
         <div className="grid gap-2">
           <Label htmlFor="confirmPassword">Confirm New Password</Label>
-          <Input id="confirmPassword" name="confirmPassword" type="password" />
+          <Input
+            id="confirmPassword"
+            name="confirmPassword"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            autoComplete="new-password"
+          />
         </div>
+        {passwordError && (
+          <p className="text-sm text-destructive">{passwordError}</p>
+        )}
         <Button
           type="button"
-          onClick={() => {
-            setPasswordSaved(true);
-            setTimeout(() => setPasswordSaved(false), 2000);
-          }}
+          onClick={handleUpdatePassword}
+          disabled={loading}
         >
-          Update Password
+          {loading ? "Updating…" : "Update Password"}
         </Button>
         {passwordSaved && (
-          <p className="text-sm text-green-600 font-medium">✓ Saved</p>
+          <p className="text-sm text-green-600 font-medium">✓ Password updated</p>
         )}
       </SectionCard>
 
