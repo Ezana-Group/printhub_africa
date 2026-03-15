@@ -55,9 +55,33 @@ function checkApiOrigin(req: Request): NextResponse | null {
   return null;
 }
 
+/** Require auth for protected API prefixes; return 401 JSON for API, redirect for pages. */
+function requireProtectedApi(
+  path: string,
+  token: { role?: string; isCorporate?: boolean } | null
+): NextResponse | null {
+  if (path.startsWith("/api/admin")) {
+    if (!token?.role || !ADMIN_ROLES.includes(token.role)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  } else if (path.startsWith("/api/account")) {
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  } else if (path.startsWith("/api/corporate")) {
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  }
+  return null;
+}
+
 function innerMiddleware(req: Request) {
   const token = (req as Request & { nextauth?: { token?: { role?: string; isCorporate?: boolean } } }).nextauth?.token;
   const path = new URL(req.url).pathname;
+
+  const apiBlock = requireProtectedApi(path, token ?? null);
+  if (apiBlock) return apiBlock;
 
   if (path.startsWith("/admin")) {
     if (!token?.role || !ADMIN_ROLES.includes(token.role)) {

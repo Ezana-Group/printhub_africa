@@ -135,7 +135,7 @@ prisma/
 ## Default admin (after seed)
 
 - **Email:** admin@printhub.africa  
-- **Password:** Set by `prisma/seed.ts` — **change immediately in production.** See `TEST_ACCOUNTS.md` for roles; do not commit real passwords.
+- **Password:** Set by `prisma/seed.ts` — **change immediately in production.** See `docs/TEST_ACCOUNTS.md` for roles; do not commit real passwords.
 
 ## Currency & locale
 

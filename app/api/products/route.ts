@@ -4,13 +4,13 @@ import { safePublicFileUrl } from "@/lib/r2";
 import type { ProductType } from "@prisma/client";
 
 
-/** Prisma 7 expects orderBy as an array for multiple fields */
+/** Prisma 7 expects orderBy as an array for multiple fields. Bestselling uses order-count sort in the route. */
 const SORT_MAP: Record<string, { [k: string]: "asc" | "desc" }[]> = {
   featured: [{ isFeatured: "desc" }, { createdAt: "desc" }],
   newest: [{ createdAt: "desc" }],
   "price-asc": [{ basePrice: "asc" }],
   "price-desc": [{ basePrice: "desc" }],
-  bestselling: [{ id: "asc" }], // TODO: order by order count
+  bestselling: [{ id: "asc" }],
 };
 
 export async function GET(req: NextRequest) {
@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
     const inStock = searchParams.get("inStock");
 
     const orderBy = SORT_MAP[sort] ?? SORT_MAP.featured;
+    const isBestselling = sort === "bestselling";
 
     const where: {
       isActive: boolean;
@@ -58,19 +59,58 @@ export async function GET(req: NextRequest) {
     if (inStock === "true") where.stock = { gt: 0 };
     if (q) where.OR = [{ name: { contains: q, mode: "insensitive" } }, { slug: { contains: q, mode: "insensitive" } }];
 
-    const [products, total] = await Promise.all([
-      prisma.product.findMany({
-        where,
-        orderBy,
-        skip: (page - 1) * limit,
-        take: limit,
-        include: {
-          category: { select: { name: true, slug: true } },
-          productImages: { orderBy: { sortOrder: "asc" } },
-        },
-      }),
-      prisma.product.count({ where }),
-    ]);
+    let products: Awaited<
+      ReturnType<
+        typeof prisma.product.findMany<{
+          include: { category: { select: { name: true; slug: true } }; productImages: { orderBy: { sortOrder: "asc" } } };
+        }>
+      >
+    >;
+    let total: number;
+
+    if (isBestselling) {
+      const matchingIds = await prisma.product.findMany({ where, select: { id: true } }).then((r) => r.map((p) => p.id));
+      total = matchingIds.length;
+      if (matchingIds.length === 0) {
+        products = [];
+      } else {
+        const orderCounts = await prisma.orderItem.groupBy({
+          by: ["productId"],
+          where: { productId: { in: matchingIds } },
+          _count: { id: true },
+        });
+        const countByProductId: Record<string, number> = {};
+        for (const row of orderCounts) {
+          if (row.productId != null) countByProductId[row.productId] = row._count.id;
+        }
+        const orderedIds = [...matchingIds].sort((a, b) => (countByProductId[b] ?? 0) - (countByProductId[a] ?? 0));
+        const pageIds = orderedIds.slice((page - 1) * limit, page * limit);
+        const found = await prisma.product.findMany({
+          where: { id: { in: pageIds } },
+          include: {
+            category: { select: { name: true, slug: true } },
+            productImages: { orderBy: { sortOrder: "asc" } },
+          },
+        });
+        products = pageIds.map((id) => found.find((p) => p.id === id)).filter(Boolean) as typeof found;
+      }
+    } else {
+      const [found, count] = await Promise.all([
+        prisma.product.findMany({
+          where,
+          orderBy,
+          skip: (page - 1) * limit,
+          take: limit,
+          include: {
+            category: { select: { name: true, slug: true } },
+            productImages: { orderBy: { sortOrder: "asc" } },
+          },
+        }),
+        prisma.product.count({ where }),
+      ]);
+      products = found;
+      total = count;
+    }
 
     const productIds = products.map((p) => p.id);
     const reviewStats =

@@ -43,7 +43,7 @@ Sentry.init({
     "Non-Error promise rejection captured",
   ],
 
-  beforeSend(event, hint) {
+  beforeSend(event) {
     if (event.exception?.values?.[0]?.value?.includes("404")) {
       return null;
     }
