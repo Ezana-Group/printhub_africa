@@ -344,7 +344,7 @@ export default async function AboutPage() {
                 />
               ) : (
                 <div className="w-full h-64 lg:h-80 flex items-center justify-center text-black/40 text-sm">
-                  Add Google Maps URL in Admin → Settings → Business Profile
+                  Add a map URL (OpenStreetMap, Google Maps, etc.) in Admin → Settings → Business
                 </div>
               )}
             </div>

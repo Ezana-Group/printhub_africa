@@ -282,7 +282,7 @@ export function SettingsBusinessClient({
               { label: "Town/City", value: getStr(data, "city") || "Nairobi" },
               { label: "County", value: getStr(data, "county") || "Nairobi County" },
               { label: "Country", value: getStr(data, "country") || "Kenya" },
-              { label: "Google Maps URL", value: getStr(data, "googleMapsUrl") },
+              { label: "Map URL", value: getStr(data, "googleMapsUrl") },
             ].map((row, i) => (
               <div
                 key={i}
@@ -341,8 +341,8 @@ export function SettingsBusinessClient({
               <Input value={getStr(data, "country")} onChange={(e) => update("country", e.target.value)} readOnly className="bg-muted" />
             </div>
             <div className="space-y-1.5">
-              <Label>Google Maps URL</Label>
-              <Input value={getStr(data, "googleMapsUrl")} onChange={(e) => update("googleMapsUrl", e.target.value)} placeholder="Paste link for contact page" className="focus-visible:ring-orange-500" />
+              <Label>Map URL (OpenStreetMap, Google Maps, or any embed link)</Label>
+              <Input value={getStr(data, "googleMapsUrl")} onChange={(e) => update("googleMapsUrl", e.target.value)} placeholder="https://www.openstreetmap.org/... or paste embed URL" className="focus-visible:ring-orange-500" />
             </div>
           </div>
         )}
