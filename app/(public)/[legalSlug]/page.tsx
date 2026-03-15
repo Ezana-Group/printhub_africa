@@ -22,11 +22,16 @@ async function getLegalPage(slug: string) {
 }
 
 export async function generateStaticParams() {
-  const pages = await prisma.legalPage.findMany({
-    where: { isPublished: true },
-    select: { slug: true },
-  });
-  return pages.map((p) => ({ legalSlug: p.slug }));
+  if (!process.env.DATABASE_URL) return [];
+  try {
+    const pages = await prisma.legalPage.findMany({
+      where: { isPublished: true },
+      select: { slug: true },
+    });
+    return pages.map((p) => ({ legalSlug: p.slug }));
+  } catch {
+    return [];
+  }
 }
 
 /** Replace hardcoded placeholders in legal HTML with current business data. */
