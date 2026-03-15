@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { safePublicFileUrl } from "@/lib/r2";
 import type { ProductType } from "@prisma/client";
+import { isAlgoliaConfigured, searchProducts as algoliaSearchProducts } from "@/lib/algolia";
 
 
 /** Prisma 7 expects orderBy as an array for multiple fields. Bestselling uses order-count sort in the route. */
@@ -28,6 +29,94 @@ export async function GET(req: NextRequest) {
 
     const orderBy = SORT_MAP[sort] ?? SORT_MAP.featured;
     const isBestselling = sort === "bestselling";
+
+    // When there is a text query, use Algolia if admin has enabled it and it's configured
+    if (q && isAlgoliaConfigured()) {
+      const integrationsRow = await prisma.pricingConfig.findUnique({
+        where: { key: "adminSettings:integrations" },
+      });
+      let algoliaEnabled = false;
+      try {
+        const data = integrationsRow?.valueJson ? JSON.parse(integrationsRow.valueJson) : {};
+        algoliaEnabled = data.algoliaSearchEnabled === true || data.algoliaSearchEnabled === "true";
+      } catch {
+        // ignore
+      }
+      if (algoliaEnabled) {
+        const { hits, nbHits } = await algoliaSearchProducts(q, { page, limit });
+        const pageIds = hits.map((h) => h.objectID).filter(Boolean);
+        if (pageIds.length > 0) {
+          const found = await prisma.product.findMany({
+            where: { id: { in: pageIds }, isActive: true },
+            include: {
+              category: { select: { name: true, slug: true } },
+              productImages: { orderBy: { sortOrder: "asc" } },
+            },
+          });
+          const byId = Object.fromEntries(found.map((p) => [p.id, p]));
+          const products = pageIds.map((id) => byId[id]).filter(Boolean) as typeof found;
+          const productIds = products.map((p) => p.id);
+          const reviewStats =
+            productIds.length > 0
+              ? await prisma.productReview.groupBy({
+                  by: ["productId"],
+                  where: { productId: { in: productIds }, isApproved: true },
+                  _count: { id: true },
+                  _avg: { rating: true },
+                })
+              : [];
+          const statsByProductId: Record<string, { avg: number; count: number }> = {};
+          for (const s of reviewStats) {
+            statsByProductId[s.productId] = {
+              avg: s._avg.rating != null ? Math.round(s._avg.rating * 10) / 10 : 0,
+              count: s._count.id,
+            };
+          }
+          const items = products.map((p) => {
+            const imgs = p.productImages ?? [];
+            const featured = imgs.find((i) => i.isPrimary) ?? imgs[0];
+            const rawImage = p.images?.[0] ?? featured?.url ?? null;
+            const image =
+              rawImage && rawImage.startsWith("http")
+                ? rawImage
+                : featured?.storageKey
+                  ? safePublicFileUrl(featured.storageKey)
+                  : null;
+            const stats = statsByProductId[p.id];
+            return {
+              id: p.id,
+              name: p.name,
+              slug: p.slug,
+              shortDescription: p.shortDescription,
+              category: p.category,
+              productType: p.productType,
+              image,
+              imagesCount: imgs.length,
+              basePrice: Number(p.basePrice),
+              comparePrice: p.comparePrice != null ? Number(p.comparePrice) : null,
+              sku: p.sku,
+              stock: p.stock,
+              isFeatured: p.isFeatured,
+              tags: p.tags ?? [],
+              averageRating: stats?.avg ?? null,
+              reviewCount: stats?.count ?? 0,
+            };
+          });
+          return NextResponse.json(
+            { items, total: nbHits, page, limit, totalPages: Math.ceil(nbHits / limit) },
+            {
+              headers: {
+                "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600",
+              },
+            }
+          );
+        }
+        return NextResponse.json(
+          { items: [], total: 0, page, limit, totalPages: 0 },
+          { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600" } }
+        );
+      }
+    }
 
     const where: {
       isActive: boolean;
