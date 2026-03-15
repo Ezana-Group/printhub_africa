@@ -10,6 +10,8 @@ import { formatPrice } from "@/lib/utils";
 
 const DEFAULT_WHATSAPP = "254700000000";
 
+export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
+
 interface Props {
   params: Promise<{ slug: string }>;
 }

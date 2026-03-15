@@ -6,6 +6,8 @@ import { getCorporateAccount } from "@/lib/corporate";
 import { prisma } from "@/lib/prisma";
 import { Image as ImageIcon, ChevronLeft } from "lucide-react";
 
+export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
+
 export default async function CorporateBrandAssetsPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect("/login");

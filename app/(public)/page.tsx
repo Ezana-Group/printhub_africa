@@ -9,6 +9,7 @@ import { PriceCalculatorTeaser } from "@/components/marketing/price-calculator-t
 import { CTABanner } from "@/components/marketing/cta-banner";
 import { getCachedBusinessPublic } from "@/lib/cache/unstable-cache";
 
+export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
 // ISR: revalidate every 5 minutes so homepage is served from edge cache
 export const revalidate = 300;
 

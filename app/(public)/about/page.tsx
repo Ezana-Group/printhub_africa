@@ -5,6 +5,7 @@ import { AboutHero } from "./about-hero";
 import { getBusinessPublic } from "@/lib/business-public";
 import { getCachedPublicTeamMembers } from "@/lib/cache/unstable-cache";
 
+export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
 export const revalidate = 3600; // 1 hour — about page changes rarely
 
 export async function generateMetadata(): Promise<Metadata> {

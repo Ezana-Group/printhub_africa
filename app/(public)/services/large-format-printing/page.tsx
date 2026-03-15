@@ -12,6 +12,7 @@ import {
 import { LargeFormatServiceGrid } from "@/components/services/LargeFormatServiceGrid";
 import { getBusinessPublic } from "@/lib/business-public";
 
+export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
 export const revalidate = 3600; // 1 hour — service page content changes rarely
 
 // Local images (WebP) — large format / print shop / signage

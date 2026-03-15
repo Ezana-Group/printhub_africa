@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getBusinessPublic } from "@/lib/business-public";
 import { FaqPageClient } from "./faq-client";
 
+export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
 export const revalidate = 3600; // 1 hour — FAQ changes rarely
 
 export const metadata = {

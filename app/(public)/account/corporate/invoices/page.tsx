@@ -7,6 +7,8 @@ import { prisma } from "@/lib/prisma";
 import { FileText, ChevronLeft } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 
+export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
+
 export default async function CorporateInvoicesPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirect("/login");

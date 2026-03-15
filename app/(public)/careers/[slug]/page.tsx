@@ -8,6 +8,8 @@ import { ApplicationForm } from "./application-form";
 
 type Props = { params: Promise<{ slug: string }> };
 
+export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const [job, business] = await Promise.all([

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { getBusinessPublic } from "@/lib/business-public";
 
+export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
 export const revalidate = 3600; // 1 hour — services overview changes rarely
 
 const MAIN_SERVICES = [

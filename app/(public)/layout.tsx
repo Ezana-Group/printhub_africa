@@ -7,6 +7,7 @@ import { CookieBanner } from "@/components/CookieBanner";
 import { TawkTo } from "@/components/TawkTo";
 import { getCachedBusinessPublic, getCachedBusinessMetadata } from "@/lib/cache/unstable-cache";
 
+export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
 // Revalidate every 5 min so public pages can be cached (TTFB optimisation)
 export const revalidate = 300;
 
