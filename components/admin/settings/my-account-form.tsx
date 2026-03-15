@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
+import { QRCodeSVG } from "qrcode.react";
 import { SectionCard } from "@/components/settings/section-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +24,7 @@ interface MyAccountFormProps {
   email: string;
   phone?: string | null;
   twoFaEnabled?: boolean;
+  pinSet?: boolean;
   role?: string;
   position?: string | null;
   departmentId?: string | null;
@@ -34,6 +37,7 @@ export function MyAccountForm({
   email,
   phone = null,
   twoFaEnabled = false,
+  pinSet = false,
   role = "STAFF",
   position = null,
   departmentId = null,
@@ -62,6 +66,21 @@ export function MyAccountForm({
   const [twoFaCode, setTwoFaCode] = useState("");
   const [twoFaLoading, setTwoFaLoading] = useState(false);
   const [twoFaError, setTwoFaError] = useState<string | null>(null);
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  const [pinOpen, setPinOpen] = useState(false);
+  const [pinCurrentPassword, setPinCurrentPassword] = useState("");
+  const [pinNewPin, setPinNewPin] = useState("");
+  const [pinConfirmPin, setPinConfirmPin] = useState("");
+  const [pinLoading, setPinLoading] = useState(false);
+  const [pinSuccess, setPinSuccess] = useState(false);
+  const [pinError, setPinError] = useState<string | null>(null);
 
   const handleSaveProfile = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -146,6 +165,96 @@ export function MyAccountForm({
       setTwoFaError("Something went wrong");
     } finally {
       setTwoFaLoading(false);
+    }
+  };
+
+  const handleSetPin = async () => {
+    setPinError(null);
+    if (!pinCurrentPassword.trim()) {
+      setPinError("Enter your current password.");
+      return;
+    }
+    if (pinNewPin.length !== 4 || !/^\d{4}$/.test(pinNewPin)) {
+      setPinError("PIN must be exactly 4 digits.");
+      return;
+    }
+    if (pinNewPin !== pinConfirmPin) {
+      setPinError("PIN and confirmation do not match.");
+      return;
+    }
+    setPinLoading(true);
+    try {
+      const res = await fetch("/api/admin/settings/my-account/pin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: pinCurrentPassword.trim(),
+          newPin: pinNewPin,
+          confirmPin: pinConfirmPin,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setPinError(data.error ?? "Failed to set PIN.");
+        return;
+      }
+      setPinSuccess(true);
+      setPinCurrentPassword("");
+      setPinNewPin("");
+      setPinConfirmPin("");
+      setTimeout(() => {
+        setPinSuccess(false);
+        setPinOpen(false);
+        router.refresh();
+      }, 1500);
+    } catch {
+      setPinError("Something went wrong");
+    } finally {
+      setPinLoading(false);
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    setPasswordError(null);
+    if (!currentPassword.trim()) {
+      setPasswordError("Enter your current password.");
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordError("New password must be at least 8 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New password and confirmation do not match.");
+      return;
+    }
+    setPasswordLoading(true);
+    try {
+      const res = await fetch("/api/account/settings/password", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: currentPassword.trim(),
+          newPassword,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setPasswordError(data.error ?? "Failed to update password.");
+        return;
+      }
+      setPasswordSuccess(true);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setTimeout(() => {
+        setPasswordSuccess(false);
+        signOut({ callbackUrl: "/login", redirect: true });
+      }, 2000);
+    } catch {
+      setPasswordError("Something went wrong");
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -251,17 +360,53 @@ export function MyAccountForm({
       >
         <div className="grid gap-2">
           <Label htmlFor="currentPassword">Current Password</Label>
-          <Input id="currentPassword" type="password" />
+          <Input
+            id="currentPassword"
+            type="password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            autoComplete="current-password"
+            disabled={passwordLoading}
+          />
         </div>
         <div className="grid gap-2">
           <Label htmlFor="newPassword">New Password</Label>
-          <Input id="newPassword" type="password" />
+          <Input
+            id="newPassword"
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            autoComplete="new-password"
+            disabled={passwordLoading}
+          />
         </div>
         <div className="grid gap-2">
           <Label htmlFor="confirmPassword">Confirm New Password</Label>
-          <Input id="confirmPassword" type="password" />
+          <Input
+            id="confirmPassword"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            autoComplete="new-password"
+            disabled={passwordLoading}
+          />
         </div>
-        <Button type="button" variant="outline">Update Password</Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={handleUpdatePassword}
+          disabled={passwordLoading}
+        >
+          {passwordLoading ? "Updating…" : "Update Password"}
+        </Button>
+        {passwordSuccess && (
+          <p className="text-sm text-green-600 font-medium">
+            Password updated. Signing you out — please sign in again with your new password.
+          </p>
+        )}
+        {passwordError && (
+          <p className="text-sm text-destructive font-medium">{passwordError}</p>
+        )}
       </SectionCard>
 
       <SectionCard
@@ -293,7 +438,10 @@ export function MyAccountForm({
             </DialogDescription>
           </DialogHeader>
           {twoFaOtpauthUrl && (
-            <div className="space-y-2">
+            <div className="space-y-3">
+              <div className="flex justify-center bg-white p-3 rounded-md inline-block">
+                <QRCodeSVG value={twoFaOtpauthUrl} size={192} level="M" />
+              </div>
               <p className="text-xs text-muted-foreground font-mono break-all">
                 Secret (manual entry): {twoFaSecret}
               </p>
@@ -341,8 +489,90 @@ export function MyAccountForm({
         title="PIN (production floor)"
         description="4-digit PIN for job ticket scanning and production updates on shared devices."
       >
-        <Button type="button" variant="outline">Set / Change PIN</Button>
+        <p className="text-sm text-muted-foreground mb-2">
+          Status: {pinSet ? "Set" : "Not set"}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            setPinError(null);
+            setPinSuccess(false);
+            setPinCurrentPassword("");
+            setPinNewPin("");
+            setPinConfirmPin("");
+            setPinOpen(true);
+          }}
+        >
+          {pinSet ? "Change PIN" : "Set PIN"}
+        </Button>
       </SectionCard>
+
+      <Dialog open={pinOpen} onOpenChange={(open) => !pinLoading && setPinOpen(open)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{pinSet ? "Change" : "Set"} production PIN</DialogTitle>
+            <DialogDescription>
+              Enter your account password to authorize, then choose a 4-digit PIN for the production floor.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid gap-2">
+              <Label htmlFor="pin-current-password">Current password</Label>
+              <Input
+                id="pin-current-password"
+                type="password"
+                value={pinCurrentPassword}
+                onChange={(e) => setPinCurrentPassword(e.target.value)}
+                autoComplete="current-password"
+                disabled={pinLoading}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="pin-new">New PIN (4 digits)</Label>
+              <Input
+                id="pin-new"
+                type="password"
+                inputMode="numeric"
+                maxLength={4}
+                placeholder="0000"
+                value={pinNewPin}
+                onChange={(e) => setPinNewPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                disabled={pinLoading}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="pin-confirm">Confirm PIN</Label>
+              <Input
+                id="pin-confirm"
+                type="password"
+                inputMode="numeric"
+                maxLength={4}
+                placeholder="0000"
+                value={pinConfirmPin}
+                onChange={(e) => setPinConfirmPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                disabled={pinLoading}
+              />
+            </div>
+            {pinSuccess && (
+              <p className="text-sm text-green-600 font-medium">PIN saved. You can use it on the production floor.</p>
+            )}
+            {pinError && <p className="text-sm text-destructive font-medium">{pinError}</p>}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setPinOpen(false)} disabled={pinLoading}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSetPin}
+              disabled={pinLoading || !pinCurrentPassword.trim() || pinNewPin.length !== 4 || pinConfirmPin.length !== 4}
+            >
+              {pinLoading ? "Saving…" : pinSet ? "Change PIN" : "Set PIN"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </form>
   );
 }

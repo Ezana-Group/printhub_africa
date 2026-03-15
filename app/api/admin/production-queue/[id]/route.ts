@@ -1,5 +1,6 @@
 /**
- * PATCH /api/admin/production-queue/[id] — update status (and optional assignedTo, machineId, notes)
+ * PATCH /api/admin/production-queue/[id] — update status (and optional assignedTo, machineId, notes).
+ * Optional body.pin: when provided (e.g. from shared production floor device), verifies user's production PIN.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
@@ -7,6 +8,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canAccessRoute } from "@/lib/admin-permissions";
 import { z } from "zod";
+import bcrypt from "bcryptjs";
 
 const ADMIN_ROLES = ["STAFF", "ADMIN", "SUPER_ADMIN"];
 const STATUSES = ["Queued", "In Progress", "Printing", "Quality Check", "Done"] as const;
@@ -16,6 +18,7 @@ const patchSchema = z.object({
   assignedTo: z.string().max(100).nullable().optional(),
   machineId: z.string().nullable().optional(),
   notes: z.string().max(500).nullable().optional(),
+  pin: z.string().length(4).regex(/^\d{4}$/).optional(),
 });
 
 export async function PATCH(
@@ -37,6 +40,22 @@ export async function PATCH(
   const parsed = patchSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+
+  if (parsed.data.pin !== undefined) {
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { productionPinHash: true },
+    });
+    if (!user?.productionPinHash) {
+      return NextResponse.json(
+        { error: "Production PIN not set. Set a PIN in Admin → Settings → My Account." },
+        { status: 403 }
+      );
+    }
+    if (!(await bcrypt.compare(parsed.data.pin, user.productionPinHash))) {
+      return NextResponse.json({ error: "Incorrect PIN" }, { status: 403 });
+    }
   }
 
   const update: { status?: string; assignedTo?: string | null; machineId?: string | null; notes?: string | null; startedAt?: Date; completedAt?: Date } = {};

@@ -37,6 +37,7 @@ model User {
   inviteTokenExpiry   DateTime?
   status              String?   @default("ACTIVE") // ACTIVE | INVITE_PENDING | DEACTIVATED
   totpSecret          String?   // 2FA TOTP secret
+  productionPinHash   String?   // 4-digit PIN hash for production floor (job tickets, shared devices)
   dateOfBirth         DateTime?
   isAnonymised        Boolean?  @default(false)
   anonymisedAt        DateTime?

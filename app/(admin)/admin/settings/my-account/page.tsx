@@ -13,6 +13,7 @@ export default async function AdminMyAccountPage() {
     where: { id: session.user.id },
     select: {
       totpSecret: true,
+      productionPinHash: true,
       name: true,
       email: true,
       phone: true,
@@ -28,6 +29,7 @@ export default async function AdminMyAccountPage() {
     },
   });
   const twoFaEnabled = !!user?.totpSecret;
+  const pinSet = !!user?.productionPinHash;
   const position = user?.staff?.position ?? null;
   const departmentId = user?.staff?.departmentId ?? null;
   const department = user?.staff?.department ?? user?.staff?.departmentObj?.name ?? null;
@@ -41,6 +43,7 @@ export default async function AdminMyAccountPage() {
         email={user?.email ?? session.user.email ?? ""}
         phone={user?.phone ?? null}
         twoFaEnabled={twoFaEnabled}
+        pinSet={pinSet}
         role={role}
         position={position}
         departmentId={departmentId}

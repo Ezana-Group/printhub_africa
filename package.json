@@ -64,6 +64,7 @@
     "otplib": "^13.3.0",
     "pg": "^8.19.0",
     "prisma": "^7.4.2",
+    "qrcode.react": "^4.2.0",
     "react": "^18",
     "react-dom": "^18",
     "recharts": "^3.7.0",
