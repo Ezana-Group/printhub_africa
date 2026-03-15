@@ -1,9 +1,11 @@
 /**
  * POST /api/payments/mpesa/b2c-callback — Safaricom B2C result callback
  * Set MPESA_B2C_RESULT_URL to this route (e.g. https://yourapp.com/api/payments/mpesa/b2c-callback)
+ * IP verification: same as STK — in production set MPESA_CALLBACK_IP_WHITELIST (or MPESA_B2C_CALLBACK_IP_WHITELIST).
  */
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getMpesaCallbackIpCheck } from "@/lib/mpesa-callback";
 import { sendRefundProcessedEmail } from "@/lib/email";
 
 interface B2CCallbackBody {
@@ -26,6 +28,17 @@ function getParam(params: Array<{ Key: string; Value: string | number }> | undef
 }
 
 export async function POST(req: Request) {
+  const ipCheck = getMpesaCallbackIpCheck(req, { useB2CWhitelist: true });
+  if (!ipCheck.allowed && ipCheck.productionRequiresWhitelist) {
+    return NextResponse.json(
+      { ResultCode: 1, ResultDesc: "MPESA_CALLBACK_IP_WHITELIST (or MPESA_B2C_CALLBACK_IP_WHITELIST) must be set in production" },
+      { status: 503 }
+    );
+  }
+  if (!ipCheck.allowed) {
+    return NextResponse.json({ ResultCode: 1, ResultDesc: "Forbidden" }, { status: 403 });
+  }
+
   let body: B2CCallbackBody;
   try {
     body = await req.json();

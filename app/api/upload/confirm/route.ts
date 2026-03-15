@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getObjectBuffer, headObject, publicFileUrl, isR2Configured } from "@/lib/r2";
 import { scanFile } from "@/lib/virustotal";
@@ -123,6 +125,14 @@ export async function POST(req: Request) {
 
     if (!file) {
       return NextResponse.json({ error: "Upload not found" }, { status: 404 });
+    }
+
+    // When upload has an owner, only that user may confirm (defence in depth; presign is session-gated).
+    if (file.userId) {
+      const session = await getServerSession(authOptions);
+      if (!session?.user?.id || file.userId !== session.user.id) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
 
     if (file.storageKey !== storageKey) {

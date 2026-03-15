@@ -17,7 +17,7 @@ const STKPUSH_WINDOW_MS = 60 * 1000;
 
 export async function POST(req: Request) {
   const ip = getRateLimitClientIp(req) ?? "unknown";
-  if (!rateLimit(`stkpush:${ip}`, STKPUSH_LIMIT, STKPUSH_WINDOW_MS).ok) {
+  if (!(await rateLimit(`stkpush:${ip}`, STKPUSH_LIMIT, STKPUSH_WINDOW_MS)).ok) {
     return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   }
   await getServerSession(authOptions);

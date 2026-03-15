@@ -27,7 +27,7 @@ const REGISTER_WINDOW_MS = 60 * 1000;
 
 export async function POST(req: Request) {
   const ip = getRateLimitClientIp(req) ?? "unknown";
-  if (!rateLimit(`register:${ip}`, REGISTER_LIMIT, REGISTER_WINDOW_MS).ok) {
+  if (!(await rateLimit(`register:${ip}`, REGISTER_LIMIT, REGISTER_WINDOW_MS)).ok) {
     return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   }
   try {

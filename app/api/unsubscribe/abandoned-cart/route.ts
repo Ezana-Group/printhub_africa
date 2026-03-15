@@ -9,17 +9,23 @@ import { createHmac } from "crypto";
 import { prisma } from "@/lib/prisma";
 
 function tokenFor(email: string): string {
-  const secret = process.env.CRON_SECRET ?? "abandoned-cart-unsubscribe";
+  const secret = process.env.CRON_SECRET;
+  if (!secret) {
+    throw new Error("CRON_SECRET must be set for unsubscribe links");
+  }
   return createHmac("sha256", secret).update(email.toLowerCase().trim()).digest("hex");
 }
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const email = searchParams.get("email")?.trim();
-  const token = searchParams.get("token");
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://printhub.africa";
   const doneUrl = `${baseUrl}/unsubscribe/abandoned-cart/done`;
 
+  if (!process.env.CRON_SECRET) {
+    return NextResponse.redirect(`${doneUrl}?error=server`);
+  }
+  const { searchParams } = new URL(req.url);
+  const email = searchParams.get("email")?.trim();
+  const token = searchParams.get("token");
   if (!email || !token) {
     return NextResponse.redirect(`${doneUrl}?error=missing`);
   }

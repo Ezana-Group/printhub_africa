@@ -19,7 +19,7 @@ const CONTACT_WINDOW_MS = 60 * 1000;
 
 export async function POST(req: NextRequest) {
   const ip = getRateLimitClientIp(req) ?? "unknown";
-  if (!rateLimit(`contact:${ip}`, CONTACT_LIMIT, CONTACT_WINDOW_MS).ok) {
+  if (!(await rateLimit(`contact:${ip}`, CONTACT_LIMIT, CONTACT_WINDOW_MS)).ok) {
     return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
   }
   try {

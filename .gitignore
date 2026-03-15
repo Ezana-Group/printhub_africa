@@ -7,6 +7,7 @@
 .env.test.local
 .env.production.local
 .env.test
+.env.seed
 
 # dependencies
 /node_modules
@@ -69,3 +70,7 @@ Coursera*.pdf
 
 # Archived/removed files — not part of the build
 /archive/
+
+# Only root README.md is committed; all other .md files are excluded from this repo
+*.md
+!/README.md

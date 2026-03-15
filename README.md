@@ -135,9 +135,7 @@ prisma/
 ## Default admin (after seed)
 
 - **Email:** admin@printhub.africa  
-- **Password:** Admin@Printhub2025!  
-
-Change this in production.
+- **Password:** Set by `prisma/seed.ts` — **change immediately in production.** See `TEST_ACCOUNTS.md` for roles; do not commit real passwords.
 
 ## Currency & locale
 
@@ -171,8 +169,7 @@ PrintHub uses ERPNext for finance, inventory, HR and payroll.
 
 - **URL:** http://localhost:8080  
 - **Username:** administrator  
-- **Password:** admin123  
-- **Do NOT use these defaults in production.**
+- **Password:** (default from ERPNext setup — change in production; do not commit real passwords)
 
 ### Troubleshooting
 
