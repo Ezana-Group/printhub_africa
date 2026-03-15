@@ -12,6 +12,7 @@ export async function generateMetadata() {
   };
 }
 
+export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
 export const revalidate = 300;
 
 async function getJobs() {
