@@ -94,14 +94,14 @@ function VerifyContent() {
 
   if (!token) {
     return (
-      <Card>
-        <CardHeader>
+      <Card className="rounded-2xl border-slate-200 shadow-lg">
+        <CardHeader className="space-y-1">
           <Link href="/" className="text-2xl font-display font-bold text-primary">PrintHub</Link>
           <CardTitle>Verification</CardTitle>
           <CardDescription>Invalid or expired link.</CardDescription>
         </CardHeader>
         <CardFooter>
-          <Button asChild variant="default">
+          <Button asChild variant="default" className="w-full">
             <Link href="/login">Back to sign in</Link>
           </Button>
         </CardFooter>
@@ -115,7 +115,7 @@ function VerifyContent() {
     const sentLabel = chosenMethod === "email" ? "email" : chosenMethod === "sms" ? "phone" : null;
 
     return (
-      <Card>
+      <Card className="rounded-2xl border-slate-200 shadow-lg">
         <CardHeader className="space-y-1">
           <Link href="/" className="text-2xl font-display font-bold text-primary">
             PrintHub
@@ -130,17 +130,17 @@ function VerifyContent() {
         <form onSubmit={handleVerify}>
           <CardContent className="space-y-4">
             {!isAuthenticator && (
-              <p className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-md p-2">
+              <p className="text-sm text-green-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
                 Code sent to your {sentLabel}. Enter it below.
               </p>
             )}
             {error && (
-              <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-2">
+              <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg px-3 py-2">
                 {error}
               </p>
             )}
             <div className="space-y-2">
-              <Label htmlFor="verify-code">6-digit code</Label>
+              <Label htmlFor="verify-code" className="text-slate-700">6-digit code</Label>
               <Input
                 id="verify-code"
                 type="text"
@@ -151,25 +151,28 @@ function VerifyContent() {
                 value={code}
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 disabled={loading}
-                className="text-center tracking-[0.35em] font-mono text-lg"
+                className="text-center tracking-[0.35em] font-mono text-lg h-12 rounded-lg border-slate-300 focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
+              <p className="text-xs text-slate-500">
+                Codes expire in 10 minutes. Didn&apos;t get one? Go back and try another method.
+              </p>
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col gap-2">
-            <Button type="submit" className="w-full" disabled={loading || code.length !== 6}>
+          <CardFooter className="flex flex-col gap-2 border-t border-slate-100 pt-4">
+            <Button type="submit" className="w-full h-11 rounded-lg" disabled={loading || code.length !== 6}>
               {loading ? "Verifying…" : "Verify and sign in"}
             </Button>
             <Button
               type="button"
               variant="ghost"
-              className="w-full gap-2"
+              className="w-full gap-2 text-slate-600 hover:text-slate-900"
               onClick={handleBackToMethods}
               disabled={loading}
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4 shrink-0" />
               Back — choose another method
             </Button>
-            <Button type="button" variant="link" className="w-full text-muted-foreground" asChild>
+            <Button type="button" variant="link" className="w-full text-slate-500 hover:text-slate-700" asChild>
               <Link href="/login">Back to sign in</Link>
             </Button>
           </CardFooter>
@@ -178,72 +181,77 @@ function VerifyContent() {
     );
   }
 
-  // Method selection: only one in use at a time; choosing a new method sends a new code and invalidates the previous.
+  // Method selection: card-style options; only one in use at a time.
   return (
-    <Card>
+    <Card className="rounded-2xl border-slate-200 shadow-lg">
       <CardHeader className="space-y-1">
         <Link href="/" className="text-2xl font-display font-bold text-primary">
           PrintHub
         </Link>
-        <CardTitle>Verify your identity</CardTitle>
-        <CardDescription>Choose how to receive your 6-digit code. Only one method is used at a time.</CardDescription>
+        <CardTitle className="text-xl">Verify your identity</CardTitle>
+        <CardDescription className="text-slate-600">
+          Choose how to receive your 6-digit code. Only one method is used at a time.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3">
         {error && (
-          <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-2">
+          <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg px-3 py-2">
             {error}
           </p>
         )}
 
-        <div className="space-y-3">
-          <p className="text-sm font-medium text-foreground">Authenticator app</p>
-          <p className="text-xs text-muted-foreground mb-2">
-            Open your authenticator app (e.g. Google Authenticator) and enter the 6-digit code.
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="w-full justify-start"
-            onClick={handleChooseAuthenticator}
-          >
-            <ShieldCheck className="h-4 w-4 mr-2" />
-            Use authenticator app
-          </Button>
-        </div>
+        <button
+          type="button"
+          onClick={handleChooseAuthenticator}
+          className="w-full flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2"
+        >
+          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <ShieldCheck className="h-4 w-4" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-slate-900">Authenticator app</p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Open your authenticator app (e.g. Google Authenticator) and enter the 6-digit code.
+            </p>
+          </div>
+        </button>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-foreground">Email</p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="w-full justify-start"
-            onClick={() => handleSendCode("email")}
-            disabled={sendLoading !== null}
-          >
-            <Mail className="h-4 w-4 mr-2" />
-            {sendLoading === "email" ? "Sending…" : "Send code to my email"}
-          </Button>
-        </div>
+        <button
+          type="button"
+          onClick={() => handleSendCode("email")}
+          disabled={sendLoading !== null}
+          className="w-full flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2 disabled:opacity-60 disabled:pointer-events-none"
+        >
+          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+            <Mail className="h-4 w-4" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-slate-900">Email</p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              {sendLoading === "email" ? "Sending code…" : "Send a 6-digit code to your email."}
+            </p>
+          </div>
+        </button>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-foreground">SMS</p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="w-full justify-start"
-            onClick={() => handleSendCode("sms")}
-            disabled={sendLoading !== null}
-          >
-            <MessageCircle className="h-4 w-4 mr-2" />
-            {sendLoading === "sms" ? "Sending…" : "Send code via SMS"}
-          </Button>
-        </div>
+        <button
+          type="button"
+          onClick={() => handleSendCode("sms")}
+          disabled={sendLoading !== null}
+          className="w-full flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2 disabled:opacity-60 disabled:pointer-events-none"
+        >
+          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+            <MessageCircle className="h-4 w-4" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-slate-900">SMS</p>
+            <p className="mt-0.5 text-xs text-slate-500">
+              {sendLoading === "sms" ? "Sending code…" : "Send a 6-digit code to your phone."}
+            </p>
+          </div>
+        </button>
       </CardContent>
-      <CardFooter>
-        <Button type="button" variant="ghost" className="w-full" asChild>
+      <CardFooter className="border-t border-slate-100 pt-4">
+        <Button type="button" variant="ghost" className="w-full text-slate-600 hover:text-slate-900" asChild>
           <Link href="/login">Back to sign in</Link>
         </Button>
       </CardFooter>
@@ -253,7 +261,7 @@ function VerifyContent() {
 
 export default function LoginVerifyPage() {
   return (
-    <Suspense fallback={<Card><CardContent className="pt-6">Loading…</CardContent></Card>}>
+    <Suspense fallback={<Card className="rounded-2xl"><CardContent className="pt-6">Loading…</CardContent></Card>}>
       <VerifyContent />
     </Suspense>
   );
