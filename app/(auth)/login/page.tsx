@@ -90,7 +90,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [magicSent, setMagicSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -151,11 +150,6 @@ export default function LoginPage() {
           <Suspense fallback={null}>
             <LoginMessagesWithParams error={error} />
           </Suspense>
-          {magicSent && (
-            <p className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-md p-2">
-              Check your email for the sign-in link.
-            </p>
-          )}
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
