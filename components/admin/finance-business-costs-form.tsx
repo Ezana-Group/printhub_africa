@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { EditableSection } from "@/components/admin/editable-section";
 import { CALCULATOR_CONFIG_INVALIDATE_EVENT } from "@/lib/calculator-config";
 
@@ -25,6 +26,19 @@ function formatNum(n: number | undefined): string {
 }
 
 const UTILISATION_PCT = 70; // 70% machine utilisation for effective hours
+
+/** Default baseline values (same as API/seed). Use as starting point so you can edit and save your own. */
+const DEFAULT_BASELINE: BusinessSettings = {
+  labourRateKesPerHour: 200,
+  monthlyRentKes: 35000,
+  monthlyUtilitiesKes: 8000,
+  monthlyInsuranceKes: 4000,
+  monthlyOtherKes: 3000,
+  workingDaysPerMonth: 26,
+  workingHoursPerDay: 8,
+  defaultProfitMarginPct: 40,
+  vatRatePct: 16,
+};
 
 export function FinanceBusinessCostsForm({ canEdit = true }: { canEdit?: boolean }) {
   const [loading, setLoading] = useState(true);
@@ -117,9 +131,21 @@ export function FinanceBusinessCostsForm({ canEdit = true }: { canEdit?: boolean
 
   if (!business) {
     return (
-      <p className="text-sm text-muted-foreground">
-        No business settings found. Run <code className="rounded bg-muted px-1">npm run db:seed</code> to create defaults.
-      </p>
+      <Card className="border-dashed">
+        <CardContent className="pt-6">
+          <p className="text-sm text-muted-foreground mb-3">
+            No business settings found. You can start from a default baseline and then enter your own values — no need to run <code className="rounded bg-muted px-1">npm run db:seed</code>.
+          </p>
+          {canEdit && (
+            <Button type="button" onClick={() => setBusiness({ ...DEFAULT_BASELINE })}>
+              Use default baseline and enter my values
+            </Button>
+          )}
+          {!canEdit && (
+            <p className="text-sm text-muted-foreground">You don’t have permission to edit finance settings.</p>
+          )}
+        </CardContent>
+      </Card>
     );
   }
 

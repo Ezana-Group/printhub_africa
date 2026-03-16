@@ -596,36 +596,60 @@ export function AdminLFCalculator() {
           <CardHeader>
             <CardTitle>Current material costs (from inventory)</CardTitle>
             <CardDescription>
-              These rates feed the calculator. Update stock and receive prices in Admin → Inventory.
+              These rates feed the calculator. Substrate rolls come from Large Format stock in Admin → Inventory. Ink and finishing use your inventory when set; otherwise the app shows default placeholders so quotes can still be generated.
             </CardDescription>
           </CardHeader>
           <CardContent>
             {ratesLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
-            {!ratesLoading && rates && (
+            {!ratesLoading && rates && (() => {
+              const sources = (rates as { costSources?: { inkCosts?: string; finishing?: Record<string, boolean> } }).costSources;
+              const inkDefault = sources?.inkCosts === "default";
+              const finishingAllDefault = sources?.finishing && !Object.values(sources.finishing).some(Boolean);
+              const showPlaceholderBanner = inkDefault || finishingAllDefault;
+              return (
               <div className="space-y-6">
+                {showPlaceholderBanner && (
+                  <p className="text-sm rounded-md bg-amber-500/10 text-amber-800 dark:text-amber-200 border border-amber-500/30 px-3 py-2">
+                    You haven’t added ink or finishing inventory yet. The ink and finishing costs below are <strong>default placeholders</strong> so the calculator can still run. To use your own costs: set printer ink in Admin → Finance (LF printer settings) or Inventory → Hardware, and add finishing items (eyelets, hem tape, rope, packaging) under Inventory → Large Format stock.
+                  </p>
+                )}
                 <div>
                   <h4 className="font-medium mb-2">Substrate rolls</h4>
-                  <ul className="text-sm space-y-1">
-                    {rates.materials.map((m) => (
-                      <li key={m.code}>
-                        {m.name} — {formatKes(m.averageCostKes)}/lm
-                        {m.lastPurchasePriceKes != null &&
-                          ` (last: ${formatKes(m.lastPurchasePriceKes)})`}
-                        {m.stockAvailableLm > 0 && ` · Stock: ${m.stockAvailableLm} lm`}
-                        {m.isLowStock && " · Low stock"}
-                      </li>
-                    ))}
-                  </ul>
+                  {rates.materials.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No substrate rolls in inventory yet. Add Large Format stock in Admin → Inventory.</p>
+                  ) : (
+                    <ul className="text-sm space-y-1">
+                      {rates.materials.map((m) => (
+                        <li key={m.code}>
+                          {m.name} — {formatKes(m.averageCostKes)}/lm
+                          {m.lastPurchasePriceKes != null &&
+                            ` (last: ${formatKes(m.lastPurchasePriceKes)})`}
+                          {m.stockAvailableLm > 0 && ` · Stock: ${m.stockAvailableLm} lm`}
+                          {m.isLowStock && " · Low stock"}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
                 <div>
-                  <h4 className="font-medium mb-2">Ink costs (per m²)</h4>
+                  <h4 className="font-medium mb-2">
+                    Ink costs (per m²)
+                    {inkDefault && (
+                      <span className="ml-2 text-xs font-normal text-amber-600 dark:text-amber-400">(default placeholder)</span>
+                    )}
+                  </h4>
                   <p className="text-sm">
                     CMYK: {formatKes(rates.inkCosts.CMYK)} · Photo: {formatKes(rates.inkCosts.PHOTO)} ·
                     Black only: {formatKes(rates.inkCosts.BLACK_ONLY)}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-medium mb-2">Finishing hardware</h4>
+                  <h4 className="font-medium mb-2">
+                    Finishing hardware
+                    {finishingAllDefault && (
+                      <span className="ml-2 text-xs font-normal text-amber-600 dark:text-amber-400">(default placeholders)</span>
+                    )}
+                  </h4>
                   <p className="text-sm">
                     Eyelet: {formatKes(rates.finishingHardware.eyeletCostPerUnit)}/unit · Hem tape:{" "}
                     {formatKes(rates.finishingHardware.hemTapeCostPerM)}/m · Rope:{" "}
@@ -637,7 +661,8 @@ export function AdminLFCalculator() {
                   Refresh
                 </Button>
               </div>
-            )}
+              );
+            })()}
           </CardContent>
         </Card>
       )}
