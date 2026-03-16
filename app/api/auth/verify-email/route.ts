@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const token = searchParams.get("token");
+  const rawToken = searchParams.get("token");
+  const token = typeof rawToken === "string" ? rawToken.trim() : "";
   if (!token) {
     return NextResponse.redirect(new URL("/login?error=MissingToken", req.url));
   }
@@ -15,8 +16,17 @@ export async function GET(req: Request) {
     return NextResponse.redirect(new URL("/login?error=InvalidOrExpiredToken", req.url));
   }
 
+  // Match user by email case-insensitively (identifier may differ in casing from User.email)
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: vt.identifier.trim(), mode: "insensitive" } },
+    select: { id: true },
+  });
+  if (!user) {
+    return NextResponse.redirect(new URL("/login?error=InvalidOrExpiredToken", req.url));
+  }
+
   await prisma.user.update({
-    where: { email: vt.identifier },
+    where: { id: user.id },
     data: { emailVerified: new Date() },
   });
   await prisma.verificationToken.delete({ where: { token } });

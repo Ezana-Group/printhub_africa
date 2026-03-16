@@ -46,8 +46,9 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    const { email, password, firstName, lastName, marketingConsent = false } = parsed.data;
+    const { email: rawEmail, password, firstName, lastName, marketingConsent = false } = parsed.data;
     // confirmPassword validated by refine; not used further
+    const email = rawEmail.trim().toLowerCase();
     const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(" ");
 
     const existing = await prisma.user.findUnique({ where: { email } });

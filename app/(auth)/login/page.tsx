@@ -36,15 +36,27 @@ function AppleIcon({ className }: { className?: string }) {
   );
 }
 
+const EMAIL_NOT_VERIFIED_MSG = "Please verify your email before signing in. Check your inbox for the verification link.";
+
 /** Messages that depend on searchParams; wrapped in Suspense so the form can render immediately (fixes WebKit E2E). */
 function LoginMessages({
   error,
   errorParam,
   verified,
+  showResend,
+  resendLoading,
+  resendSuccess,
+  resendError,
+  onResend,
 }: {
   error: string;
   errorParam: string | null;
   verified: string | null;
+  showResend: boolean;
+  resendLoading: boolean;
+  resendSuccess: boolean;
+  resendError: string;
+  onResend: () => void;
 }) {
   return (
     <>
@@ -59,19 +71,68 @@ function LoginMessages({
         </p>
       )}
       {(error || errorParam === "CredentialsSignin") && (
-        <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-2">
-          {error || (errorParam === "CredentialsSignin" ? "Invalid email or password." : errorParam ?? "")}
-        </p>
+        <div className="space-y-2">
+          <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-2">
+            {error || (errorParam === "CredentialsSignin" ? "Invalid email or password." : errorParam ?? "")}
+          </p>
+          {showResend && (
+            <div className="flex flex-col gap-1.5">
+              <button
+                type="button"
+                onClick={onResend}
+                disabled={resendLoading}
+                className="text-sm text-primary hover:underline text-left disabled:opacity-50"
+              >
+                {resendLoading ? "Sending…" : "Resend verification email"}
+              </button>
+              {resendSuccess && (
+                <p className="text-sm text-success bg-success/10 border border-success/30 rounded-md p-2">
+                  Check your inbox and click the link, then sign in again.
+                </p>
+              )}
+              {resendError && (
+                <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-2">
+                  {resendError}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       )}
     </>
   );
 }
 
-function LoginMessagesWithParams({ error }: { error: string }) {
+function LoginMessagesWithParams({
+  error,
+  showResend,
+  resendLoading,
+  resendSuccess,
+  resendError,
+  onResend,
+}: {
+  error: string;
+  showResend: boolean;
+  resendLoading: boolean;
+  resendSuccess: boolean;
+  resendError: string;
+  onResend: () => void;
+}) {
   const searchParams = useSearchParams();
   const verified = searchParams.get("verified");
   const errorParam = searchParams.get("error");
-  return <LoginMessages error={error} errorParam={errorParam} verified={verified} />;
+  return (
+    <LoginMessages
+      error={error}
+      errorParam={errorParam}
+      verified={verified}
+      showResend={showResend}
+      resendLoading={resendLoading}
+      resendSuccess={resendSuccess}
+      resendError={resendError}
+      onResend={onResend}
+    />
+  );
 }
 
 /**
@@ -90,6 +151,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [emailNotVerified, setEmailNotVerified] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
+  const [resendError, setResendError] = useState("");
   const [oauthProviders, setOauthProviders] = useState<{
     google: boolean;
     facebook: boolean;
@@ -112,6 +177,9 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setResendSuccess(false);
+    setResendError("");
+    setEmailNotVerified(false);
     setLoading(true);
     try {
       const res = await fetch("/api/auth/validate-login", {
@@ -126,7 +194,8 @@ export default function LoginPage() {
         return;
       }
       if (res.status === 403 && data.error === "EMAIL_NOT_VERIFIED") {
-        setError(data.message ?? "Please verify your email before signing in. Check your inbox for the verification link.");
+        setError(data.message ?? EMAIL_NOT_VERIFIED_MSG);
+        setEmailNotVerified(true);
         setLoading(false);
         return;
       }
@@ -143,11 +212,12 @@ export default function LoginPage() {
           return;
         }
         const errMsg = result?.error === "EMAIL_NOT_VERIFIED"
-          ? "Please verify your email before signing in. Check your inbox for the verification link."
+          ? EMAIL_NOT_VERIFIED_MSG
           : result?.error === "CredentialsSignin"
             ? "Invalid email or password."
             : result?.error ?? "Sign in failed.";
         setError(errMsg);
+        if (result?.error === "EMAIL_NOT_VERIFIED") setEmailNotVerified(true);
         return;
       }
       setError(data.message ?? data.error ?? "Invalid email or password.");
@@ -155,6 +225,34 @@ export default function LoginPage() {
       setError("Something went wrong");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    const e = email.trim().toLowerCase();
+    if (!e || !e.includes("@")) {
+      setResendError("Enter your email above and try again.");
+      return;
+    }
+    setResendError("");
+    setResendSuccess(false);
+    setResendLoading(true);
+    try {
+      const res = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: e }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setResendSuccess(true);
+      } else {
+        setResendError(data.error ?? "Failed to send. Try again later.");
+      }
+    } catch {
+      setResendError("Something went wrong. Try again later.");
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -176,7 +274,14 @@ export default function LoginPage() {
       <form id="login-credentials" onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           <Suspense fallback={null}>
-            <LoginMessagesWithParams error={error} />
+            <LoginMessagesWithParams
+              error={error}
+              showResend={emailNotVerified}
+              resendLoading={resendLoading}
+              resendSuccess={resendSuccess}
+              resendError={resendError}
+              onResend={handleResendVerification}
+            />
           </Suspense>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
