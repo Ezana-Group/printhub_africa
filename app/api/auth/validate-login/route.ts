@@ -16,9 +16,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Email and password required" }, { status: 400 });
     }
 
-    // Case-insensitive lookup so we match the same user that verify-email updates (avoids duplicate-email casing issues)
+    // Case-insensitive lookup; orderBy id so we always get the same user when duplicates exist (2FA token must match the account that has 2FA)
     const user = await prisma.user.findFirst({
       where: { email: { equals: email, mode: "insensitive" } },
+      orderBy: { id: "asc" },
       select: {
         id: true,
         passwordHash: true,

@@ -114,7 +114,11 @@ export const authOptions: NextAuthOptions = {
           if (!user) return null;
           if (user.totpSecret) {
             try {
-              const result = verifySync({ secret: user.totpSecret, token: code });
+              const result = verifySync({
+                secret: user.totpSecret,
+                token: code,
+                epochTolerance: 1,
+              });
               if (!result.valid) return null;
             } catch {
               return null;
@@ -143,9 +147,10 @@ export const authOptions: NextAuthOptions = {
 
         if (!credentials?.email || !credentials?.password) return null;
         const email = String(credentials.email).trim();
-        // Case-insensitive lookup so we match the same user that verify-email updates
+        // Case-insensitive lookup; orderBy id so we always get the same user (2FA, session consistency)
         const user = await prisma.user.findFirst({
           where: { email: { equals: email, mode: "insensitive" } },
+          orderBy: { id: "asc" },
           select: {
             id: true,
             email: true,
@@ -196,7 +201,11 @@ export const authOptions: NextAuthOptions = {
         if (method === "totp" && user.totpSecret) {
           if (!totpCode || totpCode.length !== 6) throw new Error("2FA_REQUIRED");
           try {
-            const result = verifySync({ secret: user.totpSecret, token: totpCode });
+            const result = verifySync({
+              secret: user.totpSecret,
+              token: totpCode,
+              epochTolerance: 1,
+            });
             if (!result.valid) return null;
           } catch {
             return null;
@@ -262,7 +271,11 @@ export const authOptions: NextAuthOptions = {
         } else if (user.totpSecret) {
           if (!totpCode || totpCode.length !== 6) throw new Error("2FA_REQUIRED");
           try {
-            const result = verifySync({ secret: user.totpSecret, token: totpCode });
+            const result = verifySync({
+              secret: user.totpSecret,
+              token: totpCode,
+              epochTolerance: 1,
+            });
             if (!result.valid) return null;
           } catch {
             return null;
