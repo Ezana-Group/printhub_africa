@@ -69,6 +69,11 @@ export function MyAccountForm({
   const [twoFaLoading, setTwoFaLoading] = useState(false);
   const [twoFaError, setTwoFaError] = useState<string | null>(null);
 
+  const [disable2FaOpen, setDisable2FaOpen] = useState(false);
+  const [disable2FaPassword, setDisable2FaPassword] = useState("");
+  const [disable2FaLoading, setDisable2FaLoading] = useState(false);
+  const [disable2FaError, setDisable2FaError] = useState<string | null>(null);
+
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -167,6 +172,35 @@ export function MyAccountForm({
       setTwoFaError("Something went wrong");
     } finally {
       setTwoFaLoading(false);
+    }
+  };
+
+  const handleDisable2FA = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!disable2FaPassword.trim()) {
+      setDisable2FaError("Enter your current password.");
+      return;
+    }
+    setDisable2FaError(null);
+    setDisable2FaLoading(true);
+    try {
+      const res = await fetch("/api/admin/settings/my-account/2fa/disable", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword: disable2FaPassword }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setDisable2FaError(data.error ?? "Failed to disable 2FA");
+        return;
+      }
+      setDisable2FaOpen(false);
+      setDisable2FaPassword("");
+      router.refresh();
+    } catch {
+      setDisable2FaError("Something went wrong");
+    } finally {
+      setDisable2FaLoading(false);
     }
   };
 
@@ -418,6 +452,25 @@ export function MyAccountForm({
         <p className="text-sm text-muted-foreground mb-2">
           Status: {twoFaEnabled ? `Enabled (${twoFaMethod === "totp" ? "Authenticator app" : twoFaMethod === "email" ? "Email code" : twoFaMethod === "sms" ? "SMS code" : "Authenticator"})` : "Disabled"}
         </p>
+        {twoFaEnabled && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setDisable2FaError(null);
+                setDisable2FaPassword("");
+                setDisable2FaOpen(true);
+              }}
+              disabled={disable2FaLoading}
+            >
+              Disable 2FA
+            </Button>
+            <p className="text-xs text-muted-foreground self-center">
+              You can re-enable with a different method below after disabling.
+            </p>
+          </div>
+        )}
         {!twoFaEnabled && (
           <div className="flex flex-wrap gap-2">
             <Button
@@ -490,6 +543,46 @@ export function MyAccountForm({
           <p className="text-sm text-destructive font-medium mt-2">{twoFaError}</p>
         )}
       </SectionCard>
+
+      <Dialog open={disable2FaOpen} onOpenChange={(open) => !disable2FaLoading && setDisable2FaOpen(open)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Disable Two-Factor Authentication</DialogTitle>
+            <DialogDescription>
+              Enter your current password to disable 2FA. You can re-enable it later with authenticator app, email, or SMS.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleDisable2FA} className="space-y-4">
+            <div className="grid gap-2">
+              <Label htmlFor="disable2fa-password">Current password</Label>
+              <Input
+                id="disable2fa-password"
+                type="password"
+                value={disable2FaPassword}
+                onChange={(e) => setDisable2FaPassword(e.target.value)}
+                autoComplete="current-password"
+                disabled={disable2FaLoading}
+              />
+            </div>
+            {disable2FaError && (
+              <p className="text-sm text-destructive font-medium">{disable2FaError}</p>
+            )}
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDisable2FaOpen(false)}
+                disabled={disable2FaLoading}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={disable2FaLoading || !disable2FaPassword.trim()}>
+                {disable2FaLoading ? "Disabling…" : "Disable 2FA"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={twoFaOpen} onOpenChange={(open) => !twoFaLoading && setTwoFaOpen(open)}>
         <DialogContent className="sm:max-w-md">

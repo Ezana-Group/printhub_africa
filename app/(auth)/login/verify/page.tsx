@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, MessageCircle } from "lucide-react";
+import { Mail, MessageCircle, ShieldCheck, ArrowLeft } from "lucide-react";
+
+type VerificationMethod = "authenticator" | "email" | "sms";
 
 function getCallbackUrl(): string {
   if (typeof window === "undefined") return "/login/success";
@@ -24,7 +26,8 @@ function VerifyContent() {
   const [loading, setLoading] = useState(false);
   const [sendLoading, setSendLoading] = useState<"email" | "sms" | null>(null);
   const [error, setError] = useState("");
-  const [sent, setSent] = useState<"email" | "sms" | null>(null);
+  const [view, setView] = useState<"choose" | "enter-code">("choose");
+  const [chosenMethod, setChosenMethod] = useState<VerificationMethod | null>(null);
 
   useEffect(() => {
     if (!token) setError("Invalid or expired link. Please sign in again.");
@@ -67,12 +70,26 @@ function VerifyContent() {
         setError(data.error ?? "Failed to send code");
         return;
       }
-      setSent(method);
+      setChosenMethod(method);
+      setView("enter-code");
     } catch {
       setError("Something went wrong");
     } finally {
       setSendLoading(null);
     }
+  };
+
+  const handleChooseAuthenticator = () => {
+    setError("");
+    setChosenMethod("authenticator");
+    setView("enter-code");
+  };
+
+  const handleBackToMethods = () => {
+    setView("choose");
+    setChosenMethod(null);
+    setCode("");
+    setError("");
   };
 
   if (!token) {
@@ -92,6 +109,76 @@ function VerifyContent() {
     );
   }
 
+  // Dedicated "enter code" screen — one method in use at a time; user can go back to pick another.
+  if (view === "enter-code" && chosenMethod) {
+    const isAuthenticator = chosenMethod === "authenticator";
+    const sentLabel = chosenMethod === "email" ? "email" : chosenMethod === "sms" ? "phone" : null;
+
+    return (
+      <Card>
+        <CardHeader className="space-y-1">
+          <Link href="/" className="text-2xl font-display font-bold text-primary">
+            PrintHub
+          </Link>
+          <CardTitle>Enter your code</CardTitle>
+          <CardDescription>
+            {isAuthenticator
+              ? "Enter the 6-digit code from your authenticator app."
+              : "Enter the 6-digit code we sent you below."}
+          </CardDescription>
+        </CardHeader>
+        <form onSubmit={handleVerify}>
+          <CardContent className="space-y-4">
+            {!isAuthenticator && (
+              <p className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-md p-2">
+                Code sent to your {sentLabel}. Enter it below.
+              </p>
+            )}
+            {error && (
+              <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-2">
+                {error}
+              </p>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="verify-code">6-digit code</Label>
+              <Input
+                id="verify-code"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                placeholder="000000"
+                maxLength={6}
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                disabled={loading}
+                className="text-center tracking-[0.35em] font-mono text-lg"
+              />
+            </div>
+          </CardContent>
+          <CardFooter className="flex flex-col gap-2">
+            <Button type="submit" className="w-full" disabled={loading || code.length !== 6}>
+              {loading ? "Verifying…" : "Verify and sign in"}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full gap-2"
+              onClick={handleBackToMethods}
+              disabled={loading}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back — choose another method
+            </Button>
+            <Button type="button" variant="link" className="w-full text-muted-foreground" asChild>
+              <Link href="/login">Back to sign in</Link>
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
+    );
+  }
+
+  // Method selection: only one in use at a time; choosing a new method sends a new code and invalidates the previous.
   return (
     <Card>
       <CardHeader className="space-y-1">
@@ -99,80 +186,67 @@ function VerifyContent() {
           PrintHub
         </Link>
         <CardTitle>Verify your identity</CardTitle>
-        <CardDescription>Choose how to receive your 6-digit code</CardDescription>
+        <CardDescription>Choose how to receive your 6-digit code. Only one method is used at a time.</CardDescription>
       </CardHeader>
-      <form onSubmit={handleVerify}>
-        <CardContent className="space-y-4">
-          {error && (
-            <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-2">
-              {error}
-            </p>
-          )}
-          {sent && (
-            <p className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-md p-2">
-              Code sent to your {sent === "email" ? "email" : "phone"}. Enter it below.
-            </p>
-          )}
+      <CardContent className="space-y-4">
+        {error && (
+          <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-2">
+            {error}
+          </p>
+        )}
 
-          <div className="space-y-3">
-            <p className="text-sm font-medium text-foreground">Option 1: Authenticator app</p>
-            <p className="text-xs text-muted-foreground">
-              Open your authenticator app (e.g. Google Authenticator) and enter the 6-digit code.
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-foreground">Option 2: Email the code</p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => handleSendCode("email")}
-              disabled={sendLoading !== null}
-            >
-              <Mail className="h-4 w-4 mr-2" />
-              {sendLoading === "email" ? "Sending…" : "Send code to my email"}
-            </Button>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-foreground">Option 3: SMS the code</p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => handleSendCode("sms")}
-              disabled={sendLoading !== null}
-            >
-              <MessageCircle className="h-4 w-4 mr-2" />
-              {sendLoading === "sms" ? "Sending…" : "Send code via SMS"}
-            </Button>
-          </div>
-
-          <div className="pt-2 border-t space-y-2">
-            <Label htmlFor="verify-code">Enter 6-digit code</Label>
-            <Input
-              id="verify-code"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              placeholder="000000"
-              maxLength={6}
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              disabled={loading}
-            />
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-2">
-          <Button type="submit" className="w-full" disabled={loading || code.length !== 6}>
-            {loading ? "Verifying…" : "Verify and sign in"}
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-foreground">Authenticator app</p>
+          <p className="text-xs text-muted-foreground mb-2">
+            Open your authenticator app (e.g. Google Authenticator) and enter the 6-digit code.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full justify-start"
+            onClick={handleChooseAuthenticator}
+          >
+            <ShieldCheck className="h-4 w-4 mr-2" />
+            Use authenticator app
           </Button>
-          <Button type="button" variant="ghost" className="w-full" asChild>
-            <Link href="/login">Back to sign in</Link>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-foreground">Email</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full justify-start"
+            onClick={() => handleSendCode("email")}
+            disabled={sendLoading !== null}
+          >
+            <Mail className="h-4 w-4 mr-2" />
+            {sendLoading === "email" ? "Sending…" : "Send code to my email"}
           </Button>
-        </CardFooter>
-      </form>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-foreground">SMS</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full justify-start"
+            onClick={() => handleSendCode("sms")}
+            disabled={sendLoading !== null}
+          >
+            <MessageCircle className="h-4 w-4 mr-2" />
+            {sendLoading === "sms" ? "Sending…" : "Send code via SMS"}
+          </Button>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button type="button" variant="ghost" className="w-full" asChild>
+          <Link href="/login">Back to sign in</Link>
+        </Button>
+      </CardFooter>
     </Card>
   );
 }

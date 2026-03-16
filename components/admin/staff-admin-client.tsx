@@ -80,6 +80,8 @@ export function StaffAdminClient({
   const [inviteOpen, setInviteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<StaffRow | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [reset2faTarget, setReset2faTarget] = useState<StaffRow | null>(null);
+  const [reset2faLoading, setReset2faLoading] = useState(false);
   const router = useRouter();
 
   const handleDeleteClick = useCallback((s: StaffRow) => setDeleteTarget(s), []);
@@ -99,6 +101,27 @@ export function StaffAdminClient({
       setDeleteLoading(false);
     }
   }, [deleteTarget, router]);
+
+  const handleReset2faClick = useCallback((s: StaffRow) => setReset2faTarget(s), []);
+
+  const handleReset2faConfirm = useCallback(async () => {
+    if (!reset2faTarget) return;
+    setReset2faLoading(true);
+    try {
+      const res = await fetch(`/api/admin/settings/users/${reset2faTarget.id}/reset-2fa`, {
+        method: "POST",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error ?? "Failed to reset 2FA");
+        return;
+      }
+      setReset2faTarget(null);
+      router.refresh();
+    } finally {
+      setReset2faLoading(false);
+    }
+  }, [reset2faTarget, router]);
 
   const roleOptions: SelectOption[] = [
     { value: "", label: "All roles" },
@@ -236,6 +259,16 @@ export function StaffAdminClient({
                   <Key className="mr-2 h-4 w-4" />
                   Reset password
                 </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleReset2faClick(s);
+                }}
+              >
+                <Key className="mr-2 h-4 w-4" />
+                Reset 2FA
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href={`/admin/staff/${s.id}#activity`}>
@@ -408,6 +441,29 @@ export function StaffAdminClient({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <Button variant="destructive" disabled={deleteLoading} onClick={handleDeleteConfirm}>
               {deleteLoading ? "Deleting…" : "Delete"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset 2FA confirmation dialog */}
+      <AlertDialog open={!!reset2faTarget} onOpenChange={(open) => !open && setReset2faTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset two-factor authentication?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {reset2faTarget && (
+                <>
+                  This will clear 2FA for {reset2faTarget.name ?? reset2faTarget.email}. The next time
+                  they sign in, they will need to set up 2FA again before accessing admin tools.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button variant="destructive" disabled={reset2faLoading} onClick={handleReset2faConfirm}>
+              {reset2faLoading ? "Resetting…" : "Reset 2FA"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
