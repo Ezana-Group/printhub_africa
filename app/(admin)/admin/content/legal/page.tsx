@@ -2,6 +2,7 @@ import { requireAdminSettings } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { AdminBreadcrumbs } from "@/components/admin/admin-breadcrumbs";
+import { LegalPagesSeedButton } from "@/components/admin/legal-pages-seed-button";
 
 export default async function AdminContentLegalPage() {
   await requireAdminSettings();
@@ -23,6 +24,7 @@ export default async function AdminContentLegalPage() {
           Edit the legal pages shown on your website. Changes go live when you save & publish.
         </p>
       </div>
+      {pages.length === 0 && <LegalPagesSeedButton />}
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 border-b border-slate-200">
