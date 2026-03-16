@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
@@ -90,6 +90,24 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [oauthProviders, setOauthProviders] = useState<{
+    google: boolean;
+    facebook: boolean;
+    apple: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/providers")
+      .then((r) => r.json())
+      .then((data) =>
+        setOauthProviders({
+          google: !!data.google,
+          facebook: !!data.facebook,
+          apple: !!data.apple,
+        })
+      )
+      .catch(() => setOauthProviders({ google: false, facebook: false, apple: false }));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,9 +159,9 @@ export default function LoginPage() {
   };
 
 
-  const showGoogle = !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-  const showFacebook = !!process.env.NEXT_PUBLIC_FACEBOOK_APP_ID;
-  const showApple = !!process.env.NEXT_PUBLIC_APPLE_CLIENT_ID;
+  const showGoogle = oauthProviders?.google ?? !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const showFacebook = oauthProviders?.facebook ?? !!process.env.NEXT_PUBLIC_FACEBOOK_APP_ID;
+  const showApple = oauthProviders?.apple ?? !!process.env.NEXT_PUBLIC_APPLE_CLIENT_ID;
   const showSocial = showGoogle || showFacebook || showApple;
 
   return (

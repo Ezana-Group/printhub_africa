@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -292,9 +293,11 @@ export function StaffDetailTabs({
                     <Label className="text-xs text-[#6B7280]">Profile photo</Label>
                     <div className="flex items-center gap-3 mt-1">
                       {user.staff.profilePhotoUrl ? (
-                        <img
+                        <Image
                           src={user.staff.profilePhotoUrl}
                           alt={user.name ?? "Staff"}
+                          width={56}
+                          height={56}
                           className="w-14 h-14 rounded-full object-cover border border-[#E5E7EB]"
                         />
                       ) : (

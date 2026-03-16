@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { EditableSection } from "@/components/admin/editable-section";
+import Image from "next/image";
 import { FileUploader } from "@/components/upload/FileUploader";
 
 const EMPTY: Record<string, string> = {};
@@ -145,7 +146,7 @@ export function SettingsBusinessClient({
             <div className="flex flex-wrap items-center justify-between gap-2 py-2 border-b border-border/50 hover:bg-muted/30 rounded px-1 -mx-1">
               <span className="text-sm text-muted-foreground">Logo</span>
               {getStr(data, "logo") ? (
-                <img src={getStr(data, "logo")} alt="Logo" className="h-10 w-auto object-contain max-w-[200px]" />
+                <Image src={getStr(data, "logo")} alt="Logo" width={200} height={40} className="h-10 w-auto object-contain max-w-[200px]" />
               ) : (
                 <span className="text-sm font-medium text-muted-foreground">—</span>
               )}
@@ -153,7 +154,7 @@ export function SettingsBusinessClient({
             <div className="flex flex-wrap items-center justify-between gap-2 py-2 border-b border-border/50 last:border-0 hover:bg-muted/30 rounded px-1 -mx-1">
               <span className="text-sm text-muted-foreground">Favicon</span>
               {getStr(data, "favicon") ? (
-                <img src={getStr(data, "favicon")} alt="Favicon" className="h-8 w-8 object-contain" />
+                <Image src={getStr(data, "favicon")} alt="Favicon" width={32} height={32} className="h-8 w-8 object-contain" />
               ) : (
                 <span className="text-sm font-medium text-muted-foreground">—</span>
               )}
@@ -200,7 +201,7 @@ export function SettingsBusinessClient({
               <p className="text-xs text-muted-foreground">Min 400×400px recommended. PNG, JPG or WEBP. Used in header and invoices.</p>
               {getStr(data, "logo") && (
                 <div className="flex items-center gap-3 py-2">
-                  <img src={getStr(data, "logo")} alt="Current logo" className="h-14 w-auto object-contain rounded border border-border" />
+                  <Image src={getStr(data, "logo")} alt="Current logo" width={56} height={56} className="h-14 w-auto object-contain rounded border border-border" />
                   <button
                     type="button"
                     onClick={() => update("logo", "")}
@@ -233,7 +234,7 @@ export function SettingsBusinessClient({
               </p>
               {getStr(data, "favicon") && (
                 <div className="flex items-center gap-3 py-2">
-                  <img src={getStr(data, "favicon")} alt="Current favicon" className="h-8 w-8 object-contain rounded border border-border" />
+                  <Image src={getStr(data, "favicon")} alt="Current favicon" width={32} height={32} className="h-8 w-8 object-contain rounded border border-border" />
                   <button
                     type="button"
                     onClick={() => update("favicon", "")}

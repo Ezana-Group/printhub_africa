@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { safePublicFileUrl } from "@/lib/r2";
 import { Button } from "@/components/ui/button";
@@ -84,10 +85,12 @@ export async function FeaturedCatalogueSection() {
                 <Link href={`/catalogue/${item.slug}`}>
                   <div className="aspect-square bg-slate-100 relative overflow-hidden">
                     {photoUrl ? (
-                      <img
+                      <Image
                         src={photoUrl}
                         alt={primaryPhoto?.altText ?? item.name}
-                        className="absolute inset-0 w-full h-full object-cover"
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 288px, 272px"
                       />
                     ) : null}
                   </div>

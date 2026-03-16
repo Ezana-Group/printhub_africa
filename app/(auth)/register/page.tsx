@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { Building2 } from "lucide-react";
@@ -20,6 +20,24 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [oauthProviders, setOauthProviders] = useState<{
+    google: boolean;
+    facebook: boolean;
+    apple: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/providers")
+      .then((r) => r.json())
+      .then((data) =>
+        setOauthProviders({
+          google: !!data.google,
+          facebook: !!data.facebook,
+          apple: !!data.apple,
+        })
+      )
+      .catch(() => setOauthProviders({ google: false, facebook: false, apple: false }));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -217,9 +235,9 @@ export default function RegisterPage() {
           >
             {loading ? "Creating account…" : "Create account"}
           </Button>
-          {(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
-            process.env.NEXT_PUBLIC_FACEBOOK_APP_ID ||
-            process.env.NEXT_PUBLIC_APPLE_CLIENT_ID) && (
+          {((oauthProviders?.google ?? process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) ||
+            (oauthProviders?.facebook ?? process.env.NEXT_PUBLIC_FACEBOOK_APP_ID) ||
+            (oauthProviders?.apple ?? process.env.NEXT_PUBLIC_APPLE_CLIENT_ID)) && (
             <>
               <div className="relative w-full">
                 <span className="absolute inset-0 flex items-center">
@@ -230,7 +248,7 @@ export default function RegisterPage() {
                 </span>
               </div>
               <div className="grid grid-cols-1 gap-2 w-full">
-                {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
+                {(oauthProviders?.google ?? process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) && (
                   <Button
                     type="button"
                     variant="secondary"
@@ -240,7 +258,7 @@ export default function RegisterPage() {
                     Google
                   </Button>
                 )}
-                {process.env.NEXT_PUBLIC_FACEBOOK_APP_ID && (
+                {(oauthProviders?.facebook ?? process.env.NEXT_PUBLIC_FACEBOOK_APP_ID) && (
                   <Button
                     type="button"
                     variant="secondary"
@@ -250,7 +268,7 @@ export default function RegisterPage() {
                     Facebook
                   </Button>
                 )}
-                {process.env.NEXT_PUBLIC_APPLE_CLIENT_ID && (
+                {(oauthProviders?.apple ?? process.env.NEXT_PUBLIC_APPLE_CLIENT_ID) && (
                   <Button
                     type="button"
                     variant="secondary"
