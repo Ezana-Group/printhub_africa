@@ -48,10 +48,18 @@ export async function GET(req: Request) {
   return NextResponse.redirect(new URL("/login?verified=1", baseUrl));
 }
 
-/** Use request host so redirect lands on the same site the user clicked (e.g. localhost vs production). */
+/** Use request host so redirect lands on the same site the user clicked. Avoid 0.0.0.0 (Safari blocks it). */
 function getRedirectBase(req: Request): string {
   try {
     const url = new URL(req.url);
+    const host = url.hostname;
+    // Browsers block 0.0.0.0 and restricted ports; use configured app URL or localhost so redirect works
+    if (host === "0.0.0.0" || host === "::") {
+      const fallback = process.env.NEXT_PUBLIC_APP_URL ?? "https://printhub.africa";
+      if (fallback && !fallback.includes("0.0.0.0")) return fallback.replace(/\/$/, "");
+      const port = url.port || (url.protocol === "https:" ? "443" : "80");
+      return `${url.protocol === "https:" ? "https" : "http"}://localhost${port === "80" || port === "443" ? "" : `:${port}`}`;
+    }
     return url.origin;
   } catch {
     return process.env.NEXT_PUBLIC_APP_URL ?? "https://printhub.africa";
