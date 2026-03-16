@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { AdminNav } from "@/components/admin/admin-nav";
+import { AdminHeaderClient } from "@/components/admin/admin-header-client";
 import { EditableSectionProvider } from "@/components/admin/editable-section-context";
 
 const ADMIN_ROLES = ["STAFF", "ADMIN", "SUPER_ADMIN"];
@@ -31,14 +32,10 @@ export default async function AdminLayout({
           <AdminNav role={role} permissions={permissions} newQuotesCount={newQuotesCount} />
         </div>
       </aside>
-      <header className="fixed top-0 left-56 right-0 z-30 h-14 border-b border-border bg-card flex items-center justify-between px-6">
-        <span className="text-sm text-muted-foreground">
-          {session.user?.name ?? session.user?.email}
-        </span>
-        <Link href="/" className="text-sm text-primary hover:underline">
-          View site
-        </Link>
-      </header>
+      <AdminHeaderClient
+        userName={session.user?.name ?? undefined}
+        userEmail={session.user?.email ?? undefined}
+      />
       <EditableSectionProvider>
         <main className="fixed left-56 top-14 right-0 bottom-0 overflow-y-auto overflow-x-hidden bg-[#F9FAFB]">
           {children}

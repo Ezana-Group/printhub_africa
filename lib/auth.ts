@@ -7,6 +7,7 @@ import AppleProvider from "next-auth/providers/apple";
 import EmailProvider from "next-auth/providers/email";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { verifySync } from "otplib";
 import { sendEmail } from "@/lib/email";
 
 /** Cache staff permissions by userId with 5 min TTL to avoid DB hit on every request. */
@@ -95,11 +96,28 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        totpCode: { label: "2FA Code", type: "text" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            phone: true,
+            profileImage: true,
+            role: true,
+            passwordHash: true,
+            status: true,
+            lockedUntil: true,
+            failedLoginAttempts: true,
+            totpSecret: true,
+            twoFaMethod: true,
+            otpCodeHash: true,
+            otpExpiresAt: true,
+          },
         });
         if (!user?.passwordHash) return null;
         if (user.status === "DEACTIVATED") return null;
@@ -121,6 +139,85 @@ export const authOptions: NextAuthOptions = {
             },
           });
           return null;
+        }
+
+        const method = user.twoFaMethod ?? (user.totpSecret ? "totp" : null);
+        const code = (credentials.totpCode ?? "").trim();
+
+        if (method === "totp" && user.totpSecret) {
+          if (!code || code.length !== 6) throw new Error("2FA_REQUIRED");
+          try {
+            const result = verifySync({ secret: user.totpSecret, token: code });
+            if (!result.valid) return null;
+          } catch {
+            return null;
+          }
+        } else if (method === "email") {
+          if (!code || code.length !== 6) {
+            const sixDigit = String(Math.floor(100000 + Math.random() * 900000));
+            const hash = await bcrypt.hash(sixDigit, 10);
+            const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { otpCodeHash: hash, otpExpiresAt: expiresAt },
+            });
+            await sendEmail({
+              to: user.email,
+              subject: "Your PrintHub sign-in code",
+              html: `
+                <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+                  <h1 style="color: #FF4D00;">PrintHub</h1>
+                  <p>Your sign-in code is: <strong>${sixDigit}</strong></p>
+                  <p>It expires in 10 minutes. If you didn't request this, ignore this email.</p>
+                  <p style="color: #6B6B6B; font-size: 12px;">PrintHub · Nairobi, Kenya</p>
+                </div>
+              `,
+            });
+            throw new Error("2FA_REQUIRED");
+          }
+          if (!user.otpCodeHash || !user.otpExpiresAt || user.otpExpiresAt < new Date()) return null;
+          if (!(await bcrypt.compare(code, user.otpCodeHash))) return null;
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { otpCodeHash: null, otpExpiresAt: null },
+          });
+        } else if (method === "sms") {
+          if (!code || code.length !== 6) {
+            const sixDigit = String(Math.floor(100000 + Math.random() * 900000));
+            const hash = await bcrypt.hash(sixDigit, 10);
+            const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { otpCodeHash: hash, otpExpiresAt: expiresAt },
+            });
+            const phone = user.phone?.replace(/\D/g, "");
+            if (phone) {
+              try {
+                const { sendSms } = await import("@/lib/sms");
+                await sendSms({
+                  to: phone.startsWith("+") ? phone : `+${phone}`,
+                  body: `Your PrintHub sign-in code is ${sixDigit}. Expires in 10 minutes.`,
+                });
+              } catch (err) {
+                console.error("SMS 2FA send error:", err);
+              }
+            }
+            throw new Error("2FA_REQUIRED");
+          }
+          if (!user.otpCodeHash || !user.otpExpiresAt || user.otpExpiresAt < new Date()) return null;
+          if (!(await bcrypt.compare(code, user.otpCodeHash))) return null;
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { otpCodeHash: null, otpExpiresAt: null },
+          });
+        } else if (user.totpSecret) {
+          if (!code || code.length !== 6) throw new Error("2FA_REQUIRED");
+          try {
+            const result = verifySync({ secret: user.totpSecret, token: code });
+            if (!result.valid) return null;
+          } catch {
+            return null;
+          }
         }
 
         await prisma.user.update({

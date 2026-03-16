@@ -24,6 +24,7 @@ interface MyAccountFormProps {
   email: string;
   phone?: string | null;
   twoFaEnabled?: boolean;
+  twoFaMethod?: string | null;
   pinSet?: boolean;
   role?: string;
   position?: string | null;
@@ -37,6 +38,7 @@ export function MyAccountForm({
   email,
   phone = null,
   twoFaEnabled = false,
+  twoFaMethod = null,
   pinSet = false,
   role = "STAFF",
   position = null,
@@ -411,20 +413,81 @@ export function MyAccountForm({
 
       <SectionCard
         title="Two-Factor Authentication"
-        description="Admin accounts require 2FA. Highly recommended for all staff."
+        description="Admin accounts require 2FA. Choose authenticator app, email code, or SMS code."
       >
-        <p className="text-sm text-muted-foreground">
-          Status: {twoFaEnabled ? "Enabled" : "Disabled"}
+        <p className="text-sm text-muted-foreground mb-2">
+          Status: {twoFaEnabled ? `Enabled (${twoFaMethod === "totp" ? "Authenticator app" : twoFaMethod === "email" ? "Email code" : twoFaMethod === "sms" ? "SMS code" : "Authenticator"})` : "Disabled"}
         </p>
         {!twoFaEnabled && (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleEnable2FAClick}
-            disabled={twoFaLoading}
-          >
-            {twoFaLoading ? "Starting…" : "Enable 2FA"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleEnable2FAClick}
+              disabled={twoFaLoading}
+            >
+              {twoFaLoading ? "Starting…" : "Authenticator app"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={twoFaLoading}
+              onClick={async () => {
+                setTwoFaLoading(true);
+                setTwoFaError(null);
+                try {
+                  const res = await fetch("/api/admin/settings/my-account/2fa/setup-method", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ method: "email" }),
+                  });
+                  const data = await res.json().catch(() => ({}));
+                  if (!res.ok) {
+                    setTwoFaError(data.error ?? "Failed to enable");
+                    return;
+                  }
+                  router.refresh();
+                } catch {
+                  setTwoFaError("Something went wrong");
+                } finally {
+                  setTwoFaLoading(false);
+                }
+              }}
+            >
+              Email code
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={twoFaLoading}
+              onClick={async () => {
+                setTwoFaLoading(true);
+                setTwoFaError(null);
+                try {
+                  const res = await fetch("/api/admin/settings/my-account/2fa/setup-method", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ method: "sms" }),
+                  });
+                  const data = await res.json().catch(() => ({}));
+                  if (!res.ok) {
+                    setTwoFaError(data.error ?? "Failed to enable");
+                    return;
+                  }
+                  router.refresh();
+                } catch {
+                  setTwoFaError("Something went wrong");
+                } finally {
+                  setTwoFaLoading(false);
+                }
+              }}
+            >
+              SMS code
+            </Button>
+          </div>
+        )}
+        {twoFaError && (
+          <p className="text-sm text-destructive font-medium mt-2">{twoFaError}</p>
         )}
       </SectionCard>
 

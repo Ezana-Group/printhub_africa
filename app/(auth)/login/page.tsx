@@ -62,6 +62,8 @@ function getCallbackUrl() {
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [totpCode, setTotpCode] = useState("");
+  const [needs2FA, setNeeds2FA] = useState(false);
   const [magicEmail, setMagicEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [magicLoading, setMagicLoading] = useState(false);
@@ -72,13 +74,25 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    await signIn("credentials", {
+    const result = await signIn("credentials", {
       email,
       password,
+      totpCode: totpCode.trim() || undefined,
       callbackUrl: getCallbackUrl(),
-      redirect: true,
+      redirect: false,
     });
     setLoading(false);
+    if (result?.error === "2FA_REQUIRED") {
+      setNeeds2FA(true);
+      return;
+    }
+    if (result?.ok && result?.url) {
+      window.location.href = result.url;
+      return;
+    }
+    if (result?.error) {
+      setError(result.error === "CredentialsSignin" ? "Invalid email or password." : result.error);
+    }
   };
 
   const handleMagicLink = async (e: React.FormEvent) => {
@@ -149,11 +163,29 @@ export default function LoginPage() {
               autoComplete="current-password"
             />
           </div>
+          {needs2FA && (
+            <div className="space-y-2">
+              <Label htmlFor="totpCode">Authentication code</Label>
+              <Input
+                id="totpCode"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                placeholder="000000"
+                maxLength={6}
+                value={totpCode}
+                onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              />
+              <p className="text-xs text-muted-foreground">
+                Enter the 6-digit code from your authenticator app, or the code we sent to your email or phone.
+              </p>
+            </div>
+          )}
         </CardContent>
       </form>
       <CardFooter className="flex flex-col gap-4">
           <Button type="submit" form="login-credentials" className="w-full" disabled={loading}>
-            {loading ? "Signing in…" : "Sign in"}
+            {loading ? "Signing in…" : needs2FA ? "Verify and sign in" : "Sign in"}
           </Button>
           {showSocial && (
             <>
