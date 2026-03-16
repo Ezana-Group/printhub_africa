@@ -70,6 +70,11 @@ function LoginMessages({
           Verification link invalid or expired.
         </p>
       )}
+      {errorParam === "VerifyFailed" && (
+        <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-2">
+          Verification could not be completed. Please try &quot;Resend verification email&quot; or sign in again later.
+        </p>
+      )}
       {(error || errorParam === "CredentialsSignin") && (
         <div className="space-y-2">
           <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-2">
