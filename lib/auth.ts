@@ -7,7 +7,7 @@ import AppleProvider from "next-auth/providers/apple";
 import EmailProvider from "next-auth/providers/email";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { verifySync } from "otplib";
+import { verify } from "otplib";
 import { sendEmail } from "@/lib/email";
 
 /** Cache staff permissions by userId with 5 min TTL to avoid DB hit on every request. */
@@ -103,7 +103,8 @@ export const authOptions: NextAuthOptions = {
         const twoFaToken = (credentials?.token ?? "").trim();
         const code = (credentials?.totpCode ?? "").trim();
 
-        if (twoFaToken && code.length === 6) {
+        const codeDigits = code.replace(/\D/g, "").slice(0, 6);
+        if (twoFaToken && codeDigits.length === 6) {
           const { verifyTwoFaToken } = await import("@/lib/twofa-token");
           const userId = verifyTwoFaToken(twoFaToken);
           if (!userId) return null;
@@ -114,17 +115,13 @@ export const authOptions: NextAuthOptions = {
           if (!user) return null;
           if (user.totpSecret) {
             try {
-              const result = verifySync({
-                secret: user.totpSecret,
-                token: code,
-                epochTolerance: 1,
-              });
+              const result = verifySync({ secret: user.totpSecret, token: code });
               if (!result.valid) return null;
             } catch {
               return null;
             }
           } else if (user.otpCodeHash && user.otpExpiresAt && user.otpExpiresAt >= new Date()) {
-            if (!(await bcrypt.compare(code, user.otpCodeHash))) return null;
+            if (!(await bcrypt.compare(codeDigits, user.otpCodeHash))) return null;
             await prisma.user.update({
               where: { id: user.id },
               data: { otpCodeHash: null, otpExpiresAt: null },
@@ -146,11 +143,8 @@ export const authOptions: NextAuthOptions = {
         }
 
         if (!credentials?.email || !credentials?.password) return null;
-        const email = String(credentials.email).trim();
-        // Case-insensitive lookup; orderBy id so we always get the same user (2FA, session consistency)
-        const user = await prisma.user.findFirst({
-          where: { email: { equals: email, mode: "insensitive" } },
-          orderBy: { id: "asc" },
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
           select: {
             id: true,
             email: true,
@@ -166,16 +160,11 @@ export const authOptions: NextAuthOptions = {
             twoFaMethod: true,
             otpCodeHash: true,
             otpExpiresAt: true,
-            emailVerified: true,
           },
         });
         if (!user?.passwordHash) return null;
         if (user.status === "DEACTIVATED") return null;
         if (user.status === "INVITE_PENDING") return null;
-
-        if (!user.emailVerified) {
-          throw new Error("EMAIL_NOT_VERIFIED");
-        }
 
         if (user.lockedUntil && user.lockedUntil > new Date()) {
           throw new Error("Account locked. Try again after 15 minutes.");
@@ -199,13 +188,10 @@ export const authOptions: NextAuthOptions = {
         const totpCode = (credentials.totpCode ?? "").trim();
 
         if (method === "totp" && user.totpSecret) {
-          if (!totpCode || totpCode.length !== 6) throw new Error("2FA_REQUIRED");
+          const totpDigits = (totpCode ?? "").replace(/\D/g, "").slice(0, 6);
+          if (!totpDigits || totpDigits.length !== 6) throw new Error("2FA_REQUIRED");
           try {
-            const result = verifySync({
-              secret: user.totpSecret,
-              token: totpCode,
-              epochTolerance: 1,
-            });
+            const result = verifySync({ secret: user.totpSecret, token: totpCode });
             if (!result.valid) return null;
           } catch {
             return null;
@@ -269,13 +255,10 @@ export const authOptions: NextAuthOptions = {
             data: { otpCodeHash: null, otpExpiresAt: null },
           });
         } else if (user.totpSecret) {
-          if (!totpCode || totpCode.length !== 6) throw new Error("2FA_REQUIRED");
+          const totpDigits = (totpCode ?? "").replace(/\D/g, "").slice(0, 6);
+          if (!totpDigits || totpDigits.length !== 6) throw new Error("2FA_REQUIRED");
           try {
-            const result = verifySync({
-              secret: user.totpSecret,
-              token: totpCode,
-              epochTolerance: 1,
-            });
+            const result = verifySync({ secret: user.totpSecret, token: totpCode });
             if (!result.valid) return null;
           } catch {
             return null;

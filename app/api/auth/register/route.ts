@@ -25,7 +25,7 @@ const schema = z
     marketingConsent: z.boolean().optional().default(false),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords do not match.",
+    message: "Password and confirm password do not match.",
     path: ["confirmPassword"],
   });
 
@@ -46,9 +46,8 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    const { email: rawEmail, password, firstName, lastName, marketingConsent = false } = parsed.data;
-    // confirmPassword validated by refine; not used further
-    const email = rawEmail.trim().toLowerCase();
+    const { email, password, firstName, lastName, marketingConsent = false } = parsed.data;
+    // confirmPassword was already validated by refine()
     const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(" ");
 
     const existing = await prisma.user.findUnique({ where: { email } });

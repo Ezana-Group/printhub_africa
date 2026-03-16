@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
@@ -36,27 +36,15 @@ function AppleIcon({ className }: { className?: string }) {
   );
 }
 
-const EMAIL_NOT_VERIFIED_MSG = "Please verify your email before signing in. Check your inbox for the verification link.";
-
 /** Messages that depend on searchParams; wrapped in Suspense so the form can render immediately (fixes WebKit E2E). */
 function LoginMessages({
   error,
   errorParam,
   verified,
-  showResend,
-  resendLoading,
-  resendSuccess,
-  resendError,
-  onResend,
 }: {
   error: string;
   errorParam: string | null;
   verified: string | null;
-  showResend: boolean;
-  resendLoading: boolean;
-  resendSuccess: boolean;
-  resendError: string;
-  onResend: () => void;
 }) {
   return (
     <>
@@ -70,74 +58,20 @@ function LoginMessages({
           Verification link invalid or expired.
         </p>
       )}
-      {errorParam === "VerifyFailed" && (
-        <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-2">
-          Verification could not be completed. Please try &quot;Resend verification email&quot; or sign in again later.
-        </p>
-      )}
       {(error || errorParam === "CredentialsSignin") && (
-        <div className="space-y-2">
-          <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-2">
-            {error || (errorParam === "CredentialsSignin" ? "Invalid email or password." : errorParam ?? "")}
-          </p>
-          {showResend && (
-            <div className="flex flex-col gap-1.5">
-              <button
-                type="button"
-                onClick={onResend}
-                disabled={resendLoading}
-                className="text-sm text-primary hover:underline text-left disabled:opacity-50"
-              >
-                {resendLoading ? "Sending…" : "Resend verification email"}
-              </button>
-              {resendSuccess && (
-                <p className="text-sm text-success bg-success/10 border border-success/30 rounded-md p-2">
-                  Check your inbox and click the link, then sign in again.
-                </p>
-              )}
-              {resendError && (
-                <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-2">
-                  {resendError}
-                </p>
-              )}
-            </div>
-          )}
-        </div>
+        <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-2">
+          {error || (errorParam === "CredentialsSignin" ? "Invalid email or password." : errorParam ?? "")}
+        </p>
       )}
     </>
   );
 }
 
-function LoginMessagesWithParams({
-  error,
-  showResend,
-  resendLoading,
-  resendSuccess,
-  resendError,
-  onResend,
-}: {
-  error: string;
-  showResend: boolean;
-  resendLoading: boolean;
-  resendSuccess: boolean;
-  resendError: string;
-  onResend: () => void;
-}) {
+function LoginMessagesWithParams({ error }: { error: string }) {
   const searchParams = useSearchParams();
   const verified = searchParams.get("verified");
   const errorParam = searchParams.get("error");
-  return (
-    <LoginMessages
-      error={error}
-      errorParam={errorParam}
-      verified={verified}
-      showResend={showResend}
-      resendLoading={resendLoading}
-      resendSuccess={resendSuccess}
-      resendError={resendError}
-      onResend={onResend}
-    />
-  );
+  return <LoginMessages error={error} errorParam={errorParam} verified={verified} />;
 }
 
 /**
@@ -156,35 +90,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [emailNotVerified, setEmailNotVerified] = useState(false);
-  const [resendLoading, setResendLoading] = useState(false);
-  const [resendSuccess, setResendSuccess] = useState(false);
-  const [resendError, setResendError] = useState("");
-  const [oauthProviders, setOauthProviders] = useState<{
-    google: boolean;
-    facebook: boolean;
-    apple: boolean;
-  } | null>(null);
-
-  useEffect(() => {
-    fetch("/api/auth/providers")
-      .then((r) => r.json())
-      .then((data) =>
-        setOauthProviders({
-          google: !!data.google,
-          facebook: !!data.facebook,
-          apple: !!data.apple,
-        })
-      )
-      .catch(() => setOauthProviders({ google: false, facebook: false, apple: false }));
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setResendSuccess(false);
-    setResendError("");
-    setEmailNotVerified(false);
     setLoading(true);
     try {
       const res = await fetch("/api/auth/validate-login", {
@@ -196,12 +105,6 @@ export default function LoginPage() {
       if (res.ok && data.requires2FA && data.token) {
         const callbackUrl = getCallbackUrl();
         window.location.href = `/login/verify?t=${encodeURIComponent(data.token)}&callbackUrl=${encodeURIComponent(callbackUrl)}`;
-        return;
-      }
-      if (res.status === 403 && data.error === "EMAIL_NOT_VERIFIED") {
-        setError(data.message ?? EMAIL_NOT_VERIFIED_MSG);
-        setEmailNotVerified(true);
-        setLoading(false);
         return;
       }
       if (res.ok && !data.requires2FA) {
@@ -216,16 +119,10 @@ export default function LoginPage() {
           window.location.href = result.url;
           return;
         }
-        const errMsg = result?.error === "EMAIL_NOT_VERIFIED"
-          ? EMAIL_NOT_VERIFIED_MSG
-          : result?.error === "CredentialsSignin"
-            ? "Invalid email or password."
-            : result?.error ?? "Sign in failed.";
-        setError(errMsg);
-        if (result?.error === "EMAIL_NOT_VERIFIED") setEmailNotVerified(true);
+        setError(result?.error === "CredentialsSignin" ? "Invalid email or password." : result?.error ?? "Sign in failed.");
         return;
       }
-      setError(data.message ?? data.error ?? "Invalid email or password.");
+      setError(data.error ?? "Invalid email or password.");
     } catch {
       setError("Something went wrong");
     } finally {
@@ -233,38 +130,10 @@ export default function LoginPage() {
     }
   };
 
-  const handleResendVerification = async () => {
-    const e = email.trim().toLowerCase();
-    if (!e || !e.includes("@")) {
-      setResendError("Enter your email above and try again.");
-      return;
-    }
-    setResendError("");
-    setResendSuccess(false);
-    setResendLoading(true);
-    try {
-      const res = await fetch("/api/auth/resend-verification", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: e }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        setResendSuccess(true);
-      } else {
-        setResendError(data.error ?? "Failed to send. Try again later.");
-      }
-    } catch {
-      setResendError("Something went wrong. Try again later.");
-    } finally {
-      setResendLoading(false);
-    }
-  };
 
-
-  const showGoogle = oauthProviders?.google ?? !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-  const showFacebook = oauthProviders?.facebook ?? !!process.env.NEXT_PUBLIC_FACEBOOK_APP_ID;
-  const showApple = oauthProviders?.apple ?? !!process.env.NEXT_PUBLIC_APPLE_CLIENT_ID;
+  const showGoogle = !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const showFacebook = !!process.env.NEXT_PUBLIC_FACEBOOK_APP_ID;
+  const showApple = !!process.env.NEXT_PUBLIC_APPLE_CLIENT_ID;
   const showSocial = showGoogle || showFacebook || showApple;
 
   return (
@@ -279,14 +148,7 @@ export default function LoginPage() {
       <form id="login-credentials" onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           <Suspense fallback={null}>
-            <LoginMessagesWithParams
-              error={error}
-              showResend={emailNotVerified}
-              resendLoading={resendLoading}
-              resendSuccess={resendSuccess}
-              resendError={resendError}
-              onResend={handleResendVerification}
-            />
+            <LoginMessagesWithParams error={error} />
           </Suspense>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
@@ -332,41 +194,38 @@ export default function LoginPage() {
                   Or continue with
                 </span>
               </div>
-              <div className="flex justify-center gap-3 w-full">
+              <div className="grid grid-cols-1 gap-2 w-full">
                 {showGoogle && (
                   <Button
                     type="button"
                     variant="outline"
-                    size="icon"
-                    className="h-11 w-11 rounded-full border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700"
+                    className="w-full h-11 gap-3 border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 font-medium"
                     onClick={() => signIn("google", { callbackUrl: getCallbackUrl() })}
-                    aria-label="Sign in with Google"
                   >
                     <GoogleIcon className="h-5 w-5 shrink-0" />
+                    Continue with Google
                   </Button>
                 )}
                 {showFacebook && (
                   <Button
                     type="button"
                     variant="outline"
-                    size="icon"
-                    className="h-11 w-11 rounded-full border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700"
+                    className="w-full h-11 gap-3 border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 font-medium"
                     onClick={() => signIn("facebook", { callbackUrl: getCallbackUrl() })}
-                    aria-label="Sign in with Facebook"
                   >
                     <FacebookIcon className="h-5 w-5 shrink-0" />
+                    Continue with Facebook
                   </Button>
                 )}
                 {showApple && (
                   <Button
                     type="button"
                     variant="outline"
-                    size="icon"
-                    className="h-11 w-11 rounded-full border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700"
+                    className="w-full h-11 gap-3 border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 font-medium"
                     onClick={() => signIn("apple", { callbackUrl: getCallbackUrl() })}
-                    aria-label="Sign in with Apple"
                   >
                     <AppleIcon className="h-5 w-5 shrink-0" />
+                    Continue with Apple
                   </Button>
                 )}
               </div>

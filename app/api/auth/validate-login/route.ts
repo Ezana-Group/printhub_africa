@@ -16,10 +16,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Email and password required" }, { status: 400 });
     }
 
-    // Case-insensitive lookup; orderBy id so we always get the same user when duplicates exist (2FA token must match the account that has 2FA)
-    const user = await prisma.user.findFirst({
-      where: { email: { equals: email, mode: "insensitive" } },
-      orderBy: { id: "asc" },
+    const user = await prisma.user.findUnique({
+      where: { email },
       select: {
         id: true,
         passwordHash: true,
@@ -28,7 +26,6 @@ export async function POST(req: Request) {
         failedLoginAttempts: true,
         totpSecret: true,
         twoFaMethod: true,
-        emailVerified: true,
       },
     });
     if (!user?.passwordHash) {
@@ -50,13 +47,6 @@ export async function POST(req: Request) {
         data: { failedLoginAttempts: attempts, lockedUntil },
       });
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
-    }
-
-    if (!user.emailVerified) {
-      return NextResponse.json(
-        { error: "EMAIL_NOT_VERIFIED", message: "Please verify your email before signing in. Check your inbox for the verification link." },
-        { status: 403 }
-      );
     }
 
     // Only require 2FA when the user has actually set it up on their account (authenticator, email, or SMS).

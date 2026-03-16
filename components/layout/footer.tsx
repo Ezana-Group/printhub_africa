@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Instagram, Facebook, Linkedin, X, Youtube, MapPin, Phone, Mail, Clock } from "lucide-react";
 import { ContactModal } from "@/components/contact/ContactModal";
 import type { BusinessPublic } from "@/lib/business-public";
@@ -75,11 +74,9 @@ export function Footer({ business }: { business: BusinessPublic }) {
           <div className="grid grid-cols-2 md:grid-cols-6 gap-10">
             <div className="col-span-2 md:col-span-1">
               <Link href="/" className="inline-block">
-                <Image
+                <img
                   src="/logo-white.png"
                   alt={business.businessName}
-                  width={140}
-                  height={36}
                   className="h-9 w-auto max-w-[140px] object-contain object-left"
                 />
               </Link>
