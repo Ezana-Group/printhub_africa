@@ -60,7 +60,8 @@ async function sendWithTemplate(
 
 export async function sendVerificationEmail(email: string, token: string) {
   const { businessName, footer } = await getEmailBranding();
-  const url = `${baseUrl}/verify-email?token=${token}`;
+  // Link must hit the API so the token is consumed and emailVerified is set (the /verify-email page is informational only)
+  const url = `${baseUrl}/api/auth/verify-email?token=${encodeURIComponent(token)}`;
   const context = { businessName, footer, verifyUrl: url };
   const defaultSubject = `Verify your ${businessName} account`;
   const defaultHtml = `
