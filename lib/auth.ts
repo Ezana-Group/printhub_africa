@@ -97,8 +97,50 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
         totpCode: { label: "2FA Code", type: "text" },
+        token: { label: "2FA token", type: "text" },
       },
       async authorize(credentials) {
+        const twoFaToken = (credentials?.token ?? "").trim();
+        const code = (credentials?.totpCode ?? "").trim();
+
+        if (twoFaToken && code.length === 6) {
+          const { verifyTwoFaToken } = await import("@/lib/twofa-token");
+          const userId = verifyTwoFaToken(twoFaToken);
+          if (!userId) return null;
+          const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, email: true, name: true, profileImage: true, role: true, totpSecret: true, twoFaMethod: true, otpCodeHash: true, otpExpiresAt: true },
+          });
+          if (!user) return null;
+          if (user.totpSecret) {
+            try {
+              const result = verifySync({ secret: user.totpSecret, token: code });
+              if (!result.valid) return null;
+            } catch {
+              return null;
+            }
+          } else if (user.otpCodeHash && user.otpExpiresAt && user.otpExpiresAt >= new Date()) {
+            if (!(await bcrypt.compare(code, user.otpCodeHash))) return null;
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { otpCodeHash: null, otpExpiresAt: null },
+            });
+          } else {
+            return null;
+          }
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { failedLoginAttempts: 0, lockedUntil: null },
+          });
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            image: user.profileImage ?? undefined,
+            role: user.role,
+          };
+        }
+
         if (!credentials?.email || !credentials?.password) return null;
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
@@ -142,18 +184,18 @@ export const authOptions: NextAuthOptions = {
         }
 
         const method = user.twoFaMethod ?? (user.totpSecret ? "totp" : null);
-        const code = (credentials.totpCode ?? "").trim();
+        const totpCode = (credentials.totpCode ?? "").trim();
 
         if (method === "totp" && user.totpSecret) {
-          if (!code || code.length !== 6) throw new Error("2FA_REQUIRED");
+          if (!totpCode || totpCode.length !== 6) throw new Error("2FA_REQUIRED");
           try {
-            const result = verifySync({ secret: user.totpSecret, token: code });
+            const result = verifySync({ secret: user.totpSecret, token: totpCode });
             if (!result.valid) return null;
           } catch {
             return null;
           }
         } else if (method === "email") {
-          if (!code || code.length !== 6) {
+          if (!totpCode || totpCode.length !== 6) {
             const sixDigit = String(Math.floor(100000 + Math.random() * 900000));
             const hash = await bcrypt.hash(sixDigit, 10);
             const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
@@ -176,13 +218,13 @@ export const authOptions: NextAuthOptions = {
             throw new Error("2FA_REQUIRED");
           }
           if (!user.otpCodeHash || !user.otpExpiresAt || user.otpExpiresAt < new Date()) return null;
-          if (!(await bcrypt.compare(code, user.otpCodeHash))) return null;
+          if (!(await bcrypt.compare(totpCode, user.otpCodeHash))) return null;
           await prisma.user.update({
             where: { id: user.id },
             data: { otpCodeHash: null, otpExpiresAt: null },
           });
         } else if (method === "sms") {
-          if (!code || code.length !== 6) {
+          if (!totpCode || totpCode.length !== 6) {
             const sixDigit = String(Math.floor(100000 + Math.random() * 900000));
             const hash = await bcrypt.hash(sixDigit, 10);
             const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
@@ -205,15 +247,15 @@ export const authOptions: NextAuthOptions = {
             throw new Error("2FA_REQUIRED");
           }
           if (!user.otpCodeHash || !user.otpExpiresAt || user.otpExpiresAt < new Date()) return null;
-          if (!(await bcrypt.compare(code, user.otpCodeHash))) return null;
+          if (!(await bcrypt.compare(totpCode, user.otpCodeHash))) return null;
           await prisma.user.update({
             where: { id: user.id },
             data: { otpCodeHash: null, otpExpiresAt: null },
           });
         } else if (user.totpSecret) {
-          if (!code || code.length !== 6) throw new Error("2FA_REQUIRED");
+          if (!totpCode || totpCode.length !== 6) throw new Error("2FA_REQUIRED");
           try {
-            const result = verifySync({ secret: user.totpSecret, token: code });
+            const result = verifySync({ secret: user.totpSecret, token: totpCode });
             if (!result.valid) return null;
           } catch {
             return null;
