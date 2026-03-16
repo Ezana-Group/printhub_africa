@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function RegisterPage() {
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
@@ -34,7 +35,8 @@ export default function RegisterPage() {
         body: JSON.stringify({
           email,
           password,
-          name: name || undefined,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
           acceptTerms: true,
           marketingConsent,
         }),
@@ -45,7 +47,7 @@ export default function RegisterPage() {
         setError(
           typeof err === "string"
             ? err
-            : err?.email?.[0] ?? err?.password?.[0] ?? "Registration failed."
+            : err?.firstName?.[0] ?? err?.lastName?.[0] ?? err?.email?.[0] ?? err?.password?.[0] ?? "Registration failed."
         );
         return;
       }
@@ -89,16 +91,31 @@ export default function RegisterPage() {
               {error}
             </p>
           )}
-          <div className="space-y-2">
-            <Label htmlFor="name">Name (optional)</Label>
-            <Input
-              id="name"
-              type="text"
-              placeholder="Your name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoComplete="name"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">First name</Label>
+              <Input
+                id="firstName"
+                type="text"
+                placeholder="First name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                required
+                autoComplete="given-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last name</Label>
+              <Input
+                id="lastName"
+                type="text"
+                placeholder="Last name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                required
+                autoComplete="family-name"
+              />
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
@@ -163,7 +180,7 @@ export default function RegisterPage() {
           </label>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
-          <Button type="submit" className="w-full" disabled={loading || !acceptTerms}>
+          <Button type="submit" className="w-full" disabled={loading || !acceptTerms || !firstName.trim() || !lastName.trim()}>
             {loading ? "Creating account…" : "Create account"}
           </Button>
           {(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||

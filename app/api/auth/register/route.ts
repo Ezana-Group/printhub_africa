@@ -17,7 +17,8 @@ const passwordSchema = z
 const schema = z.object({
   email: z.string().email(),
   password: passwordSchema,
-  name: z.string().min(1).optional(),
+  firstName: z.string().min(1, "First name is required").max(100),
+  lastName: z.string().min(1, "Last name is required").max(100),
   acceptTerms: z.literal(true).optional(), // optional for backwards compatibility; frontend enforces
   marketingConsent: z.boolean().optional().default(false),
 });
@@ -39,7 +40,8 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    const { email, password, name, marketingConsent = false } = parsed.data;
+    const { email, password, firstName, lastName, marketingConsent = false } = parsed.data;
+    const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(" ");
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -54,7 +56,7 @@ export async function POST(req: Request) {
     const user = await prisma.user.create({
       data: {
         email,
-        name: name ?? null,
+        name: fullName || null,
         passwordHash,
         acceptedTermsAt: now,
         termsVersion: "1.0",
