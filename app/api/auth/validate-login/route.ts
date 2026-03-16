@@ -16,8 +16,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Email and password required" }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email },
+    // Case-insensitive lookup so we match the same user that verify-email updates (avoids duplicate-email casing issues)
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: "insensitive" } },
       select: {
         id: true,
         passwordHash: true,

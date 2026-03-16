@@ -327,38 +327,41 @@ export default function LoginPage() {
                   Or continue with
                 </span>
               </div>
-              <div className="grid grid-cols-1 gap-2 w-full">
+              <div className="flex justify-center gap-3 w-full">
                 {showGoogle && (
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full h-11 gap-3 border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 font-medium"
+                    size="icon"
+                    className="h-11 w-11 rounded-full border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700"
                     onClick={() => signIn("google", { callbackUrl: getCallbackUrl() })}
+                    aria-label="Sign in with Google"
                   >
                     <GoogleIcon className="h-5 w-5 shrink-0" />
-                    Continue with Google
                   </Button>
                 )}
                 {showFacebook && (
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full h-11 gap-3 border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 font-medium"
+                    size="icon"
+                    className="h-11 w-11 rounded-full border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700"
                     onClick={() => signIn("facebook", { callbackUrl: getCallbackUrl() })}
+                    aria-label="Sign in with Facebook"
                   >
                     <FacebookIcon className="h-5 w-5 shrink-0" />
-                    Continue with Facebook
                   </Button>
                 )}
                 {showApple && (
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full h-11 gap-3 border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 font-medium"
+                    size="icon"
+                    className="h-11 w-11 rounded-full border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700"
                     onClick={() => signIn("apple", { callbackUrl: getCallbackUrl() })}
+                    aria-label="Sign in with Apple"
                   >
                     <AppleIcon className="h-5 w-5 shrink-0" />
-                    Continue with Apple
                   </Button>
                 )}
               </div>

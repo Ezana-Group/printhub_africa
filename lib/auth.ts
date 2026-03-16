@@ -142,8 +142,10 @@ export const authOptions: NextAuthOptions = {
         }
 
         if (!credentials?.email || !credentials?.password) return null;
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+        const email = String(credentials.email).trim();
+        // Case-insensitive lookup so we match the same user that verify-email updates
+        const user = await prisma.user.findFirst({
+          where: { email: { equals: email, mode: "insensitive" } },
           select: {
             id: true,
             email: true,
