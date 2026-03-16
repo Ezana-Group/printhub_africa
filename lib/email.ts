@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { getBusinessPublic } from "@/lib/business-public";
+import { getEmailTemplate, renderTemplate } from "@/lib/email-templates";
 
 async function getEmailBranding() {
   const b = await getBusinessPublic();
@@ -43,13 +44,26 @@ export async function sendEmail({
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://printhub.africa";
 
+/** If a template exists for slug, use it; otherwise use default subject/html. */
+async function sendWithTemplate(
+  slug: string,
+  to: string,
+  context: Record<string, string>,
+  defaultSubject: string,
+  defaultHtml: string
+) {
+  const t = await getEmailTemplate(slug);
+  const subject = t ? renderTemplate(t.subject, context) : defaultSubject;
+  const html = t ? renderTemplate(t.bodyHtml, context) : defaultHtml;
+  return sendEmail({ to, subject, html });
+}
+
 export async function sendVerificationEmail(email: string, token: string) {
   const { businessName, footer } = await getEmailBranding();
   const url = `${baseUrl}/verify-email?token=${token}`;
-  return sendEmail({
-    to: email,
-    subject: `Verify your ${businessName} account`,
-    html: `
+  const context = { businessName, footer, verifyUrl: url };
+  const defaultSubject = `Verify your ${businessName} account`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h1 style="color: #FF4D00;">${businessName}</h1>
         <p>Thanks for signing up. Please verify your email by clicking the link below:</p>
@@ -58,17 +72,16 @@ export async function sendVerificationEmail(email: string, token: string) {
         <p>This link expires in 24 hours.</p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("verification", email, context, defaultSubject, defaultHtml);
 }
 
 export async function sendPasswordResetEmail(email: string, token: string) {
   const { businessName, footer } = await getEmailBranding();
   const url = `${baseUrl}/reset-password?token=${token}`;
-  return sendEmail({
-    to: email,
-    subject: `Reset your ${businessName} password`,
-    html: `
+  const context = { businessName, footer, resetUrl: url };
+  const defaultSubject = `Reset your ${businessName} password`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h1 style="color: #FF4D00;">${businessName}</h1>
         <p>You requested a password reset. Click the link below to set a new password:</p>
@@ -77,8 +90,8 @@ export async function sendPasswordResetEmail(email: string, token: string) {
         <p>This link expires in 1 hour. If you didn't request this, ignore this email.</p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("password-reset", email, context, defaultSubject, defaultHtml);
 }
 
 export async function sendQuoteReceivedEmail(
@@ -88,10 +101,9 @@ export async function sendQuoteReceivedEmail(
 ) {
   const { businessName, footer } = await getEmailBranding();
   const quotesUrl = `${baseUrl}/account/quotes`;
-  return sendEmail({
-    to: email,
-    subject: `Quote request ${quoteNumber} received – ${businessName}`,
-    html: `
+  const context = { businessName, footer, quoteNumber, typeLabel, quotesUrl };
+  const defaultSubject = `Quote request ${quoteNumber} received – ${businessName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
         <h2 style="color: #FF4D00;">${businessName} – Quote received</h2>
         <p>We've received your quote request <strong>${quoteNumber}</strong> (${typeLabel}).</p>
@@ -99,8 +111,8 @@ export async function sendQuoteReceivedEmail(
         <p><a href="${quotesUrl}" style="color: #FF4D00; font-weight: bold;">View my quotes</a></p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("quote-received", email, context, defaultSubject, defaultHtml);
 }
 
 export async function sendOrderConfirmationEmail(
@@ -111,10 +123,16 @@ export async function sendOrderConfirmationEmail(
 ) {
   const { businessName, footer } = await getEmailBranding();
   const orderUrl = `${baseUrl}/account/orders`;
-  return sendEmail({
-    to: email,
-    subject: `Order ${orderNumber} confirmed – ${businessName}`,
-    html: `
+  const context = {
+    businessName,
+    footer,
+    orderNumber,
+    orderTotal: total.toLocaleString(),
+    currency,
+    orderUrl,
+  };
+  const defaultSubject = `Order ${orderNumber} confirmed – ${businessName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h1 style="color: #FF4D00;">${businessName}</h1>
         <p>Thank you for your order.</p>
@@ -124,8 +142,8 @@ export async function sendOrderConfirmationEmail(
         <p><a href="${orderUrl}" style="color: #FF4D00; font-weight: bold;">View my orders</a></p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("order-confirmation", email, context, defaultSubject, defaultHtml);
 }
 
 /** Order status update (tracking) — used by createTrackingEvent. */
@@ -137,10 +155,9 @@ export async function sendOrderStatusEmail(
 ) {
   const { businessName, footer } = await getEmailBranding();
   const trackUrl = `${baseUrl}/track?ref=${encodeURIComponent(orderNumber)}`;
-  return sendEmail({
-    to: email,
-    subject: `Order ${orderNumber} – ${title} – ${businessName}`,
-    html: `
+  const context = { businessName, footer, orderNumber, title, description, trackUrl };
+  const defaultSubject = `Order ${orderNumber} – ${title} – ${businessName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h1 style="color: #FF4D00;">${businessName}</h1>
         <p><strong>Order ${orderNumber}</strong></p>
@@ -149,8 +166,8 @@ export async function sendOrderStatusEmail(
         <p><a href="${trackUrl}" style="color: #FF4D00; font-weight: bold;">Track your order</a></p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("order-status", email, context, defaultSubject, defaultHtml);
 }
 
 /** Manual payment submitted — we received your reference; team will confirm within 30 min. */
@@ -161,18 +178,17 @@ export async function sendPaymentReceivedEmail(
   method: string
 ) {
   const { businessName, footer } = await getEmailBranding();
-  return sendEmail({
-    to: email,
-    subject: `Payment reference received – Order ${orderNumber}`,
-    html: `
+  const context = { businessName, footer, orderNumber, reference, method };
+  const defaultSubject = `Payment reference received – Order ${orderNumber}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h1 style="color: #FF4D00;">${businessName}</h1>
         <p>We received your payment reference <strong>${reference}</strong> for order <strong>${orderNumber}</strong>.</p>
         <p>Our team will confirm your ${method} payment within 30 minutes (Mon–Fri 8am–6pm).</p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("payment-received", email, context, defaultSubject, defaultHtml);
 }
 
 /** Staff could not verify manual payment reference — ask customer to contact. */
@@ -183,18 +199,17 @@ export async function sendPaymentRejectedEmail(
 ) {
   const { businessName, footer } = await getEmailBranding();
   const whatsapp = "https://wa.me/254727410320";
-  return sendEmail({
-    to: email,
-    subject: `Payment verification – Order ${orderNumber}`,
-    html: `
+  const context = { businessName, footer, orderNumber, reference, whatsapp };
+  const defaultSubject = `Payment verification – Order ${orderNumber}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h1 style="color: #FF4D00;">${businessName}</h1>
         <p>We couldn't verify the payment reference <strong>${reference}</strong> for order <strong>${orderNumber}</strong>.</p>
         <p>Please contact us on <a href="${whatsapp}" style="color: #FF4D00;">WhatsApp</a> with your M-Pesa receipt so we can complete your order.</p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("payment-rejected", email, context, defaultSubject, defaultHtml);
 }
 
 /** Pay on pickup — order confirmed; pickup code and address sent. */
@@ -205,10 +220,15 @@ export async function sendPickupConfirmationEmail(
   totalKes: number
 ) {
   const { businessName, footer } = await getEmailBranding();
-  return sendEmail({
-    to: email,
-    subject: `Order ${orderNumber} – Pay when you collect`,
-    html: `
+  const context = {
+    businessName,
+    footer,
+    orderNumber,
+    pickupCode,
+    totalKes: totalKes.toLocaleString(),
+  };
+  const defaultSubject = `Order ${orderNumber} – Pay when you collect`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h1 style="color: #FF4D00;">${businessName}</h1>
         <p>Your order <strong>${orderNumber}</strong> is confirmed. You'll pay when you collect.</p>
@@ -217,8 +237,8 @@ export async function sendPickupConfirmationEmail(
         <p>We'll notify you when your order is ready. Bring this code to our Nairobi studio.</p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("pickup-confirmation", email, context, defaultSubject, defaultHtml);
 }
 
 /** When staff sends a quote to the customer (status → quoted). */
@@ -235,10 +255,18 @@ export async function sendQuoteSentToCustomerEmail(
   const breakdownHtml = breakdown
     ? `<p><strong>Breakdown:</strong></p><p style="white-space: pre-wrap;">${breakdown.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`
     : "";
-  return sendEmail({
-    to: email,
-    subject: `Your quote ${quoteNumber} – ${businessName}`,
-    html: `
+  const context = {
+    businessName,
+    footer,
+    quoteNumber,
+    quotedAmountKes: quotedAmountKes.toLocaleString(),
+    breakdown: breakdown ?? "",
+    validity,
+    breakdownHtml,
+    quotesUrl,
+  };
+  const defaultSubject = `Your quote ${quoteNumber} – ${businessName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
         <h2 style="color: #FF4D00;">${businessName} – Your quote</h2>
         <p>We've prepared a quote for your request <strong>${quoteNumber}</strong>.</p>
@@ -248,8 +276,8 @@ export async function sendQuoteSentToCustomerEmail(
         <p><a href="${quotesUrl}" style="color: #FF4D00; font-weight: bold;">View quote &amp; Accept or Decline</a></p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("quote-sent-to-customer", email, context, defaultSubject, defaultHtml);
 }
 
 /** When customer accepts a quote – notify assigned staff (or all sales). */
@@ -261,10 +289,15 @@ export async function sendStaffQuoteAcceptedEmail(
 ) {
   const { businessName } = await getEmailBranding();
   const adminUrl = `${baseUrl}/admin/quotes`;
-  return sendEmail({
-    to: staffEmail,
-    subject: `Quote ${quoteNumber} accepted – ${businessName}`,
-    html: `
+  const context = {
+    businessName,
+    quoteNumber,
+    customerName,
+    quotedAmountKes: quotedAmountKes.toLocaleString(),
+    adminUrl,
+  };
+  const defaultSubject = `Quote ${quoteNumber} accepted – ${businessName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
         <h2 style="color: #FF4D00;">Quote accepted</h2>
         <p><strong>${quoteNumber}</strong> has been accepted by <strong>${customerName}</strong>.</p>
@@ -272,8 +305,8 @@ export async function sendStaffQuoteAcceptedEmail(
         <p><a href="${adminUrl}" style="color: #FF4D00; font-weight: bold;">View in Admin</a></p>
         <p style="color: #6B6B6B; font-size: 12px;">${businessName} Admin</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("staff-quote-accepted", staffEmail, context, defaultSubject, defaultHtml);
 }
 
 /** When a quote is assigned to a staff member. */
@@ -285,28 +318,26 @@ export async function sendStaffQuoteAssignedEmail(
 ) {
   const { businessName } = await getEmailBranding();
   const adminUrl = `${baseUrl}/admin/quotes`;
-  return sendEmail({
-    to: staffEmail,
-    subject: `Quote ${quoteNumber} assigned to you – ${businessName}`,
-    html: `
+  const context = { businessName, quoteNumber, customerName, typeLabel, adminUrl };
+  const defaultSubject = `Quote ${quoteNumber} assigned to you – ${businessName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
         <h2 style="color: #FF4D00;">New quote assigned</h2>
         <p>Quote <strong>${quoteNumber}</strong> (${typeLabel}) from <strong>${customerName}</strong> has been assigned to you.</p>
         <p><a href="${adminUrl}" style="color: #FF4D00; font-weight: bold;">View in Admin</a></p>
         <p style="color: #6B6B6B; font-size: 12px;">${businessName} Admin</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("staff-quote-assigned", staffEmail, context, defaultSubject, defaultHtml);
 }
 
 /** When quote status → in production – notify customer. */
 export async function sendQuoteInProductionEmail(email: string, quoteNumber: string) {
   const { businessName, footer } = await getEmailBranding();
   const quotesUrl = `${baseUrl}/account/quotes`;
-  return sendEmail({
-    to: email,
-    subject: `Quote ${quoteNumber} – Now in production – ${businessName}`,
-    html: `
+  const context = { businessName, footer, quoteNumber, quotesUrl };
+  const defaultSubject = `Quote ${quoteNumber} – Now in production – ${businessName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
         <h2 style="color: #FF4D00;">${businessName} – We're on it</h2>
         <p>Your order for quote <strong>${quoteNumber}</strong> is now in production.</p>
@@ -314,8 +345,8 @@ export async function sendQuoteInProductionEmail(email: string, quoteNumber: str
         <p><a href="${quotesUrl}" style="color: #FF4D00; font-weight: bold;">View my quotes</a></p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("quote-in-production", email, context, defaultSubject, defaultHtml);
 }
 
 // ============== CAREERS ==============
@@ -328,10 +359,9 @@ export async function sendCareerApplicationConfirmationEmail(
 ) {
   const { businessName } = await getEmailBranding();
   const site = process.env.NEXT_PUBLIC_APP_URL?.replace(/^https?:\/\//, "") ?? "printhub.africa";
-  return sendEmail({
-    to: email,
-    subject: `Application received — ${jobTitle} at ${businessName}`,
-    html: `
+  const context = { businessName, firstName, jobTitle, applicationRef, site };
+  const defaultSubject = `Application received — ${jobTitle} at ${businessName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
         <h2 style="color: #FF4D00;">${businessName}</h2>
         <p>Hi ${firstName},</p>
@@ -340,8 +370,8 @@ export async function sendCareerApplicationConfirmationEmail(
         <p>Your application reference: <strong>${applicationRef}</strong></p>
         <p>Best,<br>The ${businessName} Team<br>${site}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("career-application-confirmation", email, context, defaultSubject, defaultHtml);
 }
 
 export async function sendCareerApplicationNotificationToAdmin(
@@ -356,10 +386,18 @@ export async function sendCareerApplicationNotificationToAdmin(
   const { businessName } = await getEmailBranding();
   const site = process.env.NEXT_PUBLIC_APP_URL?.replace(/^https?:\/\//, "") ?? "printhub.africa";
   const viewUrl = `${baseUrl}/admin/careers/applications/${applicationId}`;
-  return sendEmail({
-    to: adminEmail,
-    subject: `New application: ${jobTitle} — ${applicantName}`,
-    html: `
+  const context = {
+    businessName,
+    jobTitle,
+    applicantName,
+    applicantEmail,
+    applicantPhone,
+    appliedAt,
+    viewUrl,
+    site,
+  };
+  const defaultSubject = `New application: ${jobTitle} — ${applicantName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
         <h2 style="color: #FF4D00;">New job application</h2>
         <p><strong>Role:</strong> ${jobTitle}</p>
@@ -370,8 +408,8 @@ export async function sendCareerApplicationNotificationToAdmin(
         <p><a href="${viewUrl}" style="color: #FF4D00; font-weight: bold;">View Application →</a></p>
         <p style="color: #6B6B6B; font-size: 12px;">${businessName} Admin | ${site}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("career-application-admin", adminEmail, context, defaultSubject, defaultHtml);
 }
 
 export async function sendCareerStatusShortlistedEmail(
@@ -381,10 +419,9 @@ export async function sendCareerStatusShortlistedEmail(
 ) {
   const { businessName } = await getEmailBranding();
   const site = process.env.NEXT_PUBLIC_APP_URL?.replace(/^https?:\/\//, "") ?? "printhub.africa";
-  return sendEmail({
-    to: email,
-    subject: `You've been shortlisted — ${jobTitle} at ${businessName}`,
-    html: `
+  const context = { businessName, firstName, jobTitle, site };
+  const defaultSubject = `You've been shortlisted — ${jobTitle} at ${businessName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
         <h2 style="color: #FF4D00;">${businessName}</h2>
         <p>Hi ${firstName},</p>
@@ -392,8 +429,8 @@ export async function sendCareerStatusShortlistedEmail(
         <p>Our team will be in touch to schedule an interview.</p>
         <p>Best,<br>The ${businessName} Team<br>${site}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("career-shortlisted", email, context, defaultSubject, defaultHtml);
 }
 
 export async function sendCareerStatusRejectedEmail(
@@ -403,10 +440,9 @@ export async function sendCareerStatusRejectedEmail(
 ) {
   const { businessName } = await getEmailBranding();
   const site = process.env.NEXT_PUBLIC_APP_URL?.replace(/^https?:\/\//, "") ?? "printhub.africa";
-  return sendEmail({
-    to: email,
-    subject: `Your application — ${jobTitle} at ${businessName}`,
-    html: `
+  const context = { businessName, firstName, jobTitle, site };
+  const defaultSubject = `Your application — ${jobTitle} at ${businessName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
         <h2 style="color: #FF4D00;">${businessName}</h2>
         <p>Hi ${firstName},</p>
@@ -414,8 +450,8 @@ export async function sendCareerStatusRejectedEmail(
         <p>After careful consideration, we won't be moving forward with your application at this time. We'll keep your details on file and encourage you to apply for future roles.</p>
         <p>Best,<br>The ${businessName} Team<br>${site}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("career-rejected", email, context, defaultSubject, defaultHtml);
 }
 
 export async function sendCareerOfferMadeEmail(
@@ -425,10 +461,9 @@ export async function sendCareerOfferMadeEmail(
 ) {
   const { businessName } = await getEmailBranding();
   const site = process.env.NEXT_PUBLIC_APP_URL?.replace(/^https?:\/\//, "") ?? "printhub.africa";
-  return sendEmail({
-    to: email,
-    subject: `An offer from ${businessName} — ${jobTitle}`,
-    html: `
+  const context = { businessName, firstName, jobTitle, site };
+  const defaultSubject = `An offer from ${businessName} — ${jobTitle}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
         <h2 style="color: #FF4D00;">${businessName}</h2>
         <p>Hi ${firstName},</p>
@@ -436,8 +471,8 @@ export async function sendCareerOfferMadeEmail(
         <p>Please check your email for the formal offer letter.</p>
         <p>Best,<br>The ${businessName} Team<br>${site}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("career-offer", email, context, defaultSubject, defaultHtml);
 }
 
 /** Abandoned cart — first reminder (e.g. 1 hour after leaving checkout) */
@@ -447,10 +482,9 @@ export async function sendAbandonedCartEmail1(
   cartUrl: string
 ) {
   const { businessName, footer } = await getEmailBranding();
-  return sendEmail({
-    to: email,
-    subject: `You left something in your cart – ${businessName}`,
-    html: `
+  const context = { businessName, footer, firstName: firstName || "there", cartUrl };
+  const defaultSubject = `You left something in your cart – ${businessName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h1 style="color: #FF4D00;">${businessName}</h1>
         <p>Hi ${firstName || "there"},</p>
@@ -458,8 +492,8 @@ export async function sendAbandonedCartEmail1(
         <p><a href="${cartUrl}" style="color: #FF4D00; font-weight: bold;">Return to cart</a></p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("abandoned-cart-1", email, context, defaultSubject, defaultHtml);
 }
 
 /** Abandoned cart — second reminder (e.g. 24 hours). unsubscribeUrl optional for "Unsubscribe from cart reminders". */
@@ -473,10 +507,16 @@ export async function sendAbandonedCartEmail2(
   const unsubscribeLine = unsubscribeUrl
     ? `<p style="font-size: 11px; color: #9CA3AF;"><a href="${unsubscribeUrl}">Unsubscribe from cart reminders</a></p>`
     : "";
-  return sendEmail({
-    to: email,
-    subject: `Still thinking? Your cart is waiting – ${businessName}`,
-    html: `
+  const context = {
+    businessName,
+    footer,
+    firstName: firstName || "there",
+    cartUrl,
+    unsubscribeUrl: unsubscribeUrl ?? "",
+    unsubscribeLine,
+  };
+  const defaultSubject = `Still thinking? Your cart is waiting – ${businessName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h1 style="color: #FF4D00;">${businessName}</h1>
         <p>Hi ${firstName || "there"},</p>
@@ -485,8 +525,8 @@ export async function sendAbandonedCartEmail2(
         ${unsubscribeLine}
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("abandoned-cart-2", email, context, defaultSubject, defaultHtml);
 }
 
 /** Corporate application received — to applicant */
@@ -497,10 +537,15 @@ export async function sendCorporateApplicationReceivedEmail(
   applicationRef: string
 ) {
   const { businessName, footer } = await getEmailBranding();
-  return sendEmail({
-    to: email,
-    subject: `Corporate account application received – ${businessName}`,
-    html: `
+  const context = {
+    businessName,
+    footer,
+    applicantName: applicantName || "there",
+    companyName,
+    applicationRef,
+  };
+  const defaultSubject = `Corporate account application received – ${businessName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h1 style="color: #FF4D00;">${businessName}</h1>
         <p>Hi ${applicantName || "there"},</p>
@@ -509,8 +554,8 @@ export async function sendCorporateApplicationReceivedEmail(
         <p>Our team will review your application and respond within 1 business day.</p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("corporate-received", email, context, defaultSubject, defaultHtml);
 }
 
 /** New corporate application — to admin */
@@ -521,10 +566,9 @@ export async function sendCorporateApplicationNewAdminEmail(
 ) {
   const { businessName, footer } = await getEmailBranding();
   const adminUrl = `${baseUrl}/admin/corporate/applications`;
-  return sendEmail({
-    to: adminEmail,
-    subject: `New corporate account application: ${companyName}`,
-    html: `
+  const context = { businessName, footer, companyName, contactPerson, adminUrl };
+  const defaultSubject = `New corporate account application: ${companyName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
         <h2 style="color: #FF4D00;">${businessName}</h2>
         <p>A new corporate account application has been submitted.</p>
@@ -532,8 +576,8 @@ export async function sendCorporateApplicationNewAdminEmail(
         <p><a href="${adminUrl}" style="color: #FF4D00; font-weight: bold;">Review applications</a></p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("corporate-new-admin", adminEmail, context, defaultSubject, defaultHtml);
 }
 
 /** Corporate application approved — to applicant */
@@ -545,10 +589,16 @@ export async function sendCorporateApplicationApprovedEmail(
 ) {
   const { businessName, footer } = await getEmailBranding();
   const dashboardUrl = `${baseUrl}/corporate/dashboard`;
-  return sendEmail({
-    to: email,
-    subject: `Your corporate account is approved – ${businessName}`,
-    html: `
+  const context = {
+    businessName,
+    footer,
+    contactPerson: contactPerson || "there",
+    companyName,
+    accountNumber,
+    dashboardUrl,
+  };
+  const defaultSubject = `Your corporate account is approved – ${businessName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
         <h2 style="color: #FF4D00;">${businessName}</h2>
         <p>Hi ${contactPerson || "there"},</p>
@@ -558,8 +608,8 @@ export async function sendCorporateApplicationApprovedEmail(
         <p><a href="${dashboardUrl}" style="color: #FF4D00; font-weight: bold;">Go to Corporate Dashboard</a></p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("corporate-approved", email, context, defaultSubject, defaultHtml);
 }
 
 /** Corporate application rejected — to applicant */
@@ -571,21 +621,29 @@ export async function sendCorporateApplicationRejectedEmail(
 ) {
   const { businessName, footer } = await getEmailBranding();
   const applyUrl = `${baseUrl}/corporate/apply`;
-  return sendEmail({
-    to: email,
-    subject: `Update on your corporate account application – ${businessName}`,
-    html: `
+  const reasonLine = reason ? `<p><strong>Reason:</strong> ${reason}</p>` : "";
+  const context = {
+    businessName,
+    footer,
+    contactPerson: contactPerson || "there",
+    companyName,
+    reason: reason ?? "",
+    reasonLine,
+    applyUrl,
+  };
+  const defaultSubject = `Update on your corporate account application – ${businessName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
         <h2 style="color: #FF4D00;">${businessName}</h2>
         <p>Hi ${contactPerson || "there"},</p>
         <p>Thank you for your interest in a corporate account with ${businessName}. After review, we are unable to approve your application for <strong>${companyName}</strong> at this time.</p>
-        ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ""}
+        ${reasonLine}
         <p>If you have questions or would like to reapply in the future, please contact us or submit a new application.</p>
         <p><a href="${applyUrl}" style="color: #FF4D00; font-weight: bold;">Apply again</a></p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("corporate-rejected", email, context, defaultSubject, defaultHtml);
 }
 
 // ============== DELIVERY NOTIFICATIONS ==============
@@ -600,10 +658,16 @@ export async function sendDeliveryDispatchedEmail(
   const trackingLine = trackingNumber
     ? `<p><strong>Tracking:</strong> ${trackingNumber}</p>`
     : "";
-  return sendEmail({
-    to: email,
-    subject: `Order ${orderNumber} is on its way – ${businessName}`,
-    html: `
+  const context = {
+    businessName,
+    footer,
+    orderNumber,
+    trackingNumber: trackingNumber ?? "",
+    trackingLine,
+    trackUrl,
+  };
+  const defaultSubject = `Order ${orderNumber} is on its way – ${businessName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h1 style="color: #FF4D00;">${businessName}</h1>
         <p>Your order <strong>${orderNumber}</strong> has been dispatched and is on its way.</p>
@@ -611,25 +675,24 @@ export async function sendDeliveryDispatchedEmail(
         <p><a href="${trackUrl}" style="color: #FF4D00; font-weight: bold;">Track your order</a></p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("delivery-dispatched", email, context, defaultSubject, defaultHtml);
 }
 
 export async function sendDeliveryDeliveredEmail(email: string, orderNumber: string) {
   const { businessName, footer } = await getEmailBranding();
   const ordersUrl = `${baseUrl}/account/orders`;
-  return sendEmail({
-    to: email,
-    subject: `Order ${orderNumber} delivered – ${businessName}`,
-    html: `
+  const context = { businessName, footer, orderNumber, ordersUrl };
+  const defaultSubject = `Order ${orderNumber} delivered – ${businessName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h1 style="color: #FF4D00;">${businessName}</h1>
         <p>Your order <strong>${orderNumber}</strong> has been delivered. Thank you for shopping with us!</p>
         <p><a href="${ordersUrl}" style="color: #FF4D00; font-weight: bold;">View my orders</a></p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("delivery-delivered", email, context, defaultSubject, defaultHtml);
 }
 
 export async function sendDeliveryFailedEmail(
@@ -640,10 +703,16 @@ export async function sendDeliveryFailedEmail(
   const { businessName, footer } = await getEmailBranding();
   const supportUrl = `${baseUrl}/contact`;
   const reasonLine = failureReason ? `<p><strong>Reason:</strong> ${failureReason}</p>` : "";
-  return sendEmail({
-    to: email,
-    subject: `Delivery update – Order ${orderNumber} – ${businessName}`,
-    html: `
+  const context = {
+    businessName,
+    footer,
+    orderNumber,
+    failureReason: failureReason ?? "",
+    reasonLine,
+    supportUrl,
+  };
+  const defaultSubject = `Delivery update – Order ${orderNumber} – ${businessName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h1 style="color: #FF4D00;">${businessName}</h1>
         <p>We're sorry – there was an issue delivering your order <strong>${orderNumber}</strong>.</p>
@@ -651,8 +720,8 @@ export async function sendDeliveryFailedEmail(
         <p>Our team will contact you to rearrange delivery. If you have questions, please <a href="${supportUrl}" style="color: #FF4D00;">contact us</a>.</p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("delivery-failed", email, context, defaultSubject, defaultHtml);
 }
 
 // ============== ORDER CANCELLATION & REFUNDS ==============
@@ -665,10 +734,16 @@ export async function sendOrderCancelledEmail(
   const { businessName, footer } = await getEmailBranding();
   const ordersUrl = `${baseUrl}/account/orders`;
   const reasonLine = reason ? `<p><strong>Reason:</strong> ${reason.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>` : "";
-  return sendEmail({
-    to: email,
-    subject: `Order ${orderNumber} cancelled – ${businessName}`,
-    html: `
+  const context = {
+    businessName,
+    footer,
+    orderNumber,
+    reason: reason ?? "",
+    reasonLine,
+    ordersUrl,
+  };
+  const defaultSubject = `Order ${orderNumber} cancelled – ${businessName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h1 style="color: #FF4D00;">${businessName}</h1>
         <p>Your order <strong>${orderNumber}</strong> has been cancelled.</p>
@@ -676,8 +751,8 @@ export async function sendOrderCancelledEmail(
         <p>If you have questions or would like to place a new order, <a href="${ordersUrl}" style="color: #FF4D00;">visit your orders</a>.</p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("order-cancelled", email, context, defaultSubject, defaultHtml);
 }
 
 export async function sendRefundApprovedEmail(
@@ -688,10 +763,16 @@ export async function sendRefundApprovedEmail(
 ) {
   const { businessName, footer } = await getEmailBranding();
   const ordersUrl = `${baseUrl}/account/orders`;
-  return sendEmail({
-    to: email,
-    subject: `Refund ${refundNumber} approved – ${businessName}`,
-    html: `
+  const context = {
+    businessName,
+    footer,
+    refundNumber,
+    orderNumber,
+    amountKes: amountKes.toLocaleString(),
+    ordersUrl,
+  };
+  const defaultSubject = `Refund ${refundNumber} approved – ${businessName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h1 style="color: #FF4D00;">${businessName}</h1>
         <p>Your refund request <strong>${refundNumber}</strong> for order ${orderNumber} has been approved.</p>
@@ -700,8 +781,8 @@ export async function sendRefundApprovedEmail(
         <p><a href="${ordersUrl}" style="color: #FF4D00; font-weight: bold;">View my orders</a></p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("refund-approved", email, context, defaultSubject, defaultHtml);
 }
 
 export async function sendRefundRejectedEmail(
@@ -713,10 +794,17 @@ export async function sendRefundRejectedEmail(
   const { businessName, footer } = await getEmailBranding();
   const supportUrl = `${baseUrl}/contact`;
   const reasonLine = rejectionReason ? `<p><strong>Reason:</strong> ${rejectionReason.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>` : "";
-  return sendEmail({
-    to: email,
-    subject: `Refund ${refundNumber} – ${businessName}`,
-    html: `
+  const context = {
+    businessName,
+    footer,
+    refundNumber,
+    orderNumber,
+    rejectionReason: rejectionReason ?? "",
+    reasonLine,
+    supportUrl,
+  };
+  const defaultSubject = `Refund ${refundNumber} – ${businessName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h1 style="color: #FF4D00;">${businessName}</h1>
         <p>Your refund request <strong>${refundNumber}</strong> for order ${orderNumber} could not be approved.</p>
@@ -724,8 +812,8 @@ export async function sendRefundRejectedEmail(
         <p>If you have questions, please <a href="${supportUrl}" style="color: #FF4D00;">contact us</a>.</p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("refund-rejected", email, context, defaultSubject, defaultHtml);
 }
 
 export async function sendRefundProcessedEmail(
@@ -737,10 +825,17 @@ export async function sendRefundProcessedEmail(
 ) {
   const { businessName, footer } = await getEmailBranding();
   const receiptLine = mpesaReceiptNo ? `<p><strong>M-Pesa receipt:</strong> ${mpesaReceiptNo}</p>` : "";
-  return sendEmail({
-    to: email,
-    subject: `Refund ${refundNumber} sent – ${businessName}`,
-    html: `
+  const context = {
+    businessName,
+    footer,
+    refundNumber,
+    orderNumber,
+    amountKes: amountKes.toLocaleString(),
+    mpesaReceiptNo: mpesaReceiptNo ?? "",
+    receiptLine,
+  };
+  const defaultSubject = `Refund ${refundNumber} sent – ${businessName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h1 style="color: #FF4D00;">${businessName}</h1>
         <p>Your refund <strong>${refundNumber}</strong> for order ${orderNumber} has been sent to your M-Pesa account.</p>
@@ -749,8 +844,8 @@ export async function sendRefundProcessedEmail(
         <p>Thank you for your patience.</p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("refund-processed", email, context, defaultSubject, defaultHtml);
 }
 
 // ============== SUPPORT TICKET NOTIFICATIONS ==============
@@ -762,10 +857,9 @@ export async function sendTicketCreatedEmail(
 ) {
   const { businessName, footer } = await getEmailBranding();
   const supportUrl = `${baseUrl}/account/support`;
-  return sendEmail({
-    to: email,
-    subject: `Support request ${ticketNumber} received – ${businessName}`,
-    html: `
+  const context = { businessName, footer, ticketNumber, ticketSubject: subject, supportUrl };
+  const defaultSubject = `Support request ${ticketNumber} received – ${businessName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h1 style="color: #FF4D00;">${businessName}</h1>
         <p>We've received your support request.</p>
@@ -774,8 +868,8 @@ export async function sendTicketCreatedEmail(
         <p><a href="${supportUrl}" style="color: #FF4D00; font-weight: bold;">View my tickets</a></p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("ticket-created", email, context, defaultSubject, defaultHtml);
 }
 
 export async function sendTicketRepliedEmail(
@@ -787,19 +881,25 @@ export async function sendTicketRepliedEmail(
   const { businessName, footer } = await getEmailBranding();
   const supportUrl = `${baseUrl}/account/support`;
   const preview = messagePreview.length > 200 ? messagePreview.slice(0, 200) + "…" : messagePreview;
-  return sendEmail({
-    to: email,
-    subject: `New reply on ${ticketNumber} – ${businessName}`,
-    html: `
+  const context = {
+    businessName,
+    footer,
+    ticketNumber,
+    ticketSubject: subject,
+    messagePreview: preview.replace(/</g, "&lt;").replace(/>/g, "&gt;"),
+    supportUrl,
+  };
+  const defaultSubject = `New reply on ${ticketNumber} – ${businessName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h1 style="color: #FF4D00;">${businessName}</h1>
         <p>We've replied to your support request <strong>${ticketNumber}</strong> (${subject}).</p>
-        <p style="background: #f5f5f5; padding: 12px; border-radius: 6px; font-size: 14px;">${preview.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+        <p style="background: #f5f5f5; padding: 12px; border-radius: 6px; font-size: 14px;">${context.messagePreview}</p>
         <p><a href="${supportUrl}" style="color: #FF4D00; font-weight: bold;">View ticket &amp; reply</a></p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("ticket-replied", email, context, defaultSubject, defaultHtml);
 }
 
 export async function sendTicketResolvedEmail(
@@ -809,10 +909,9 @@ export async function sendTicketResolvedEmail(
 ) {
   const { businessName, footer } = await getEmailBranding();
   const supportUrl = `${baseUrl}/account/support`;
-  return sendEmail({
-    to: email,
-    subject: `Ticket ${ticketNumber} resolved – ${businessName}`,
-    html: `
+  const context = { businessName, footer, ticketNumber, ticketSubject: subject, supportUrl };
+  const defaultSubject = `Ticket ${ticketNumber} resolved – ${businessName}`;
+  const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h1 style="color: #FF4D00;">${businessName}</h1>
         <p>Your support request <strong>${ticketNumber}</strong> (${subject}) has been marked as resolved.</p>
@@ -820,6 +919,6 @@ export async function sendTicketResolvedEmail(
         <p><a href="${supportUrl}" style="color: #FF4D00; font-weight: bold;">View my tickets</a></p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
-    `,
-  });
+    `;
+  return sendWithTemplate("ticket-resolved", email, context, defaultSubject, defaultHtml);
 }

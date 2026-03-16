@@ -14,14 +14,20 @@ const passwordSchema = z
   .regex(/[0-9]/, "Password must include a number")
   .regex(/[^a-zA-Z0-9]/, "Password must include a special character (e.g. !@#$%)");
 
-const schema = z.object({
-  email: z.string().email(),
-  password: passwordSchema,
-  firstName: z.string().min(1, "First name is required").max(100),
-  lastName: z.string().min(1, "Last name is required").max(100),
-  acceptTerms: z.literal(true).optional(), // optional for backwards compatibility; frontend enforces
-  marketingConsent: z.boolean().optional().default(false),
-});
+const schema = z
+  .object({
+    email: z.string().email(),
+    password: passwordSchema,
+    confirmPassword: z.string().min(1, "Please confirm your password"),
+    firstName: z.string().min(1, "First name is required").max(100),
+    lastName: z.string().min(1, "Last name is required").max(100),
+    acceptTerms: z.literal(true).optional(), // optional for backwards compatibility; frontend enforces
+    marketingConsent: z.boolean().optional().default(false),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match.",
+    path: ["confirmPassword"],
+  });
 
 const REGISTER_LIMIT = 5;
 const REGISTER_WINDOW_MS = 60 * 1000;
@@ -41,6 +47,7 @@ export async function POST(req: Request) {
       );
     }
     const { email, password, firstName, lastName, marketingConsent = false } = parsed.data;
+    // confirmPassword validated by refine; not used further
     const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(" ");
 
     const existing = await prisma.user.findUnique({ where: { email } });

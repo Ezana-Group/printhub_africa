@@ -107,6 +107,11 @@ export default function LoginPage() {
         window.location.href = `/login/verify?t=${encodeURIComponent(data.token)}&callbackUrl=${encodeURIComponent(callbackUrl)}`;
         return;
       }
+      if (res.status === 403 && data.error === "EMAIL_NOT_VERIFIED") {
+        setError(data.message ?? "Please verify your email before signing in. Check your inbox for the verification link.");
+        setLoading(false);
+        return;
+      }
       if (res.ok && !data.requires2FA) {
         const result = await signIn("credentials", {
           email,
@@ -119,10 +124,15 @@ export default function LoginPage() {
           window.location.href = result.url;
           return;
         }
-        setError(result?.error === "CredentialsSignin" ? "Invalid email or password." : result?.error ?? "Sign in failed.");
+        const errMsg = result?.error === "EMAIL_NOT_VERIFIED"
+          ? "Please verify your email before signing in. Check your inbox for the verification link."
+          : result?.error === "CredentialsSignin"
+            ? "Invalid email or password."
+            : result?.error ?? "Sign in failed.";
+        setError(errMsg);
         return;
       }
-      setError(data.error ?? "Invalid email or password.");
+      setError(data.message ?? data.error ?? "Invalid email or password.");
     } catch {
       setError("Something went wrong");
     } finally {

@@ -21,6 +21,7 @@ import {
   TrendingUp,
   HelpCircle,
   Scale,
+  Mail,
   Briefcase,
   Layers,
   Truck,
@@ -84,6 +85,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/content/legal", label: "Legal Pages", icon: Scale },
       { href: "/admin/content/faq", label: "FAQ Manager", icon: HelpCircle },
+      { href: "/admin/content/email-templates", label: "Email Templates", icon: Mail },
     ],
   },
   {

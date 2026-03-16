@@ -14,6 +14,7 @@ export default function RegisterPage() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [marketingConsent, setMarketingConsent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -27,6 +28,10 @@ export default function RegisterPage() {
       setError("You must accept the Account Registration Terms to continue.");
       return;
     }
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/auth/register", {
@@ -35,6 +40,7 @@ export default function RegisterPage() {
         body: JSON.stringify({
           email,
           password,
+          confirmPassword,
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           acceptTerms: true,
@@ -47,7 +53,7 @@ export default function RegisterPage() {
         setError(
           typeof err === "string"
             ? err
-            : err?.firstName?.[0] ?? err?.lastName?.[0] ?? err?.email?.[0] ?? err?.password?.[0] ?? "Registration failed."
+            : err?.firstName?.[0] ?? err?.lastName?.[0] ?? err?.email?.[0] ?? err?.password?.[0] ?? err?.confirmPassword?.[0] ?? "Registration failed."
         );
         return;
       }
@@ -142,6 +148,22 @@ export default function RegisterPage() {
               autoComplete="new-password"
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirm password</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              placeholder="Re-enter your password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              minLength={8}
+              autoComplete="new-password"
+            />
+            {password && confirmPassword && password !== confirmPassword && (
+              <p className="text-sm text-destructive">Passwords do not match.</p>
+            )}
+          </div>
           <label className="flex items-start gap-3 cursor-pointer group">
             <input
               type="checkbox"
@@ -180,7 +202,19 @@ export default function RegisterPage() {
           </label>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
-          <Button type="submit" className="w-full" disabled={loading || !acceptTerms || !firstName.trim() || !lastName.trim()}>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={
+              loading ||
+              !acceptTerms ||
+              !firstName.trim() ||
+              !lastName.trim() ||
+              password !== confirmPassword ||
+              !password ||
+              !confirmPassword
+            }
+          >
             {loading ? "Creating account…" : "Create account"}
           </Button>
           {(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||

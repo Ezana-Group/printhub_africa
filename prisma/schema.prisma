@@ -2114,6 +2114,20 @@ model LegalPageHistory {
   @@index([legalPageId])
 }
 
+// ============== EMAIL TEMPLATES (admin-editable) ==============
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String?  // optional note for admin (e.g. "Sent when customer signs up")
+  subject     String   @default("")
+  bodyHtml    String   @db.Text
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+
+  @@index([slug])
+}
+
 // ============== CATALOGUE (Print-on-Demand) ==============
 enum CatalogueStatus {
   DRAFT

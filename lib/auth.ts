@@ -159,11 +159,16 @@ export const authOptions: NextAuthOptions = {
             twoFaMethod: true,
             otpCodeHash: true,
             otpExpiresAt: true,
+            emailVerified: true,
           },
         });
         if (!user?.passwordHash) return null;
         if (user.status === "DEACTIVATED") return null;
         if (user.status === "INVITE_PENDING") return null;
+
+        if (!user.emailVerified) {
+          throw new Error("EMAIL_NOT_VERIFIED");
+        }
 
         if (user.lockedUntil && user.lockedUntil > new Date()) {
           throw new Error("Account locked. Try again after 15 minutes.");
