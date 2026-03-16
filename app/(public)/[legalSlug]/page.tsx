@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getBusinessPublic } from "@/lib/business-public";
-import { LEGAL_NAV, isLegalSlug } from "@/lib/legal";
 import type { Metadata } from "next";
 import type { BusinessPublic } from "@/lib/business-public";
 import { Mail, MapPin, Phone } from "lucide-react";
@@ -18,6 +17,18 @@ async function getLegalPage(slug: string) {
     });
   } catch {
     return null;
+  }
+}
+
+async function getPublishedLegalPages() {
+  try {
+    return await prisma.legalPage.findMany({
+      where: { isPublished: true },
+      orderBy: { slug: "asc" },
+      select: { slug: true, title: true },
+    });
+  } catch {
+    return [];
   }
 }
 
@@ -63,11 +74,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { legalSlug } = await params;
   const business = await getBusinessPublic();
   const site = business.website?.replace(/^https?:\/\//, "") ?? "printhub.africa";
-  if (!isLegalSlug(legalSlug)) {
-    return { title: `Not Found | ${business.businessName}` };
-  }
   const page = await getLegalPage(legalSlug);
-  if (!page) return { title: business.businessName };
+  if (!page) return { title: `Not Found | ${business.businessName}` };
   return {
     title: `${page.title} | ${business.businessName}`,
     description: `${business.businessName} ${page.title} — ${site}`,
@@ -77,13 +85,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function LegalPage({ params }: Props) {
   const { legalSlug } = await params;
-  if (!isLegalSlug(legalSlug)) {
-    notFound();
-  }
 
-  const [page, business] = await Promise.all([
+  const [page, business, navPages] = await Promise.all([
     getLegalPage(legalSlug),
     getBusinessPublic(),
+    getPublishedLegalPages(),
   ]);
 
   if (!page) notFound();
@@ -102,7 +108,7 @@ export default async function LegalPage({ params }: Props) {
                 Legal
               </p>
               <ul className="space-y-0.5">
-                {LEGAL_NAV.map(({ slug, label }) => (
+                {navPages.map(({ slug, title }) => (
                   <li key={slug}>
                     <Link
                       href={`/${slug}`}
@@ -112,7 +118,7 @@ export default async function LegalPage({ params }: Props) {
                           : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                       }`}
                     >
-                      {label}
+                      {title ?? slug}
                     </Link>
                   </li>
                 ))}

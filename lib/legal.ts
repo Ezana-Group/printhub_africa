@@ -26,3 +26,8 @@ export const LEGAL_NAV: { slug: LegalSlug; label: string }[] = [
 export function isLegalSlug(s: string): s is LegalSlug {
   return LEGAL_SLUGS.includes(s as LegalSlug);
 }
+
+/** URL-safe slug for new legal pages: lowercase, a-z, 0-9, hyphens only. */
+export function isValidLegalSlugFormat(slug: string): boolean {
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length >= 2 && slug.length <= 80;
+}

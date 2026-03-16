@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/admin-api-guard";
-import { isLegalSlug } from "@/lib/legal";
 
 function requireContentAdmin(auth: { role: string }) {
   if (auth.role !== "ADMIN" && auth.role !== "SUPER_ADMIN") {
@@ -19,10 +18,6 @@ export async function GET(
   if (forbidden) return forbidden;
 
   const { slug } = await params;
-  if (!isLegalSlug(slug)) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-
   const page = await prisma.legalPage.findUnique({
     where: { slug },
     select: { id: true },
