@@ -7,7 +7,7 @@ import AppleProvider from "next-auth/providers/apple";
 import EmailProvider from "next-auth/providers/email";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { verify } from "otplib";
+import { verifySync } from "otplib";
 import { sendEmail } from "@/lib/email";
 
 /** Cache staff permissions by userId with 5 min TTL to avoid DB hit on every request. */
