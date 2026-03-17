@@ -13,6 +13,7 @@ config({ path: path.join(root, ".env") });
 
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { assertPrinthubDatabase } from "../../lib/db-guard";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -34,6 +35,7 @@ const LEGAL_PAGES = [
 ];
 
 async function seedLegalPages() {
+  await assertPrinthubDatabase(prisma);
   console.log("Seeding legal pages...");
   const { getLegalContent } = await import("../legal-content");
   for (const page of LEGAL_PAGES) {

@@ -2128,6 +2128,15 @@ model EmailTemplate {
   @@index([slug])
 }
 
+// ============== DATABASE GUARD (prevents seeding wrong DB) ==============
+// Only PrintHub migrations create this table and row. Seed/clean scripts refuse to run
+// unless this row exists with project = PRINTHUB_PROJECT_ID (so other projects' DBs are protected).
+model DatabaseGuard {
+  id        String   @id // "default"
+  project   String   // e.g. "printhub_africa"
+  updatedAt DateTime @updatedAt
+}
+
 // ============== CATALOGUE (Print-on-Demand) ==============
 enum CatalogueStatus {
   DRAFT

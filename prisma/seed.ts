@@ -9,6 +9,7 @@ config({ path: path.join(root, ".env") });
 import { PrismaClient, UserRole, ProductType, PrintMaterialType, PrinterType, CorporateIndustry, CompanySize, CorporateStatus, PaymentTerms, CorporateRole } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import * as bcrypt from "bcryptjs";
+import { assertPrinthubDatabase } from "../lib/db-guard";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -24,6 +25,8 @@ const TEST_PASSWORD = "Test@12345";
 const ADMIN_PASSWORD = "Admin@Printhub2025!";
 
 async function main() {
+  await assertPrinthubDatabase(prisma);
+
   const defaultHash = await bcrypt.hash(TEST_PASSWORD, 12);
   const adminHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
 

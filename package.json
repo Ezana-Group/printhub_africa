@@ -15,6 +15,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:legal": "tsx prisma/seeds/legal-pages.ts",
     "db:seed:email-templates": "tsx prisma/seeds/email-templates.ts",
+    "db:clean-test-data": "tsx prisma/scripts/clean-test-data.ts",
     "db:reset": "prisma migrate reset",
     "db:studio": "prisma studio",
     "docker:db": "docker compose up -d db",

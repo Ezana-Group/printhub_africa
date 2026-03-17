@@ -14,6 +14,7 @@ config({ path: path.join(root, ".env") });
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import * as bcrypt from "bcryptjs";
+import { assertPrinthubDatabase } from "@/lib/db-guard";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -26,6 +27,8 @@ const prisma = new PrismaClient({
 });
 
 async function seedProduction() {
+  await assertPrinthubDatabase(prisma);
+
   console.log("🌱 Seeding PrintHub production data...\n");
 
   const adminHash = await bcrypt.hash("ChangeMe2026!", 12);

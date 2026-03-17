@@ -13,6 +13,7 @@ config({ path: path.join(root, ".env") });
 
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { assertPrinthubDatabase } from "../../lib/db-guard";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -442,6 +443,7 @@ const TEMPLATE_NAMES: Record<string, string> = {
 };
 
 async function main() {
+  await assertPrinthubDatabase(prisma);
   console.log("Seeding email templates...");
   for (const def of DEFAULT_TEMPLATES) {
     const name = TEMPLATE_NAMES[def.slug] ?? def.slug;
