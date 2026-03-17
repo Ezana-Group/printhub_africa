@@ -156,8 +156,9 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
       printTimeHrs: t,
       quantity: qty,
       costPerKg: selectedFilament.costPerKgKes,
+      postProcessing,
     });
-  }, [config, selectedFilament, weightGrams, printTimeHours, quantity]);
+  }, [config, selectedFilament, weightGrams, printTimeHours, quantity, postProcessing]);
 
   const priceLow = breakdown?.rangeLow ?? null;
   const priceHigh = breakdown?.rangeHigh ?? null;

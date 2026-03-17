@@ -16,4 +16,6 @@ export interface CalculatorConfig {
   monthlyOverhead: number;
   monthlyCapacityHrs: number;
   filaments: CalculatorConfigFilament[];
+  /** Fee per unit when "Post-processing / support removal" is selected (3D calculator). */
+  postProcessingFeePerUnit?: number;
 }

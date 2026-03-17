@@ -13,6 +13,8 @@ export interface PrinterSettings {
   maintenancePerYearKes: number;
   laborRateKesPerHour: number;
   postProcessingTimeHours: number;
+  /** Fee per unit when post-processing / support removal is selected (support removal + finishing addons). */
+  postProcessingFeePerUnit?: number;
   monthlyRentKes: number;
   monthlyUtilitiesKes: number;
   monthlyInsuranceKes: number;
@@ -97,6 +99,10 @@ export function calculatePrintCost(
     : job.printTimeHours;
   const laborCost = laborTimeHours * settings.laborRateKesPerHour;
 
+  const postProcessingFeePerUnit = job.postProcessing
+    ? (settings.postProcessingFeePerUnit ?? 300)
+    : 0;
+
   const overheadCost =
     ((settings.monthlyRentKes +
       settings.monthlyUtilitiesKes +
@@ -116,6 +122,7 @@ export function calculatePrintCost(
     depreciationCost +
     maintenanceCost +
     laborCost +
+    postProcessingFeePerUnit +
     overheadCost +
     failedPrintBuffer +
     packagingCost;
@@ -168,6 +175,7 @@ export const DEFAULT_PRINTER_SETTINGS: PrinterSettings = {
   maintenancePerYearKes: 12000,
   laborRateKesPerHour: 200,
   postProcessingTimeHours: 0.5,
+  postProcessingFeePerUnit: 300,
   monthlyRentKes: 25000,
   monthlyUtilitiesKes: 6000,
   monthlyInsuranceKes: 3000,

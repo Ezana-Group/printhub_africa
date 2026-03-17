@@ -10,17 +10,19 @@ const DEFAULT_VAT_PCT = 16;
 const DEFAULT_MONTHLY_OVERHEAD = 50000;
 const DEFAULT_MONTHLY_CAPACITY_HRS = 208; // 26 * 8
 
-/** GET: Public config for 3D (and LF) calculators: business costs + filaments.
+/** GET: Public config for 3D (and LF) calculators: business costs + filaments + post-processing fee.
  *  Used by /get-a-quote 3D tab and admin 3D calculator so pricing uses Finance → Business costs.
  */
 export async function GET() {
   try {
-    const [business, filaments] = await Promise.all([
+    const [business, filaments, supportRemovalAddons, finishingAddons] = await Promise.all([
       prisma.lFBusinessSettings.findFirst(),
       prisma.threeDConsumable.findMany({
         where: { kind: "FILAMENT", costPerKgKes: { not: null } },
         orderBy: [{ name: "asc" }, { specification: "asc" }],
       }),
+      prisma.threeDAddon.findMany({ where: { category: "SUPPORT_REMOVAL", isActive: true } }),
+      prisma.threeDAddon.findMany({ where: { category: "FINISHING", isActive: true } }),
     ]);
 
     const labourRate = business?.labourRateKesPerHour ?? DEFAULT_LABOUR_RATE;
@@ -46,6 +48,15 @@ export async function GET() {
       };
     });
 
+    // Post-processing / support removal: default fee per unit (support removal + finishing) for 3D quote calculator
+    const supportRemovalFee = Number(
+      supportRemovalAddons.find((a) => a.code !== "SUP_RM_NONE")?.pricePerUnit ?? 200
+    );
+    const finishingFee = Number(
+      finishingAddons.find((a) => a.code !== "FINISH_RAW")?.pricePerUnit ?? 100
+    );
+    const postProcessingFeePerUnit = supportRemovalFee + finishingFee;
+
     return NextResponse.json({
       labourRate,
       profitMargin,
@@ -53,10 +64,12 @@ export async function GET() {
       monthlyOverhead: monthlyOverhead || DEFAULT_MONTHLY_OVERHEAD,
       monthlyCapacityHrs: monthlyCapacityHrs || DEFAULT_MONTHLY_CAPACITY_HRS,
       filaments: filamentsList,
+      postProcessingFeePerUnit,
     });
   } catch (e) {
     console.error("calculator-config GET error:", e);
     const errorMessage = e instanceof Error ? e.message : "Unknown error";
+    const defaultPostProcessingFee = 200 + 100; // support removal + finishing fallback
     return NextResponse.json(
       {
         error: true,
@@ -67,6 +80,7 @@ export async function GET() {
         monthlyOverhead: DEFAULT_MONTHLY_OVERHEAD,
         monthlyCapacityHrs: DEFAULT_MONTHLY_CAPACITY_HRS,
         filaments: [],
+        postProcessingFeePerUnit: defaultPostProcessingFee,
       },
       { status: 500 }
     );

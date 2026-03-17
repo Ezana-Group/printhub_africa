@@ -18,7 +18,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const printerId = searchParams.get("printerId") ?? undefined;
 
-    const [printerAsset, inventoryPrinter, linkedItems, inventoryFilament, config] = await Promise.all([
+    const [printerAsset, inventoryPrinter, linkedItems, inventoryFilament, config, supportRemovalAddons, finishingAddons] = await Promise.all([
       printerId ? prisma.printerAsset.findFirst({ where: { id: printerId, isActive: true, printerType: { in: ["FDM", "RESIN", "HYBRID"] } } }).catch(() => null) : Promise.resolve(null),
       printerId ? prisma.inventoryHardwareItem.findFirst({ where: { id: printerId, isActive: true, hardwareType: "THREE_D_PRINTER" } }).catch(() => null) : Promise.resolve(null),
       printerId
@@ -33,6 +33,8 @@ export async function GET(req: Request) {
       prisma.pricingConfig.findUnique({
         where: { key: "3dPrinterSettings" },
       }),
+      prisma.threeDAddon.findMany({ where: { category: "SUPPORT_REMOVAL", isActive: true } }),
+      prisma.threeDAddon.findMany({ where: { category: "FINISHING", isActive: true } }),
     ]);
 
     let printerSettings: PrinterSettings = { ...DEFAULT_PRINTER_SETTINGS };
@@ -89,8 +91,21 @@ export async function GET(req: Request) {
       };
     });
 
+    const supportRemovalFee = Number(
+      supportRemovalAddons.find((a) => a.code !== "SUP_RM_NONE")?.pricePerUnit ?? 200
+    );
+    const finishingFee = Number(
+      finishingAddons.find((a) => a.code !== "FINISH_RAW")?.pricePerUnit ?? 100
+    );
+    const postProcessingFeePerUnit = supportRemovalFee + finishingFee;
+
+    const printerSettingsWithFee = {
+      ...printerSettings,
+      postProcessingFeePerUnit,
+    };
+
     return NextResponse.json({
-      printerSettings,
+      printerSettings: printerSettingsWithFee,
       materials: materialsList,
       postProcessingOptions: [
         { code: "NONE", name: "None" },
