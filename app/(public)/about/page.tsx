@@ -26,8 +26,6 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-const STORY_IMAGE = "/images/about/production-floor.webp";
-
 export default async function AboutPage() {
   const [business, teamMembers, siteImages] = await Promise.all([
     getBusinessPublic(),
@@ -123,7 +121,7 @@ export default async function AboutPage() {
           <div className="relative">
             <div className="relative aspect-[4/3] rounded overflow-hidden border-l-4 border-primary">
               <Image
-                src={STORY_IMAGE}
+                src={siteImages.about_story_image}
                 alt="PrintHub production floor — Nairobi"
                 fill
                 className="object-cover"
@@ -310,7 +308,7 @@ export default async function AboutPage() {
       {/* SECTION 6 — LOCATION (map + CTA; contact details are in footer) */}
       <section className="relative bg-primary py-20 md:py-28 px-4 md:px-6 lg:px-8 overflow-hidden">
         <div className="absolute inset-0">
-          <Image src="/images/about/nairobi.webp" alt="" fill className="object-cover opacity-20" sizes="100vw" />
+          <Image src={siteImages.about_location_background} alt="" fill className="object-cover opacity-20" sizes="100vw" />
         </div>
         <div className="container max-w-6xl mx-auto relative z-10">
           <div className="grid md:grid-cols-2 gap-12 items-center">

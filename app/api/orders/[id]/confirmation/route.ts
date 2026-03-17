@@ -23,6 +23,7 @@ export async function GET(
     include: {
       items: { include: { product: { select: { name: true } } } },
       shippingAddress: true,
+      payments: { where: { provider: "PESAPAL" }, orderBy: { createdAt: "desc" }, take: 1 },
     },
   });
   if (!order) {
@@ -34,6 +35,12 @@ export async function GET(
   if (!isOwner && !isConfirmed) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  const pesapalPayment = order.payments[0];
+  const pesapalOrderTrackingId =
+    pesapalPayment?.status === "PENDING" && (pesapalPayment.pesapalRef ?? pesapalPayment.providerTransactionId)
+      ? (pesapalPayment.pesapalRef ?? pesapalPayment.providerTransactionId) ?? undefined
+      : undefined;
 
   return NextResponse.json({
     id: order.id,
@@ -65,5 +72,6 @@ export async function GET(
           deliveryMethod: order.shippingAddress.deliveryMethod,
         }
       : null,
+    ...(pesapalOrderTrackingId && { pesapalOrderTrackingId }),
   });
 }

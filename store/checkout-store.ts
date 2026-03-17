@@ -40,9 +40,7 @@ export interface CheckoutPayment {
     | "MPESA"
     | "AIRTEL_MONEY"
     | "TKASH"
-    | "STRIPE"
     | "PESAPAL"
-    | "FLUTTERWAVE"
     | "BANK_TRANSFER"
     | "CARD"
     | "APPLE_PAY"
@@ -54,7 +52,7 @@ export interface CheckoutPayment {
   poReference?: string;
   /** Airtel Money / TKash phone (Airtel: 07XX; Telkom: 07XX) */
   mobileMoneyPhone?: string;
-  /** Card details (only for display/validation; never send raw card to server — use Stripe Elements token in production) */
+  /** Card details (only for display; card payment is via PesaPal redirect at checkout) */
   cardNumber?: string;
   cardExpiry?: string;
   cardCvc?: string;

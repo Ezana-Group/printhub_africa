@@ -71,15 +71,9 @@ export default async function AdminSettingsPaymentsPage() {
           <MpesaPaybillTillFields />
         </div>
       </SectionCard>
-      <SectionCard title="Pesapal" description="Consumer Key, Secret, IPN URL.">
+      <SectionCard title="Pesapal" description="Consumer Key, Secret, IPN URL. Primary for cards and other mobile money.">
         <p className="text-sm text-muted-foreground">Status: Not configured</p>
         <Button type="button" variant="outline" size="sm">Configure</Button>
-      </SectionCard>
-      <SectionCard title="Flutterwave" description="Public Key, Secret Key, Webhook.">
-        <p className="text-sm text-muted-foreground">Status: Not configured</p>
-      </SectionCard>
-      <SectionCard title="Stripe (International Cards)" description="Publishable Key, Secret Key, Webhook Secret.">
-        <p className="text-sm text-muted-foreground">Status: Not configured</p>
       </SectionCard>
       <SectionCard
         title="Bank Transfer"
@@ -104,7 +98,7 @@ export default async function AdminSettingsPaymentsPage() {
           <Label>Payment timeout (minutes)</Label>
           <Input name="paymentTimeoutMinutes" type="number" defaultValue={p("paymentTimeoutMinutes", "30")} />
         </div>
-        <p className="text-sm text-muted-foreground">Accepted: M-Pesa, Visa/Mastercard, Flutterwave, Stripe, Bank Transfer. M-Pesa first.</p>
+        <p className="text-sm text-muted-foreground">Accepted: M-Pesa, PesaPal (cards & mobile money), Bank Transfer. M-Pesa first.</p>
       </SectionCard>
       <SectionCard
         title="Invoice Settings"

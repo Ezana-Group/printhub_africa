@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getPesapalTransactionStatus } from "@/lib/pesapal";
+import { decrementStockForOrder } from "@/lib/stock";
 
 /**
  * POST /api/payments/pesapal/callback
@@ -68,6 +69,11 @@ export async function POST(req: NextRequest) {
           paidAt: new Date(),
         },
       });
+      try {
+        await decrementStockForOrder(order.id);
+      } catch (e) {
+        console.error("Stock decrement on PesaPal callback:", e);
+      }
     }
     return NextResponse.json({ message: "OK" });
   } catch (e) {

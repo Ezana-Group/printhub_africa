@@ -22,12 +22,19 @@ export default async function HomePage() {
   ]);
   return (
     <>
-      <Hero />
+      <Hero heroImage={siteImages.marketing_hero} />
       <ServicesOverview
         largeFormatImage={siteImages.marketing_services_large_format}
         threeDImage={siteImages.marketing_services_3d}
       />
-      <HowItWorks />
+      <HowItWorks
+        stepImages={[
+          siteImages.how_it_works_step_01,
+          siteImages.how_it_works_step_02,
+          siteImages.how_it_works_step_03,
+          siteImages.how_it_works_step_04,
+        ]}
+      />
       <NewArrivalsSection />
       <FeaturedProducts />
       <FeaturedCatalogueSection />

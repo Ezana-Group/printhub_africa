@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { ensureUniqueOrderNumber } from "@/lib/order-utils";
 import { createTrackingEvent } from "@/lib/tracking";
 import { calculateCartTotals } from "@/lib/cart-calculations";
+import { reserveOrderStock } from "@/lib/order-stock";
 import { z } from "zod";
 
 const createOrderSchema = z.object({
@@ -87,35 +88,50 @@ export async function POST(req: Request) {
     }
   }
 
-  // Re-validate stock before creating order
+  // Re-validate stock before creating order (Inventory when present, else Product/Variant)
   for (const item of items) {
-    if (item.productId) {
-      let stock: number;
-      if (item.variantId) {
-        const variant = await prisma.productVariant.findUnique({
-          where: { id: item.variantId },
-          select: { stock: true },
-        });
-        if (!variant) {
-          return NextResponse.json({ error: "One or more items are no longer available." }, { status: 400 });
-        }
-        stock = variant.stock;
-      } else {
-        const product = await prisma.product.findUnique({
-          where: { id: item.productId },
-          select: { stock: true },
-        });
-        if (!product) {
-          return NextResponse.json({ error: "One or more products are no longer available." }, { status: 400 });
-        }
-        stock = product.stock;
-      }
-      if (item.quantity > stock) {
+    if (!item.productId) continue;
+    const inv = await prisma.inventory.findFirst({
+      where: {
+        productId: item.productId,
+        productVariantId: item.variantId ?? null,
+      },
+    });
+    if (inv) {
+      const available = inv.quantity - inv.reservedQuantity;
+      if (item.quantity > available) {
         return NextResponse.json(
-          { error: `Insufficient stock for one or more items. Maximum available: ${stock}.` },
-          { status: 400 }
+          { error: `Insufficient stock for one or more items. Maximum available: ${available}.` },
+          { status: 409 }
         );
       }
+      continue;
+    }
+    let stock: number;
+    if (item.variantId) {
+      const variant = await prisma.productVariant.findUnique({
+        where: { id: item.variantId },
+        select: { stock: true },
+      });
+      if (!variant) {
+        return NextResponse.json({ error: "One or more items are no longer available." }, { status: 400 });
+      }
+      stock = variant.stock;
+    } else {
+      const product = await prisma.product.findUnique({
+        where: { id: item.productId },
+        select: { stock: true },
+      });
+      if (!product) {
+        return NextResponse.json({ error: "One or more products are no longer available." }, { status: 400 });
+      }
+      stock = product.stock;
+    }
+    if (item.quantity > stock) {
+      return NextResponse.json(
+        { error: `Insufficient stock for one or more items. Maximum available: ${stock}.` },
+        { status: 409 }
+      );
     }
   }
 
@@ -187,57 +203,65 @@ export async function POST(req: Request) {
   }
 
   try {
-    const order = await prisma.order.create({
-      data: {
-        orderNumber,
-        userId: session?.user?.id ?? null,
-        status: "PENDING",
-        type: orderType,
-        subtotal,
-        tax,
-        shippingCost,
-        discount,
-        total,
-        currency: "KES",
-        notes: [notes, deliveryNotes].filter(Boolean).join(" — ") || undefined,
-        pickupLocationId: orderPickupLocationId,
-        courierId: orderCourierId ?? undefined,
-        deliveryZoneId: orderDeliveryZoneId ?? undefined,
-        estimatedDelivery: orderEstimatedDelivery ?? undefined,
-        corporateId: orderCorporateId ?? undefined,
-        isNetTerms: orderIsNetTerms || undefined,
-        poReference: orderPoReference ?? undefined,
-        placedBy: orderPlacedBy ?? undefined,
-        items: {
-          create: items.map((i) => ({
-            productId: i.productId ?? null,
-            productVariantId: i.variantId ?? null,
-            quantity: i.quantity,
-            unitPrice: i.unitPrice,
-            customizations: (i.customizations ?? undefined) as object | undefined,
-            instructions: i.instructions ?? undefined,
-          })),
-        },
-        shippingAddress: {
-          create: shippingAddress,
-        },
-        ...(isShipping && {
-          delivery: {
-            create: {
-              deliveryZoneId: orderDeliveryZoneId ?? undefined,
-              method: deliveryMethod,
-              status: "PENDING",
-              estimatedDelivery: orderEstimatedDelivery ?? undefined,
-              assignedCourierId: orderCourierId ?? undefined,
-            },
+    const order = await prisma.$transaction(async (tx) => {
+      const reserve = await reserveOrderStock(
+        items.filter((i) => i.productId).map((i) => ({ productId: i.productId!, variantId: i.variantId, quantity: i.quantity })),
+        tx
+      );
+      if (!reserve.ok) throw new Error(reserve.error);
+
+      return tx.order.create({
+        data: {
+          orderNumber,
+          userId: session?.user?.id ?? null,
+          status: "PENDING",
+          type: orderType,
+          subtotal,
+          tax,
+          shippingCost,
+          discount,
+          total,
+          currency: "KES",
+          notes: [notes, deliveryNotes].filter(Boolean).join(" — ") || undefined,
+          pickupLocationId: orderPickupLocationId,
+          courierId: orderCourierId ?? undefined,
+          deliveryZoneId: orderDeliveryZoneId ?? undefined,
+          estimatedDelivery: orderEstimatedDelivery ?? undefined,
+          corporateId: orderCorporateId ?? undefined,
+          isNetTerms: orderIsNetTerms || undefined,
+          poReference: orderPoReference ?? undefined,
+          placedBy: orderPlacedBy ?? undefined,
+          items: {
+            create: items.map((i) => ({
+              productId: i.productId ?? null,
+              productVariantId: i.variantId ?? null,
+              quantity: i.quantity,
+              unitPrice: i.unitPrice,
+              customizations: (i.customizations ?? undefined) as object | undefined,
+              instructions: i.instructions ?? undefined,
+            })),
           },
-        }),
-      },
-      include: {
-        items: true,
-        shippingAddress: true,
-        delivery: true,
-      },
+          shippingAddress: {
+            create: shippingAddress,
+          },
+          ...(isShipping && {
+            delivery: {
+              create: {
+                deliveryZoneId: orderDeliveryZoneId ?? undefined,
+                method: deliveryMethod,
+                status: "PENDING",
+                estimatedDelivery: orderEstimatedDelivery ?? undefined,
+                assignedCourierId: orderCourierId ?? undefined,
+              },
+            },
+          }),
+        },
+        include: {
+          items: true,
+          shippingAddress: true,
+          delivery: true,
+        },
+      });
     });
 
     await createTrackingEvent(order.id, "PENDING");
@@ -297,6 +321,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ order });
   } catch (e) {
     console.error("Order create error:", e);
+    const msg = e instanceof Error ? e.message : "";
+    if (msg.includes("Insufficient stock")) {
+      return NextResponse.json({ error: msg }, { status: 409 });
+    }
     return NextResponse.json(
       { error: "Failed to create order. Please try again." },
       { status: 500 }

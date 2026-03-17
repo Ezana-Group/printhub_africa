@@ -119,12 +119,8 @@ export default function CheckoutPage() {
     mpesa: boolean;
     airtelMoney: boolean;
     tkash: boolean;
-    stripe: boolean;
     pesapal: boolean;
-    flutterwave: boolean;
-    applePay: boolean;
-    googlePay: boolean;
-  }>({ mpesa: true, airtelMoney: true, tkash: true, stripe: false, pesapal: false, flutterwave: false, applePay: false, googlePay: false });
+  }>({ mpesa: true, airtelMoney: true, tkash: true, pesapal: false });
   const [shippingRates, setShippingRates] = useState<{
     standard: number | null;
     express: number | null;
@@ -262,11 +258,7 @@ export default function CheckoutPage() {
           mpesa: data.mpesa ?? true,
           airtelMoney: data.airtelMoney ?? true,
           tkash: data.tkash ?? true,
-          stripe: data.stripe ?? false,
           pesapal: data.pesapal ?? false,
-          flutterwave: data.flutterwave ?? false,
-          applePay: data.applePay ?? data.stripe ?? false,
-          googlePay: data.googlePay ?? data.stripe ?? false,
         })
       )
       .catch(() => {});
@@ -1099,19 +1091,6 @@ export default function CheckoutPage() {
                       <p className="text-sm font-semibold text-foreground">Card</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">Visa or Mastercard</p>
                     </button>
-                    {paymentMethods.stripe && (
-                      <button
-                        type="button"
-                        onClick={() => setPayment({ method: "STRIPE" })}
-                        className={`rounded-xl border-2 p-4 text-left transition ${payment.method === "STRIPE" ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"}`}
-                      >
-                        <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50">
-                          <CreditCard className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <p className="text-sm font-semibold text-foreground">Card (Stripe)</p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">Visa or Mastercard</p>
-                      </button>
-                    )}
                     {paymentMethods.pesapal && (
                       <button
                         type="button"
@@ -1123,45 +1102,6 @@ export default function CheckoutPage() {
                         </div>
                         <p className="text-sm font-semibold text-foreground">Pesapal</p>
                         <p className="mt-0.5 text-xs text-muted-foreground">Card via Pesapal</p>
-                      </button>
-                    )}
-                    {paymentMethods.flutterwave && (
-                      <button
-                        type="button"
-                        onClick={() => setPayment({ method: "FLUTTERWAVE" })}
-                        className={`rounded-xl border-2 p-4 text-left transition ${payment.method === "FLUTTERWAVE" ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"}`}
-                      >
-                        <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50">
-                          <Building2 className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <p className="text-sm font-semibold text-foreground">Flutterwave</p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">Cards & mobile money</p>
-                      </button>
-                    )}
-                    {paymentMethods.applePay && (
-                      <button
-                        type="button"
-                        onClick={() => setPayment({ method: "APPLE_PAY" })}
-                        className={`rounded-xl border-2 p-4 text-left transition ${payment.method === "APPLE_PAY" ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"}`}
-                      >
-                        <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100">
-                          <CreditCard className="h-5 w-5 text-slate-700" />
-                        </div>
-                        <p className="text-sm font-semibold text-foreground">Apple Pay</p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">Face ID or Touch ID</p>
-                      </button>
-                    )}
-                    {paymentMethods.googlePay && (
-                      <button
-                        type="button"
-                        onClick={() => setPayment({ method: "GOOGLE_PAY" })}
-                        className={`rounded-xl border-2 p-4 text-left transition ${payment.method === "GOOGLE_PAY" ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"}`}
-                      >
-                        <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100">
-                          <CreditCard className="h-5 w-5 text-slate-700" />
-                        </div>
-                        <p className="text-sm font-semibold text-foreground">Google Pay</p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">Pay with Google</p>
                       </button>
                     )}
                     {corporate?.canUseNetTerms && (corporate.paymentTerms === "NET_30" || corporate.paymentTerms === "NET_60" || corporate.paymentTerms === "NET_14") && (
@@ -1240,7 +1180,7 @@ export default function CheckoutPage() {
                           />
                         </div>
                       </div>
-                      <p className="text-xs text-muted-foreground">Your card details are secured. For card payments we use Stripe or Pesapal; details are not stored on our servers.</p>
+                      <p className="text-xs text-muted-foreground">Your card details are secured. For card payments we use PesaPal; details are not stored on our servers.</p>
                     </div>
                   )}
                   {payment.method === "MPESA" && (

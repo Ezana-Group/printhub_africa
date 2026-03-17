@@ -1152,7 +1152,9 @@ export function OrderDetailClient({ orderId, initialOrder }: { orderId: string; 
                     ? "M-Pesa"
                     : latestPayment?.provider === "STRIPE"
                       ? "Card"
-                      : latestPayment?.provider ?? "—"}
+                      : latestPayment?.provider === "PESAPAL"
+                        ? "PesaPal (Card)"
+                        : latestPayment?.provider ?? "—"}
                 </span>
               </div>
               <div className="flex items-center justify-between">

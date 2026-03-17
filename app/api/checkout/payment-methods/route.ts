@@ -14,7 +14,6 @@ export async function GET() {
       prisma.businessSettings.findUnique({ where: { id: "default" } }),
       prisma.pricingConfig.findUnique({ where: { key: "adminSettings:payments" } }),
     ]);
-    const stripeOn = businessSettings?.stripeEnabled ?? false;
     let mpesaPaybillNumber = DEFAULT_PAYBILL;
     let mpesaTillNumber = DEFAULT_TILL;
     if (paymentsConfig?.valueJson) {
@@ -34,18 +33,14 @@ export async function GET() {
       mpesa: businessSettings?.mpesaEnabled ?? true,
       airtelMoney: true,
       tkash: true,
-      stripe: stripeOn,
       pesapal: businessSettings?.pesapalEnabled ?? false,
-      flutterwave: businessSettings?.flutterwaveEnabled ?? false,
-      applePay: stripeOn,
-      googlePay: stripeOn,
       mpesaPaybillNumber,
       mpesaTillNumber,
     });
   } catch (e) {
     console.error("Payment methods error:", e);
     return NextResponse.json(
-      { mpesa: true, airtelMoney: true, tkash: true, stripe: false, pesapal: false, flutterwave: false, applePay: false, googlePay: false, mpesaPaybillNumber: DEFAULT_PAYBILL, mpesaTillNumber: DEFAULT_TILL },
+      { mpesa: true, airtelMoney: true, tkash: true, pesapal: false, mpesaPaybillNumber: DEFAULT_PAYBILL, mpesaTillNumber: DEFAULT_TILL },
       { status: 200 }
     );
   }

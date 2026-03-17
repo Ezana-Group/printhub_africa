@@ -23,6 +23,7 @@ export default async function AdminContentSiteImagesPage() {
     const imagePath = row?.imagePath?.trim() || SITE_IMAGE_DEFAULTS[key];
     return {
       key,
+      tab: meta.tab,
       label: row?.label ?? meta.label,
       description: row?.description ?? meta.description,
       imagePath,

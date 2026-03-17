@@ -632,6 +632,7 @@ model Refund {
   mpesaPhone           String?
   mpesaReceiptNo       String?
   mpesaConversationId  String?   // B2C callback matching
+  providerRefReference String?   // PesaPal or other provider refund reference
   createdAt            DateTime  @default(now())
 
   @@index([orderId])
@@ -1466,6 +1467,7 @@ model Inventory {
   product           Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   variantId         String?
   quantity          Int             @default(0)
+  reservedQuantity  Int             @default(0) // reserved by unpaid orders; released on cancel
   lowStockThreshold Int             @default(5)
   location          String?
   unitCostKes       Float?          // cost per unit (KES) – for margin/profit checks

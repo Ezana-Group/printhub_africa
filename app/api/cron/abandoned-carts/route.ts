@@ -44,6 +44,7 @@ export async function GET(req: Request) {
     select: {
       id: true,
       email: true,
+      items: true,
       lastActivityAt: true,
       recoveryEmailSent1At: true,
       recoveryEmailSent2At: true,

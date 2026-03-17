@@ -15,16 +15,19 @@ export function RefundActionsClient({
   refundId,
   status,
   orderNumber,
+  paymentProvider,
 }: {
   refundId: string;
   status: string;
   orderNumber: string;
+  paymentProvider?: string;
 }) {
   const [loading, setLoading] = useState<string | null>(null);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [b2cOpen, setB2cOpen] = useState(false);
   const [mpesaPhone, setMpesaPhone] = useState("");
+  const isPesaPal = paymentProvider === "PESAPAL";
 
   const approve = async () => {
     setLoading("approve");
@@ -80,6 +83,25 @@ export function RefundActionsClient({
     }
   };
 
+  const processPesaPal = async () => {
+    setLoading("pesapal");
+    try {
+      const res = await fetch(`/api/admin/refunds/process-pesapal`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refundId }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        window.location.reload();
+      } else {
+        alert(data.error ?? "PesaPal refund failed");
+      }
+    } finally {
+      setLoading(null);
+    }
+  };
+
   return (
     <>
       <div className="flex flex-wrap gap-1">
@@ -94,9 +116,16 @@ export function RefundActionsClient({
           </>
         )}
         {status === "APPROVED" && (
-          <Button size="sm" variant="secondary" onClick={() => setB2cOpen(true)} disabled={!!loading}>
-            {loading === "b2c" ? "…" : "Send via M-Pesa"}
-          </Button>
+          <>
+            <Button size="sm" variant="secondary" onClick={() => setB2cOpen(true)} disabled={!!loading}>
+              {loading === "b2c" ? "…" : "Send via M-Pesa"}
+            </Button>
+            {isPesaPal && (
+              <Button size="sm" variant="secondary" onClick={processPesaPal} disabled={!!loading}>
+                {loading === "pesapal" ? "…" : "Process PesaPal Refund"}
+              </Button>
+            )}
+          </>
         )}
       </div>
 

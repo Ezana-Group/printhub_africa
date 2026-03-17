@@ -21,6 +21,7 @@ export default async function AdminRefundsPage({
           id: true,
           orderNumber: true,
           user: { select: { name: true, email: true } },
+          payments: { orderBy: { createdAt: "desc" }, take: 1, select: { provider: true } },
         },
       },
     },
@@ -96,6 +97,7 @@ export default async function AdminRefundsPage({
                         refundId={r.id}
                         status={r.status}
                         orderNumber={r.order?.orderNumber ?? r.orderId}
+                        paymentProvider={r.order?.payments?.[0]?.provider ?? undefined}
                       />
                     </td>
                   </tr>

@@ -7,9 +7,9 @@ import { z } from "zod";
 const PROVIDER_FIELD_MAP: Record<string, string> = {
   mpesa: "mpesaEnabled",
   pesapal: "pesapalEnabled",
-  flutterwave: "flutterwaveEnabled",
-  stripe: "stripeEnabled",
 };
+
+const REMOVED_PROVIDERS = ["stripe", "flutterwave"];
 
 export async function PATCH(
   req: Request,
@@ -18,6 +18,9 @@ export async function PATCH(
   const auth = await requireRole(req, "SUPER_ADMIN");
   if (auth instanceof NextResponse) return auth;
   const { provider } = await params;
+  if (REMOVED_PROVIDERS.includes(provider.toLowerCase())) {
+    return NextResponse.json({ error: "This payment provider is no longer supported. Use M-Pesa or PesaPal." }, { status: 400 });
+  }
   const body = z.object({ enabled: z.boolean() }).safeParse(await req.json().catch(() => ({})));
   if (!body.success) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   const field = PROVIDER_FIELD_MAP[provider];

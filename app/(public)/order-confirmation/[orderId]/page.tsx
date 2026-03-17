@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
@@ -28,13 +28,23 @@ interface ConfirmationOrder {
   } | null;
 }
 
+const PESAPAL_POLL_INTERVAL_MS = 4000;
+const PESAPAL_POLL_MAX_ATTEMPTS = 20;
+
 export default function OrderConfirmationPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const orderId = params?.orderId as string;
+  const isPesaPalReturn = searchParams?.get("pesapal") === "1";
   const { data: session, status: sessionStatus } = useSession();
   const [order, setOrder] = useState<ConfirmationOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [copyDone, setCopyDone] = useState(false);
+  const [pesapalState, setPesapalState] = useState<"confirming" | "confirmed" | "failed" | null>(
+    isPesaPalReturn ? "confirming" : null
+  );
+  const pollAttempts = useRef(0);
+  const pesapalOrderTrackingIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!orderId) return;
@@ -42,10 +52,46 @@ export default function OrderConfirmationPage() {
       .then((r) => r.json())
       .then((data) => {
         if (data.orderNumber) setOrder(data);
+        if (data.status === "CONFIRMED") setPesapalState("confirmed");
+        if (data.pesapalOrderTrackingId) pesapalOrderTrackingIdRef.current = data.pesapalOrderTrackingId;
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [orderId]);
+
+  useEffect(() => {
+    if (!orderId || !isPesaPalReturn || pesapalState !== "confirming" || !order) return;
+    const orderTrackingId =
+      searchParams?.get("OrderTrackingId") ??
+      searchParams?.get("orderTrackingId") ??
+      pesapalOrderTrackingIdRef.current;
+    if (!orderTrackingId) return;
+    const interval = setInterval(async () => {
+      pollAttempts.current += 1;
+      if (pollAttempts.current > PESAPAL_POLL_MAX_ATTEMPTS) {
+        setPesapalState("failed");
+        clearInterval(interval);
+        return;
+      }
+      try {
+        const r = await fetch(
+          `/api/payments/pesapal/status?orderTrackingId=${encodeURIComponent(orderTrackingId)}&orderId=${encodeURIComponent(orderId)}`
+        );
+        const data = await r.json();
+        if (data.status === "CONFIRMED") {
+          setPesapalState("confirmed");
+          setOrder((prev) => (prev ? { ...prev, status: "CONFIRMED" } : null));
+          clearInterval(interval);
+        } else if (data.status === "FAILED") {
+          setPesapalState("failed");
+          clearInterval(interval);
+        }
+      } catch {
+        // keep polling
+      }
+    }, PESAPAL_POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [orderId, isPesaPalReturn, pesapalState, order, searchParams]);
 
   const copyOrderNumber = () => {
     if (!order?.orderNumber) return;
@@ -58,6 +104,28 @@ export default function OrderConfirmationPage() {
     return (
       <div className="min-h-[50vh] bg-[#F9FAFB] flex items-center justify-center">
         <p className="text-muted-foreground">{loading ? "Loading…" : "Order not found."}</p>
+      </div>
+    );
+  }
+
+  if (pesapalState === "confirming") {
+    return (
+      <div className="min-h-[50vh] bg-[#F9FAFB] flex flex-col items-center justify-center gap-4">
+        <div className="animate-spin h-10 w-10 border-2 border-primary border-t-transparent rounded-full" />
+        <p className="text-muted-foreground">Confirming your payment…</p>
+      </div>
+    );
+  }
+
+  if (pesapalState === "failed") {
+    return (
+      <div className="min-h-[50vh] bg-[#F9FAFB] flex flex-col items-center justify-center gap-4 px-4">
+        <p className="text-center text-muted-foreground">
+          We couldn’t confirm your payment yet. You can try again or contact support.
+        </p>
+        <Button asChild>
+          <Link href={`/pay/${orderId}`}>Try again</Link>
+        </Button>
       </div>
     );
   }

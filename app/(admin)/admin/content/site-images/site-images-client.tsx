@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { FileUploader } from "@/components/upload/FileUploader";
@@ -14,10 +14,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Loader2, RotateCcw, ImageIcon } from "lucide-react";
+import { Loader2, RotateCcw, ImageIcon, LayoutGrid, Users, Home } from "lucide-react";
+import type { SiteImageTabId } from "@/lib/site-images";
 
 export type SiteImageSlotRow = {
   key: string;
+  tab: SiteImageTabId;
   label: string;
   description: string;
   imagePath: string;
@@ -25,6 +27,12 @@ export type SiteImageSlotRow = {
   isOverridden: boolean;
   alt: string | null;
   updatedAt: string | null;
+};
+
+const TAB_CONFIG: Record<SiteImageTabId, { label: string; icon: typeof Home }> = {
+  services: { label: "Services page", icon: LayoutGrid },
+  about: { label: "About page", icon: Users },
+  homepage: { label: "Homepage", icon: Home },
 };
 
 function getPublicUrl(file: UploadedFileResult): string {
@@ -36,9 +44,24 @@ function getPublicUrl(file: UploadedFileResult): string {
 export function SiteImagesClient({ initialSlots }: { initialSlots: SiteImageSlotRow[] }) {
   const router = useRouter();
   const [slots, setSlots] = useState<SiteImageSlotRow[]>(initialSlots);
+  const [activeTab, setActiveTab] = useState<SiteImageTabId>("homepage");
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const slotsByTab = useMemo(() => {
+    const map: Record<SiteImageTabId, SiteImageSlotRow[]> = {
+      services: [],
+      about: [],
+      homepage: [],
+    };
+    for (const slot of slots) {
+      map[slot.tab].push(slot);
+    }
+    return map;
+  }, [slots]);
+
+  const currentSlots = slotsByTab[activeTab];
 
   const updateSlotPath = useCallback((key: string, imagePath: string | null) => {
     setSlots((prev) =>
@@ -115,8 +138,29 @@ export function SiteImagesClient({ initialSlots }: { initialSlots: SiteImageSlot
   );
 
   return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {slots.map((slot) => (
+    <div className="space-y-6">
+      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-4">
+        {(Object.keys(TAB_CONFIG) as SiteImageTabId[]).map((tabId) => {
+          const config = TAB_CONFIG[tabId];
+          const Icon = config.icon;
+          const count = slotsByTab[tabId].length;
+          return (
+            <Button
+              key={tabId}
+              variant={activeTab === tabId ? "default" : "outline"}
+              size="sm"
+              className="rounded-lg gap-2"
+              onClick={() => setActiveTab(tabId)}
+            >
+              <Icon className="h-4 w-4" />
+              {config.label}
+              <span className="text-xs opacity-80">({count})</span>
+            </Button>
+          );
+        })}
+      </div>
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {currentSlots.map((slot) => (
         <Card key={slot.key} className="overflow-hidden">
           <CardHeader className="pb-2">
             <h3 className="font-semibold text-slate-900">{slot.label}</h3>
@@ -174,6 +218,7 @@ export function SiteImagesClient({ initialSlots }: { initialSlots: SiteImageSlot
           </CardContent>
         </Card>
       ))}
+      </div>
 
       <Dialog open={editingKey !== null} onOpenChange={(open) => !open && setEditingKey(null)}>
         <DialogContent className="max-w-md">
