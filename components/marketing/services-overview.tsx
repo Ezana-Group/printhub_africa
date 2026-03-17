@@ -10,7 +10,7 @@ const SERVICES = [
     description: "Banners, billboards, vehicle wraps, canvas, signage, and more.",
     bullets: ["Vinyl & flex banners", "Vehicle wraps & branding", "Canvas prints", "Event backdrops"],
     cta: "Explore Large Format",
-    image: "/images/services/large-format-hero.webp",
+    defaultImage: "/images/services/large-format-hero.webp",
     alt: "Large format printing — banners, signage, vehicle wraps",
   },
   {
@@ -19,12 +19,22 @@ const SERVICES = [
     description: "From prototypes to finished products. Multiple materials and finishes.",
     bullets: ["FDM & resin printing", "Custom designs", "Ready-made products", "Industrial & consumer"],
     cta: "Explore 3D Printing",
-    image: "/images/services/3d-printing-hero.webp",
+    defaultImage: "/images/services/3d-printing-hero.webp",
     alt: "3D printing — FDM and resin printing Kenya",
   },
 ];
 
-export function ServicesOverview() {
+export function ServicesOverview({
+  largeFormatImage,
+  threeDImage,
+}: {
+  largeFormatImage?: string;
+  threeDImage?: string;
+} = {}) {
+  const images = [
+    largeFormatImage ?? SERVICES[0].defaultImage,
+    threeDImage ?? SERVICES[1].defaultImage,
+  ];
   return (
     <section className="py-20 md:py-28 bg-slate-50/80">
       <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
@@ -35,14 +45,14 @@ export function ServicesOverview() {
           Professional printing solutions for businesses and creatives across Kenya.
         </p>
         <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
-          {SERVICES.map((service) => (
+          {SERVICES.map((service, i) => (
             <Card
               key={service.href}
               className="overflow-hidden border-0 bg-white rounded-3xl shadow-lg shadow-slate-200/60 hover:shadow-xl hover:shadow-slate-200/80 transition-all duration-300 group hover:-translate-y-1"
             >
               <div className="relative aspect-[5/3] rounded-t-3xl overflow-hidden">
                 <Image
-                  src={service.image}
+                  src={images[i] ?? service.defaultImage}
                   alt={service.alt}
                   fill
                   className="object-cover"

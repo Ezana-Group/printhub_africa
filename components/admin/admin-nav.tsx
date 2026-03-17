@@ -22,6 +22,7 @@ import {
   HelpCircle,
   Scale,
   Mail,
+  ImageIcon,
   Briefcase,
   Layers,
   Truck,
@@ -86,6 +87,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/content/legal", label: "Legal Pages", icon: Scale },
       { href: "/admin/content/faq", label: "FAQ Manager", icon: HelpCircle },
       { href: "/admin/content/email-templates", label: "Email Templates", icon: Mail },
+      { href: "/admin/content/site-images", label: "Site Images", icon: ImageIcon },
     ],
   },
   {

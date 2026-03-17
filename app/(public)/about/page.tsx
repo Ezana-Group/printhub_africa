@@ -4,6 +4,8 @@ import Image from "next/image";
 import { AboutHero } from "./about-hero";
 import { getBusinessPublic } from "@/lib/business-public";
 import { getCachedPublicTeamMembers } from "@/lib/cache/unstable-cache";
+import { getSiteImageSlots } from "@/lib/site-images";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
 export const revalidate = 3600; // 1 hour — about page changes rarely
@@ -27,17 +29,31 @@ export async function generateMetadata(): Promise<Metadata> {
 const STORY_IMAGE = "/images/about/production-floor.webp";
 
 export default async function AboutPage() {
-  const [business, teamMembers] = await Promise.all([
+  const [business, teamMembers, siteImages] = await Promise.all([
     getBusinessPublic(),
     getCachedPublicTeamMembers(),
+    getSiteImageSlots(prisma),
   ]);
   const whatsappDigits = (business.whatsapp ?? "").replace(/\D/g, "") || "254700000000";
   const whatsappHref = `https://wa.me/${whatsappDigits}`;
+  const heroBgImage = siteImages.about_hero_background;
   return (
     <div className="bg-[#0A0A0A] text-white">
       {/* SECTION 1 — HERO */}
-      <section className="min-h-[100dvh] md:min-h-screen flex flex-col justify-center px-4 md:px-6 lg:px-8 pt-24 pb-16 md:pt-28">
-        <div className="container max-w-6xl mx-auto w-full">
+      <section className="relative min-h-[100dvh] md:min-h-screen flex flex-col justify-center px-4 md:px-6 lg:px-8 pt-24 pb-16 md:pt-28 overflow-hidden">
+        {/* Faded background image */}
+        <div className="absolute inset-0 z-0">
+          <Image
+            src={heroBgImage}
+            alt=""
+            fill
+            className="object-cover"
+            sizes="100vw"
+            priority
+          />
+          <div className="absolute inset-0 bg-[#0A0A0A]/90" aria-hidden />
+        </div>
+        <div className="container relative z-10 max-w-6xl mx-auto w-full">
           <p
             className="font-mono text-[11px] uppercase tracking-[0.2em] text-primary mb-6"
             style={{ letterSpacing: "0.2em" }}
@@ -138,7 +154,7 @@ export default async function AboutPage() {
                 desc: "Banners, vehicle wraps, signage, canvas, wallpaper and floor graphics. Any size. Any substrate.",
                 cta: "Explore service",
                 href: "/services/large-format-printing",
-                image: "/images/services/large-format-hero.webp",
+                image: siteImages.about_card_01,
               },
               {
                 num: "02",
@@ -147,7 +163,7 @@ export default async function AboutPage() {
                 desc: "FDM and resin printing for prototypes, products, architecture, jewellery and engineering parts.",
                 cta: "Explore service",
                 href: "/services/3d-printing",
-                image: "/images/services/3d-printing-hero.webp",
+                image: siteImages.about_card_02,
               },
               {
                 num: "03",
@@ -156,7 +172,7 @@ export default async function AboutPage() {
                 desc: "Ready-made and custom printed products shipped across Kenya.",
                 cta: "Browse shop",
                 href: "/shop",
-                image: "/images/services/banner-outdoor.webp",
+                image: siteImages.about_card_03,
               },
             ].map((card) => (
               <ServiceCard key={card.num} {...card} />

@@ -870,6 +870,7 @@ enum UploadContext {
   ADMIN_LOGO
   ADMIN_FAVICON
   ADMIN_OG_IMAGE
+  ADMIN_SITE_IMAGE
   USER_AVATAR
   STAFF_AVATAR
   STAFF_PROFILE_PHOTO
@@ -1959,6 +1960,17 @@ model ThreeDConsumableMovement {
 }
 
 // ============== SETTINGS (single-row per id) ==============
+// Slots for admin-managed site images (services, about, marketing). Key is unique; imagePath overrides default.
+model SiteImageSlot {
+  id          String    @id @default(cuid())
+  key         String    @unique // e.g. services_page_large_format, about_card_01
+  label       String    // Display name in admin UI
+  description String?   // Where this image appears on the site
+  imagePath   String?   // Override URL/path; null = use default from code
+  alt         String?   // Optional alt text override
+  updatedAt   DateTime  @updatedAt
+}
+
 model BusinessSettings {
   id                   String    @id // "default"
   businessName         String?

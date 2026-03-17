@@ -8,17 +8,25 @@ import { WhyPrintHub } from "@/components/marketing/why-printhub";
 import { PriceCalculatorTeaser } from "@/components/marketing/price-calculator-teaser";
 import { CTABanner } from "@/components/marketing/cta-banner";
 import { getCachedBusinessPublic } from "@/lib/cache/unstable-cache";
+import { getSiteImageSlots } from "@/lib/site-images";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
 // ISR: revalidate every 5 minutes so homepage is served from edge cache
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const business = await getCachedBusinessPublic();
+  const [business, siteImages] = await Promise.all([
+    getCachedBusinessPublic(),
+    getSiteImageSlots(prisma),
+  ]);
   return (
     <>
       <Hero />
-      <ServicesOverview />
+      <ServicesOverview
+        largeFormatImage={siteImages.marketing_services_large_format}
+        threeDImage={siteImages.marketing_services_3d}
+      />
       <HowItWorks />
       <NewArrivalsSection />
       <FeaturedProducts />

@@ -56,6 +56,7 @@ export type UploadFolder =
   | "brand/logos"
   | "brand/favicons"
   | "brand/og"
+  | "site-images"
   | "categories/images"
   | "avatars"
   | "staff-profile"
