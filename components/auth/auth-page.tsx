@@ -482,16 +482,17 @@ export function AuthPage({ initialTab = "login", panel: panelProp }: AuthPagePro
                           OR
                         </span>
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="w-full h-10 text-sm font-medium"
-                        asChild
-                      >
-                        <Link href="/login/magic">Email me a sign-in link</Link>
-                      </Button>
                     </>
                   )}
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full h-10 text-sm font-medium"
+                    asChild
+                  >
+                    <Link href="/login/magic">Email me a sign-in link</Link>
+                  </Button>
 
                   <p className="text-[12px] text-center text-muted-foreground pt-1">
                     New to PrintHub?{" "}
