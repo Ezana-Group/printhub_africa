@@ -7,5 +7,14 @@ export const dynamic = "force-dynamic";
 
 export default async function RegisterPage() {
   const panel = await getAuthPanelForPublic(prisma);
-  return <AuthPage initialTab="register" panel={panel} />;
+  return (
+    <AuthPage
+      initialTab="register"
+      panel={panel}
+      socialProviders={{
+        google: !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET,
+        facebook: !!process.env.FACEBOOK_CLIENT_ID && !!process.env.FACEBOOK_CLIENT_SECRET,
+      }}
+    />
+  );
 }

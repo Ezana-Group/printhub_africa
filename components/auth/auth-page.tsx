@@ -114,9 +114,18 @@ export type AuthPageProps = {
   initialTab?: AuthTab;
   /** Server-fetched panel config + slides; when null/undefined, built-in default is used. */
   panel?: AuthPanelPublic | null;
+  /** Server-resolved social provider visibility to avoid hydration flicker. */
+  socialProviders?: {
+    google: boolean;
+    facebook: boolean;
+  };
 };
 
-export function AuthPage({ initialTab = "login", panel: panelProp }: AuthPageProps) {
+export function AuthPage({
+  initialTab = "login",
+  panel: panelProp,
+  socialProviders,
+}: AuthPageProps) {
   const [activeTab, setActiveTab] = useState<AuthTab>(initialTab);
   const panel = panelProp ?? DEFAULT_PANEL;
   const slides = panel.slides.length > 0 ? panel.slides : DEFAULT_PANEL.slides;
@@ -136,8 +145,8 @@ export function AuthPage({ initialTab = "login", panel: panelProp }: AuthPagePro
     return () => clearInterval(t);
   }, [panel.carouselIntervalSeconds, slides.length]);
 
-  const showGoogle = !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-  const showFacebook = !!process.env.NEXT_PUBLIC_FACEBOOK_APP_ID;
+  const showGoogle = socialProviders?.google ?? false;
+  const showFacebook = socialProviders?.facebook ?? false;
   const showSocial = showGoogle || showFacebook;
 
   const [loginEmail, setLoginEmail] = useState("");
@@ -723,7 +732,7 @@ export function AuthPage({ initialTab = "login", panel: panelProp }: AuthPagePro
                       {registerLoading ? "Creating account…" : "Create account"}
                     </Button>
 
-                    {(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_FACEBOOK_APP_ID) && (
+                    {showSocial && (
                       <>
                         <div className="relative w-full">
                           <span className="absolute inset-0 flex items-center">
@@ -734,7 +743,7 @@ export function AuthPage({ initialTab = "login", panel: panelProp }: AuthPagePro
                           </span>
                         </div>
                         <div className="grid grid-cols-1 gap-2 w-full">
-                          {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
+                          {showGoogle && (
                             <Button
                               type="button"
                               variant="outline"
@@ -745,7 +754,7 @@ export function AuthPage({ initialTab = "login", panel: panelProp }: AuthPagePro
                               Continue with Google
                             </Button>
                           )}
-                          {process.env.NEXT_PUBLIC_FACEBOOK_APP_ID && (
+                          {showFacebook && (
                             <Button
                               type="button"
                               variant="outline"
