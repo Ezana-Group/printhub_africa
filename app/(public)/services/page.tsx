@@ -120,19 +120,31 @@ export default async function ServicesPage() {
             Two core offerings — large format for signage and branding, and 3D printing for prototypes and products. Both support custom file uploads and instant quoting.
           </p>
           <div className="grid md:grid-cols-2 gap-8 max-w-6xl">
-            {MAIN_SERVICES.map((service, i) => (
+            {MAIN_SERVICES.map((service, i) => {
+              const src = serviceImages[i] ?? service.image;
+              const isExternal = src.startsWith("http");
+              return (
               <Card
                 key={service.href}
                 className="overflow-hidden border-0 bg-white rounded-3xl shadow-lg shadow-slate-200/60 hover:shadow-xl transition-all duration-300 group"
               >
                 <div className="relative aspect-[5/3] overflow-hidden">
-                  <Image
-                    src={serviceImages[i] ?? service.image}
-                    alt={service.alt}
-                    fill
-                    className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                    sizes="(max-width: 768px) 100vw, 50vw"
-                  />
+                  {isExternal ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={src}
+                      alt={service.alt}
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                    />
+                  ) : (
+                    <Image
+                      src={src}
+                      alt={service.alt}
+                      fill
+                      className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                    />
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                 </div>
                 <CardContent className="p-8">
@@ -160,7 +172,8 @@ export default async function ServicesPage() {
                   </Button>
                 </CardContent>
               </Card>
-            ))}
+            );
+            })}
           </div>
         </div>
       </section>

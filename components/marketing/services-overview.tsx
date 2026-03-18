@@ -45,19 +45,31 @@ export function ServicesOverview({
           Professional printing solutions for businesses and creatives across Kenya.
         </p>
         <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
-          {SERVICES.map((service, i) => (
+          {SERVICES.map((service, i) => {
+            const src = images[i] ?? service.defaultImage;
+            const isExternal = src.startsWith("http");
+            return (
             <Card
               key={service.href}
               className="overflow-hidden border-0 bg-white rounded-3xl shadow-lg shadow-slate-200/60 hover:shadow-xl hover:shadow-slate-200/80 transition-all duration-300 group hover:-translate-y-1"
             >
               <div className="relative aspect-[5/3] rounded-t-3xl overflow-hidden">
-                <Image
-                  src={images[i] ?? service.defaultImage}
-                  alt={service.alt}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                />
+                {isExternal ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={src}
+                    alt={service.alt}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <Image
+                    src={src}
+                    alt={service.alt}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                  />
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
               </div>
               <CardContent className="p-8">
@@ -79,7 +91,8 @@ export function ServicesOverview({
                 </Button>
               </CardContent>
             </Card>
-          ))}
+          );
+          })}
         </div>
       </div>
     </section>

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/settings-api";
@@ -61,6 +62,12 @@ export async function PATCH(
   });
 
   const currentPath = slot.imagePath?.trim() || SITE_IMAGE_DEFAULTS[key as SiteImageSlotKey];
+
+  // Revalidate homepage and related pages so updated images show immediately
+  revalidatePath("/");
+  revalidatePath("/services");
+  revalidatePath("/about");
+
   return NextResponse.json({
     key: slot.key,
     imagePath: currentPath,
