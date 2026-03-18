@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Loader2, RotateCcw, ImageIcon, LayoutGrid, Users, Home } from "lucide-react";
+import { Loader2, RotateCcw, ImageIcon, LayoutGrid, Users, Home, ShoppingBag } from "lucide-react";
 import type { SiteImageTabId } from "@/lib/site-images";
 
 export type SiteImageSlotRow = {
@@ -32,9 +32,10 @@ export type SiteImageSlotRow = {
 };
 
 const TAB_CONFIG: Record<SiteImageTabId, { label: string; icon: typeof Home }> = {
-  services: { label: "Services page", icon: LayoutGrid },
+  services: { label: "Services", icon: LayoutGrid },
   about: { label: "About page", icon: Users },
   homepage: { label: "Homepage", icon: Home },
+  catalogue: { label: "Catalogue", icon: ShoppingBag },
 };
 
 function getPublicUrl(file: UploadedFileResult): string {
@@ -57,6 +58,7 @@ export function SiteImagesClient({ initialSlots }: { initialSlots: SiteImageSlot
       services: [],
       about: [],
       homepage: [],
+      catalogue: [],
     };
     for (const slot of slots) {
       map[slot.tab].push(slot);

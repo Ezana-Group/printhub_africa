@@ -6,7 +6,7 @@
 import type { PrismaClient } from "@prisma/client";
 
 /** Tab id for grouping in admin UI. */
-export type SiteImageTabId = "services" | "about" | "homepage";
+export type SiteImageTabId = "services" | "about" | "homepage" | "catalogue";
 
 export const SITE_IMAGE_SLOT_KEYS = [
   "services_page_large_format",
@@ -44,6 +44,15 @@ export const SITE_IMAGE_SLOT_KEYS = [
   "service_3d_application_06",
   "service_3d_application_07",
   "service_3d_application_08",
+  // Catalogue categories (/catalogue)
+  "catalogue_category_home_decor",
+  "catalogue_category_phone_tech",
+  "catalogue_category_toys_games",
+  "catalogue_category_tools",
+  "catalogue_category_jewellery",
+  "catalogue_category_education",
+  "catalogue_category_office_desk",
+  "catalogue_category_kenya_collection",
   "about_hero_background",
   "about_story_image",
   "about_card_01",
@@ -96,6 +105,14 @@ export const SITE_IMAGE_DEFAULTS: Record<SiteImageSlotKey, string> = {
   service_3d_application_06: "/images/products/product-placeholder.webp",
   service_3d_application_07: "/images/services/3d-prototype.webp",
   service_3d_application_08: "/images/products/3d-figurine.webp",
+  catalogue_category_home_decor: "/images/catalogue/category-home-decor.webp",
+  catalogue_category_phone_tech: "/images/catalogue/category-phone-tech.webp",
+  catalogue_category_toys_games: "/images/catalogue/category-toys.webp",
+  catalogue_category_tools: "/images/catalogue/category-tools.webp",
+  catalogue_category_jewellery: "/images/catalogue/category-jewellery.webp",
+  catalogue_category_education: "/images/catalogue/category-education.webp",
+  catalogue_category_office_desk: "/images/catalogue/category-office.webp",
+  catalogue_category_kenya_collection: "/images/catalogue/category-kenya.webp",
   about_hero_background: "/images/about/production-floor.webp",
   about_story_image: "/images/about/production-floor.webp",
   about_card_01: "/images/services/large-format-hero.webp",
@@ -313,6 +330,46 @@ export const SITE_IMAGE_SLOT_META: Record<
     description: "Applications section — Art & culture (/services/3d-printing)",
     tab: "services",
     group: "3D Printing",
+  },
+  catalogue_category_home_decor: {
+    label: "Category — Home decor",
+    description: "Default image for Home decor category (/catalogue)",
+    tab: "catalogue",
+  },
+  catalogue_category_phone_tech: {
+    label: "Category — Phone & tech",
+    description: "Default image for Phone & tech category (/catalogue)",
+    tab: "catalogue",
+  },
+  catalogue_category_toys_games: {
+    label: "Category — Toys & games",
+    description: "Default image for Toys & games category (/catalogue)",
+    tab: "catalogue",
+  },
+  catalogue_category_tools: {
+    label: "Category — Tools",
+    description: "Default image for Tools category (/catalogue)",
+    tab: "catalogue",
+  },
+  catalogue_category_jewellery: {
+    label: "Category — Jewellery",
+    description: "Default image for Jewellery category (/catalogue)",
+    tab: "catalogue",
+  },
+  catalogue_category_education: {
+    label: "Category — Education",
+    description: "Default image for Education category (/catalogue)",
+    tab: "catalogue",
+  },
+  catalogue_category_office_desk: {
+    label: "Category — Office & desk",
+    description: "Default image for Office & desk category (/catalogue)",
+    tab: "catalogue",
+  },
+  catalogue_category_kenya_collection: {
+    label: "Category — Kenya collection",
+    description: "Default image for Kenya collection category (/catalogue)",
+    tab: "catalogue",
   },
   about_hero_background: {
     label: "Hero background",
