@@ -92,9 +92,11 @@ function VerifyContent() {
     setError("");
   };
 
+  const cardBaseClass = "w-full max-w-3xl mx-auto rounded-2xl border-slate-200 shadow-lg";
+
   if (!token) {
     return (
-      <Card className="rounded-2xl border-slate-200 shadow-lg">
+      <Card className={cardBaseClass}>
         <CardHeader className="space-y-1">
           <Link href="/" className="text-2xl font-display font-bold text-primary">PrintHub</Link>
           <CardTitle>Verification</CardTitle>
@@ -115,7 +117,7 @@ function VerifyContent() {
     const sentLabel = chosenMethod === "email" ? "email" : chosenMethod === "sms" ? "phone" : null;
 
     return (
-      <Card className="rounded-2xl border-slate-200 shadow-lg">
+      <Card className={cardBaseClass}>
         <CardHeader className="space-y-1">
           <Link href="/" className="text-2xl font-display font-bold text-primary">
             PrintHub
@@ -183,7 +185,7 @@ function VerifyContent() {
 
   // Method selection: card-style options; only one in use at a time.
   return (
-    <Card className="rounded-2xl border-slate-200 shadow-lg">
+    <Card className={cardBaseClass}>
       <CardHeader className="space-y-1">
         <Link href="/" className="text-2xl font-display font-bold text-primary">
           PrintHub
@@ -261,7 +263,13 @@ function VerifyContent() {
 
 export default function LoginVerifyPage() {
   return (
-    <Suspense fallback={<Card className="rounded-2xl"><CardContent className="pt-6">Loading…</CardContent></Card>}>
+    <Suspense
+      fallback={
+        <Card className="w-full max-w-3xl mx-auto rounded-2xl border-slate-200 shadow-lg">
+          <CardContent className="pt-6">Loading…</CardContent>
+        </Card>
+      }
+    >
       <VerifyContent />
     </Suspense>
   );

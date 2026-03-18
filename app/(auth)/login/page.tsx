@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function LoginPage() {
   const panel = await getAuthPanelForPublic(prisma);
+
   return (
     <AuthPage
       initialTab="login"

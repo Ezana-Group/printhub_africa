@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, startTransition } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -322,7 +322,7 @@ export function StaffAdminClient({
         {canInvite && (
           <Button
             type="button"
-            onClick={() => startTransition(() => setInviteOpen(true))}
+            onClick={() => setInviteOpen(true)}
             className="bg-primary hover:bg-primary/90"
           >
             <Plus className="mr-2 h-4 w-4" />
@@ -368,7 +368,7 @@ export function StaffAdminClient({
                 {canInvite && (
                   <Button
                     type="button"
-                    onClick={() => startTransition(() => setInviteOpen(true))}
+                    onClick={() => setInviteOpen(true)}
                     className="mt-4 bg-primary"
                   >
                     <Plus className="mr-2 h-4 w-4" />

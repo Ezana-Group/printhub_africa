@@ -10,19 +10,19 @@ export default async function AdminCustomerDetailPage({
 }) {
   await requireAdminSection("/admin/customers");
   const { id } = await params;
+  async function safeQuery<T>(label: string, fn: () => Promise<T>, fallback: T): Promise<T> {
+    try {
+      return await fn();
+    } catch (error) {
+      console.error(`[admin/customers/${id}] Failed to load ${label}:`, error);
+      return fallback;
+    }
+  }
+
   const user = await prisma.user.findFirst({
     where: { id, role: "CUSTOMER" },
     include: {
       _count: { select: { orders: true } },
-      orders: {
-        orderBy: { createdAt: "desc" },
-        take: 50,
-        include: {
-          payments: true,
-          refunds: true,
-        },
-      },
-      addresses: { select: { id: true, label: true, street: true, city: true } },
       primaryCorporateAccount: {
         select: {
           id: true,
@@ -61,30 +61,99 @@ export default async function AdminCustomerDetailPage({
         },
         take: 1,
       },
-      printQuotes: { orderBy: { createdAt: "desc" }, take: 50 },
-      quotes: { orderBy: { createdAt: "desc" }, take: 50 },
-      uploadedFiles: { orderBy: { createdAt: "desc" }, take: 50 },
-      auditLogs: { orderBy: { timestamp: "desc" }, take: 100 },
     },
   });
   if (!user) notFound();
 
+  const [orders, addresses, printQuotes, quotes, uploadedFiles, auditLogs] = await Promise.all([
+    safeQuery(
+      "orders",
+      () =>
+        prisma.order.findMany({
+          where: { userId: user.id },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+          include: {
+            payments: true,
+            refunds: true,
+          },
+        }),
+      []
+    ),
+    safeQuery(
+      "addresses",
+      () =>
+        prisma.address.findMany({
+          where: { userId: user.id },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+          select: { id: true, label: true, street: true, city: true },
+        }),
+      []
+    ),
+    safeQuery(
+      "printQuotes",
+      () =>
+        prisma.printQuote.findMany({
+          where: { userId: user.id },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+        }),
+      []
+    ),
+    safeQuery(
+      "quotes",
+      () =>
+        prisma.quote.findMany({
+          where: { customerId: user.id },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+        }),
+      []
+    ),
+    safeQuery(
+      "uploadedFiles",
+      () =>
+        prisma.uploadedFile.findMany({
+          where: { userId: user.id },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+        }),
+      []
+    ),
+    safeQuery(
+      "auditLogs",
+      () =>
+        prisma.auditLog.findMany({
+          where: { userId: user.id },
+          orderBy: { timestamp: "desc" },
+          take: 100,
+        }),
+      []
+    ),
+  ]);
+
   // Also load Get a Quote requests that match this customer's email (e.g. submitted as guest)
-  const quotesByEmail = await prisma.quote.findMany({
-    where: {
-      customerEmail: { equals: user.email, mode: "insensitive" },
-      customerId: null,
-      id: { notIn: user.quotes.map((q) => q.id) },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  });
+  const quotesByEmail = await safeQuery(
+    "quotesByEmail",
+    () =>
+      prisma.quote.findMany({
+        where: {
+          customerEmail: user.email,
+          customerId: null,
+          id: { notIn: quotes.map((q) => q.id) },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+      }),
+    []
+  );
   const allGetAQuoteQuotes = [
-    ...user.quotes.map((q) => ({ ...q, source: "account" as const })),
+    ...quotes.map((q) => ({ ...q, source: "account" as const })),
     ...quotesByEmail.map((q) => ({ ...q, source: "email_match" as const })),
   ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 50);
 
-  const totalSpent = user.orders.reduce(
+  const totalSpent = orders.reduce(
     (sum, o) =>
       sum +
       o.payments
@@ -92,7 +161,7 @@ export default async function AdminCustomerDetailPage({
         .reduce((s, p) => s + Number(p.amount), 0),
     0
   );
-  const totalRefunded = user.orders.reduce(
+  const totalRefunded = orders.reduce(
     (sum, o) =>
       sum +
       o.refunds
@@ -113,7 +182,7 @@ export default async function AdminCustomerDetailPage({
     ordersCount: user._count.orders,
     totalSpent,
     totalRefunded,
-    orders: user.orders.map((o) => ({
+    orders: orders.map((o) => ({
       id: o.id,
       orderNumber: o.orderNumber,
       status: o.status,
@@ -130,7 +199,7 @@ export default async function AdminCustomerDetailPage({
         reason: r.reason,
       })),
     })),
-    addresses: user.addresses.map((a) => ({
+    addresses: addresses.map((a) => ({
       id: a.id,
       label: a.label,
       street: a.street,
@@ -158,7 +227,7 @@ export default async function AdminCustomerDetailPage({
       };
     })(),
     corporateRole: user.corporateTeamMemberships[0]?.role ?? null,
-    quotes: user.printQuotes.map((q) => ({
+    quotes: printQuotes.map((q) => ({
       id: q.id,
       status: q.status,
       estimatedCost: q.estimatedCost != null ? Number(q.estimatedCost) : null,
@@ -174,7 +243,7 @@ export default async function AdminCustomerDetailPage({
       createdAt: q.createdAt,
       projectName: q.projectName,
     })),
-    uploads: user.uploadedFiles.map((u) => ({
+    uploads: uploadedFiles.map((u) => ({
       id: u.id,
       originalName: u.originalName,
       fileType: u.fileType,
@@ -182,7 +251,7 @@ export default async function AdminCustomerDetailPage({
       createdAt: u.createdAt,
       url: u.url ?? "",
     })),
-    auditLogs: user.auditLogs.map((a) => ({
+    auditLogs: auditLogs.map((a) => ({
       id: a.id,
       action: a.action,
       entity: a.entity,

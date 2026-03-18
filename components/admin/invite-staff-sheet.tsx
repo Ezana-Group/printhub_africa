@@ -90,19 +90,14 @@ export function InviteStaffSheet({
     onOpenChange(false);
   };
 
-  // Defer close to next tick so Radix focus trap doesn't block the main thread (fixes Cancel freeze)
-  const onCancelClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setTimeout(handleClose, 0);
-  };
-
   return (
-    <Dialog open={open} onOpenChange={(next) => !next && handleClose()}>
-      <DialogContent
-        className="sm:max-w-[480px] bg-white border-[#E5E7EB]"
-        onCloseAutoFocus={(e) => e.preventDefault()}
-      >
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) handleClose();
+      }}
+    >
+      <DialogContent className="sm:max-w-[480px] bg-white border-[#E5E7EB]">
         <DialogHeader>
           <DialogTitle className="text-[#111]">Invite new staff member</DialogTitle>
         </DialogHeader>
@@ -118,6 +113,7 @@ export function InviteStaffSheet({
               id="invite-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              autoComplete="name"
               required
               className="mt-1"
             />
@@ -129,6 +125,7 @@ export function InviteStaffSheet({
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
               required
               className="mt-1"
             />
@@ -168,6 +165,7 @@ export function InviteStaffSheet({
               id="invite-position"
               value={position}
               onChange={(e) => setPosition(e.target.value)}
+              autoComplete="organization-title"
               placeholder="e.g. Print Operator, Sales Rep"
               className="mt-1"
             />
@@ -178,6 +176,7 @@ export function InviteStaffSheet({
               id="invite-phone"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
+              autoComplete="tel"
               placeholder="+254 7XX XXX XXX"
               className="mt-1"
             />
@@ -187,7 +186,7 @@ export function InviteStaffSheet({
           </p>
         </form>
         <DialogFooter className="mt-4 gap-2 sm:gap-0">
-          <Button type="button" variant="outline" onClick={onCancelClick}>
+          <Button type="button" variant="outline" onClick={handleClose}>
             Cancel
           </Button>
           <Button type="submit" form="invite-staff-form" disabled={loading} className="bg-primary hover:bg-primary/90">
