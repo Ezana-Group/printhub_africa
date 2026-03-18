@@ -33,7 +33,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { getInitials, nameToHue, formatRelativeTime, formatDateForDisplay } from "@/lib/admin-utils";
-import { InviteStaffSheet } from "@/components/admin/invite-staff-sheet";
 import {
   Search,
   Plus,
@@ -77,7 +76,6 @@ export function StaffAdminClient({
   const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [inviteOpen, setInviteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<StaffRow | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [reset2faTarget, setReset2faTarget] = useState<StaffRow | null>(null);
@@ -320,13 +318,11 @@ export function StaffAdminClient({
           </p>
         </div>
         {canInvite && (
-          <Button
-            type="button"
-            onClick={() => setInviteOpen(true)}
-            className="bg-primary hover:bg-primary/90"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Invite Staff
+          <Button asChild className="bg-primary hover:bg-primary/90">
+            <Link href="/admin/staff/invite">
+              <Plus className="mr-2 h-4 w-4" />
+              Invite Staff
+            </Link>
           </Button>
         )}
       </div>
@@ -366,13 +362,11 @@ export function StaffAdminClient({
                   Invite your first team member or adjust your filters.
                 </p>
                 {canInvite && (
-                  <Button
-                    type="button"
-                    onClick={() => setInviteOpen(true)}
-                    className="mt-4 bg-primary"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Invite Staff
+                  <Button asChild className="mt-4 bg-primary">
+                    <Link href="/admin/staff/invite">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Invite Staff
+                    </Link>
                   </Button>
                 )}
               </div>
@@ -413,16 +407,6 @@ export function StaffAdminClient({
           </div>
         </CardContent>
       </Card>
-
-      {/* Always mount so Dialog open/close doesn't freeze (conditional mount + portal can block main thread) */}
-      <InviteStaffSheet
-        open={inviteOpen}
-        onOpenChange={setInviteOpen}
-        onSuccess={() => {
-          setInviteOpen(false);
-          router.refresh();
-        }}
-      />
 
       {/* AUDIT FIX: Delete confirmation dialog before deleting staff */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>

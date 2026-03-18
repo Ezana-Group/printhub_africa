@@ -4,6 +4,8 @@ import { requireAdminSection } from "@/lib/admin-route-guard";
 import { Card, CardContent } from "@/components/ui/card";
 import { RefundActionsClient } from "./refund-actions-client";
 
+const REFUND_STATUSES = ["PENDING", "APPROVED", "COMPLETED", "REJECTED", "FAILED"] as const;
+
 export default async function AdminRefundsPage({
   searchParams,
 }: {
@@ -11,26 +13,49 @@ export default async function AdminRefundsPage({
 }) {
   await requireAdminSection("/admin/refunds");
   const { status } = await searchParams;
-  const refunds = await prisma.refund.findMany({
-    where: status ? { status } : undefined,
-    orderBy: { createdAt: "desc" },
-    take: 100,
-    include: {
-      order: {
-        select: {
-          id: true,
-          orderNumber: true,
-          user: { select: { name: true, email: true } },
-          payments: { orderBy: { createdAt: "desc" }, take: 1, select: { provider: true } },
-        },
-      },
-    },
-  });
+  const normalizedStatus = status && REFUND_STATUSES.includes(status.toUpperCase() as (typeof REFUND_STATUSES)[number])
+    ? (status.toUpperCase() as (typeof REFUND_STATUSES)[number])
+    : undefined;
 
-  const statusCounts = await prisma.refund.groupBy({
-    by: ["status"],
-    _count: { id: true },
-  });
+  const safeQuery = async <T,>(label: string, query: () => Promise<T>, fallback: T): Promise<T> => {
+    try {
+      return await query();
+    } catch (error) {
+      console.error(`[admin/refunds] Failed to load ${label}`, error);
+      return fallback;
+    }
+  };
+
+  const refunds = await safeQuery(
+    "refund list",
+    () =>
+      prisma.refund.findMany({
+        where: normalizedStatus ? { status: normalizedStatus } : undefined,
+        orderBy: { createdAt: "desc" },
+        take: 100,
+        include: {
+          order: {
+            select: {
+              id: true,
+              orderNumber: true,
+              user: { select: { name: true, email: true } },
+              payments: { orderBy: { createdAt: "desc" }, take: 1, select: { provider: true } },
+            },
+          },
+        },
+      }),
+    []
+  );
+
+  const statusCounts = await safeQuery(
+    "refund status counts",
+    () =>
+      prisma.refund.groupBy({
+        by: ["status"],
+        _count: { id: true },
+      }),
+    []
+  );
   const countByStatus = Object.fromEntries(statusCounts.map((r) => [r.status, r._count.id]));
 
   return (
@@ -40,15 +65,15 @@ export default async function AdminRefundsPage({
       <div className="flex gap-2 flex-wrap mt-4">
         <Link
           href="/admin/refunds"
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium ${!status ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"}`}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium ${!normalizedStatus ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"}`}
         >
           All {(countByStatus.PENDING ?? 0) + (countByStatus.COMPLETED ?? 0) + (countByStatus.REJECTED ?? 0) + (countByStatus.APPROVED ?? 0) + (countByStatus.FAILED ?? 0)}
         </Link>
-        {["PENDING", "APPROVED", "COMPLETED", "REJECTED", "FAILED"].map((s) => (
+        {REFUND_STATUSES.map((s) => (
           <Link
             key={s}
-            href={status === s ? "/admin/refunds" : `/admin/refunds?status=${s}`}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium ${status === s ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"}`}
+            href={normalizedStatus === s ? "/admin/refunds" : `/admin/refunds?status=${s}`}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium ${normalizedStatus === s ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"}`}
           >
             {s} {countByStatus[s] ?? 0}
           </Link>
