@@ -24,6 +24,7 @@ export default async function AdminContentSiteImagesPage() {
     return {
       key,
       tab: meta.tab,
+      group: meta.group ?? null,
       label: row?.label ?? meta.label,
       description: row?.description ?? meta.description,
       imagePath,

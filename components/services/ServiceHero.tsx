@@ -36,6 +36,8 @@ export function ServiceHero({
   className?: string;
 }) {
   const ref = useRef<HTMLElement>(null);
+  const src = imageSrc?.trim() || "";
+  const isExternal = src.startsWith("http");
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start start", "end start"],
@@ -85,14 +87,23 @@ export function ServiceHero({
           style={prefersReducedMotion ? undefined : { y }}
           className="absolute inset-0"
         >
-          <Image
-            src={imageSrc}
-            alt={imageAlt}
-            fill
-            priority
-            sizes="(max-width: 768px) 100vw, 50vw"
-            className="object-cover object-center"
-          />
+          {isExternal ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={src}
+              alt={imageAlt}
+              className="absolute inset-0 h-full w-full object-cover object-center"
+            />
+          ) : (
+            <Image
+              src={src}
+              alt={imageAlt}
+              fill
+              priority
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover object-center"
+            />
+          )}
           <div
             className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/40 to-transparent md:bg-gradient-to-r from-black/80 to-transparent"
             aria-hidden

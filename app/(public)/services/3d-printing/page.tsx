@@ -11,18 +11,19 @@ import {
   MaterialsSection,
 } from "@/components/services";
 import { getBusinessPublic } from "@/lib/business-public";
+import { getSiteImageSlots } from "@/lib/site-images";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
 export const revalidate = 3600; // 1 hour — service page content changes rarely
 
 // Local images (WebP) — 3D printing hero and sections
-const HERO_IMAGE = "/images/services/3d-printing-hero.webp";
-const WHAT_IS_IMAGE = "/images/services/3d-objects.webp";
-const FILE_REQ_IMAGE = "/images/services/3d-nozzle.webp";
-const CTA_BG_IMAGE = "/images/services/3d-printing-hero.webp";
-
-const FDM_IMAGE = "/images/services/3d-nozzle.webp";
-const RESIN_IMAGE = "/images/services/3d-objects.webp";
+const DEFAULT_HERO_IMAGE = "/images/services/3d-printing-hero.webp";
+const DEFAULT_WHAT_IS_IMAGE = "/images/services/3d-objects.webp";
+const DEFAULT_FILE_REQ_IMAGE = "/images/services/3d-nozzle.webp";
+const DEFAULT_CTA_BG_IMAGE = "/images/services/3d-printing-hero.webp";
+const DEFAULT_FDM_IMAGE = "/images/services/3d-nozzle.webp";
+const DEFAULT_RESIN_IMAGE = "/images/services/3d-objects.webp";
 
 export type Material3D = {
   title: string;
@@ -406,8 +407,46 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ThreeDPrintingPage() {
-  const business = await getBusinessPublic();
+  const [business, siteImages] = await Promise.all([
+    getBusinessPublic(),
+    getSiteImageSlots(prisma),
+  ]);
   const baseUrl = business.website.startsWith("http") ? business.website : `https://${business.website}`;
+  const HERO_IMAGE = siteImages.service_3d_hero || DEFAULT_HERO_IMAGE;
+  const WHAT_IS_IMAGE = siteImages.service_3d_what_is || DEFAULT_WHAT_IS_IMAGE;
+  const FDM_IMAGE = siteImages.service_3d_fdm_image || DEFAULT_FDM_IMAGE;
+  const RESIN_IMAGE = siteImages.service_3d_resin_image || DEFAULT_RESIN_IMAGE;
+  const FILE_REQ_IMAGE = siteImages.service_3d_file_requirements || DEFAULT_FILE_REQ_IMAGE;
+  const CTA_BG_IMAGE = siteImages.service_3d_cta_background || DEFAULT_CTA_BG_IMAGE;
+
+  const materialImageOverrides = [
+    siteImages.service_3d_material_pla,
+    siteImages.service_3d_material_pla_plus,
+    siteImages.service_3d_material_petg,
+    siteImages.service_3d_material_abs,
+    siteImages.service_3d_material_tpu,
+    siteImages.service_3d_material_resin,
+    siteImages.service_3d_material_nylon,
+  ];
+  const materials = MATERIALS_3D.map((m, i) => ({
+    ...m,
+    imageSrc: materialImageOverrides[i] ?? m.imageSrc,
+  }));
+
+  const applicationImageOverrides = [
+    siteImages.service_3d_application_01,
+    siteImages.service_3d_application_02,
+    siteImages.service_3d_application_03,
+    siteImages.service_3d_application_04,
+    siteImages.service_3d_application_05,
+    siteImages.service_3d_application_06,
+    siteImages.service_3d_application_07,
+    siteImages.service_3d_application_08,
+  ];
+  const applications = APPLICATIONS_3D.map((a, i) => ({
+    ...a,
+    imageSrc: applicationImageOverrides[i] ?? a.imageSrc,
+  }));
   return (
     <main id="main-content" className="bg-[var(--brand-black)]">
       <nav aria-label="Breadcrumb" className="border-b border-white/10 bg-[var(--surface-dark)] px-6 py-3 md:px-12">
@@ -461,7 +500,12 @@ export default async function ThreeDPrintingPage() {
                   Melts and extrudes thermoplastic filament layer by layer. Best for: prototypes, functional parts, large models, affordable production runs. Layer resolution: 0.1mm – 0.3mm. Materials: PLA, PETG, ABS, TPU, ASA, Nylon, Carbon Fibre PLA.
                 </p>
                 <div className="mt-4 relative aspect-video rounded-lg overflow-hidden bg-slate-100">
-                  <Image src={FDM_IMAGE} alt="FDM 3D printer printing a prototype part" fill className="object-cover" sizes="(max-width: 640px) 100vw, 50vw" />
+                  {FDM_IMAGE.startsWith("http") ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={FDM_IMAGE} alt="FDM 3D printer printing a prototype part" className="h-full w-full object-cover" />
+                  ) : (
+                    <Image src={FDM_IMAGE} alt="FDM 3D printer printing a prototype part" fill className="object-cover" sizes="(max-width: 640px) 100vw, 50vw" />
+                  )}
                 </div>
               </div>
               <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -470,26 +514,40 @@ export default async function ThreeDPrintingPage() {
                   UV light cures liquid resin into solid form layer by layer. Best for: jewellery, miniatures, dental models, intricate detail. Layer resolution: 0.025mm – 0.1mm. Extremely smooth — near-injection-moulded quality.
                 </p>
                 <div className="mt-4 relative aspect-video rounded-lg overflow-hidden bg-slate-100">
-                  <Image src={RESIN_IMAGE} alt="MSLA resin 3D printer producing a detailed miniature" fill className="object-cover" sizes="(max-width: 640px) 100vw, 50vw" />
+                  {RESIN_IMAGE.startsWith("http") ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={RESIN_IMAGE} alt="MSLA resin 3D printer producing a detailed miniature" className="h-full w-full object-cover" />
+                  ) : (
+                    <Image src={RESIN_IMAGE} alt="MSLA resin 3D printer producing a detailed miniature" fill className="object-cover" sizes="(max-width: 640px) 100vw, 50vw" />
+                  )}
                 </div>
               </div>
             </div>
           </div>
           <div className="relative aspect-[4/5] rounded-2xl overflow-hidden">
-            <Image
-              src={WHAT_IS_IMAGE}
-              alt={`FDM 3D printer producing a part at ${business.businessName} ${business.city || "Kenya"}`}
-              fill
-              sizes="(max-width: 768px) 100vw, 50vw"
-              className="object-cover"
-            />
+            {WHAT_IS_IMAGE.startsWith("http") ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={WHAT_IS_IMAGE}
+                alt={`FDM 3D printer producing a part at ${business.businessName} ${business.city || "Kenya"}`}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <Image
+                src={WHAT_IS_IMAGE}
+                alt={`FDM 3D printer producing a part at ${business.businessName} ${business.city || "Kenya"}`}
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover"
+              />
+            )}
           </div>
         </div>
       </SectionReveal>
 
       {/* Section 2 — Materials */}
       <SectionReveal id="materials" className="bg-[#0D0D0D] py-24 px-6 md:px-12 lg:px-16">
-        <MaterialsSection materials={MATERIALS_3D} />
+        <MaterialsSection materials={materials} />
       </SectionReveal>
 
       {/* Section 3 — Applications */}
@@ -505,17 +563,22 @@ export default async function ThreeDPrintingPage() {
             The answer is: almost anything that fits in the build volume. Here are the most common applications our Nairobi clients bring to us. If your application isn&apos;t listed — ask us.
           </p>
           <div className="mt-16 space-y-24">
-            {APPLICATIONS_3D.map((app) => (
+            {applications.map((app) => (
               <div key={app.number} className="grid md:grid-cols-2 gap-10 items-center">
                 <div className={app.imageLeft ? "md:order-1" : "md:order-2"}>
                   <div className="relative aspect-video rounded-xl overflow-hidden">
-                    <Image
-                      src={app.imageSrc}
-                      alt={app.imageAlt}
-                      fill
-                      sizes="(max-width: 768px) 100vw, 50vw"
-                      className="object-cover"
-                    />
+                    {app.imageSrc.startsWith("http") ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={app.imageSrc} alt={app.imageAlt} className="h-full w-full object-cover" />
+                    ) : (
+                      <Image
+                        src={app.imageSrc}
+                        alt={app.imageAlt}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                        className="object-cover"
+                      />
+                    )}
                   </div>
                 </div>
                 <div className={app.imageLeft ? "md:order-2" : "md:order-1"}>
@@ -590,13 +653,22 @@ export default async function ThreeDPrintingPage() {
             </div>
           </div>
           <div className="relative aspect-[4/3] rounded-2xl overflow-hidden">
-            <Image
-              src={FILE_REQ_IMAGE}
-              alt={`3D model being sliced in slicer software for ${business.businessName} 3D printing ${business.city || "Kenya"}`}
-              fill
-              sizes="(max-width: 768px) 100vw, 50vw"
-              className="object-cover"
-            />
+            {FILE_REQ_IMAGE.startsWith("http") ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={FILE_REQ_IMAGE}
+                alt={`3D model being sliced in slicer software for ${business.businessName} 3D printing ${business.city || "Kenya"}`}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <Image
+                src={FILE_REQ_IMAGE}
+                alt={`3D model being sliced in slicer software for ${business.businessName} 3D printing ${business.city || "Kenya"}`}
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover"
+              />
+            )}
           </div>
         </div>
       </SectionReveal>

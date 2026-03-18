@@ -66,6 +66,8 @@ export async function PATCH(
   // Revalidate homepage and related pages so updated images show immediately
   revalidatePath("/");
   revalidatePath("/services");
+  revalidatePath("/services/large-format-printing");
+  revalidatePath("/services/3d-printing");
   revalidatePath("/about");
 
   return NextResponse.json({

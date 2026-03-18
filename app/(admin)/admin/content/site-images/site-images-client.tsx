@@ -20,6 +20,8 @@ import type { SiteImageTabId } from "@/lib/site-images";
 export type SiteImageSlotRow = {
   key: string;
   tab: SiteImageTabId;
+  /** Secondary grouping inside a tab (e.g. per-service). */
+  group: string | null;
   label: string;
   description: string;
   imagePath: string;
@@ -45,6 +47,7 @@ export function SiteImagesClient({ initialSlots }: { initialSlots: SiteImageSlot
   const router = useRouter();
   const [slots, setSlots] = useState<SiteImageSlotRow[]>(initialSlots);
   const [activeTab, setActiveTab] = useState<SiteImageTabId>("homepage");
+  const [activeGroup, setActiveGroup] = useState<string>("All");
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -62,6 +65,20 @@ export function SiteImagesClient({ initialSlots }: { initialSlots: SiteImageSlot
   }, [slots]);
 
   const currentSlots = slotsByTab[activeTab];
+  const groupOptions = useMemo(() => {
+    if (activeTab !== "services") return [];
+    const set = new Set<string>();
+    currentSlots.forEach((s) => {
+      if (s.group && s.group.trim()) set.add(s.group.trim());
+    });
+    return ["All", ...Array.from(set).sort((a, b) => a.localeCompare(b))];
+  }, [activeTab, currentSlots]);
+
+  const visibleSlots = useMemo(() => {
+    if (activeTab !== "services") return currentSlots;
+    if (activeGroup === "All") return currentSlots;
+    return currentSlots.filter((s) => (s.group ?? "") === activeGroup);
+  }, [activeTab, activeGroup, currentSlots]);
 
   const updateSlotPath = useCallback((key: string, imagePath: string | null) => {
     setSlots((prev) =>
@@ -150,7 +167,10 @@ export function SiteImagesClient({ initialSlots }: { initialSlots: SiteImageSlot
               variant={activeTab === tabId ? "default" : "outline"}
               size="sm"
               className="rounded-lg gap-2"
-              onClick={() => setActiveTab(tabId)}
+              onClick={() => {
+                setActiveTab(tabId);
+                setActiveGroup("All");
+              }}
             >
               <Icon className="h-4 w-4" />
               {config.label}
@@ -159,8 +179,25 @@ export function SiteImagesClient({ initialSlots }: { initialSlots: SiteImageSlot
           );
         })}
       </div>
+
+      {activeTab === "services" && groupOptions.length > 1 && (
+        <div className="flex flex-wrap gap-2">
+          {groupOptions.map((g) => (
+            <Button
+              key={g}
+              variant={activeGroup === g ? "default" : "outline"}
+              size="sm"
+              className="rounded-lg"
+              onClick={() => setActiveGroup(g)}
+              disabled={saving}
+            >
+              {g}
+            </Button>
+          ))}
+        </div>
+      )}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {currentSlots.map((slot) => (
+      {visibleSlots.map((slot) => (
         <Card key={slot.key} className="overflow-hidden">
           <CardHeader className="pb-2">
             <h3 className="font-semibold text-slate-900">{slot.label}</h3>
