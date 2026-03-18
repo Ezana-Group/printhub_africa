@@ -1973,6 +1973,25 @@ model SiteImageSlot {
   updatedAt   DateTime  @updatedAt
 }
 
+// Login / Register left panel: config (background, carousel interval) and ordered slides (subtitle, headline, body, image).
+model AuthPanelConfig {
+  id                      String   @id // "default"
+  backgroundColor         String?  // e.g. #E84A0C; used when backgroundImagePath is empty
+  backgroundImagePath     String?  // Optional full-width background image URL
+  carouselIntervalSeconds Int?     @default(5) // 0 = no auto-advance
+  updatedAt               DateTime @updatedAt
+}
+
+model AuthPanelSlide {
+  id         String   @id @default(cuid())
+  sortOrder  Int      @default(0) // Lower = first
+  subtitle   String?  // Small uppercase line, e.g. "PRINTHUB FOR TEAMS & CREATORS"
+  headline   String?  // Main heading, e.g. "Print experiences that get noticed."
+  body       String?  // Short paragraph
+  imagePath  String?  // Optional image URL for this slide
+  updatedAt  DateTime @updatedAt
+}
+
 model BusinessSettings {
   id                   String    @id // "default"
   businessName         String?

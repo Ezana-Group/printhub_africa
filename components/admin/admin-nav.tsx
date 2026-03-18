@@ -26,6 +26,7 @@ import {
   Briefcase,
   Layers,
   Truck,
+  PanelLeft,
 } from "lucide-react";
 import { canAccessRoute } from "@/lib/admin-permissions";
 import { cn } from "@/lib/utils";
@@ -88,6 +89,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/content/faq", label: "FAQ Manager", icon: HelpCircle },
       { href: "/admin/content/email-templates", label: "Email Templates", icon: Mail },
       { href: "/admin/content/site-images", label: "Site Images", icon: ImageIcon },
+      { href: "/admin/content/auth-panel", label: "Login panel", icon: PanelLeft },
     ],
   },
   {

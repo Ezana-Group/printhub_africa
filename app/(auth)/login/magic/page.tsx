@@ -48,8 +48,9 @@ export default function MagicLoginPage() {
   };
 
   return (
-    <Card>
-      <CardHeader className="space-y-1">
+    <div className="w-full max-w-md mx-auto">
+      <Card>
+        <CardHeader className="space-y-1">
         <Link href="/" className="text-2xl font-display font-bold text-primary">
           PrintHub
         </Link>
@@ -92,5 +93,6 @@ export default function MagicLoginPage() {
         </CardFooter>
       </form>
     </Card>
+    </div>
   );
 }
