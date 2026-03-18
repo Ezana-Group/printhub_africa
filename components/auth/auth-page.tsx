@@ -39,6 +39,20 @@ function LoginMessages({
   errorParam: string | null;
   verified: string | null;
 }) {
+  const authErrorMessage =
+    errorParam === "CredentialsSignin"
+      ? "Invalid email or password."
+      : errorParam === "AccessDenied"
+        ? "Social sign-in was cancelled or permission was denied."
+        : errorParam === "OAuthSignin" ||
+            errorParam === "OAuthCallback" ||
+            errorParam === "OAuthCreateAccount" ||
+            errorParam === "Callback"
+          ? "Social sign-in failed. Please try again."
+          : errorParam && errorParam.length > 0
+            ? "Sign in failed. Please try again."
+            : "";
+
   return (
     <>
       {verified === "1" && (
@@ -51,9 +65,9 @@ function LoginMessages({
           Verification link invalid or expired.
         </p>
       )}
-      {(error || errorParam === "CredentialsSignin") && (
+      {(error || authErrorMessage) && (
         <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-2">
-          {error || (errorParam === "CredentialsSignin" ? "Invalid email or password." : errorParam ?? "")}
+          {error || authErrorMessage}
         </p>
       )}
     </>
