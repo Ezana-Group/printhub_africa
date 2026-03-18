@@ -36,7 +36,7 @@ export function ServicesOverview({
     threeDImage ?? SERVICES[1].defaultImage,
   ];
   return (
-    <section className="py-20 md:py-28 bg-slate-50/80">
+    <section id="our-services" className="py-20 md:py-28 bg-slate-50/80">
       <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
         <h2 className="font-display text-3xl md:text-4xl font-bold text-center text-slate-900 mb-4">
           Our Services

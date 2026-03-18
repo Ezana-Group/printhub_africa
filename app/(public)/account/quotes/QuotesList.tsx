@@ -93,13 +93,19 @@ type QuoteItem = {
 }
 
 type TabCounts = { all: number; active: number; awaiting_you: number; in_progress: number; closed: number }
-type StatusTab = { id: string; label: string; countKey: keyof TabCounts }
+type StatusTab = {
+  id: string;
+  label: string;
+  countKey: keyof TabCounts;
+  bgColor: string;
+  textColor: string;
+}
 const TABS: StatusTab[] = [
-  { id: 'all', label: 'All', countKey: 'all' },
-  { id: 'active', label: 'Active', countKey: 'active' },
-  { id: 'awaiting_you', label: 'Awaiting You', countKey: 'awaiting_you' },
-  { id: 'in_progress', label: 'In Progress', countKey: 'in_progress' },
-  { id: 'closed', label: 'Closed', countKey: 'closed' },
+  { id: 'all', label: 'All', countKey: 'all', bgColor: '#FFF3E0', textColor: '#E65100' },
+  { id: 'active', label: 'Active', countKey: 'active', bgColor: '#E8F5E9', textColor: '#2E7D32' },
+  { id: 'awaiting_you', label: 'Awaiting You', countKey: 'awaiting_you', bgColor: '#E3F2FD', textColor: '#1565C0' },
+  { id: 'in_progress', label: 'In Progress', countKey: 'in_progress', bgColor: '#E0F7FA', textColor: '#00695C' },
+  { id: 'closed', label: 'Closed', countKey: 'closed', bgColor: '#FCE4EC', textColor: '#880E4F' },
 ]
 
 const defaultCounts: TabCounts = { all: 0, active: 0, awaiting_you: 0, in_progress: 0, closed: 0 }
@@ -233,7 +239,7 @@ export function QuotesList({
 
   return (
     <div className="space-y-4">
-      <div className="-mx-1 flex gap-1 overflow-x-auto border-b border-gray-100 pb-0 px-1">
+      <div className="-mx-1 flex gap-3 overflow-x-auto rounded-xl bg-slate-50 p-2 px-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         {TABS.map((tab) => {
           const count = counts[tab.countKey] ?? 0
           const isActive = activeTab === tab.id
@@ -241,17 +247,18 @@ export function QuotesList({
             <Link
               key={tab.id}
               href={tab.id === 'all' ? '/account/quotes' : `/account/quotes?status=${tab.id}`}
-              className={`flex shrink-0 items-center gap-2 rounded-t-xl border-b-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors -mb-px ${
+              className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
                 isActive
-                  ? 'border-[#FF4D00] text-[#FF4D00] bg-orange-50/50'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  ? 'bg-[#FF4D00] text-white shadow-sm'
+                  : 'hover:brightness-95'
               }`}
+              style={isActive ? undefined : { backgroundColor: tab.bgColor, color: tab.textColor }}
             >
               {tab.label}
               {count > 0 && (
                 <span
                   className={`rounded-full px-1.5 py-0.5 text-xs font-semibold ${
-                    isActive ? 'bg-[#FF4D00] text-white' : 'bg-gray-100 text-gray-600'
+                    isActive ? 'bg-white/20 text-white' : 'bg-white/60 text-current'
                   }`}
                 >
                   {count}

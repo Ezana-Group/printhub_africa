@@ -22,14 +22,14 @@ export default function UploadPage() {
         Choose 3D print or large format, then upload your design files. You can request a quote after uploading.
       </p>
 
-      <div className="mt-8 flex gap-2 border-b border-slate-200">
+      <div className="mt-8 flex w-full gap-3 overflow-x-auto rounded-xl bg-slate-50 p-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         <button
           type="button"
           onClick={() => setTab("3d")}
-          className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 -mb-px transition ${
+          className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
             tab === "3d"
-              ? "border-primary text-primary"
-              : "border-transparent text-slate-600 hover:text-slate-900"
+              ? "bg-[#FF4D00] text-white shadow-sm"
+              : "bg-[#E3F2FD] text-[#1565C0] hover:brightness-95"
           }`}
         >
           <Box className="h-4 w-4" />
@@ -38,10 +38,10 @@ export default function UploadPage() {
         <button
           type="button"
           onClick={() => setTab("large_format")}
-          className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 -mb-px transition ${
+          className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
             tab === "large_format"
-              ? "border-primary text-primary"
-              : "border-transparent text-slate-600 hover:text-slate-900"
+              ? "bg-[#FF4D00] text-white shadow-sm"
+              : "bg-[#FFF3E0] text-[#E65100] hover:brightness-95"
           }`}
         >
           <FileCode className="h-4 w-4" />

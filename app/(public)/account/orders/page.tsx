@@ -46,10 +46,10 @@ function filterOrdersByTab(orders: OrderRow[], tab: TabKey): OrderRow[] {
   return orders;
 }
 
-const TABS: { key: TabKey; label: string }[] = [
-  { key: "pending", label: "Pending orders" },
-  { key: "completed", label: "Completed orders" },
-  { key: "archived", label: "Archived orders" },
+const TABS: { key: TabKey; label: string; bgColor: string; textColor: string }[] = [
+  { key: "pending", label: "Pending orders", bgColor: "#FFF3E0", textColor: "#E65100" },
+  { key: "completed", label: "Completed orders", bgColor: "#E8F5E9", textColor: "#2E7D32" },
+  { key: "archived", label: "Archived orders", bgColor: "#EDE7F6", textColor: "#4527A0" },
 ];
 
 export default function AccountOrdersPage() {
@@ -103,17 +103,18 @@ export default function AccountOrdersPage() {
         </div>
       ) : (
         <>
-          <div className="mt-6 flex flex-wrap gap-1 border-b border-slate-200">
-            {TABS.map(({ key, label }) => (
+          <div className="mt-6 flex w-full gap-3 overflow-x-auto rounded-xl bg-slate-50 p-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            {TABS.map(({ key, label, bgColor, textColor }) => (
               <button
                 key={key}
                 type="button"
                 onClick={() => setActiveTab(key)}
-                className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${
+                className={`whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
                   activeTab === key
-                    ? "bg-white border border-slate-200 border-b-white -mb-px text-[#E8440A]"
-                    : "text-slate-600 hover:text-slate-900"
+                    ? "bg-[#FF4D00] text-white shadow-sm"
+                    : "hover:brightness-95"
                 }`}
+                style={activeTab === key ? undefined : { backgroundColor: bgColor, color: textColor }}
               >
                 {label}
               </button>

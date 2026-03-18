@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PackageSearch } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { safePublicFileUrl } from "@/lib/r2";
 import { Button } from "@/components/ui/button";
@@ -39,79 +40,85 @@ export async function FeaturedCatalogueSection() {
     // Build-time or when DB unavailable: show empty state
   }
 
-  if (items.length === 0) {
-    return (
-      <section className="py-20 md:py-28 bg-slate-50/80">
-        <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
-          <h2 className="font-display text-3xl md:text-4xl font-bold text-center text-slate-900 mb-4">
-            Print on Demand
-          </h2>
-          <p className="text-center text-slate-600">No featured catalogue items yet.</p>
-          <div className="text-center mt-8">
-            <Button asChild className="rounded-2xl bg-primary hover:bg-primary/90">
-              <Link href="/catalogue">Browse catalogue</Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-    );
-  }
-
   return (
-    <section className="py-20 md:py-28 bg-slate-50/80">
+    <section id="print-on-demand" className="bg-[#FAFAFA] py-[60px]">
       <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
-        <h2 className="font-display text-3xl md:text-4xl font-bold text-center text-slate-900 mb-4">
-          Print on Demand
-        </h2>
-        <p className="text-slate-600 text-center max-w-xl mx-auto mb-14">
-          Customise and order 3D-printed pieces from our catalogue. Choose material, colour, and quantity.
-        </p>
-        <div className="flex gap-5 overflow-x-auto pb-4 snap-x snap-mandatory md:grid md:grid-cols-4 md:overflow-visible">
-          {items.map((item) => {
-            const priceKes = item.priceOverrideKes ?? item.basePriceKes;
-            const primaryPhoto = item.photos[0];
-            const photoUrl =
-              primaryPhoto?.url?.startsWith("http")
-                ? primaryPhoto.url
-                : primaryPhoto?.storageKey
-                  ? safePublicFileUrl(primaryPhoto.storageKey)
-                  : primaryPhoto?.url ?? null;
-            return (
-              <Card
-                key={item.id}
-                className="flex-shrink-0 w-72 snap-center md:w-auto overflow-hidden border-0 rounded-3xl shadow-lg shadow-slate-200/60 hover:shadow-xl transition-shadow bg-white"
-              >
-                <Link href={`/catalogue/${item.slug}`}>
-                  <div className="aspect-square bg-slate-100 relative overflow-hidden">
-                    {photoUrl ? (
-                      <img
-                        src={photoUrl}
-                        alt={primaryPhoto?.altText ?? item.name}
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                    ) : null}
-                  </div>
-                  <CardContent className="p-5">
-                    <p className="font-semibold text-slate-900 truncate">{item.name}</p>
-                    {item.shortDescription ? (
-                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">{item.shortDescription}</p>
-                    ) : null}
-                    <p className="mt-3 font-bold text-primary">
-                      {priceKes != null ? formatPrice(priceKes) : "From price on page"}
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <span className="mb-3 block h-[3px] w-10 rounded-[2px] bg-[#FF4D00]" />
+            <h2 className="font-display text-2xl font-extrabold text-slate-900 md:text-[2rem]">
+              Print on Demand
+            </h2>
+          </div>
+          <Link href="/catalogue" className="text-[15px] font-medium text-[#FF4D00] hover:underline">
+            Browse catalogue →
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {items.length > 0 ? (
+            items.map((item) => {
+              const priceKes = item.priceOverrideKes ?? item.basePriceKes;
+              const primaryPhoto = item.photos[0];
+              const photoUrl =
+                primaryPhoto?.url?.startsWith("http")
+                  ? primaryPhoto.url
+                  : primaryPhoto?.storageKey
+                    ? safePublicFileUrl(primaryPhoto.storageKey)
+                    : primaryPhoto?.url ?? null;
+
+              return (
+                <Card
+                  key={item.id}
+                  className="overflow-hidden rounded-xl border-0 bg-white"
+                  style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.08)" }}
+                >
+                  <Link href={`/catalogue/${item.slug}`}>
+                    <div className="relative aspect-square overflow-hidden bg-[#F5F5F5]">
+                      {photoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={photoUrl}
+                          alt={primaryPhoto?.altText ?? item.name}
+                          className="absolute inset-0 h-full w-full object-cover"
+                        />
+                      ) : null}
+                    </div>
+                  </Link>
+                  <CardContent className="p-4">
+                    <Link href={`/catalogue/${item.slug}`}>
+                      <p className="font-semibold text-slate-900">{item.name}</p>
+                    </Link>
+                    <p className="mt-1 text-sm text-slate-500 line-clamp-2">
+                      {item.shortDescription ?? "Customisable print-on-demand product."}
                     </p>
-                    <Button size="sm" className="mt-3 w-full rounded-xl bg-primary hover:bg-primary/90">
-                      Order Now
+                    <p className="mt-3 text-lg font-bold text-[#FF4D00]">
+                      {priceKes != null ? `From ${formatPrice(priceKes)}` : "From price on page"}
+                    </p>
+                    <Button
+                      asChild
+                      size="sm"
+                      className="mt-4 w-full rounded-xl bg-[#FF4D00] hover:bg-[#FF4D00]/90"
+                    >
+                      <Link href={`/catalogue/${item.slug}`}>Customise &amp; Order</Link>
                     </Button>
                   </CardContent>
-                </Link>
-              </Card>
-            );
-          })}
-        </div>
-        <div className="text-center mt-12">
-          <Button asChild variant="outline" size="lg" className="rounded-2xl border-slate-300 text-slate-700">
-            <Link href="/catalogue">View full catalogue</Link>
-          </Button>
+                </Card>
+              );
+            })
+          ) : (
+            <div className="col-span-full text-center">
+              <div className="mt-2">
+                <PackageSearch className="mx-auto h-8 w-8 text-slate-400" />
+                <p className="mt-3 text-slate-600">No featured catalogue items yet.</p>
+              </div>
+              <div className="mt-6">
+                <Button asChild className="rounded-2xl bg-primary hover:bg-primary/90">
+                  <Link href="/catalogue">Browse catalogue</Link>
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </section>

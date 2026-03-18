@@ -362,30 +362,28 @@ export function AuthPage({
 
         <main className="flex-1 min-w-0 bg-background px-8 pt-6 pb-8 md:px-10 md:pt-8 md:pb-10 flex items-center justify-center">
           <div className="w-full max-w-lg">
-            <div className="flex items-center border-b border-border mb-6">
+            <div className="mb-6 flex w-full gap-3 overflow-x-auto rounded-xl bg-slate-50 p-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
               <button
                 type="button"
                 onClick={() => setActiveTab("login")}
-                className={`relative shrink-0 px-1 pb-3 mr-6 text-[13px] font-medium transition-colors whitespace-nowrap ${
-                  activeTab === "login" ? "text-foreground" : "text-muted-foreground"
+                className={`shrink-0 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
+                  activeTab === "login"
+                    ? "bg-[#FF4D00] text-white shadow-sm"
+                    : "bg-[#E3F2FD] text-[#1565C0] hover:brightness-95"
                 }`}
               >
-                <span className="font-accent text-[13px]">Sign in</span>
-                {activeTab === "login" && (
-                  <span className="absolute left-0 -bottom-[1px] h-0.5 w-12 rounded-full" style={{ backgroundColor: "#E84A0C" }} />
-                )}
+                <span className="font-accent text-sm">Sign in</span>
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("register")}
-                className={`relative shrink-0 px-1 pb-3 text-[13px] font-medium transition-colors whitespace-nowrap ${
-                  activeTab === "register" ? "text-foreground" : "text-muted-foreground"
+                className={`shrink-0 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
+                  activeTab === "register"
+                    ? "bg-[#FF4D00] text-white shadow-sm"
+                    : "bg-[#FFF3E0] text-[#E65100] hover:brightness-95"
                 }`}
               >
-                <span className="font-accent text-[13px]">Create account</span>
-                {activeTab === "register" && (
-                  <span className="absolute left-0 -bottom-[1px] h-0.5 w-20 rounded-full" style={{ backgroundColor: "#E84A0C" }} />
-                )}
+                <span className="font-accent text-sm">Create account</span>
               </button>
             </div>
 
