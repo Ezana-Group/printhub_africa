@@ -78,9 +78,9 @@ export async function generateMetadata(): Promise<Metadata> {
           shortcut: [{ url: faviconUrl }],
         }
       : {
-          icon: "/favicon.ico",
-          shortcut: "/favicon.ico",
-          apple: "/apple-touch-icon.png",
+          icon: "/api/branding/favicon",
+          shortcut: "/api/branding/favicon",
+          apple: "/api/branding/favicon",
         },
     openGraph: {
       title: `${businessName} | Printing the Future, Made in Kenya`,

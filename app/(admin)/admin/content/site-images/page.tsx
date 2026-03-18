@@ -2,6 +2,7 @@ import { requireAdminSettings } from "@/lib/auth-guard";
 import { AdminBreadcrumbs } from "@/components/admin/admin-breadcrumbs";
 import { SiteImagesClient } from "./site-images-client";
 import { prisma } from "@/lib/prisma";
+import Link from "next/link";
 import {
   SITE_IMAGE_SLOT_KEYS,
   SITE_IMAGE_DEFAULTS,
@@ -47,6 +48,13 @@ export default async function AdminContentSiteImagesPage() {
         <h1 className="font-display text-2xl font-bold text-slate-900">Site Images</h1>
         <p className="text-slate-600 text-sm mt-1">
           Upload or change images used on the Services page, About page, and homepage. Each slot shows where the image appears.
+        </p>
+        <p className="text-slate-600 text-sm mt-2">
+          Browser tab icon (favicon) is managed in{" "}
+          <Link href="/admin/settings/business" className="text-primary hover:underline">
+            Settings → Business Profile
+          </Link>
+          .
         </p>
       </div>
       <SiteImagesClient initialSlots={initialSlots} />

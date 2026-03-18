@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { EditableSection } from "@/components/admin/editable-section";
 import { FileUploader } from "@/components/upload/FileUploader";
 import { formatRelativeTime, formatDateForDisplay } from "@/lib/admin-utils";
+import { PERMISSION_GROUPS, PERMISSION_KEYS } from "@/lib/admin-permissions";
 import {
   BarChart,
   Bar,
@@ -49,40 +50,6 @@ const TABS: { id: StaffDetailTab; label: string }[] = [
   { id: "permissions", label: "Permissions" },
   { id: "activity", label: "Activity" },
   { id: "performance", label: "Performance" },
-];
-
-// Permission categories and keys for the Permissions tab
-const PERMISSION_GROUPS: { category: string; permissions: { key: string; label: string }[] }[] = [
-  {
-    category: "Orders",
-    permissions: [
-      { key: "orders_view", label: "View orders" },
-      { key: "orders_edit", label: "Edit orders" },
-      { key: "orders_delete", label: "Delete orders" },
-    ],
-  },
-  {
-    category: "Products",
-    permissions: [
-      { key: "products_view", label: "View products" },
-      { key: "products_edit", label: "Edit products" },
-      { key: "products_delete", label: "Delete products" },
-    ],
-  },
-  {
-    category: "Finance",
-    permissions: [
-      { key: "finance_view", label: "View only" },
-      { key: "finance_edit", label: "Edit / record payments" },
-    ],
-  },
-  {
-    category: "Inventory",
-    permissions: [
-      { key: "inventory_view", label: "View inventory" },
-      { key: "inventory_edit", label: "Update stock" },
-    ],
-  },
 ];
 
 // Placeholder activity log entries
@@ -140,7 +107,8 @@ export function StaffDetailTabs({
     });
   }, [user]);
 
-  const savedPermissions = user.staff?.permissions ?? [];
+  const roleHasFullAccess = user.role === "ADMIN" || user.role === "SUPER_ADMIN";
+  const savedPermissions = roleHasFullAccess ? PERMISSION_KEYS : (user.staff?.permissions ?? []);
   const [permissions, setPermissions] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     PERMISSION_GROUPS.forEach((g) =>
@@ -262,44 +230,43 @@ export function StaffDetailTabs({
             }}
           />
 
-          {user.staff && (
-            <div className="border-t border-[#E5E7EB] pt-6 mt-6">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <p className="text-sm font-semibold text-[#111]">About page visibility</p>
-                  <p className="text-xs text-[#6B7280]">Show this person in the Team section on /about</p>
-                </div>
-                <Switch
-                  checked={user.staff.showOnAboutPage ?? false}
-                  onCheckedChange={async (checked) => {
-                    try {
-                      const res = await fetch(`/api/admin/staff/${user.id}/public-profile`, {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ showOnAboutPage: checked }),
-                      });
-                      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "Failed");
-                      router.refresh();
-                    } catch (e) {
-                      alert(e instanceof Error ? e.message : "Failed to update");
-                    }
-                  }}
-                />
+          <div className="border-t border-[#E5E7EB] pt-6 mt-6">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-sm font-semibold text-[#111]">About page visibility</p>
+                <p className="text-xs text-[#6B7280]">Show this person in the Team section on /about</p>
               </div>
-              {(user.staff.showOnAboutPage ?? false) && (
+              <Switch
+                checked={user.staff?.showOnAboutPage ?? false}
+                onCheckedChange={async (checked) => {
+                  try {
+                    const res = await fetch(`/api/admin/staff/${user.id}/public-profile`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ showOnAboutPage: checked }),
+                    });
+                    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "Failed");
+                    router.refresh();
+                  } catch (e) {
+                    alert(e instanceof Error ? e.message : "Failed to update");
+                  }
+                }}
+              />
+            </div>
+            {(user.staff?.showOnAboutPage ?? false) && (
                 <div className="space-y-4 mt-4">
                   <div>
                     <Label className="text-xs text-[#6B7280]">Profile photo</Label>
                     <div className="flex items-center gap-3 mt-1">
-                      {user.staff.profilePhotoUrl ? (
+                      {user.staff?.profilePhotoUrl ? (
                         <img
-                          src={user.staff.profilePhotoUrl}
+                          src={user.staff?.profilePhotoUrl}
                           alt={user.name ?? "Staff"}
                           className="w-14 h-14 rounded-full object-cover border border-[#E5E7EB]"
                         />
                       ) : (
                         <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center text-white font-semibold text-lg">
-                          {(user.staff.publicName ?? user.name ?? "S").charAt(0)}
+                          {(user.staff?.publicName ?? user.name ?? "S").charAt(0)}
                         </div>
                       )}
                       <FileUploader
@@ -330,7 +297,7 @@ export function StaffDetailTabs({
                   <div>
                     <Label className="text-xs text-[#6B7280]">Display name (leave blank to use account name)</Label>
                     <Input
-                      defaultValue={user.staff.publicName ?? ""}
+                      defaultValue={user.staff?.publicName ?? ""}
                       onBlur={async (e) => {
                         const v = e.target.value.trim() || null;
                         try {
@@ -351,7 +318,7 @@ export function StaffDetailTabs({
                   <div>
                     <Label className="text-xs text-[#6B7280]">Public role / title *</Label>
                     <Input
-                      defaultValue={user.staff.publicRole ?? ""}
+                      defaultValue={user.staff?.publicRole ?? ""}
                       onBlur={async (e) => {
                         const v = e.target.value.trim() || null;
                         try {
@@ -372,7 +339,7 @@ export function StaffDetailTabs({
                   <div>
                     <Label className="text-xs text-[#6B7280]">Short bio (optional)</Label>
                     <textarea
-                      defaultValue={user.staff.publicBio ?? ""}
+                      defaultValue={user.staff?.publicBio ?? ""}
                       onBlur={async (e) => {
                         const v = e.target.value.trim() || null;
                         try {
@@ -396,7 +363,7 @@ export function StaffDetailTabs({
                     <Input
                       type="number"
                       min={0}
-                      defaultValue={user.staff.aboutPageOrder ?? 0}
+                      defaultValue={user.staff?.aboutPageOrder ?? 0}
                       onBlur={async (e) => {
                         const n = parseInt(e.target.value, 10);
                         if (Number.isNaN(n)) return;
@@ -415,9 +382,8 @@ export function StaffDetailTabs({
                     />
                   </div>
                 </div>
-              )}
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
 
@@ -426,7 +392,11 @@ export function StaffDetailTabs({
           <EditableSection
             id="staff-permissions"
             title="Permissions"
-            description="Granular access for orders, products, finance, inventory."
+            description={
+              roleHasFullAccess
+                ? `${user.role.replace("_", " ")} has full access by role.`
+                : "Granular access control for each admin section."
+            }
             canEdit={canEditPermissions}
             viewContent={
               <div className="space-y-6">

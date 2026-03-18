@@ -28,12 +28,13 @@ export async function PATCH(
   }
 
   const { id: userId } = await params;
-  const staff = await prisma.staff.findUnique({
-    where: { userId },
+  const targetUser = await prisma.user.findFirst({
+    where: { id: userId, role: { in: ["STAFF", "ADMIN", "SUPER_ADMIN"] } },
+    select: { id: true },
   });
-  if (!staff) {
+  if (!targetUser) {
     return NextResponse.json(
-      { error: "Staff record not found for this user" },
+      { error: "User not found" },
       { status: 404 }
     );
   }
@@ -61,9 +62,20 @@ export async function PATCH(
   if (data.profilePhotoUrl !== undefined) allowed.profilePhotoUrl = data.profilePhotoUrl;
   if (data.aboutPageOrder !== undefined) allowed.aboutPageOrder = data.aboutPageOrder;
 
-  const updated = await prisma.staff.update({
+  const updated = await prisma.staff.upsert({
     where: { userId },
-    data: allowed,
+    update: allowed,
+    create: {
+      userId,
+      department: null,
+      position: null,
+      showOnAboutPage: Boolean(data.showOnAboutPage),
+      publicName: data.publicName ?? null,
+      publicRole: data.publicRole ?? null,
+      publicBio: data.publicBio ?? null,
+      profilePhotoUrl: data.profilePhotoUrl ?? null,
+      aboutPageOrder: data.aboutPageOrder ?? 0,
+    },
   });
 
   revalidatePath("/about");
