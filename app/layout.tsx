@@ -47,6 +47,8 @@ const metadataBase = (() => {
   }
 })();
 
+const shouldEnableSpeedInsights = process.env.VERCEL === "1";
+
 export async function generateMetadata(): Promise<Metadata> {
   const meta = await getCachedBusinessMetadata();
   const businessName = meta.businessName ?? "PrintHub";
@@ -129,7 +131,7 @@ export default function RootLayout({
         </a>
         <Providers>{children}</Providers>
         <ConsentGatedAnalytics />
-        <SpeedInsights />
+        {shouldEnableSpeedInsights ? <SpeedInsights /> : null}
       </body>
     </html>
   );
