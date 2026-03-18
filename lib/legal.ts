@@ -1,10 +1,11 @@
 /**
- * Legal page slugs and nav — single source of truth for all 6 legal documents.
+ * Legal page slugs and nav — single source of truth for legal documents.
  * Used by public legal page, admin legal CMS, API routes, and footer.
  */
 
 export const LEGAL_SLUGS = [
   "privacy-policy",
+  "data-deletion",
   "terms-of-service",
   "refund-policy",
   "cookie-policy",
@@ -16,6 +17,7 @@ export type LegalSlug = (typeof LEGAL_SLUGS)[number];
 
 export const LEGAL_NAV: { slug: LegalSlug; label: string }[] = [
   { slug: "privacy-policy", label: "Privacy Policy" },
+  { slug: "data-deletion", label: "Data Deletion Request" },
   { slug: "terms-of-service", label: "Terms of Service" },
   { slug: "refund-policy", label: "Refund & Returns Policy" },
   { slug: "cookie-policy", label: "Cookie Policy" },

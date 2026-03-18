@@ -1,5 +1,5 @@
 /**
- * Seed legal pages (Privacy, Terms, Refund, Cookie, Account Terms, Corporate Terms).
+ * Seed legal pages (Privacy, Data Deletion, Terms, Refund, Cookie, Account Terms, Corporate Terms).
  * Run: npx tsx prisma/seeds/legal-pages.ts
  * Uses content from prisma/legal-content.ts. Safe to re-run (upserts).
  */
@@ -27,6 +27,7 @@ const prisma = new PrismaClient({
 
 const LEGAL_PAGES = [
   { slug: "privacy-policy" as const, title: "Privacy Policy" },
+  { slug: "data-deletion" as const, title: "Data Deletion Request" },
   { slug: "terms-of-service" as const, title: "Terms of Service" },
   { slug: "refund-policy" as const, title: "Refund and Returns Policy" },
   { slug: "cookie-policy" as const, title: "Cookie Policy" },

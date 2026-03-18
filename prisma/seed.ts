@@ -665,6 +665,7 @@ async function main() {
   const { getLegalContent } = await import("./legal-content");
   const legalPages = [
     { slug: "privacy-policy" as const, title: "Privacy Policy" },
+    { slug: "data-deletion" as const, title: "Data Deletion Request" },
     { slug: "terms-of-service" as const, title: "Terms of Service" },
     { slug: "refund-policy" as const, title: "Refund and Returns Policy" },
     { slug: "cookie-policy" as const, title: "Cookie Policy" },

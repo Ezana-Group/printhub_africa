@@ -11,6 +11,8 @@ export function getLegalContent(slug: LegalSlug): string {
   switch (slug) {
     case "privacy-policy":
       return PRIVACY_POLICY_HTML;
+    case "data-deletion":
+      return DATA_DELETION_HTML;
     case "terms-of-service":
       return TERMS_OF_SERVICE_HTML;
     case "cookie-policy":
@@ -422,6 +424,8 @@ update yourself, contact us at dpo@printhub.africa.</p>
 <p><strong>Note:</strong> We cannot delete data that we are legally required to retain (such as
 financial records required by KRA). In such cases, we will anonymise your personal identifiers
 while retaining the necessary financial data.</p>
+<p>For full deletion steps and timelines, please see our
+<a href="/data-deletion">Data Deletion Request</a> page.</p>
 
 <h3>8.4 Right to Object (Section 26(d) DPA)</h3>
 <p>You have the right to object to processing of your personal data based on our legitimate
@@ -1882,6 +1886,119 @@ of Nairobi have non-exclusive jurisdiction for urgent or interim relief.</p>
 <p><strong>PrintHub — An Ezana Group Company</strong><br>
 Corporate Accounts: hello@printhub.africa | WhatsApp: +254 727 410 320<br>
 DPO: dpo@printhub.africa | https://printhub.africa/corporate</p>
+
+</div>
+`;
+
+const DATA_DELETION_HTML = `
+<div class="legal-document">
+
+<p class="effective-date"><strong>Last Updated:</strong> March 2026</p>
+
+<h2>Data Deletion Request</h2>
+
+<p>PrintHub Africa (An Ezana Group Company) is committed to your right to erasure under the Kenya Data Protection Act, 2019 (<strong>Section 26(c)</strong>) and, where applicable, the EU General Data Protection Regulation (<strong>GDPR Article 17</strong>) and UK GDPR. This page explains how to request deletion of your personal data collected through Facebook Login or Google Login on our Platform.</p>
+
+<h3>1. Data we hold from Facebook Login and Google Login</h3>
+<p>When you sign in using Facebook or Google, we receive and store:</p>
+<ul>
+  <li>Full name</li>
+  <li>Email address</li>
+  <li>Profile picture URL</li>
+  <li>A unique identifier from Facebook or Google (used to recognise your account on future logins)</li>
+</ul>
+<p>We do not receive your password, friends list, contacts, posts, or any other data from your Facebook or Google account.</p>
+
+<h3>2. Your right to erasure</h3>
+<p><strong>Kenya Data Protection Act, 2019 — Section 26(c):</strong><br>
+You have the right to request erasure of your personal data where:</p>
+<ul>
+  <li>The data is no longer necessary for the purpose it was collected</li>
+  <li>You withdraw consent and there is no other legal basis for processing</li>
+  <li>You object to processing and there are no overriding legitimate grounds</li>
+  <li>The data has been unlawfully processed</li>
+</ul>
+<p><strong>EU/UK GDPR — Article 17 (where applicable):</strong><br>
+Where EU or UK data protection law applies to your use of our Platform, you have the right to erasure ("right to be forgotten") on the same grounds listed above.</p>
+
+<h3>3. How to request deletion</h3>
+<p><strong>Option 1 — Self-service (immediate):</strong><br>
+Log in → Account Settings → Privacy → Delete Account<br>
+Your account and associated Facebook/Google login data will be permanently and immediately deleted.</p>
+
+<p><strong>Option 2 — Email request:</strong><br>
+Email: <a href="mailto:dpo@printhub.africa">dpo@printhub.africa</a><br>
+Subject line: Data Deletion Request<br>
+Include:</p>
+<ul>
+  <li>Your full name</li>
+  <li>The email address linked to your PrintHub account</li>
+  <li>Whether you signed in via Facebook, Google, or email/password</li>
+  <li>Your account ID or order number if known (optional but helpful)</li>
+</ul>
+<p>We will acknowledge your request within 72 hours and action it within 30 days as required by the Kenya Data Protection Act, 2019 and GDPR Article 12. If your request is complex, we may extend this by a further 2 months and will notify you within the initial 30-day period explaining the reason for the extension.</p>
+
+<h3>4. What we delete and what we retain</h3>
+<p><strong>DELETED IMMEDIATELY:</strong></p>
+<ul>
+  <li>Your name, email address, and profile picture from Facebook/Google</li>
+  <li>Your account login credentials and session data</li>
+  <li>Your account preferences and settings</li>
+  <li>Your marketing consent records (after the statutory retention period)</li>
+</ul>
+
+<p><strong>ANONYMISED (personal identifiers removed, record retained):</strong></p>
+<ul>
+  <li>Order history — your name and contact details are removed but the order record is anonymised and retained for financial reporting</li>
+</ul>
+
+<p><strong>RETAINED (cannot be deleted — legal obligation):</strong></p>
+<ul>
+  <li>Financial transaction records, invoices, and payment references are retained for 7 years as required by:
+    <ul>
+      <li>Kenya Revenue Authority under the Income Tax Act (Cap. 470) and the VAT Act (Cap. 476)</li>
+      <li>GDPR Article 17(3)(b) — retention necessary for compliance with a legal obligation</li>
+    </ul>
+  </li>
+  <li>These records will have your personal identifiers removed (anonymised) where technically possible while meeting KRA requirements</li>
+</ul>
+
+<h3>5. Verification and response</h3>
+<p>To protect your privacy and prevent unauthorised deletion requests, we may need to verify your identity before processing your request. We will never delete an account based on an unverified request.</p>
+<p>We will respond to all deletion requests:</p>
+<ul>
+  <li>Acknowledgement: within 72 hours</li>
+  <li>Completion: within 30 days (extendable to 3 months for complex requests under Kenya DPA and GDPR Article 12)</li>
+  <li>Confirmation email sent to your registered email address once deletion is complete</li>
+</ul>
+<p>If we are unable to fulfil your request (e.g. due to a legal retention obligation), we will explain the reason in writing.</p>
+
+<h3>6. Automated deletion callback</h3>
+<p>PrintHub Africa supports Meta's automated data deletion callback. When you request deletion of your Facebook data directly through Facebook (Settings → Your Facebook Information → Delete Your Information), Meta will automatically notify our system and trigger deletion of your associated data on our Platform. You do not need to contact us separately if you use Facebook's own deletion tool.</p>
+
+<h3>7. Right to lodge a complaint</h3>
+<p><strong>Kenya — Office of the Data Protection Commissioner (ODPC):</strong><br>
+If you are unhappy with how we handle your deletion request, you may lodge a complaint with the ODPC:<br>
+Website: <a href="https://www.odpc.go.ke" target="_blank">www.odpc.go.ke</a><br>
+Email: <a href="mailto:info@odpc.go.ke">info@odpc.go.ke</a><br>
+Phone: +254 20 2628 000</p>
+
+<p><strong>EU/UK — Supervisory Authority:</strong><br>
+If EU or UK GDPR applies to you, you may lodge a complaint with your local data protection supervisory authority. A list of EU supervisory authorities is available at:<br>
+<a href="https://edpb.europa.eu/about-edpb/about-edpb/members_en" target="_blank">https://edpb.europa.eu/about-edpb/about-edpb/members_en</a></p>
+
+<p>We encourage you to contact us first at dpo@printhub.africa so we can attempt to resolve your concern directly.</p>
+
+<h3>8. Contact our Data Protection Officer</h3>
+<p>
+Data Protection Officer<br>
+PrintHub — An Ezana Group Company<br>
+Nairobi, Kenya<br>
+Email: dpo@printhub.africa<br>
+General enquiries: hello@printhub.africa<br>
+Website: https://printhub.africa<br>
+Last updated: March 2026
+</p>
 
 </div>
 `;
