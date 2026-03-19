@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canAccessRoute } from "@/lib/admin-permissions";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 
 const ADMIN_ROLES = ["STAFF", "ADMIN", "SUPER_ADMIN"];
 
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest) {
   const limit = Math.max(1, Math.min(100, Number(qp.get("limit") ?? "20")));
   const skip = (page - 1) * limit;
 
-  const where: { status?: string; mailboxId?: string; assignedToId?: string } = {};
+  const where: Prisma.EmailThreadWhereInput = {};
   if (status) {
     const parsed = statusSchema.safeParse(status);
     if (!parsed.success) {

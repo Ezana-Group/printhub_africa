@@ -151,7 +151,8 @@ export async function POST(req: NextRequest) {
 
   // Attachments: use attachments.list() to get download URLs.
   const attachmentsMeta = await resend.emails.receiving.attachments.list({ emailId });
-  const attachments = ((attachmentsMeta as { data?: ResendAttachmentMeta[] }).data ?? []) as ResendAttachmentMeta[];
+  const attachmentsData = (attachmentsMeta as unknown as { data?: unknown }).data;
+  const attachments = Array.isArray(attachmentsData) ? (attachmentsData as ResendAttachmentMeta[]) : [];
 
   const storedAttachments: { name: string; r2Key: string; size: number; mimeType: string }[] = [];
   if (attachments.length && isR2Configured()) {
