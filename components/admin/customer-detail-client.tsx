@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AdminBreadcrumbs } from "@/components/admin/admin-breadcrumbs";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -59,6 +61,35 @@ type AuditRow = {
   entity: string;
   entityId: string | null;
   timestamp: Date;
+};
+
+type CustomerEmailMessage = {
+  id: string;
+  direction: "INBOUND" | "OUTBOUND";
+  isRead: boolean;
+  sentAt: string;
+  bodyHtml: string;
+  bodyText: string | null;
+  subject: string;
+  cc: string | null;
+  toAddress: string;
+  fromAddress: string;
+};
+
+type CustomerEmailThread = {
+  id: string;
+  subject: string;
+  status: "OPEN" | "CLOSED" | "SPAM";
+  hasUnread: boolean;
+  updatedAt: string;
+  mailbox: { id: string; label: string; address: string };
+  emails: CustomerEmailMessage[];
+};
+
+type CustomerEmailApiResponse = {
+  customer: { id: string; name: string | null; email: string };
+  threads: CustomerEmailThread[];
+  mailboxes: { id: string; label: string; address: string }[];
 };
 
 export type CustomerDetailData = {
@@ -122,19 +153,141 @@ const QUOTE_TYPE_LABELS: Record<string, string> = {
 };
 
 export function CustomerDetailClient({ data }: { data: CustomerDetailData }) {
-  const [activeTab, setActiveTab] = useState<"overview" | "orders" | "quotes" | "uploads" | "notes" | "activity">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "orders" | "quotes" | "uploads" | "email" | "notes" | "activity">("overview");
   const displayName = data.name ?? "Customer";
   const hue = nameToHue(data.email);
   const avgOrder = data.ordersCount > 0 ? data.totalSpent / data.ordersCount : 0;
+
+  const [emailData, setEmailData] = useState<CustomerEmailApiResponse | null>(null);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [composeSubject, setComposeSubject] = useState(`Regarding your account at PrintHub`);
+  const [composeCc, setComposeCc] = useState("");
+  const [composeBodyHtml, setComposeBodyHtml] = useState("<p>Hi,</p><p></p><p>Best regards,<br/>PrintHub Team</p>");
+  const [composeMailboxId, setComposeMailboxId] = useState("");
+
+  const draftKey = `customer-email-draft:${data.id}`;
 
   const tabs = [
     { id: "overview" as const, label: "Overview", icon: FileText },
     { id: "orders" as const, label: "Orders", icon: ShoppingBag },
     { id: "quotes" as const, label: "Quotes", icon: FileText },
     { id: "uploads" as const, label: "Uploads", icon: Upload },
+    { id: "email" as const, label: "Email", icon: Mail },
     { id: "notes" as const, label: "Notes", icon: StickyNote },
     { id: "activity" as const, label: "Activity", icon: Activity },
   ];
+
+  useEffect(() => {
+    if (activeTab !== "email") return;
+    let cancelled = false;
+    const run = async () => {
+      setEmailLoading(true);
+      setEmailError(null);
+      try {
+        const res = await fetch(`/api/admin/customers/${data.id}/emails`);
+        const body = (await res.json().catch(() => null)) as CustomerEmailApiResponse | null;
+        if (!res.ok || !body) {
+          if (!cancelled) setEmailError("Failed to load customer email threads.");
+          return;
+        }
+        if (cancelled) return;
+        setEmailData(body);
+        if (!selectedThreadId && body.threads[0]?.id) setSelectedThreadId(body.threads[0].id);
+        if (!composeMailboxId && body.mailboxes[0]?.id) setComposeMailboxId(body.mailboxes[0].id);
+      } catch {
+        if (!cancelled) setEmailError("Failed to load customer email threads.");
+      } finally {
+        if (!cancelled) setEmailLoading(false);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, data.id, selectedThreadId, composeMailboxId]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as {
+        subject?: string;
+        cc?: string;
+        bodyHtml?: string;
+        mailboxId?: string;
+      };
+      if (parsed.subject) setComposeSubject(parsed.subject);
+      if (parsed.cc) setComposeCc(parsed.cc);
+      if (parsed.bodyHtml) setComposeBodyHtml(parsed.bodyHtml);
+      if (parsed.mailboxId) setComposeMailboxId(parsed.mailboxId);
+    } catch {
+      // ignore draft parse issues
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.id]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        draftKey,
+        JSON.stringify({
+          subject: composeSubject,
+          cc: composeCc,
+          bodyHtml: composeBodyHtml,
+          mailboxId: composeMailboxId || undefined,
+        })
+      );
+    } catch {
+      // ignore localStorage write issues
+    }
+  }, [draftKey, composeSubject, composeCc, composeBodyHtml, composeMailboxId]);
+
+  const selectedThread = useMemo(
+    () => emailData?.threads.find((t) => t.id === selectedThreadId) ?? null,
+    [emailData, selectedThreadId]
+  );
+
+  const handleSendCustomerEmail = async () => {
+    if (!composeBodyHtml.trim()) return;
+    setSendingEmail(true);
+    setEmailError(null);
+    try {
+      const res = await fetch(`/api/admin/customers/${data.id}/emails`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          threadId: selectedThread?.id ?? undefined,
+          subject: composeSubject,
+          bodyHtml: composeBodyHtml,
+          cc: composeCc.trim() ? composeCc.trim() : undefined,
+          fromAddressId: composeMailboxId || undefined,
+        }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setEmailError(body.error ?? "Failed to send email.");
+        return;
+      }
+
+      const refreshed = await fetch(`/api/admin/customers/${data.id}/emails`);
+      const refreshedBody = (await refreshed.json().catch(() => null)) as CustomerEmailApiResponse | null;
+      if (refreshed.ok && refreshedBody) {
+        setEmailData(refreshedBody);
+        const nextThreadId =
+          typeof body.threadId === "string"
+            ? body.threadId
+            : refreshedBody.threads[0]?.id ?? null;
+        setSelectedThreadId(nextThreadId);
+      }
+    } catch {
+      setEmailError("Failed to send email.");
+    } finally {
+      setSendingEmail(false);
+    }
+  };
 
   return (
     <div className="px-4 py-4 md:px-8 md:py-6">
@@ -163,7 +316,7 @@ export function CustomerDetailClient({ data }: { data: CustomerDetailData }) {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <SelectStatus />
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => setActiveTab("email")}>
             <Mail className="mr-2 h-4 w-4" />
             Send Email
           </Button>
@@ -180,7 +333,7 @@ export function CustomerDetailClient({ data }: { data: CustomerDetailData }) {
               Create Order
             </Link>
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => setActiveTab("notes")}>
             <MessageSquare className="mr-2 h-4 w-4" />
             Add Note
           </Button>
@@ -564,6 +717,144 @@ export function CustomerDetailClient({ data }: { data: CustomerDetailData }) {
               )}
             </CardContent>
           </Card>
+        )}
+
+        {activeTab === "email" && (
+          <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4">
+            <Card className="bg-white border-[#E5E7EB]">
+              <CardHeader>
+                <CardTitle className="text-[14px] font-semibold uppercase tracking-wider text-[#111]">
+                  Correspondence
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 max-h-[70vh] overflow-y-auto">
+                {emailLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading emails...</p>
+                ) : emailData?.threads.length ? (
+                  emailData.threads.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setSelectedThreadId(t.id)}
+                      className={`w-full rounded-md border p-3 text-left transition-colors ${
+                        selectedThreadId === t.id ? "border-primary bg-primary/5" : "hover:bg-muted/40"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-medium truncate">{t.subject}</p>
+                        <Badge variant="outline" className="shrink-0">
+                          {t.status}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {t.mailbox.label} · {new Date(t.updatedAt).toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" })}
+                      </p>
+                    </button>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">No email threads yet for this customer.</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <div className="space-y-4">
+              <Card className="bg-white border-[#E5E7EB]">
+                <CardHeader>
+                  <CardTitle className="text-[14px] font-semibold uppercase tracking-wider text-[#111]">
+                    Thread messages
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 max-h-[50vh] overflow-y-auto">
+                  {selectedThread?.emails?.length ? (
+                    selectedThread.emails.map((m) => (
+                      <div
+                        key={m.id}
+                        className={`rounded-md border p-3 ${m.direction === "INBOUND" ? "bg-slate-50" : "bg-primary/5 border-primary/20"}`}
+                      >
+                        <div className="flex items-center justify-between gap-3 mb-2">
+                          <p className="text-xs font-medium">
+                            {m.direction === "INBOUND" ? m.fromAddress : m.toAddress}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(m.sentAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}
+                          </p>
+                        </div>
+                        <div
+                          className="prose prose-sm max-w-none break-words"
+                          dangerouslySetInnerHTML={{ __html: m.bodyHtml ?? "" }}
+                        />
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      {selectedThread ? "No messages in this thread yet." : "Select a thread to view correspondence."}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white border-[#E5E7EB]">
+                <CardHeader>
+                  <CardTitle className="text-[14px] font-semibold uppercase tracking-wider text-[#111]">
+                    Compose email
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {emailError && <p className="text-sm text-red-600">{emailError}</p>}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-muted-foreground">From mailbox</label>
+                      <select
+                        value={composeMailboxId}
+                        onChange={(e) => setComposeMailboxId(e.target.value)}
+                        className="h-10 rounded-md border border-input bg-background px-3 text-sm w-full"
+                      >
+                        <option value="">Select mailbox</option>
+                        {(emailData?.mailboxes ?? []).map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.label} ({m.address})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-muted-foreground">CC</label>
+                      <Input
+                        value={composeCc}
+                        onChange={(e) => setComposeCc(e.target.value)}
+                        placeholder="name@domain.com, other@domain.com"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-muted-foreground">Subject</label>
+                    <Input
+                      value={composeSubject}
+                      onChange={(e) => setComposeSubject(e.target.value)}
+                      placeholder="Subject"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs text-muted-foreground">Message (HTML)</label>
+                    <Textarea
+                      rows={8}
+                      value={composeBodyHtml}
+                      onChange={(e) => setComposeBodyHtml(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">Draft is auto-saved locally in your browser.</p>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      onClick={handleSendCustomerEmail}
+                      disabled={sendingEmail || !composeBodyHtml.trim() || !composeMailboxId}
+                    >
+                      {sendingEmail ? "Sending..." : "Send email"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         )}
 
         {activeTab === "notes" && (
