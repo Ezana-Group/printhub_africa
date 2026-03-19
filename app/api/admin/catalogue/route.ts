@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
       take: limit,
       include: {
         category: { select: { id: true, name: true, slug: true } },
-        photos: { where: { isPrimary: true }, take: 1 },
+        photos: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }], take: 1 },
         availableMaterials: { where: { isAvailable: true }, select: { materialCode: true, materialName: true, priceModifierKes: true, isDefault: true } },
       },
     }),

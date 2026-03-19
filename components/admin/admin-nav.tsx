@@ -21,8 +21,12 @@ import {
   TrendingUp,
   HelpCircle,
   Scale,
+  Mail,
+  ImageIcon,
   Briefcase,
   Layers,
+  Truck,
+  PanelLeft,
 } from "lucide-react";
 import { canAccessRoute } from "@/lib/admin-permissions";
 import { cn } from "@/lib/utils";
@@ -44,9 +48,19 @@ const NAV_GROUPS: NavGroup[] = [
     label: "SHOP",
     items: [
       { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
+      { href: "/admin/deliveries", label: "Deliveries", icon: Truck },
       { href: "/admin/products", label: "Products", icon: Package },
       { href: "/admin/categories", label: "Categories", icon: FolderTree },
       { href: "/admin/catalogue", label: "Catalogue", icon: Layers },
+    ],
+  },
+  {
+    label: "COMMUNICATION",
+    items: [
+      { href: "/admin/email/inbox", label: "Email", icon: Mail },
+      { href: "/admin/content/email-templates", label: "Email Templates", icon: Mail },
+      { href: "/admin/support", label: "Support", icon: HelpCircle },
+      { href: "/admin/reviews", label: "Reviews", icon: BarChart3 },
     ],
   },
   {
@@ -61,6 +75,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "CUSTOMERS & SALES",
     items: [
       { href: "/admin/customers", label: "Customers", icon: Users },
+      { href: "/admin/corporate", label: "Corporate", icon: Handshake },
       { href: "/admin/corporate-accounts", label: "Corporate Accounts", icon: Handshake },
       { href: "/admin/reports/sales", label: "Sales Reports", icon: TrendingUp },
     ],
@@ -70,6 +85,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/inventory", label: "Inventory", icon: Warehouse },
       { href: "/admin/finance", label: "Finance", icon: DollarSign },
+      { href: "/admin/refunds", label: "Refunds", icon: DollarSign },
       { href: "/admin/marketing", label: "Marketing", icon: Megaphone },
     ],
   },
@@ -78,6 +94,8 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/content/legal", label: "Legal Pages", icon: Scale },
       { href: "/admin/content/faq", label: "FAQ Manager", icon: HelpCircle },
+      { href: "/admin/content/site-images", label: "Site Images", icon: ImageIcon },
+      { href: "/admin/content/auth-panel", label: "Login panel", icon: PanelLeft },
     ],
   },
   {

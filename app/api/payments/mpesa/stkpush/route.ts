@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { stkPush } from "@/lib/mpesa";
+import { checkMpesaHealth } from "@/lib/mpesa-health";
 import { z } from "zod";
 import { rateLimit, getRateLimitClientIp } from "@/lib/rate-limit";
 
@@ -16,10 +17,14 @@ const STKPUSH_WINDOW_MS = 60 * 1000;
 
 export async function POST(req: Request) {
   const ip = getRateLimitClientIp(req) ?? "unknown";
-  if (!rateLimit(`stkpush:${ip}`, STKPUSH_LIMIT, STKPUSH_WINDOW_MS).ok) {
+  if (!(await rateLimit(`stkpush:${ip}`, STKPUSH_LIMIT, STKPUSH_WINDOW_MS)).ok) {
     return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   }
-  await getServerSession(authOptions);
+  const session = await getServerSession(authOptions);
+  const userId = (session?.user as { id?: string })?.id;
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const parsed = schema.safeParse(await req.json());
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
@@ -31,12 +36,23 @@ export async function POST(req: Request) {
     include: { payments: true },
   });
   if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  if (order.userId && order.userId !== userId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   if (order.status === "CONFIRMED" || order.status === "DELIVERED") {
     return NextResponse.json({ error: "Order already paid" }, { status: 400 });
   }
 
   const amount = Number(order.total);
   if (amount < 1) return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
+
+  const mpesaHealth = await checkMpesaHealth();
+  if (!mpesaHealth.ok) {
+    return NextResponse.json(
+      { error: "M-Pesa is temporarily unavailable. Please try again shortly." },
+      { status: 503 }
+    );
+  }
 
   try {
     const result = await stkPush(
@@ -52,8 +68,10 @@ export async function POST(req: Request) {
         provider: "MPESA",
         amount: order.total,
         currency: "KES",
-        status: "PENDING",
+        status: "PROCESSING",
         reference: order.orderNumber,
+        mpesaCheckoutId: result.CheckoutRequestID,
+        mpesaPhone: phone,
       },
     });
 
@@ -63,6 +81,14 @@ export async function POST(req: Request) {
         phoneNumber: phone,
         merchantRequestId: result.MerchantRequestID,
         checkoutRequestId: result.CheckoutRequestID,
+      },
+    });
+
+    await prisma.order.update({
+      where: { id: order.id },
+      data: {
+        paymentMethod: "MPESA_STK",
+        paymentStatus: "PROCESSING",
       },
     });
 

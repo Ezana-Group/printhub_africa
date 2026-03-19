@@ -28,6 +28,7 @@ export function useCalculatorConfig() {
         monthlyOverhead: json.monthlyOverhead ?? 50000,
         monthlyCapacityHrs: json.monthlyCapacityHrs ?? 208,
         filaments: Array.isArray(json.filaments) ? json.filaments : [],
+        postProcessingFeePerUnit: typeof json.postProcessingFeePerUnit === "number" ? json.postProcessingFeePerUnit : undefined,
       });
     } catch (e) {
       setError(e instanceof Error ? e : new Error("Failed to load calculator config"));
@@ -59,11 +60,14 @@ export function compute3DEstimateFromConfig(
     quantity: number;
     costPerKg: number;
     profitMarginOverride?: number;
+    /** When true, adds post-processing / support removal fee per unit from config. */
+    postProcessing?: boolean;
   }
 ): {
   materialCost: number;
   machineCost: number;
   labourCost: number;
+  postProcessingCost: number;
   subtotal: number;
   profit: number;
   profitMarginPct: number;
@@ -75,7 +79,7 @@ export function compute3DEstimateFromConfig(
   rangeHigh: number;
 } {
   const { labourRate, vatPercent, monthlyOverhead, monthlyCapacityHrs } = config;
-  const { weightG, printTimeHrs, quantity, costPerKg, profitMarginOverride } = params;
+  const { weightG, printTimeHrs, quantity, costPerKg, profitMarginOverride, postProcessing } = params;
   const profitMargin = profitMarginOverride ?? config.profitMargin;
 
   const materialCostPerUnit = (weightG / 1000) * costPerKg;
@@ -83,7 +87,10 @@ export function compute3DEstimateFromConfig(
   const machineCostPerUnit = printTimeHrs * (monthlyOverhead / capacityHrs);
   const labourCostPerUnit = printTimeHrs * labourRate;
 
-  const subtotal = (materialCostPerUnit + machineCostPerUnit + labourCostPerUnit) * quantity;
+  const postProcessingFeePerUnit = postProcessing ? (config.postProcessingFeePerUnit ?? 300) : 0;
+  const postProcessingCost = postProcessingFeePerUnit * quantity;
+
+  const subtotal = (materialCostPerUnit + machineCostPerUnit + labourCostPerUnit) * quantity + postProcessingCost;
   const profit = subtotal * (profitMargin / 100);
   const marginPct = profitMargin;
   const priceBeforeVAT = subtotal + profit;
@@ -99,6 +106,7 @@ export function compute3DEstimateFromConfig(
     materialCost: materialCostPerUnit * quantity,
     machineCost: machineCostPerUnit * quantity,
     labourCost: labourCostPerUnit * quantity,
+    postProcessingCost,
     subtotal,
     profit,
     profitMarginPct: marginPct,

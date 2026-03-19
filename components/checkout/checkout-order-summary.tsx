@@ -13,12 +13,15 @@ interface CheckoutOrderSummaryProps {
   shippingFee: number;
   paymentMethod?: string;
   className?: string;
+  /** When user has approved corporate account, show discount and include in totals */
+  corporate?: { discountPercent: number; companyName: string };
 }
 
 export function CheckoutOrderSummary({
   shippingFee,
   paymentMethod,
   className,
+  corporate,
 }: CheckoutOrderSummaryProps) {
   const { items, appliedCoupon, setAppliedCoupon } = useCartStore();
   const [couponInput, setCouponInput] = useState("");
@@ -26,11 +29,23 @@ export function CheckoutOrderSummary({
   const [couponError, setCouponError] = useState("");
   const [expanded, setExpanded] = useState(false);
 
-  const totals = calculateCartTotals(
+  const couponDiscount = appliedCoupon?.discountAmount ?? 0;
+  const baseTotals = calculateCartTotals(
     items.map((i) => ({ unitPrice: i.unitPrice, quantity: i.quantity })),
     shippingFee,
-    appliedCoupon?.discountAmount ?? 0
+    couponDiscount
   );
+  const corporateDiscountKes = corporate
+    ? Math.round(baseTotals.subtotalInclVat * (corporate.discountPercent / 100))
+    : 0;
+  const totalDiscount = couponDiscount + corporateDiscountKes;
+  const totals = totalDiscount === couponDiscount
+    ? baseTotals
+    : calculateCartTotals(
+        items.map((i) => ({ unitPrice: i.unitPrice, quantity: i.quantity })),
+        shippingFee,
+        totalDiscount
+      );
 
   const handleApplyCoupon = async () => {
     const code = couponInput.trim();
@@ -185,7 +200,19 @@ export function CheckoutOrderSummary({
             <dt>VAT (16%, included)</dt>
             <dd>{formatPrice(totals.vatAmount)}</dd>
           </div>
-          {totals.discountKes > 0 && (
+          {corporate && corporateDiscountKes > 0 && (
+            <div className="flex justify-between text-green-600 dark:text-green-400">
+              <dt>Corporate ({corporate.companyName}) {corporate.discountPercent}%</dt>
+              <dd>−{formatPrice(corporateDiscountKes)}</dd>
+            </div>
+          )}
+          {couponDiscount > 0 && (
+            <div className="flex justify-between text-green-600 dark:text-green-400">
+              <dt>Coupon</dt>
+              <dd>−{formatPrice(couponDiscount)}</dd>
+            </div>
+          )}
+          {totals.discountKes > 0 && !corporate && (
             <div className="flex justify-between text-green-600 dark:text-green-400">
               <dt>Discount</dt>
               <dd>−{formatPrice(totals.discountKes)}</dd>

@@ -10,12 +10,13 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { TableToolbar, type FilterConfig } from "@/components/admin/ui/TableToolbar";
 import { TableEmptyState } from "@/components/admin/ui/TableEmptyState";
 import { useTableUrlState } from "@/hooks/useTableUrlState";
-import { Search, Wrench, Puzzle, Plus, MoreHorizontal } from "lucide-react";
+import { Search, Wrench, Puzzle, Plus, MoreHorizontal, Eye, Pencil, History, Trash2 } from "lucide-react";
 
 export type HardwareItemSerialized = {
   id: string;
@@ -171,6 +172,9 @@ export function InventoryHardwareSection({
   const [showAddForm, setShowAddForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [editItem, setEditItem] = useState<HardwareItemSerialized | null>(null);
+  const [deleteItem, setDeleteItem] = useState<HardwareItemSerialized | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [name, setName] = useState("");
   const [priceKes, setPriceKes] = useState<number | "">("");
@@ -199,6 +203,23 @@ export function InventoryHardwareSection({
   );
   const printerOptions = [...printerAssets, ...hardwarePrinters];
   const getPrinterName = (id: string | null) => (id ? printerOptions.find((p) => p.id === id)?.name ?? id : "—");
+  const getPrinterIdByName = (itemName: string) => printerAssets.find((a) => a.name === itemName)?.id;
+
+  const handleEditSaved = (updated: HardwareItemSerialized) => {
+    setItems((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
+    setEditItem(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteItem) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/inventory/hardware-items/${deleteItem.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Delete failed");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const isLF = hardwareType === "LARGE_FORMAT_PRINTER";
   const is3D = hardwareType === "THREE_D_PRINTER";
@@ -286,6 +307,7 @@ export function InventoryHardwareSection({
   const addButtonLabel = category === "HARDWARE" ? "Add Hardware" : category === "MAINTENANCE" ? "Add maintenance" : "Add Accessory";
 
   return (
+    <>
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <div>
@@ -671,10 +693,52 @@ export function InventoryHardwareSection({
                           <Button size="icon" variant="ghost" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem>Edit (coming soon)</DropdownMenuItem>
-                          <DropdownMenuItem>Log Maintenance (coming soon)</DropdownMenuItem>
-                          <DropdownMenuItem>View History (coming soon)</DropdownMenuItem>
-                          <DropdownMenuItem>Delete (coming soon)</DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              const printerId = getPrinterIdByName(i.name);
+                              if (printerId) router.push(`/admin/inventory/hardware/printers/${printerId}`);
+                              else router.push("/admin/inventory/hardware/printers");
+                            }}
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            <Eye className="h-4 w-4" />
+                            <span>View details</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setEditItem(i)} className="flex items-center gap-2 cursor-pointer">
+                            <Pencil className="h-4 w-4" />
+                            <span>Edit hardware</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => {
+                              const printerId = getPrinterIdByName(i.name);
+                              if (printerId) router.push(`/admin/inventory/hardware/printers/${printerId}?tab=maintenance`);
+                              else router.push("/admin/inventory/hardware/printers");
+                            }}
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            <Wrench className="h-4 w-4" />
+                            <span>Log maintenance</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              const printerId = getPrinterIdByName(i.name);
+                              if (printerId) router.push(`/admin/inventory/hardware/printers/${printerId}?tab=maintenance`);
+                              else router.push("/admin/inventory/hardware/printers");
+                            }}
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            <History className="h-4 w-4" />
+                            <span>View history</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => setDeleteItem(i)}
+                            className="flex items-center gap-2 cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span>Delete hardware</span>
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
@@ -711,5 +775,130 @@ export function InventoryHardwareSection({
         )}
       </CardContent>
     </Card>
+
+    {editItem && (
+      <EditHardwareItemModal
+        item={editItem}
+        onClose={() => setEditItem(null)}
+        onSaved={handleEditSaved}
+      />
+    )}
+    {deleteItem && (
+      <DeleteHardwareItemModal
+        item={deleteItem}
+        onClose={() => setDeleteItem(null)}
+        onDeleted={() => { setItems((prev) => prev.filter((i) => i.id !== deleteItem.id)); setDeleteItem(null); }}
+        deleting={deleting}
+        onConfirm={handleDeleteConfirm}
+      />
+    )}
+    </>
+  );
+}
+
+function EditHardwareItemModal({
+  item,
+  onClose,
+  onSaved,
+}: {
+  item: HardwareItemSerialized;
+  onClose: () => void;
+  onSaved: (updated: HardwareItemSerialized) => void;
+}) {
+  const [name, setName] = useState(item.name);
+  const [priceKes, setPriceKes] = useState<number | "">(item.priceKes);
+  const [location, setLocation] = useState(item.location ?? "");
+  const [powerWatts, setPowerWatts] = useState<number | "">(item.powerWatts ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const handleSave = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/inventory/hardware-items/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          priceKes: Number(priceKes),
+          location: location.trim() || null,
+          powerWatts: powerWatts === "" ? null : Number(powerWatts),
+        }),
+      });
+      if (!res.ok) throw new Error("Save failed");
+      const updated = await res.json();
+      onSaved(updated);
+      onClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden />
+      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 space-y-4">
+        <h2 className="font-bold text-gray-900">Edit hardware item</h2>
+        <div>
+          <Label>Name</Label>
+          <Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1" />
+        </div>
+        <div>
+          <Label>Price (KES)</Label>
+          <Input type="number" min={0} value={priceKes} onChange={(e) => setPriceKes(e.target.value === "" ? "" : Number(e.target.value))} className="mt-1" />
+        </div>
+        <div>
+          <Label>Location</Label>
+          <Input value={location} onChange={(e) => setLocation(e.target.value)} className="mt-1" />
+        </div>
+        <div>
+          <Label>Power (W) — e.g. 400 for Bambu X1C</Label>
+          <Input type="number" min={0} value={powerWatts} onChange={(e) => setPowerWatts(e.target.value === "" ? "" : Number(e.target.value))} className="mt-1" />
+        </div>
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
+          <Button onClick={handleSave} disabled={saving} className="flex-1">{saving ? "Saving..." : "Save"}</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeleteHardwareItemModal({
+  item,
+  onClose,
+  onDeleted,
+  deleting,
+  onConfirm,
+}: {
+  item: HardwareItemSerialized;
+  onClose: () => void;
+  onDeleted: () => void;
+  deleting: boolean;
+  onConfirm: () => void;
+}) {
+  const handleDelete = async () => {
+    try {
+      await onConfirm();
+      onDeleted();
+      onClose();
+    } catch {
+      // onConfirm sets deleting false in finally
+    }
+  };
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden />
+      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 space-y-4">
+        <h2 className="font-bold text-gray-900">Delete hardware item</h2>
+        <p className="text-sm text-gray-600">Deactivate <strong>{item.name}</strong>? It will be hidden from the list but not permanently removed.</p>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
+          <Button variant="destructive" onClick={handleDelete} disabled={deleting} className="flex-1">{deleting ? "Deactivating..." : "Deactivate"}</Button>
+        </div>
+      </div>
+    </div>
   );
 }

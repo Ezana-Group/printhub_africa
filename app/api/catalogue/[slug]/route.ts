@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 function effectivePrice(item: {
   basePriceKes: number | null;
   priceOverrideKes: number | null;
-  availableMaterials: { priceModifierKes: number; isDefault: boolean }[];
+  availableMaterials: { priceModifierKes: number | null; isDefault: boolean }[];
 }): number | null {
   const base = item.priceOverrideKes ?? item.basePriceKes;
   if (base == null) return null;

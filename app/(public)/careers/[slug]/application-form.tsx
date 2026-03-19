@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import Link from "next/link";
 
 type Job = {
   id: string;
@@ -83,18 +84,18 @@ export function ApplicationForm({ job }: { job: Job }) {
           days.
         </p>
         <div className="flex flex-wrap justify-center gap-4 mt-8">
-          <a
+          <Link
             href="/careers"
             className="font-body text-primary hover:underline"
           >
             ← Back to Careers
-          </a>
-          <a
+          </Link>
+          <Link
             href="/careers"
             className="font-body text-primary hover:underline"
           >
             View All Open Roles
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -109,9 +110,9 @@ export function ApplicationForm({ job }: { job: Job }) {
         <p className="font-body text-white/70">
           Applications for this role have closed.
         </p>
-        <a href="/careers" className="text-primary mt-2 inline-block hover:underline">
+        <Link href="/careers" className="text-primary mt-2 inline-block hover:underline">
           View other openings
-        </a>
+        </Link>
       </div>
     );
   }

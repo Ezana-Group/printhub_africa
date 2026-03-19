@@ -113,7 +113,7 @@ export function SalesPrintCalculator({
     clearQuoteDraft();
   }, [initialDraft]);
 
-  const materials: MaterialWithColors[] = rates?.materials ?? [];
+  const materials: MaterialWithColors[] = useMemo(() => rates?.materials ?? [], [rates?.materials]);
   const settings = rates?.printerSettings;
 
   const { materialTypes, byMaterialType, availableColorSet, inStockColorSet } = useMemo(() => {
@@ -168,7 +168,7 @@ export function SalesPrintCalculator({
         }
       })
       .catch(() => setPrinterOptions([]));
-  }, []);
+  }, [selectedPrinterId]);
 
   useEffect(() => {
     if (materialTypes.length && lines.length > 0 && !lines[0].materialCode) {

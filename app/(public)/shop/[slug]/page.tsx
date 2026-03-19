@@ -1,14 +1,48 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getBusinessPublic } from "@/lib/business-public";
 import { AddToCartButton } from "./add-to-cart-button";
+import { ProductImageGallery } from "@/components/shop/product-image-gallery";
+import { ProductReviewsSection } from "./reviews-section";
 import { formatPrice } from "@/lib/utils";
 
 const DEFAULT_WHATSAPP = "254700000000";
 
+export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
+
 interface Props {
   params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  try {
+    const { slug } = await params;
+    const product = await prisma.product.findFirst({
+      where: { slug, isActive: true },
+      select: {
+        name: true,
+        shortDescription: true,
+        metaTitle: true,
+        metaDescription: true,
+        images: true,
+        productImages: { where: { isPrimary: true }, take: 1, select: { url: true } },
+      },
+    });
+    if (!product) return { title: "Shop | PrintHub Kenya" };
+    const primaryUrl = product.images?.[0] ?? product.productImages?.[0]?.url;
+    return {
+      title: product.metaTitle ?? `${product.name} | PrintHub Kenya`,
+      description: product.metaDescription ?? product.shortDescription ?? undefined,
+      openGraph: {
+        title: product.metaTitle ?? product.name,
+        images: primaryUrl ? [primaryUrl] : undefined,
+      },
+    };
+  } catch {
+    return { title: "Shop | PrintHub Kenya" };
+  }
 }
 
 export default async function ProductPage({ params }: Props) {
@@ -33,10 +67,15 @@ export default async function ProductPage({ params }: Props) {
 
   const productWithRelations = product as typeof product & {
     category?: { name: string; slug: string };
-    productImages?: { url: string; isPrimary: boolean }[];
+    productImages?: { id: string; url: string; altText: string | null; isPrimary: boolean; sortOrder: number }[];
     variants: { id: string; name: string; price: { toNumber?: () => number }; stock: number }[];
   };
-  const primaryImage = product.images?.[0] ?? productWithRelations.productImages?.find((i) => i.isPrimary)?.url ?? productWithRelations.productImages?.[0]?.url;
+  const dbImages = productWithRelations.productImages ?? [];
+  const galleryImages =
+    dbImages.length > 0
+      ? dbImages.map((img) => ({ id: img.id, url: img.url, altText: img.altText, isPrimary: img.isPrimary }))
+      : (product.images ?? []).map((url, i) => ({ id: undefined, url, altText: null as string | null, isPrimary: i === 0 }));
+  const primaryImage = product.images?.[0] ?? galleryImages.find((i) => i.isPrimary)?.url ?? galleryImages[0]?.url;
   const basePrice = Number(product.basePrice);
   const comparePrice = product.comparePrice != null ? Number(product.comparePrice) : null;
 
@@ -55,13 +94,8 @@ export default async function ProductPage({ params }: Props) {
       </nav>
 
       <div className="grid gap-8 lg:grid-cols-2">
-        <div className="aspect-square max-w-lg overflow-hidden rounded-2xl bg-slate-100">
-          {primaryImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={primaryImage} alt={product.name} className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full items-center justify-center text-slate-400">No image</div>
-          )}
+        <div className="max-w-lg">
+          <ProductImageGallery images={galleryImages} />
         </div>
 
         <div>
@@ -114,6 +148,8 @@ export default async function ProductPage({ params }: Props) {
           <p className="mt-4 text-slate-700 whitespace-pre-wrap">{product.description}</p>
         </div>
       )}
+
+      <ProductReviewsSection productSlug={product.slug} />
     </div>
   );
 }

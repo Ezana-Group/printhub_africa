@@ -2,18 +2,20 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { sendPasswordResetEmail } from "@/lib/email";
-import { generateToken, getResetPasswordExpiry } from "@/lib/tokens";
+import { writeAudit } from "@/lib/audit";
+import { sendPasswordResetEmail, sendStaffInviteEmail } from "@/lib/email";
+import { generateToken, getResetPasswordExpiry, getStaffInviteExpiry } from "@/lib/tokens";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
 /** POST: Send password reset email to this staff member. ADMIN/SUPER_ADMIN only. */
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   const role = (session?.user as { role?: string })?.role;
+  const actorId = (session?.user as { id?: string } | undefined)?.id;
   if (!session?.user || !role || !ADMIN_ROLES.includes(role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -33,21 +35,37 @@ export async function POST(
   }
 
   const token = generateToken();
-  await prisma.verificationToken.upsert({
-    where: {
-      identifier_token: { identifier: `reset:${user.email}`, token },
-    },
-    update: { token, expires: getResetPasswordExpiry() },
-    create: {
-      identifier: `reset:${user.email}`,
-      token,
-      expires: getResetPasswordExpiry(),
-    },
+  const identifier = `reset:${user.email}`;
+  const isPendingInvite = user.status === "INVITE_PENDING";
+  const expiresAt = isPendingInvite ? getStaffInviteExpiry() : getResetPasswordExpiry();
+  const deliveryEmail = (user.personalEmail?.trim() || user.email).toLowerCase();
+
+  await prisma.verificationToken.deleteMany({ where: { identifier } });
+  await prisma.verificationToken.create({
+    data: { identifier, token, expires: expiresAt },
   });
 
-  await sendPasswordResetEmail(user.email, token);
+  if (isPendingInvite) {
+    await sendStaffInviteEmail(deliveryEmail, token, user.email);
+  } else {
+    await sendPasswordResetEmail(deliveryEmail, token);
+  }
+
+  await writeAudit({
+    userId: actorId,
+    action: "STAFF_PASSWORD_RESET_SENT",
+    entity: "STAFF",
+    entityId: user.id,
+    after: {
+      email: user.email,
+      deliveryEmail,
+      invitePending: isPendingInvite,
+      role: user.role,
+    },
+    request: req,
+  });
 
   return NextResponse.json({
-    message: "Password reset email sent.",
+    message: isPendingInvite ? "Invite email sent." : "Password reset email sent.",
   });
 }

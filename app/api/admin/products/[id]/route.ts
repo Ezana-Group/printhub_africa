@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { requireAdminApi } from "@/lib/admin-api-guard";
+import { generateNextProductSku } from "@/lib/product-utils";
 
 const updateSchema = z.object({
   name: z.string().min(1).max(200).optional(),
@@ -23,6 +25,7 @@ const updateSchema = z.object({
   isFeatured: z.boolean().optional(),
   metaTitle: z.string().max(200).nullable().optional(),
   metaDescription: z.string().max(500).nullable().optional(),
+  tags: z.array(z.string().max(50)).optional(),
 });
 
 export async function PATCH(
@@ -46,6 +49,20 @@ export async function PATCH(
       return NextResponse.json({ error: { slug: ["Slug already in use"] } }, { status: 400 });
     }
   }
+  let skuUpdate: string | null | undefined = data.sku;
+  if (data.sku !== undefined && (data.sku === null || (typeof data.sku === "string" && !data.sku.trim()))) {
+    const categoryIdForSku =
+      data.categoryId ??
+      (await prisma.product.findUnique({ where: { id }, select: { categoryId: true } }))?.categoryId;
+    skuUpdate = await generateNextProductSku(categoryIdForSku ?? undefined);
+  } else if (data.sku !== undefined && typeof data.sku === "string" && data.sku.trim()) {
+    const existingBySku = await prisma.product.findFirst({
+      where: { sku: data.sku.trim(), NOT: { id } },
+    });
+    if (existingBySku) {
+      return NextResponse.json({ error: { sku: ["SKU already in use"] } }, { status: 400 });
+    }
+  }
   try {
     const product = await prisma.product.update({
       where: { id },
@@ -58,7 +75,7 @@ export async function PATCH(
         ...(data.productType != null && { productType: data.productType }),
         ...(data.basePrice != null && { basePrice: data.basePrice }),
         ...(data.comparePrice !== undefined && { comparePrice: data.comparePrice }),
-        ...(data.sku !== undefined && { sku: data.sku }),
+        ...(skuUpdate !== undefined && { sku: skuUpdate }),
         ...(data.stock != null && { stock: data.stock }),
         ...(data.minOrderQty != null && { minOrderQty: data.minOrderQty }),
         ...(data.maxOrderQty !== undefined && { maxOrderQty: data.maxOrderQty }),
@@ -69,8 +86,13 @@ export async function PATCH(
         ...(data.isFeatured != null && { isFeatured: data.isFeatured }),
         ...(data.metaTitle !== undefined && { metaTitle: data.metaTitle }),
         ...(data.metaDescription !== undefined && { metaDescription: data.metaDescription }),
+        ...(data.tags != null && { tags: data.tags }),
       },
     });
+    revalidateTag("products");
+    revalidateTag("homepage");
+    revalidatePath("/shop");
+    revalidatePath(`/shop/${product.slug}`);
     return NextResponse.json({ product });
   } catch (e) {
     console.error("Admin update product error:", e);
@@ -86,7 +108,12 @@ export async function DELETE(
   if (auth instanceof NextResponse) return auth;
   const { id } = await ctx.params;
   try {
+    const product = await prisma.product.findUnique({ where: { id }, select: { slug: true } });
     await prisma.product.delete({ where: { id } });
+    revalidateTag("products");
+    revalidateTag("homepage");
+    revalidatePath("/shop");
+    if (product?.slug) revalidatePath(`/shop/${product.slug}`);
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("Admin delete product error:", e);

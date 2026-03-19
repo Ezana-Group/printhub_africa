@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function AcceptInviteForm({ userId, email, name }: { userId: string; email: string; name: string }) {
+export function AcceptInviteForm({ userId, token, email, name }: { userId: string; token: string; email: string; name: string }) {
   void name;
   const router = useRouter();
   const [password, setPassword] = useState("");
@@ -30,11 +30,16 @@ export function AcceptInviteForm({ userId, email, name }: { userId: string; emai
       const res = await fetch("/api/admin/accept-invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, password }),
+        body: JSON.stringify({ userId, token, password }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error ?? "Failed to set password");
+        const err = data.error;
+        setError(
+          typeof err === "string"
+            ? err
+            : err?.token?.[0] ?? err?.password?.[0] ?? err?.userId?.[0] ?? "Failed to set password"
+        );
         return;
       }
       router.push("/login?callbackUrl=/admin");

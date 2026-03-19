@@ -13,6 +13,9 @@ type Courier = {
   logo: string | null;
   isActive: boolean;
   sortOrder: number;
+  address: string | null;
+  city: string | null;
+  county: string | null;
 };
 
 export function CouriersSection() {
@@ -22,6 +25,9 @@ export function CouriersSection() {
   const [name, setName] = useState("");
   const [trackingUrl, setTrackingUrl] = useState("");
   const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [county, setCounty] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -45,6 +51,9 @@ export function CouriersSection() {
           name: name.trim(),
           trackingUrl: trackingUrl.trim() || null,
           phone: phone.trim() || null,
+          address: address.trim() || null,
+          city: city.trim() || null,
+          county: county.trim() || null,
           isActive: true,
           sortOrder: couriers.length,
         }),
@@ -55,6 +64,9 @@ export function CouriersSection() {
       setName("");
       setTrackingUrl("");
       setPhone("");
+      setAddress("");
+      setCity("");
+      setCounty("");
       setShowForm(false);
     } catch {
       // ignore
@@ -110,6 +122,24 @@ export function CouriersSection() {
               placeholder="+254 XXX XXX XXX"
             />
           </div>
+          <div>
+            <Label>Address / Branch (for nearest location selection)</Label>
+            <Input
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="e.g. Westlands Branch, Moi Avenue"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label>City</Label>
+              <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Nairobi" />
+            </div>
+            <div>
+              <Label>County</Label>
+              <Input value={county} onChange={(e) => setCounty(e.target.value)} placeholder="Nairobi" />
+            </div>
+          </div>
           <div className="flex gap-2">
             <Button type="submit" disabled={saving}>
               Add
@@ -128,6 +158,9 @@ export function CouriersSection() {
           >
             <span>
               {c.name}
+              {(c.address || c.city) && (
+                <span className="ml-2 text-muted-foreground"> — {[c.address, c.city, c.county].filter(Boolean).join(", ")}</span>
+              )}
               {!c.isActive && (
                 <span className="ml-2 text-muted-foreground">(inactive)</span>
               )}

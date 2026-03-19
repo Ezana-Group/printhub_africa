@@ -7,7 +7,7 @@ import { z } from "zod";
 import { CatalogueStatus } from "@prisma/client";
 
 const bodySchema = z.object({
-  status: z.enum(["LIVE", "PAUSED", "RETIRED", "DRAFT"]),
+  status: z.enum(["LIVE", "PAUSED", "RETIRED", "DRAFT", "PENDING_REVIEW"]),
   rejectionReason: z.string().optional(),
 });
 
@@ -39,7 +39,7 @@ export async function PATCH(
       data.approvedAt = new Date();
       data.rejectedBy = null;
       data.rejectionReason = null;
-    } else if (status === "RETIRED" && rejectionReason) {
+    } else if ((status === "RETIRED" || status === "DRAFT") && rejectionReason) {
       data.rejectedBy = userId;
       data.rejectionReason = rejectionReason;
     }

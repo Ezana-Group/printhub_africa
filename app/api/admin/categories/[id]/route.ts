@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/admin-api-guard";
@@ -57,6 +58,9 @@ export async function PATCH(
         ...(data.parentId !== undefined && { parentId: data.parentId }),
       },
     });
+    revalidateTag("categories");
+    revalidateTag("homepage");
+    revalidatePath("/shop");
     return NextResponse.json(category);
   } catch (e) {
     console.error("Update category error:", e);
@@ -83,6 +87,9 @@ export async function DELETE(
       );
     }
     await prisma.category.delete({ where: { id } });
+    revalidateTag("categories");
+    revalidateTag("homepage");
+    revalidatePath("/shop");
     return NextResponse.json({ success: true });
   } catch (e) {
     console.error("Delete category error:", e);

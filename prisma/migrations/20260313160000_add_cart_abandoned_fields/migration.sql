@@ -1,0 +1,12 @@
+-- AlterTable
+ALTER TABLE "Cart" ADD COLUMN IF NOT EXISTS "email" TEXT;
+ALTER TABLE "Cart" ADD COLUMN IF NOT EXISTS "phone" TEXT;
+ALTER TABLE "Cart" ADD COLUMN IF NOT EXISTS "lastActivityAt" TIMESTAMP(3);
+ALTER TABLE "Cart" ADD COLUMN IF NOT EXISTS "recoveryEmailSent1At" TIMESTAMP(3);
+ALTER TABLE "Cart" ADD COLUMN IF NOT EXISTS "recoveryEmailSent2At" TIMESTAMP(3);
+ALTER TABLE "Cart" ADD COLUMN IF NOT EXISTS "convertedAt" TIMESTAMP(3);
+ALTER TABLE "Cart" ADD COLUMN IF NOT EXISTS "recoveryOptOutAt" TIMESTAMP(3);
+
+-- CreateIndex
+CREATE INDEX IF NOT EXISTS "Cart_convertedAt_idx" ON "Cart"("convertedAt");
+CREATE INDEX IF NOT EXISTS "Cart_lastActivityAt_idx" ON "Cart"("lastActivityAt");

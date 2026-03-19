@@ -3,6 +3,8 @@ import { z } from "zod";
 import { sendEmail } from "@/lib/email";
 import { getBusinessPublic } from "@/lib/business-public";
 import { rateLimit, getRateLimitClientIp } from "@/lib/rate-limit";
+import { prisma } from "@/lib/prisma";
+import { getNextTicketNumber } from "@/lib/next-invoice-number";
 
 const bodySchema = z.object({
   name: z.string().min(1, "Name is required").max(200),
@@ -17,7 +19,7 @@ const CONTACT_WINDOW_MS = 60 * 1000;
 
 export async function POST(req: NextRequest) {
   const ip = getRateLimitClientIp(req) ?? "unknown";
-  if (!rateLimit(`contact:${ip}`, CONTACT_LIMIT, CONTACT_WINDOW_MS).ok) {
+  if (!(await rateLimit(`contact:${ip}`, CONTACT_LIMIT, CONTACT_WINDOW_MS)).ok) {
     return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
   }
   try {
@@ -31,14 +33,35 @@ export async function POST(req: NextRequest) {
     }
     const { name, email, phone, subject, message } = parsed.data;
     const business = await getBusinessPublic();
+    const ticketNumber = await getNextTicketNumber();
+    const ticket = await prisma.supportTicket.create({
+      data: {
+        ticketNumber,
+        guestName: name,
+        guestEmail: email,
+        guestPhone: phone ?? undefined,
+        subject,
+        status: "OPEN",
+        priority: "MEDIUM",
+        messages: {
+          create: {
+            senderType: "CUSTOMER",
+            message,
+            attachments: [],
+          },
+        },
+      },
+      select: { id: true, ticketNumber: true },
+    });
     const to = process.env.CONTACT_EMAIL ?? process.env.FROM_EMAIL ?? business.primaryEmail ?? "hello@printhub.africa";
     const footer = [business.businessName, business.city, business.country].filter(Boolean).join(" · ") || "PrintHub · Kenya";
     await sendEmail({
       to: to.includes("@") ? to : business.primaryEmail ?? "hello@printhub.africa",
-      subject: `[Contact] ${subject}`,
+      subject: `[Contact #${ticketNumber}] ${subject}`,
       html: `
         <div style="font-family: sans-serif; max-width: 560px;">
           <h2 style="color: #FF4D00;">${business.businessName} – Contact form</h2>
+          <p><strong>Ticket:</strong> ${ticket.ticketNumber}</p>
           <p><strong>From:</strong> ${name} &lt;${email}&gt;</p>
           ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ""}
           <p><strong>Subject:</strong> ${subject}</p>
@@ -48,7 +71,7 @@ export async function POST(req: NextRequest) {
         </div>
       `,
     });
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, ticketNumber: ticket.ticketNumber });
   } catch (e) {
     console.error("Contact form error:", e);
     return NextResponse.json({ error: "Failed to send message" }, { status: 500 });

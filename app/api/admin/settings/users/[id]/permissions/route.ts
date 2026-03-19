@@ -21,15 +21,19 @@ export async function PATCH(
   if (!target || !["STAFF", "ADMIN", "SUPER_ADMIN"].includes(target.role)) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
-  await Promise.all(
-    body.data.overrides.map((o) =>
-      prisma.userPermission.upsert({
+  for (const o of body.data.overrides) {
+    if (o.granted) {
+      await prisma.userPermission.upsert({
         where: { userId_permission: { userId: id, permission: o.permission } },
-        update: { granted: o.granted },
-        create: { userId: id, permission: o.permission, granted: o.granted },
-      })
-    )
-  );
+        update: {},
+        create: { userId: id, permission: o.permission },
+      });
+    } else {
+      await prisma.userPermission.deleteMany({
+        where: { userId: id, permission: o.permission },
+      });
+    }
+  }
   await writeAudit({
     userId: auth.userId,
     action: "USER_PERMISSIONS_UPDATED",

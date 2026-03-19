@@ -21,6 +21,8 @@ export function TrackPageClient({ whatsapp }: { whatsapp?: string | null } = {})
       total: number;
       estimatedDelivery: string | null;
       deliveryType: string;
+      trackingNumber?: string;
+      courier?: { name: string; phone?: string; trackingUrl?: string };
     };
     events: Array<{
       status: string;

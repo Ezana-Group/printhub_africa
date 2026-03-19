@@ -24,6 +24,7 @@ const createBodySchema = z.object({
   description: z.string().max(10000).optional(),
   referenceFiles: z.array(z.string().min(1)).max(20).optional(),
   referenceFilesMeta: z.array(fileMetaSchema).max(20).optional(),
+  uploadIds: z.array(z.string().cuid()).max(20).optional(),
   specifications: z.record(z.string(), z.unknown()).optional(),
   budgetRange: z.string().max(100).optional(),
   deadline: z.string().optional(),
@@ -88,6 +89,7 @@ export async function GET(req: NextRequest) {
     quoteNumber: q.quoteNumber,
     type: q.type,
     status: q.status,
+    closedBy: q.closedBy,
     customerName: q.customerName,
     customerEmail: q.customerEmail,
     customerId: q.customerId,
@@ -152,6 +154,13 @@ export async function POST(req: NextRequest) {
         referralSource: data.referralSource ?? undefined,
       },
     });
+
+    if (Array.isArray(data.uploadIds) && data.uploadIds.length > 0) {
+      await prisma.uploadedFile.updateMany({
+        where: { id: { in: data.uploadIds } },
+        data: { quoteId: quote.id },
+      });
+    }
 
     const typeLabels: Record<string, string> = {
       large_format: "Large Format",

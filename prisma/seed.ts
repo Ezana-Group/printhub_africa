@@ -6,9 +6,10 @@ const root = path.resolve(__dirname, "..");
 config({ path: path.join(root, ".env.local") });
 config({ path: path.join(root, ".env") });
 
-import { PrismaClient, UserRole, ProductType, PrintMaterialType, PrinterType } from "@prisma/client";
+import { PrismaClient, UserRole, ProductType, PrintMaterialType, PrinterType, CorporateIndustry, CompanySize, CorporateStatus, PaymentTerms, CorporateRole } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import * as bcrypt from "bcryptjs";
+import { assertPrinthubDatabase } from "../lib/db-guard";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
@@ -24,6 +25,8 @@ const TEST_PASSWORD = "Test@12345";
 const ADMIN_PASSWORD = "Admin@Printhub2025!";
 
 async function main() {
+  await assertPrinthubDatabase(prisma);
+
   const defaultHash = await bcrypt.hash(TEST_PASSWORD, 12);
   const adminHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
 
@@ -55,6 +58,26 @@ async function main() {
   });
   console.log("Admin:", admin2.email);
 
+  // Default departments (admin-managed list for staff invite/edit)
+  const defaultDepartments = [
+    { name: "Management", description: "Directors, managers, and senior leadership", colour: "#0A0A0A", sortOrder: 1 },
+    { name: "Production", description: "Print operators, machine operators, 3D print technicians", colour: "#FF4D00", sortOrder: 2 },
+    { name: "Design", description: "Graphic designers, pre-press, file preparation", colour: "#7C3AED", sortOrder: 3 },
+    { name: "Sales", description: "Sales representatives and account executives", colour: "#059669", sortOrder: 4 },
+    { name: "Delivery", description: "Riders, drivers, logistics, and dispatch", colour: "#2563EB", sortOrder: 5 },
+    { name: "Finance", description: "Accounting, invoicing, and financial operations", colour: "#D97706", sortOrder: 6 },
+    { name: "Customer Support", description: "Customer service and support team", colour: "#DB2777", sortOrder: 7 },
+    { name: "IT", description: "Systems, website, and technical operations", colour: "#0891B2", sortOrder: 8 },
+  ];
+  for (const dept of defaultDepartments) {
+    await prisma.department.upsert({
+      where: { name: dept.name },
+      update: {},
+      create: dept,
+    });
+  }
+  console.log("Departments seeded:", defaultDepartments.length);
+
   // Staff – Sales
   const staffSales = await prisma.user.upsert({
     where: { email: "sales@printhub.africa" },
@@ -67,12 +90,14 @@ async function main() {
       emailVerified: new Date(),
     },
   });
+  const salesDept = await prisma.department.findFirst({ where: { name: "Sales" } }).catch(() => null);
   await prisma.staff.upsert({
     where: { userId: staffSales.id },
-    update: { department: "Sales", position: "Sales Rep" },
+    update: { department: "Sales", departmentId: salesDept?.id ?? null, position: "Sales Rep" },
     create: {
       userId: staffSales.id,
       department: "Sales",
+      departmentId: salesDept?.id ?? null,
       position: "Sales Rep",
       permissions: ["orders_view", "orders_edit", "products_view", "inventory_view"],
     },
@@ -483,6 +508,22 @@ async function main() {
     console.log("Default printer assets (LF + 3D) created");
   }
 
+  // One-time fix: Bambu Lab X1C typical power is ~400W (not 1300W max rated)
+  const bambuPrinterUpdated = await prisma.printerAsset.updateMany({
+    where: { name: { contains: "Bambu", mode: "insensitive" }, powerWatts: 1300 },
+    data: { powerWatts: 400 },
+  });
+  if (bambuPrinterUpdated.count > 0) console.log("Bambu printer powerWatts corrected to 400W (PrinterAsset)");
+  try {
+    const bambuHardwareUpdated = await prisma.inventoryHardwareItem.updateMany({
+      where: { name: { contains: "Bambu", mode: "insensitive" }, powerWatts: 1300 },
+      data: { powerWatts: 400 },
+    });
+    if (bambuHardwareUpdated.count > 0) console.log("Bambu hardware powerWatts corrected to 400W (InventoryHardwareItem)");
+  } catch {
+    // ignore if no matching records
+  }
+
   // LF stock items (inventory-linked costs for calculator)
   const lfStockItems = [
     { code: "VINYL_OUTDOOR_152", name: "Outdoor Vinyl (Calendared) 1.52m", category: "SUBSTRATE_ROLL", unitType: "ROLL_LM", rollWidthM: 1.52, averageCostKes: 178.5, quantityOnHand: 50, lowStockThreshold: 10 },
@@ -588,26 +629,68 @@ async function main() {
   });
   console.log("Seed coupon WELCOME10 created");
 
-  // Legal pages (full content from legal-content.ts)
+  // Kenya delivery zones (county rates: Nairobi 200, Central 400, etc.)
+  const kenyaZones = [
+    { name: "Nairobi", county: "Nairobi", counties: null, feeKes: 200, minDays: 1, maxDays: 2, sortOrder: 0 },
+    { name: "Central", county: null, counties: "Kiambu,Murang'a,Nyeri,Kirinyaga,Nyandarua", feeKes: 400, minDays: 2, maxDays: 4, sortOrder: 1 },
+    { name: "Coast", county: null, counties: "Mombasa,Kilifi,Kwale,Lamu,Taita-Taveta,Tana River", feeKes: 450, minDays: 3, maxDays: 5, sortOrder: 2 },
+    { name: "Eastern", county: null, counties: "Embu,Machakos,Makueni,Meru,Tharaka-Nithi,Kitui,Isiolo", feeKes: 450, minDays: 3, maxDays: 5, sortOrder: 3 },
+    { name: "Rift Valley", county: null, counties: "Nakuru,Eldoret,Uasin Gishu,Kericho,Bomet,Narok,Kajiado,Baringo", feeKes: 500, minDays: 3, maxDays: 6, sortOrder: 4 },
+    { name: "Western", county: null, counties: "Kakamega,Bungoma,Busia,Vihiga", feeKes: 500, minDays: 4, maxDays: 6, sortOrder: 5 },
+    { name: "Nyanza", county: null, counties: "Kisumu,Siaya,Kisii,Migori,Homa Bay,Nyamira", feeKes: 500, minDays: 4, maxDays: 6, sortOrder: 6 },
+    { name: "North Eastern", county: null, counties: "Garissa,Wajir,Mandera", feeKes: 600, minDays: 5, maxDays: 8, sortOrder: 7 },
+  ];
+  for (const z of kenyaZones) {
+    const existing = await prisma.deliveryZone.findFirst({
+      where: { name: z.name, county: z.county ?? undefined },
+    });
+    if (!existing) {
+      await prisma.deliveryZone.create({
+        data: {
+          name: z.name,
+          county: z.county ?? undefined,
+          counties: z.counties ?? undefined,
+          feeKes: z.feeKes,
+          minDays: z.minDays,
+          maxDays: z.maxDays,
+          sortOrder: z.sortOrder,
+          isActive: true,
+        },
+      });
+    }
+  }
+  console.log("Kenya delivery zones seeded");
+
+  // Legal pages (full content from legal-content.ts; upsert updates content so re-seed refreshes)
   const { getLegalContent } = await import("./legal-content");
   const legalPages = [
-    { slug: "privacy-policy", title: "Privacy Policy" },
-    { slug: "terms-of-service", title: "Terms of Service" },
-    { slug: "cookie-policy", title: "Cookie Policy" },
-    { slug: "refund-policy", title: "Refund & Returns Policy" },
+    { slug: "privacy-policy" as const, title: "Privacy Policy" },
+    { slug: "data-deletion" as const, title: "Data Deletion Request" },
+    { slug: "terms-of-service" as const, title: "Terms of Service" },
+    { slug: "refund-policy" as const, title: "Refund and Returns Policy" },
+    { slug: "cookie-policy" as const, title: "Cookie Policy" },
+    { slug: "account-terms" as const, title: "Account Registration Terms" },
+    { slug: "corporate-terms" as const, title: "Corporate Account Terms and Conditions" },
   ];
   for (const page of legalPages) {
+    const content = getLegalContent(page.slug);
     await prisma.legalPage.upsert({
       where: { slug: page.slug },
-      update: {},
+      update: {
+        title: page.title,
+        content,
+        lastUpdated: new Date(),
+      },
       create: {
         slug: page.slug,
         title: page.title,
-        content: getLegalContent(page.slug as "privacy-policy" | "terms-of-service" | "cookie-policy" | "refund-policy"),
+        content,
         lastUpdated: new Date(),
         isPublished: true,
+        version: 1,
       },
     });
+    console.log(`✓ Seeded: ${page.slug}`);
   }
   console.log("Legal pages seeded");
 
@@ -827,6 +910,74 @@ async function main() {
     });
   }
   console.log("Catalogue categories seeded");
+
+  // Corporate portal counters (for CORP-001, CINV-2026-0001)
+  await prisma.counter.upsert({
+    where: { id: "corporate_account" },
+    update: {},
+    create: { id: "corporate_account", value: 0 },
+  });
+  await prisma.counter.upsert({
+    where: { id: "corporate_invoice" },
+    update: {},
+    create: { id: "corporate_invoice", value: 0 },
+  });
+  console.log("Corporate counters seeded");
+
+  // Corporate test account — approved account for review and testing (Account → Corporate, NET-30, place orders)
+  const corporateUser = await prisma.user.upsert({
+    where: { email: "corporate@printhub.africa" },
+    update: {},
+    create: {
+      email: "corporate@printhub.africa",
+      name: "Corporate Test Contact",
+      passwordHash: defaultHash,
+      role: UserRole.CUSTOMER,
+      emailVerified: new Date(),
+    },
+  });
+  const existingCorp = await prisma.corporateAccount.findFirst({
+    where: { primaryUserId: corporateUser.id },
+  });
+  if (!existingCorp) {
+    const corp = await prisma.corporateAccount.create({
+      data: {
+        accountNumber: "CORP-001",
+        companyName: "PrintHub Test Company Ltd",
+        tradingName: "Test Corp",
+        kraPin: "P051V123456X",
+        industry: CorporateIndustry.TECHNOLOGY,
+        companySize: CompanySize.SMALL,
+        primaryUserId: corporateUser.id,
+        billingAddress: "123 Test Street",
+        billingCity: "Nairobi",
+        billingCounty: "Nairobi",
+        paymentTerms: PaymentTerms.NET_30,
+        creditLimit: 100000,
+        status: CorporateStatus.APPROVED,
+        approvedAt: new Date(),
+        approvedBy: admin.id,
+      },
+    });
+    await prisma.corporateTeamMember.create({
+      data: {
+        corporateId: corp.id,
+        userId: corporateUser.id,
+        role: CorporateRole.OWNER,
+        jobTitle: "Primary Contact",
+        canPlaceOrders: true,
+        canViewInvoices: true,
+        canManageTeam: true,
+        isActive: true,
+        acceptedAt: new Date(),
+      },
+    });
+    await prisma.counter.update({
+      where: { id: "corporate_account" },
+      data: { value: 1 },
+    });
+  }
+  console.log("Corporate test account: corporate@printhub.africa (approved, CORP-001)");
 
   console.log("Seed completed.");
 }

@@ -1,19 +1,40 @@
 import { requireAdminSettings } from "@/lib/auth-guard";
+import { prisma } from "@/lib/prisma";
 import { SectionCard } from "@/components/settings/section-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SettingsSaveButton } from "@/components/settings/settings-save-button";
 import { SettingsSwitch } from "@/components/settings/settings-switch";
+import { MpesaPaybillTillFields } from "@/components/settings/mpesa-paybill-till-fields";
 
 function getMpesaCallbackUrl(): string {
   const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://printhub.africa";
   return `${base.replace(/\/$/, "")}/api/payments/mpesa/callback`;
 }
 
+function asStr(v: unknown): string {
+  if (v == null) return "";
+  return String(v);
+}
+
 export default async function AdminSettingsPaymentsPage() {
   await requireAdminSettings();
   const mpesaCallbackUrl = getMpesaCallbackUrl();
+  let payments: Record<string, unknown> = {};
+  try {
+    const row = await prisma.pricingConfig.findUnique({ where: { key: "adminSettings:payments" } });
+    if (row?.valueJson) payments = (JSON.parse(row.valueJson) as Record<string, unknown>) ?? {};
+  } catch {
+    // use defaults
+  }
+  const p = (key: string, fallback: string) => asStr(payments[key] ?? fallback);
+  const pBool = (key: string, fallback: boolean) => {
+    const v = payments[key];
+    if (v === true || v === "true") return true;
+    if (v === false || v === "false") return false;
+    return fallback;
+  };
   return (
     <div className="space-y-6">
       <h1 className="font-display text-2xl font-bold">Payments & Checkout</h1>
@@ -44,41 +65,40 @@ export default async function AdminSettingsPaymentsPage() {
           <Input name="mpesaCallbackUrl" readOnly className="bg-muted" value={mpesaCallbackUrl} />
         </div>
         <Button type="button" variant="outline" size="sm" className="mt-2">Test M-Pesa Connection</Button>
+        <div className="mt-4 pt-4 border-t">
+          <p className="text-sm font-medium text-foreground mb-2">Paybill / Till (shown to customers)</p>
+          <p className="text-sm text-muted-foreground mb-3">When STK push fails or for manual payment, customers see these numbers. Update if your business or till number changes.</p>
+          <MpesaPaybillTillFields />
+        </div>
       </SectionCard>
-      <SectionCard title="Pesapal" description="Consumer Key, Secret, IPN URL.">
+      <SectionCard title="Pesapal" description="Consumer Key, Secret, IPN URL. Primary for cards and other mobile money.">
         <p className="text-sm text-muted-foreground">Status: Not configured</p>
         <Button type="button" variant="outline" size="sm">Configure</Button>
-      </SectionCard>
-      <SectionCard title="Flutterwave" description="Public Key, Secret Key, Webhook.">
-        <p className="text-sm text-muted-foreground">Status: Not configured</p>
-      </SectionCard>
-      <SectionCard title="Stripe (International Cards)" description="Publishable Key, Secret Key, Webhook Secret.">
-        <p className="text-sm text-muted-foreground">Status: Not configured</p>
       </SectionCard>
       <SectionCard
         title="Bank Transfer"
         description="Show for orders over threshold."
       >
-        <SettingsSwitch name="bankTransferEnabled" defaultValue={false} label="Enable bank transfer" />
+        <SettingsSwitch name="bankTransferEnabled" defaultValue={pBool("bankTransferEnabled", false)} label="Enable bank transfer" />
         <div className="grid gap-2 mt-4">
           <Label>Show for orders over (KES)</Label>
-          <Input name="bankTransferMinOrder" type="number" defaultValue="10000" />
+          <Input name="bankTransferMinOrder" type="number" defaultValue={p("bankTransferMinOrder", "10000")} />
           <Label>Bank Name / Account Name / Account Number / Branch</Label>
-          <Input name="bankTransferDetails" placeholder="Bank details" />
+          <Input name="bankTransferDetails" placeholder="Bank details" defaultValue={p("bankTransferDetails", "")} />
         </div>
       </SectionCard>
       <SectionCard
         title="Checkout Behaviour"
         description="Guest checkout, minimum order, payment method order."
       >
-        <SettingsSwitch name="guestCheckoutEnabled" defaultValue={true} label="Guest checkout enabled" />
+        <SettingsSwitch name="guestCheckoutEnabled" defaultValue={pBool("guestCheckoutEnabled", true)} label="Guest checkout enabled" />
         <div className="grid gap-2 mt-4">
           <Label>Minimum order value (KES)</Label>
-          <Input name="minOrderValue" type="number" defaultValue="500" />
+          <Input name="minOrderValue" type="number" defaultValue={p("minOrderValue", "500")} />
           <Label>Payment timeout (minutes)</Label>
-          <Input name="paymentTimeoutMinutes" type="number" defaultValue="30" />
+          <Input name="paymentTimeoutMinutes" type="number" defaultValue={p("paymentTimeoutMinutes", "30")} />
         </div>
-        <p className="text-sm text-muted-foreground">Accepted: M-Pesa, Visa/Mastercard, Flutterwave, Stripe, Bank Transfer. M-Pesa first.</p>
+        <p className="text-sm text-muted-foreground">Accepted: M-Pesa, PesaPal (cards & mobile money), Bank Transfer. M-Pesa first.</p>
       </SectionCard>
       <SectionCard
         title="Invoice Settings"
@@ -86,13 +106,13 @@ export default async function AdminSettingsPaymentsPage() {
       >
         <div className="grid gap-2">
           <Label>Invoice prefix</Label>
-          <Input name="invoicePrefix" defaultValue="PHUB-INV-" />
+          <Input name="invoicePrefix" defaultValue={p("invoicePrefix", "PHUB-INV-")} />
           <Label>Quote prefix</Label>
-          <Input name="quotePrefix" defaultValue="PHUB-QT-" />
+          <Input name="quotePrefix" defaultValue={p("quotePrefix", "PHUB-QT-")} />
           <Label>Next invoice number</Label>
-          <Input name="nextInvoiceNumber" type="number" defaultValue="1001" />
+          <Input name="nextInvoiceNumber" type="number" defaultValue={p("nextInvoiceNumber", "1001")} />
           <Label>Invoice due days</Label>
-          <Input name="invoiceDueDays" type="number" defaultValue="30" />
+          <Input name="invoiceDueDays" type="number" defaultValue={p("invoiceDueDays", "30")} />
         </div>
       </SectionCard>
       <SettingsSaveButton formId="settings-payments" action="/api/admin/settings/payments" />

@@ -12,11 +12,15 @@ export async function generateMetadata() {
   };
 }
 
+export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
 export const revalidate = 300;
 
 async function getJobs() {
   const listings = await prisma.jobListing.findMany({
-    where: { status: JobStatus.PUBLISHED },
+    where: { 
+      status: JobStatus.PUBLISHED,
+      slug: { not: 'speculative-application' }
+    },
     orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }, { createdAt: "desc" }],
     select: {
       id: true,
@@ -159,7 +163,7 @@ export default async function CareersPage() {
             what we&apos;re building, reach out anyway.
           </p>
           <Link
-            href="/get-a-quote"
+            href="/careers/speculative-application"
             className="inline-flex items-center gap-2 mt-6 rounded-lg bg-black text-white px-6 py-3 font-medium hover:bg-black/90"
           >
             Send Your CV →

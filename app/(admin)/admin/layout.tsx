@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { AdminNav } from "@/components/admin/admin-nav";
+import { AdminHeaderClient } from "@/components/admin/admin-header-client";
 import { EditableSectionProvider } from "@/components/admin/editable-section-context";
 
 const ADMIN_ROLES = ["STAFF", "ADMIN", "SUPER_ADMIN"];
@@ -23,22 +24,22 @@ export default async function AdminLayout({
 
   return (
     <div className="min-h-screen bg-background">
-      <aside className="fixed left-0 top-0 z-40 h-screen w-56 border-r border-border bg-card">
-        <Link href="/admin/dashboard" className="block p-4 font-display font-bold text-primary">
+      <aside className="fixed left-0 top-0 z-40 flex h-screen w-56 flex-col border-r border-border bg-card">
+        <Link href="/admin/dashboard" className="shrink-0 p-4 font-display font-bold text-primary">
           PrintHub Admin
         </Link>
-        <AdminNav role={role} permissions={permissions} newQuotesCount={newQuotesCount} />
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <AdminNav role={role} permissions={permissions} newQuotesCount={newQuotesCount} />
+        </div>
       </aside>
-      <header className="fixed top-0 left-56 right-0 z-30 h-14 border-b border-border bg-card flex items-center justify-between px-6">
-        <span className="text-sm text-muted-foreground">
-          {session.user?.name ?? session.user?.email}
-        </span>
-        <Link href="/" className="text-sm text-primary hover:underline">
-          View site
-        </Link>
-      </header>
+      <AdminHeaderClient
+        userName={session.user?.name ?? undefined}
+        userEmail={session.user?.email ?? undefined}
+      />
       <EditableSectionProvider>
-        <main className="pl-56 pt-14 min-h-screen bg-[#F9FAFB]">{children}</main>
+        <main className="fixed left-56 top-14 right-0 bottom-0 overflow-y-auto overflow-x-hidden bg-[#F9FAFB]">
+          {children}
+        </main>
       </EditableSectionProvider>
     </div>
   );

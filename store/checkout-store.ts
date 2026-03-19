@@ -23,11 +23,40 @@ export interface CheckoutDelivery {
   method: "STANDARD" | "EXPRESS" | "PICKUP";
   fee: number;
   estimatedDays?: string;
+  /** Delivery zone id (from shipping fee API) for order record */
+  deliveryZoneId?: string;
+  /** Estimated delivery date ISO string for order record */
+  estimatedDelivery?: string;
+  /** When method is PICKUP, chosen location id and display name */
+  pickupLocationId?: string;
+  pickupLocationName?: string;
+  /** Preferred courier location (for STANDARD/EXPRESS delivery) */
+  preferredCourierId?: string;
+  preferredCourierName?: string;
 }
 
 export interface CheckoutPayment {
-  method: "MPESA" | "STRIPE" | "PESAPAL" | "FLUTTERWAVE";
+  method:
+    | "MPESA"
+    | "AIRTEL_MONEY"
+    | "TKASH"
+    | "PESAPAL"
+    | "BANK_TRANSFER"
+    | "CARD"
+    | "APPLE_PAY"
+    | "GOOGLE_PAY"
+    | "INVOICE_NET_30"
+    | "INVOICE_NET_60";
   mpesaPhone?: string;
+  /** PO / reference when paying by invoice (corporate) */
+  poReference?: string;
+  /** Airtel Money / TKash phone (Airtel: 07XX; Telkom: 07XX) */
+  mobileMoneyPhone?: string;
+  /** Card details (only for display; card payment is via PesaPal redirect at checkout) */
+  cardNumber?: string;
+  cardExpiry?: string;
+  cardCvc?: string;
+  cardholderName?: string;
 }
 
 export interface CheckoutCoupon {
@@ -43,6 +72,9 @@ interface CheckoutState {
   payment: Partial<CheckoutPayment>;
   coupon: CheckoutCoupon | null;
   orderId: string | null;
+  /** For abandoned-cart recovery: cart id and session id from PATCH /api/checkout/cart */
+  cartId: string | null;
+  cartSessionId: string | null;
 
   setStep: (step: CheckoutStep) => void;
   setContact: (contact: Partial<CheckoutContact>) => void;
@@ -50,6 +82,7 @@ interface CheckoutState {
   setPayment: (payment: Partial<CheckoutPayment>) => void;
   setCoupon: (coupon: CheckoutCoupon | null) => void;
   setOrderId: (id: string | null) => void;
+  setCartId: (cartId: string | null, cartSessionId: string | null) => void;
   reset: () => void;
 }
 
@@ -83,6 +116,8 @@ export const useCheckoutStore = create<CheckoutState>((set) => ({
   payment: initialPayment,
   coupon: null,
   orderId: null,
+  cartId: null,
+  cartSessionId: null,
 
   setStep: (step) => set({ step }),
   setContact: (contact) => set((s) => ({ contact: { ...s.contact, ...contact } })),
@@ -90,6 +125,7 @@ export const useCheckoutStore = create<CheckoutState>((set) => ({
   setPayment: (payment) => set((s) => ({ payment: { ...s.payment, ...payment } })),
   setCoupon: (coupon) => set({ coupon }),
   setOrderId: (orderId) => set({ orderId }),
+  setCartId: (cartId, cartSessionId) => set({ cartId, cartSessionId }),
   reset: () =>
     set({
       step: 1,
@@ -98,5 +134,7 @@ export const useCheckoutStore = create<CheckoutState>((set) => ({
       payment: initialPayment,
       coupon: null,
       orderId: null,
+      cartId: null,
+      cartSessionId: null,
     }),
 }));

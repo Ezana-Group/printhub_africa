@@ -99,6 +99,8 @@ function MaterialGridCard({
   const topSpecs = getTopThreeSpecs(material.strengthSpecs);
   const bestForTags = parseTags(material.bestFor);
   const avoidTags = material.notSuitableFor ? parseTags(material.notSuitableFor) : [];
+  const src = material.imageSrc?.trim() || "";
+  const isExternal = src.startsWith("http");
 
   return (
     <motion.article
@@ -114,13 +116,18 @@ function MaterialGridCard({
     >
       {/* Image: 200px tall, object-cover, gradient overlay at bottom */}
       <div className="relative h-[200px] w-full shrink-0 bg-[#0D0D0D]">
-        <Image
-          src={material.imageSrc}
-          alt={material.imageAlt}
-          fill
-          sizes="(max-width: 768px) 100vw, 50vw"
-          className="object-cover"
-        />
+        {isExternal ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={src} alt={material.imageAlt} className="h-full w-full object-cover" />
+        ) : (
+          <Image
+            src={src}
+            alt={material.imageAlt}
+            fill
+            sizes="(max-width: 768px) 100vw, 50vw"
+            className="object-cover"
+          />
+        )}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{

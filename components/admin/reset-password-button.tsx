@@ -3,8 +3,16 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
-/** AUDIT FIX: Reset password button with handler — sends reset email via API. */
-export function ResetPasswordButton({ staffId, staffEmail }: { staffId: string; staffEmail: string }) {
+/** Sends password reset or (for invite-pending staff) a fresh invite link — email goes to personal email when set. */
+export function ResetPasswordButton({
+  staffId,
+  staffEmail,
+  invitePending = false,
+}: {
+  staffId: string;
+  staffEmail: string;
+  invitePending?: boolean;
+}) {
   void staffEmail;
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -20,7 +28,7 @@ export function ResetPasswordButton({ staffId, staffEmail }: { staffId: string; 
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error ?? "Failed to send reset email");
+        setError(data.error ?? "Failed to send email");
         return;
       }
       setSent(true);
@@ -40,7 +48,15 @@ export function ResetPasswordButton({ staffId, staffEmail }: { staffId: string; 
         onClick={handleClick}
         disabled={loading || sent}
       >
-        {loading ? "Sending…" : sent ? "Reset email sent" : "Reset password"}
+        {loading
+          ? "Sending…"
+          : sent
+            ? invitePending
+              ? "Invite email sent"
+              : "Reset email sent"
+            : invitePending
+              ? "Resend invite email"
+              : "Reset password"}
       </Button>
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>

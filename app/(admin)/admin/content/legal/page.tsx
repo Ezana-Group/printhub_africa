@@ -17,11 +17,19 @@ export default async function AdminContentLegalPage() {
           { label: "Legal Pages" },
         ]}
       />
-      <div>
-        <h1 className="font-display text-2xl font-bold text-slate-900">Legal Pages</h1>
-        <p className="text-slate-600 text-sm mt-1">
-          Edit the legal pages shown on your website. Changes go live when you save & publish.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl font-bold text-slate-900">Legal Pages</h1>
+          <p className="text-slate-600 text-sm mt-1">
+            Edit the legal pages shown on your website. Changes go live when you save & publish.
+          </p>
+        </div>
+        <Link
+          href="/admin/content/legal/new"
+          className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors shrink-0"
+        >
+          Add legal page
+        </Link>
       </div>
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         <table className="w-full text-sm">
@@ -36,13 +44,15 @@ export default async function AdminContentLegalPage() {
           <tbody>
             {pages.map((p) => (
               <tr key={p.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
-                <td className="p-4 font-medium text-slate-900">{p.title}</td>
+                <td className="p-4 font-medium text-slate-900">{p.title ?? p.slug}</td>
                 <td className="p-4 text-slate-500">
-                  {new Date(p.lastUpdated).toLocaleDateString("en-KE", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })}
+                  {p.lastUpdated
+                    ? new Date(p.lastUpdated).toLocaleDateString("en-KE", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })
+                    : "—"}
                 </td>
                 <td className="p-4 text-slate-500">v{p.version}</td>
                 <td className="p-4 text-right">

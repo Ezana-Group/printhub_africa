@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "UploadContext" ADD VALUE 'STAFF_PROFILE_PHOTO';

@@ -6,13 +6,7 @@ import type { Metadata } from "next";
 import type { BusinessPublic } from "@/lib/business-public";
 import { Mail, MapPin, Phone } from "lucide-react";
 
-const LEGAL_SLUGS = ["privacy-policy", "terms-of-service", "cookie-policy", "refund-policy"] as const;
-const LEGAL_NAV: { slug: (typeof LEGAL_SLUGS)[number]; label: string }[] = [
-  { slug: "privacy-policy", label: "Privacy Policy" },
-  { slug: "terms-of-service", label: "Terms of Service" },
-  { slug: "cookie-policy", label: "Cookie Policy" },
-  { slug: "refund-policy", label: "Refund & Returns Policy" },
-];
+export const revalidate = 86400; // 24 hours — legal pages change very rarely
 
 type Props = { params: Promise<{ legalSlug: string }> };
 
@@ -23,6 +17,31 @@ async function getLegalPage(slug: string) {
     });
   } catch {
     return null;
+  }
+}
+
+async function getPublishedLegalPages() {
+  try {
+    return await prisma.legalPage.findMany({
+      where: { isPublished: true },
+      orderBy: { slug: "asc" },
+      select: { slug: true, title: true },
+    });
+  } catch {
+    return [];
+  }
+}
+
+export async function generateStaticParams() {
+  if (!process.env.DATABASE_URL) return [];
+  try {
+    const pages = await prisma.legalPage.findMany({
+      where: { isPublished: true },
+      select: { slug: true },
+    });
+    return pages.map((p) => ({ legalSlug: p.slug }));
+  } catch {
+    return [];
   }
 }
 
@@ -55,11 +74,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { legalSlug } = await params;
   const business = await getBusinessPublic();
   const site = business.website?.replace(/^https?:\/\//, "") ?? "printhub.africa";
-  if (!LEGAL_SLUGS.includes(legalSlug as (typeof LEGAL_SLUGS)[number])) {
-    return { title: `Not Found | ${business.businessName}` };
-  }
   const page = await getLegalPage(legalSlug);
-  if (!page) return { title: business.businessName };
+  if (!page) return { title: `Not Found | ${business.businessName}` };
   return {
     title: `${page.title} | ${business.businessName}`,
     description: `${business.businessName} ${page.title} — ${site}`,
@@ -69,13 +85,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function LegalPage({ params }: Props) {
   const { legalSlug } = await params;
-  if (!LEGAL_SLUGS.includes(legalSlug as (typeof LEGAL_SLUGS)[number])) {
-    notFound();
-  }
 
-  const [page, business] = await Promise.all([
+  const [page, business, navPages] = await Promise.all([
     getLegalPage(legalSlug),
     getBusinessPublic(),
+    getPublishedLegalPages(),
   ]);
 
   if (!page) notFound();
@@ -94,7 +108,7 @@ export default async function LegalPage({ params }: Props) {
                 Legal
               </p>
               <ul className="space-y-0.5">
-                {LEGAL_NAV.map(({ slug, label }) => (
+                {navPages.map(({ slug, title }) => (
                   <li key={slug}>
                     <Link
                       href={`/${slug}`}
@@ -104,7 +118,7 @@ export default async function LegalPage({ params }: Props) {
                           : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                       }`}
                     >
-                      {label}
+                      {title ?? slug}
                     </Link>
                   </li>
                 ))}
@@ -157,11 +171,13 @@ export default async function LegalPage({ params }: Props) {
               </h1>
               <p className="text-sm text-slate-500 mt-2">
                 Last updated:{" "}
-                {new Date(page.lastUpdated).toLocaleDateString("en-KE", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
+                {page.lastUpdated
+                  ? new Date(page.lastUpdated).toLocaleDateString("en-KE", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })
+                  : "—"}
               </p>
               <div
                 className="prose prose-slate mt-8 max-w-none prose-headings:font-display prose-headings:scroll-mt-20 prose-h2:text-lg prose-h2:mt-8 prose-h2:mb-3 prose-h2:font-semibold prose-h3:text-base prose-h3:mt-6 prose-h3:mb-2 prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-p:leading-relaxed prose-ul:my-4 prose-li:my-0.5 prose-table:border-collapse prose-table:w-full prose-th:border prose-th:border-slate-200 prose-th:bg-slate-50 prose-th:px-4 prose-th:py-3 prose-th:text-left prose-td:border prose-td:border-slate-200 prose-td:px-4 prose-td:py-3"

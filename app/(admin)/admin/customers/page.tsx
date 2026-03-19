@@ -15,7 +15,7 @@ export default async function AdminCustomersPage() {
           payments: true,
         },
       },
-      corporateAccount: { select: { id: true } },
+      primaryCorporateAccount: { select: { id: true } },
     },
   });
 
@@ -43,7 +43,7 @@ export default async function AdminCustomersPage() {
     const lastOrder = lastOrderByUserId[u.id];
     if (lastOrder && lastOrder >= startOfMonth) activeThisMonth++;
     if (u.createdAt >= startOfMonth) newThisMonth++;
-    if (u.corporateAccount) corporateCount++;
+    if (u.primaryCorporateAccount) corporateCount++;
   }
 
   const allSpents = Object.values(totalSpentByUserId).filter((s) => s > 0).sort((a, b) => b - a);
@@ -59,7 +59,7 @@ export default async function AdminCustomersPage() {
     totalSpent: totalSpentByUserId[u.id] ?? 0,
     lastOrderAt: lastOrderByUserId[u.id] ?? null,
     isTopSpender: (totalSpentByUserId[u.id] ?? 0) >= top10PercentThreshold && top10PercentThreshold > 0,
-    isCorporate: !!u.corporateAccount,
+    isCorporate: !!u.primaryCorporateAccount,
   }));
 
   return (

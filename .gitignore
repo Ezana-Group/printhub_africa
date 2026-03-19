@@ -7,6 +7,7 @@
 .env.test.local
 .env.production.local
 .env.test
+.env.seed
 
 # dependencies
 /node_modules
@@ -63,3 +64,16 @@ next-env.d.ts
 Coursera*.pdf
 *Cursor*Prompt*
 *CursorAI*
+
+# Sentry Config File
+.env.sentry-build-plugin
+
+# Archived/removed files — not part of the build
+/archive/
+
+# Docs folder — keep locally only; do not push to repo
+/docs/
+
+# Only root README.md is committed; all other .md files are excluded from this repo
+*.md
+!/README.md

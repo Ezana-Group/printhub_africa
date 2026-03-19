@@ -1,12 +1,13 @@
 import { requireAdminSettings } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
 import { SectionCard } from "@/components/settings/section-card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SettingsSaveButton } from "@/components/settings/settings-save-button";
 import { SettingsSwitch } from "@/components/settings/settings-switch";
 import { CouriersSection } from "@/components/admin/couriers-section";
+import { DeliveryZonesSection } from "@/components/admin/delivery-zones-section";
+import { PickupLocationsSection } from "@/components/admin/pickup-locations-section";
 
 export default async function AdminSettingsShippingPage() {
   await requireAdminSettings();
@@ -16,18 +17,15 @@ export default async function AdminSettingsShippingPage() {
     clickCollectEnabled: false,
   };
   try {
-    const row = await prisma.pricingConfig.findUnique({
-      where: { key: "adminSettings:shipping" },
+    const row = await prisma.shippingSettings.findUnique({
+      where: { id: "default" },
     });
-    if (row?.valueJson) {
-      const parsed = JSON.parse(row.valueJson) as Record<string, unknown>;
-      const asBool = (v: unknown) => v === true || v === "true";
-      const threshold = parsed.freeShippingThreshold;
+    if (row) {
       settings = {
-        freeShippingEnabled: asBool(parsed.freeShippingEnabled) ?? false,
-        expressEnabled: asBool(parsed.expressEnabled) ?? false,
-        clickCollectEnabled: asBool(parsed.clickCollectEnabled) ?? false,
-        freeShippingThreshold: threshold != null ? String(threshold) : undefined,
+        freeShippingEnabled: row.freeShippingEnabled ?? false,
+        expressEnabled: row.expressEnabled ?? false,
+        clickCollectEnabled: row.clickCollectEnabled ?? false,
+        freeShippingThreshold: row.freeShippingThresholdKes != null ? String(row.freeShippingThresholdKes) : undefined,
       };
     }
   } catch {
@@ -37,16 +35,8 @@ export default async function AdminSettingsShippingPage() {
     <div className="space-y-6">
       <h1 className="font-display text-2xl font-bold">Shipping & Delivery</h1>
       <form id="settings-shipping" className="space-y-6">
-      <SectionCard
-        title="Delivery Zones"
-        description="Set delivery fees per county. Customers see these at checkout."
-      >
-        <p className="text-sm text-muted-foreground mb-4">
-          Zone Name | Counties | Fee (KES) | Days | Active. All 47 counties must be assigned.
-        </p>
-        <Button type="button" variant="outline">+ Add Zone</Button>
-        <p className="text-sm text-amber-600 mt-2">Unassigned counties warning if any county has no zone.</p>
-      </SectionCard>
+      <DeliveryZonesSection />
+      <PickupLocationsSection />
       <SectionCard
         title="Free Shipping"
         description="Orders above threshold get free delivery."

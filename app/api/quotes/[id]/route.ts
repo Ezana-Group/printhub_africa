@@ -45,7 +45,11 @@ export async function GET(
     return NextResponse.json({ error: "Quote not found" }, { status: 404 });
   }
 
-  const isOwner = session?.user?.id === quote.customerId;
+  const isOwner =
+    session?.user?.id === quote.customerId ||
+    (quote.customerId === null &&
+      session?.user?.email &&
+      quote.customerEmail.toLowerCase() === (session.user.email as string).toLowerCase());
   if (!isStaff && !isOwner) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
@@ -82,7 +86,11 @@ export async function PATCH(
   });
   if (!quote) return NextResponse.json({ error: "Quote not found" }, { status: 404 });
 
-  const isOwner = session.user.id === quote.customerId;
+  const isOwner =
+    session.user.id === quote.customerId ||
+    (quote.customerId === null &&
+      session.user.email &&
+      quote.customerEmail?.toLowerCase() === (session.user.email as string).toLowerCase());
 
   const raw = await req.json();
 
@@ -124,6 +132,42 @@ export async function PATCH(
 
   if (!isStaff) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Customer-closed quotes cannot be modified by admin
+  if (quote.closedBy === "CUSTOMER") {
+    return NextResponse.json(
+      {
+        error: "This quote was closed by the customer and cannot be modified.",
+        code: "QUOTE_CUSTOMER_CLOSED",
+        detail: quote.closedReason
+          ? `${quote.closedReason}${quote.closedAt ? ` on ${quote.closedAt.toISOString()}` : ""}`
+          : "Quote was closed by the customer.",
+      },
+      { status: 403 }
+    );
+  }
+  const customerClosedPhrases = [
+    "withdrawn by customer",
+    "declined by customer",
+    "customer declined",
+    "customer withdrew",
+  ];
+  const isLegacyCustomerClose =
+    (quote.status === "rejected" || quote.status === "cancelled") &&
+    quote.rejectionReason &&
+    customerClosedPhrases.some((phrase) =>
+      quote.rejectionReason!.toLowerCase().includes(phrase)
+    );
+  if (isLegacyCustomerClose && !quote.closedBy) {
+    return NextResponse.json(
+      {
+        error: "This quote was closed by the customer and cannot be modified.",
+        code: "QUOTE_CUSTOMER_CLOSED",
+        detail: quote.rejectionReason ?? undefined,
+      },
+      { status: 403 }
+    );
   }
 
   const parsed = patchSchema.safeParse(raw);

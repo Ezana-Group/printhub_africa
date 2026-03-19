@@ -5,7 +5,90 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
-const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
+const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "STAFF"];
+
+/** GET: Fetch customer by id with corporate account (for admin order form preselection). */
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getServerSession(authOptions);
+  const role = (session?.user as { role?: string })?.role;
+  if (!session?.user || !role || !ADMIN_ROLES.includes(role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const { id } = await params;
+  const user = await prisma.user.findFirst({
+    where: { id, role: "CUSTOMER" },
+    include: {
+      primaryCorporateAccount: {
+        select: {
+          id: true,
+          accountNumber: true,
+          companyName: true,
+          tradingName: true,
+          tier: true,
+          status: true,
+          discountPercent: true,
+          creditLimit: true,
+          creditUsed: true,
+          paymentTerms: true,
+          kraPin: true,
+          industry: true,
+        },
+      },
+      corporateTeamMemberships: {
+        where: { isActive: true },
+        include: {
+          corporate: {
+            select: {
+              id: true,
+              accountNumber: true,
+              companyName: true,
+              tradingName: true,
+              tier: true,
+              status: true,
+              discountPercent: true,
+              creditLimit: true,
+              creditUsed: true,
+              paymentTerms: true,
+              kraPin: true,
+              industry: true,
+            },
+          },
+        },
+        take: 1,
+      },
+    },
+  });
+
+  if (!user) {
+    return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+  }
+
+  const corporateAccount =
+    user.primaryCorporateAccount ??
+    user.corporateTeamMemberships[0]?.corporate ??
+    null;
+  const corporateRole = user.corporateTeamMemberships[0]?.role ?? null;
+
+  return NextResponse.json({
+    customer: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      corporateAccount: corporateAccount
+        ? {
+            ...corporateAccount,
+            paymentTerms: corporateAccount.paymentTerms,
+          }
+        : null,
+      corporateRole,
+    },
+  });
+}
 
 const patchSchema = z.object({
   name: z.string().min(1).max(200).optional(),

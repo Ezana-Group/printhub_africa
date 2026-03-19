@@ -13,7 +13,7 @@ import * as path from "path";
 const BASE = process.env.ERPNEXT_URL ?? "http://localhost:8080";
 const SITE = "printhub.localhost";
 
-type ApiResponse = { message?: string; [k: string]: unknown };
+
 
 function getAuthHeader(apiKey: string, apiSecret: string): Record<string, string> {
   return { Authorization: `token ${apiKey}:${apiSecret}` };
@@ -30,7 +30,7 @@ function envPath(): string {
 
 function updateEnv(apiKey: string, apiSecret: string): void {
   const p = envPath();
-  let content = fs.existsSync(p) ? fs.readFileSync(p, "utf-8") : "";
+  const content = fs.existsSync(p) ? fs.readFileSync(p, "utf-8") : "";
   const lines = content.split("\n");
   const keyLine = lines.findIndex((l) => /^\s*ERPNEXT_API_KEY\s*=/.test(l));
   const secretLine = lines.findIndex((l) => /^\s*ERPNEXT_API_SECRET\s*=/.test(l));
@@ -111,34 +111,6 @@ async function post(
   auth: { apiKey: string; apiSecret: string }
 ): Promise<unknown> {
   return api("POST", path, body, auth);
-}
-
-async function patch(
-  path: string,
-  body: object,
-  auth: { apiKey: string; apiSecret: string }
-): Promise<unknown> {
-  return api("PATCH", path, body, auth);
-}
-
-async function ensureResource(
-  auth: { apiKey: string; apiSecret: string },
-  doctype: string,
-  name: string,
-  payload: object,
-  createPath = "/api/resource/" + doctype
-): Promise<void> {
-  try {
-    await get(`/api/resource/${doctype}/${encodeURIComponent(name)}`, auth);
-    await patch(`/api/resource/${doctype}/${encodeURIComponent(name)}`, payload, auth);
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e);
-    if (msg.includes("404") || msg.includes("Does not exist")) {
-      await post(createPath, { ...payload, name: name.includes(" ") ? undefined : name } as object, auth);
-    } else {
-      throw e;
-    }
-  }
 }
 
 async function main(): Promise<void> {
@@ -405,20 +377,20 @@ async function main(): Promise<void> {
   try {
     await get("/api/resource/Company/PrintHub", auth);
     console.log("  Company: OK");
-  } catch (e) {
+  } catch {
     console.warn("  Company: not found");
   }
   try {
     await get("/api/resource/Item/SRV-LARGE-FORMAT", auth);
     console.log("  Service item: OK");
-  } catch (e) {
+  } catch {
     console.warn("  Service item SRV-LARGE-FORMAT: not found (create in ERPNext UI if needed)");
   }
   try {
     const wh = (await get("/api/resource/Warehouse?filters=%5B%5B%22company%22%2C%22%3D%22%2C%22PrintHub%22%5D%5D", auth)) as { data?: unknown[] };
     if (wh.data?.length) console.log("  Warehouse: OK");
     else console.warn("  Warehouse: none for PrintHub");
-  } catch (e) {
+  } catch {
     console.warn("  Warehouse: check failed");
   }
   console.log("✅ Verification done\n");

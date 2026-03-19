@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, startTransition } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -33,7 +33,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { getInitials, nameToHue, formatRelativeTime, formatDateForDisplay } from "@/lib/admin-utils";
-import { InviteStaffSheet } from "@/components/admin/invite-staff-sheet";
 import {
   Search,
   Plus,
@@ -50,11 +49,14 @@ export type StaffRow = {
   id: string;
   name: string | null;
   email: string;
+  personalEmail: string | null;
   role: string;
+  status: string | null;
   department: string | null;
   position: string | null;
+  departmentObj: { id: string; name: string; colour: string | null } | null;
   createdAt: Date;
-  lastActiveAt: Date | null; // from session or placeholder
+  lastActiveAt: Date | null;
 };
 
 function RoleBadge({ role }: { role: string }) {
@@ -76,9 +78,10 @@ export function StaffAdminClient({
   const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [inviteOpen, setInviteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<StaffRow | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [reset2faTarget, setReset2faTarget] = useState<StaffRow | null>(null);
+  const [reset2faLoading, setReset2faLoading] = useState(false);
   const router = useRouter();
 
   const handleDeleteClick = useCallback((s: StaffRow) => setDeleteTarget(s), []);
@@ -94,10 +97,34 @@ export function StaffAdminClient({
       }
       setDeleteTarget(null);
       router.refresh();
+    } catch (error) {
+      console.error("Delete account error:", error);
+      alert(error instanceof Error ? error.message : "Failed to delete account");
     } finally {
       setDeleteLoading(false);
     }
   }, [deleteTarget, router]);
+
+  const handleReset2faClick = useCallback((s: StaffRow) => setReset2faTarget(s), []);
+
+  const handleReset2faConfirm = useCallback(async () => {
+    if (!reset2faTarget) return;
+    setReset2faLoading(true);
+    try {
+      const res = await fetch(`/api/admin/settings/users/${reset2faTarget.id}/reset-2fa`, {
+        method: "POST",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error ?? "Failed to reset 2FA");
+        return;
+      }
+      setReset2faTarget(null);
+      router.refresh();
+    } finally {
+      setReset2faLoading(false);
+    }
+  }, [reset2faTarget, router]);
 
   const roleOptions: SelectOption[] = [
     { value: "", label: "All roles" },
@@ -114,8 +141,20 @@ export function StaffAdminClient({
 
   const filtered = staff.filter((s) => {
     const q = search.toLowerCase().trim();
-    if (q && !(s.name?.toLowerCase().includes(q) || s.email.toLowerCase().includes(q))) return false;
+    if (
+      q &&
+      !(
+        s.name?.toLowerCase().includes(q) ||
+        s.email.toLowerCase().includes(q) ||
+        (s.personalEmail && s.personalEmail.toLowerCase().includes(q))
+      )
+    )
+      return false;
     if (roleFilter && s.role !== roleFilter) return false;
+    const st = s.status ?? "ACTIVE";
+    if (statusFilter === "active" && (st === "INVITE_PENDING" || st === "DEACTIVATED")) return false;
+    if (statusFilter === "pending" && st !== "INVITE_PENDING") return false;
+    if (statusFilter === "suspended" && st !== "DEACTIVATED") return false;
     return true;
   });
 
@@ -155,24 +194,65 @@ export function StaffAdminClient({
     {
       id: "department",
       header: "Department",
-      cell: ({ row }) => (
-        <div className="text-sm">
-          <span className="text-[#111]">{row.original.department ?? "—"}</span>
-          {row.original.position && (
-            <span className="block text-[12px] text-[#6B7280]">{row.original.position}</span>
-          )}
-        </div>
-      ),
+      cell: ({ row }) => {
+        const s = row.original;
+        const deptName = s.departmentObj?.name ?? s.department;
+        const colour = s.departmentObj?.colour ?? null;
+        return (
+          <div className="text-sm">
+            {deptName ? (
+              colour ? (
+                <span
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
+                  style={{
+                    background: `${colour}18`,
+                    color: colour,
+                    border: `1px solid ${colour}40`,
+                  }}
+                >
+                  {deptName}
+                </span>
+              ) : (
+                <span className="text-[#111]">{deptName}</span>
+              )
+            ) : (
+              <span className="text-[#6B7280]">—</span>
+            )}
+            {s.position && (
+              <span className="block text-[12px] text-[#6B7280]">{s.position}</span>
+            )}
+          </div>
+        );
+      },
     },
     {
       id: "status",
       header: "Status",
-      cell: () => (
-        <span className="flex items-center gap-1.5 text-sm text-[#10B981]">
-          <span className="h-2 w-2 rounded-full bg-[#10B981]" />
-          Active
-        </span>
-      ),
+      cell: ({ row }) => {
+        const st = row.original.status ?? "ACTIVE";
+        if (st === "INVITE_PENDING") {
+          return (
+            <span className="flex items-center gap-1.5 text-sm text-amber-700">
+              <span className="h-2 w-2 rounded-full bg-amber-500" />
+              Invite pending
+            </span>
+          );
+        }
+        if (st === "DEACTIVATED") {
+          return (
+            <span className="flex items-center gap-1.5 text-sm text-[#6B7280]">
+              <span className="h-2 w-2 rounded-full bg-[#9CA3AF]" />
+              Suspended
+            </span>
+          );
+        }
+        return (
+          <span className="flex items-center gap-1.5 text-sm text-[#10B981]">
+            <span className="h-2 w-2 rounded-full bg-[#10B981]" />
+            Active
+          </span>
+        );
+      },
     },
     {
       accessorKey: "lastActiveAt",
@@ -214,6 +294,15 @@ export function StaffAdminClient({
                   Reset password
                 </Link>
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  handleReset2faClick(s);
+                }}
+              >
+                <Key className="mr-2 h-4 w-4" />
+                Reset 2FA
+              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href={`/admin/staff/${s.id}#activity`}>
                   <Activity className="mr-2 h-4 w-4" />
@@ -227,9 +316,8 @@ export function StaffAdminClient({
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
-                onClick={(e) => {
+                onSelect={(e) => {
                   e.preventDefault();
-                  e.stopPropagation();
                   handleDeleteClick(s);
                 }}
               >
@@ -264,13 +352,11 @@ export function StaffAdminClient({
           </p>
         </div>
         {canInvite && (
-          <Button
-            type="button"
-            onClick={() => startTransition(() => setInviteOpen(true))}
-            className="bg-primary hover:bg-primary/90"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Invite Staff
+          <Button asChild className="bg-primary hover:bg-primary/90">
+            <Link href="/admin/staff/invite">
+              <Plus className="mr-2 h-4 w-4" />
+              Invite Staff
+            </Link>
           </Button>
         )}
       </div>
@@ -310,13 +396,11 @@ export function StaffAdminClient({
                   Invite your first team member or adjust your filters.
                 </p>
                 {canInvite && (
-                  <Button
-                    type="button"
-                    onClick={() => startTransition(() => setInviteOpen(true))}
-                    className="mt-4 bg-primary"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Invite Staff
+                  <Button asChild className="mt-4 bg-primary">
+                    <Link href="/admin/staff/invite">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Invite Staff
+                    </Link>
                   </Button>
                 )}
               </div>
@@ -358,16 +442,6 @@ export function StaffAdminClient({
         </CardContent>
       </Card>
 
-      {/* Always mount so Dialog open/close doesn't freeze (conditional mount + portal can block main thread) */}
-      <InviteStaffSheet
-        open={inviteOpen}
-        onOpenChange={setInviteOpen}
-        onSuccess={() => {
-          setInviteOpen(false);
-          router.refresh();
-        }}
-      />
-
       {/* AUDIT FIX: Delete confirmation dialog before deleting staff */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <AlertDialogContent>
@@ -385,6 +459,29 @@ export function StaffAdminClient({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <Button variant="destructive" disabled={deleteLoading} onClick={handleDeleteConfirm}>
               {deleteLoading ? "Deleting…" : "Delete"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset 2FA confirmation dialog */}
+      <AlertDialog open={!!reset2faTarget} onOpenChange={(open) => !open && setReset2faTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset two-factor authentication?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {reset2faTarget && (
+                <>
+                  This will clear 2FA for {reset2faTarget.name ?? reset2faTarget.email}. The next time
+                  they sign in, they will need to set up 2FA again before accessing admin tools.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button variant="destructive" disabled={reset2faLoading} onClick={handleReset2faConfirm}>
+              {reset2faLoading ? "Resetting…" : "Reset 2FA"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,17 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { createTrackingEvent } from "@/lib/tracking";
-
-/** Safaricom callback origin validation. Set to comma-separated IPs in production (e.g. from go-live docs). */
-const MPESA_CALLBACK_IP_WHITELIST = process.env.MPESA_CALLBACK_IP_WHITELIST
-  ? process.env.MPESA_CALLBACK_IP_WHITELIST.split(",").map((s) => s.trim()).filter(Boolean)
-  : null;
-
-function getClientIp(req: Request): string | null {
-  const forwarded = req.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0]?.trim() ?? null;
-  return req.headers.get("x-real-ip") ?? null;
-}
+import { getMpesaCallbackIpCheck } from "@/lib/mpesa-callback";
+import { capturePaymentFailure, capturePaymentSuccess } from "@/lib/sentry-events";
+import { createInvoiceForOrder } from "@/lib/invoice-create";
+import { decrementStockForOrder } from "@/lib/stock";
+import { addOrderToProductionQueue } from "@/lib/production-queue";
 
 interface CallbackBody {
   Body: {
@@ -28,13 +21,16 @@ interface CallbackBody {
 }
 
 export async function POST(req: Request) {
-  if (MPESA_CALLBACK_IP_WHITELIST && MPESA_CALLBACK_IP_WHITELIST.length > 0) {
-    const clientIp = getClientIp(req);
-    if (!clientIp || !MPESA_CALLBACK_IP_WHITELIST.includes(clientIp)) {
-      return NextResponse.json({ ResultCode: 1, ResultDesc: "Unauthorized" }, { status: 403 });
-    }
+  const ipCheck = getMpesaCallbackIpCheck(req);
+  if (!ipCheck.allowed && ipCheck.productionRequiresWhitelist) {
+    return NextResponse.json(
+      { ResultCode: 1, ResultDesc: "MPESA_CALLBACK_IP_WHITELIST must be set in production" },
+      { status: 503 }
+    );
   }
-
+  if (!ipCheck.allowed) {
+    return NextResponse.json({ ResultCode: 1, ResultDesc: "Forbidden" }, { status: 403 });
+  }
   let body: CallbackBody;
   try {
     body = await req.json();
@@ -60,19 +56,9 @@ export async function POST(req: Request) {
     const items = stk.CallbackMetadata.Item;
     const getVal = (name: string) => items.find((i) => i.Name === name)?.Value;
     const receipt = String(getVal("MpesaReceiptNumber") ?? "");
-    const callbackAmount = Number(getVal("Amount") ?? 0);
+    const amount = Number(getVal("Amount") ?? 0);
     const date = String(getVal("TransactionDate") ?? "");
 
-    const expectedAmount = Number(mpesa.payment.amount);
-    const amountTolerance = 1;
-    if (Math.abs(callbackAmount - expectedAmount) > amountTolerance) {
-      return NextResponse.json(
-        { ResultCode: 1, ResultDesc: "Amount mismatch" },
-        { status: 400 }
-      );
-    }
-
-    const orderId = mpesa.payment.orderId;
     await prisma.$transaction([
       prisma.mpesaTransaction.update({
         where: { id: mpesa.id },
@@ -81,19 +67,48 @@ export async function POST(req: Request) {
           resultDesc: stk.ResultDesc,
           mpesaReceiptNumber: receipt,
           transactionDate: date,
-          amount: callbackAmount,
+          amount,
         },
       }),
       prisma.payment.update({
         where: { id: mpesa.paymentId },
-        data: { status: "COMPLETED", providerTransactionId: receipt, paidAt: new Date() },
+        data: {
+          status: "COMPLETED",
+          providerTransactionId: receipt,
+          mpesaReceiptNo: receipt,
+          paidAt: new Date(),
+        },
       }),
       prisma.order.update({
-        where: { id: orderId },
-        data: { status: "CONFIRMED" },
+        where: { id: mpesa.payment.orderId },
+        data: {
+          status: "CONFIRMED",
+          paymentStatus: "CONFIRMED",
+          paidAt: new Date(),
+        },
       }),
     ]);
-    await createTrackingEvent(orderId, "CONFIRMED");
+    capturePaymentSuccess({
+      orderId: mpesa.payment.orderId,
+      orderNumber: mpesa.payment.order.orderNumber,
+      amount,
+      mpesaRef: receipt,
+    });
+    try {
+      await createInvoiceForOrder(mpesa.payment.orderId, mpesa.paymentId);
+    } catch (e) {
+      console.error("Invoice create on M-Pesa callback:", e);
+    }
+    try {
+      await decrementStockForOrder(mpesa.payment.orderId);
+    } catch (e) {
+      console.error("Stock decrement on M-Pesa callback:", e);
+    }
+    try {
+      await addOrderToProductionQueue(mpesa.payment.orderId);
+    } catch (e) {
+      console.error("Production queue add on M-Pesa callback:", e);
+    }
   } else {
     await prisma.mpesaTransaction.update({
       where: { id: mpesa.id },
@@ -102,6 +117,17 @@ export async function POST(req: Request) {
     await prisma.payment.update({
       where: { id: mpesa.paymentId },
       data: { status: "FAILED", providerResponse: { ResultCode: stk.ResultCode, ResultDesc: stk.ResultDesc } },
+    });
+    await prisma.order.update({
+      where: { id: mpesa.payment.orderId },
+      data: { mpesaFailureReason: stk.ResultDesc },
+    });
+    capturePaymentFailure({
+      orderId: mpesa.payment.orderId,
+      orderNumber: mpesa.payment.order.orderNumber,
+      amount: Number(mpesa.payment.amount),
+      phone: mpesa.phoneNumber,
+      reason: stk.ResultDesc,
     });
   }
 

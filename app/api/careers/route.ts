@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { JobStatus } from "@prisma/client";
 
+export const dynamic = "force-dynamic"; // no DB at Docker build — run at request time
 export const revalidate = 300; // 5 minutes
 
 /**

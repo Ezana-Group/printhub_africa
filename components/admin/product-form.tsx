@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { FileUploader } from "@/components/upload/FileUploader";
+import { ProductImagesTab } from "@/components/admin/product-images-tab";
 
 type ProductType = "READYMADE_3D" | "LARGE_FORMAT" | "CUSTOM";
 
@@ -40,6 +42,7 @@ interface ProductFormProps {
     isFeatured: boolean;
     metaTitle: string | null;
     metaDescription: string | null;
+    tags?: string[];
   };
 }
 
@@ -62,7 +65,6 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const [productType, setProductType] = useState<ProductType>(product?.productType ?? "READYMADE_3D");
   const [basePrice, setBasePrice] = useState(String(product?.basePrice ?? 0));
   const [comparePrice, setComparePrice] = useState(product?.comparePrice != null ? String(product.comparePrice) : "");
-  const [sku, setSku] = useState(product?.sku ?? "");
   const [stock, setStock] = useState(String(product?.stock ?? 0));
   const [minOrderQty, setMinOrderQty] = useState(String(product?.minOrderQty ?? 1));
   const [maxOrderQty, setMaxOrderQty] = useState(product?.maxOrderQty != null ? String(product.maxOrderQty) : "");
@@ -73,6 +75,16 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const [isFeatured, setIsFeatured] = useState(product?.isFeatured ?? false);
   const [metaTitle, setMetaTitle] = useState(product?.metaTitle ?? "");
   const [metaDescription, setMetaDescription] = useState(product?.metaDescription ?? "");
+  const [tagsStr, setTagsStr] = useState((product?.tags ?? []).join(", "));
+
+  const tagsArray = tagsStr.split(",").map((s) => s.trim()).filter(Boolean);
+  const hasTag = (name: string) => tagsArray.some((t) => t.toLowerCase() === name.toLowerCase());
+  const setTagPreset = (name: string, checked: boolean) => {
+    const next = checked
+      ? [...tagsArray, name].filter((t, i, a) => a.findIndex((x) => x.toLowerCase() === t.toLowerCase()) === i)
+      : tagsArray.filter((t) => t.toLowerCase() !== name.toLowerCase());
+    setTagsStr(next.join(", "));
+  };
 
   const handleNameChange = (v: string) => {
     setName(v);
@@ -83,10 +95,10 @@ export function ProductForm({ categories, product }: ProductFormProps) {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const images = imagesStr.trim() ? imagesStr.split(/\n/).map((s) => s.trim()).filter(Boolean) : [];
+    const images = isEdit ? undefined : (imagesStr.trim() ? imagesStr.split(/\n/).map((s) => s.trim()).filter(Boolean) : []);
     const materials = materialsStr.trim() ? materialsStr.split(",").map((s) => s.trim()).filter(Boolean) : [];
     const colors = colorsStr.trim() ? colorsStr.split(",").map((s) => s.trim()).filter(Boolean) : [];
-    const payload = {
+    const payload: Record<string, unknown> = {
       name,
       slug: slug || undefined,
       description: description || undefined,
@@ -95,17 +107,16 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       productType,
       basePrice: parseFloat(basePrice) || 0,
       comparePrice: comparePrice ? parseFloat(comparePrice) : undefined,
-      sku: sku || undefined,
       stock: parseInt(stock, 10) || 0,
       minOrderQty: parseInt(minOrderQty, 10) || 1,
       maxOrderQty: maxOrderQty ? parseInt(maxOrderQty, 10) : undefined,
-      images,
       materials,
       colors,
       isActive,
       isFeatured,
       metaTitle: metaTitle || undefined,
       metaDescription: metaDescription || undefined,
+      ...(images != null && { images }),
     };
     try {
       if (isEdit) {
@@ -227,12 +238,23 @@ export function ProductForm({ categories, product }: ProductFormProps) {
               </select>
             </div>
           </div>
+          <div>
+            <Label htmlFor="stock">Quantity (stock)</Label>
+            <Input
+              id="stock"
+              type="number"
+              min={0}
+              value={stock}
+              onChange={(e) => setStock(e.target.value)}
+              className="mt-1"
+            />
+          </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <h2 className="font-semibold">Pricing & stock</h2>
+          <h2 className="font-semibold">Pricing</h2>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -258,23 +280,6 @@ export function ProductForm({ categories, product }: ProductFormProps) {
                 step={0.01}
                 value={comparePrice}
                 onChange={(e) => setComparePrice(e.target.value)}
-                className="mt-1"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="sku">SKU</Label>
-              <Input id="sku" value={sku} onChange={(e) => setSku(e.target.value)} className="mt-1" />
-            </div>
-            <div>
-              <Label htmlFor="stock">Stock</Label>
-              <Input
-                id="stock"
-                type="number"
-                min={0}
-                value={stock}
-                onChange={(e) => setStock(e.target.value)}
                 className="mt-1"
               />
             </div>
@@ -311,17 +316,48 @@ export function ProductForm({ categories, product }: ProductFormProps) {
           <h2 className="font-semibold">Media & attributes</h2>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="images">Image URLs (one per line)</Label>
-            <Textarea
-              id="images"
-              value={imagesStr}
-              onChange={(e) => setImagesStr(e.target.value)}
-              rows={3}
-              placeholder="https://..."
-              className="mt-1 font-mono text-sm"
+          {isEdit && product?.id ? (
+            <ProductImagesTab
+              productId={product.id}
+              initialImages={(product.images ?? []).map((url, i) => ({
+                url,
+                isMain: i === 0,
+                sortOrder: i,
+                source: "url" as const,
+              }))}
             />
-          </div>
+          ) : (
+            <>
+              <div>
+                <Label className="mb-1 block">Upload images</Label>
+                <p className="text-xs text-muted-foreground mb-2">JPEG, PNG, WebP · Max 8 · First = featured</p>
+                <FileUploader
+                  context="ADMIN_PRODUCT_IMAGE"
+                  accept={["image/jpeg", "image/png", "image/webp"]}
+                  maxSizeMB={20}
+                  maxFiles={8}
+                  hint="Uploaded images will be added below. You can also paste URLs."
+                  onUploadComplete={(files) => {
+                    const base = typeof process !== "undefined" ? process.env.NEXT_PUBLIC_R2_PUBLIC_URL : "";
+                    const urls = files.map((f) => f.publicUrl ?? (base && f.storageKey ? `${base}/${f.storageKey}` : f.storageKey));
+                    setImagesStr((prev) => (prev ? `${prev}\n${urls.join("\n")}` : urls.join("\n")));
+                  }}
+                />
+              </div>
+              <div>
+                <Label htmlFor="images">Image URLs (one per line)</Label>
+                <Textarea
+                  id="images"
+                  value={imagesStr}
+                  onChange={(e) => setImagesStr(e.target.value)}
+                  rows={3}
+                  placeholder="https://... or upload above"
+                  className="mt-1 font-mono text-sm"
+                />
+                <p className="text-xs text-muted-foreground mt-1">First URL = featured. Max 8. JPG/PNG/WEBP.</p>
+              </div>
+            </>
+          )}
           <div>
             <Label htmlFor="materials">Materials (comma-separated)</Label>
             <Input
@@ -350,15 +386,55 @@ export function ProductForm({ categories, product }: ProductFormProps) {
           <h2 className="font-semibold">Status & SEO</h2>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-6">
-            <label className="flex items-center gap-2">
+          <div className="flex flex-col gap-2">
+            <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
-              Active
+              <span className="text-sm font-medium">Visible on storefront</span>
+              <span className="text-xs text-muted-foreground">(hide to remove from shop)</span>
             </label>
-            <label className="flex items-center gap-2">
+            <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)} />
-              Featured
+              <span className="text-sm font-medium">Featured</span>
+              <span className="text-xs text-muted-foreground">(show in Shop section on homepage)</span>
             </label>
+          </div>
+          <p className="text-sm font-medium text-slate-700">Tags (shown on cards and homepage)</p>
+          <div className="flex flex-wrap gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={hasTag("New arrival")}
+                onChange={(e) => setTagPreset("New arrival", e.target.checked)}
+              />
+              <span className="text-sm">New arrival</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={hasTag("Staff pick")}
+                onChange={(e) => setTagPreset("Staff pick", e.target.checked)}
+              />
+              <span className="text-sm">Staff pick</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={hasTag("Popular")}
+                onChange={(e) => setTagPreset("Popular", e.target.checked)}
+              />
+              <span className="text-sm">Popular</span>
+            </label>
+          </div>
+          <div>
+            <Label htmlFor="tags">Other tags</Label>
+            <Input
+              id="tags"
+              value={tagsStr}
+              onChange={(e) => setTagsStr(e.target.value)}
+              placeholder="New design, Bestseller"
+              className="mt-1"
+            />
+            <p className="text-xs text-muted-foreground mt-1">Comma-separated. Use the toggles above or type your own.</p>
           </div>
           <div>
             <Label htmlFor="metaTitle">Meta title</Label>

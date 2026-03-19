@@ -16,6 +16,11 @@ declare module "next-auth" {
       name?: string | null;
       image?: string | null;
       role?: string;
+      permissions?: string[];
+      isCorporate?: boolean;
+      corporateId?: string;
+      corporateRole?: string;
+      corporateTier?: string;
     };
   }
 }
@@ -24,5 +29,10 @@ declare module "next-auth/jwt" {
   interface JWT {
     id?: string;
     role?: string;
+    permissions?: string[];
+    isCorporate?: boolean;
+    corporateId?: string;
+    corporateRole?: string;
+    corporateTier?: string;
   }
 }

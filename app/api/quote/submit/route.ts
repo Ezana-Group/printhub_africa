@@ -16,7 +16,7 @@ const QUOTE_SUBMIT_WINDOW_MS = 60 * 1000;
 
 export async function POST(req: Request) {
   const ip = getRateLimitClientIp(req) ?? "unknown";
-  if (!rateLimit(`quote-submit:${ip}`, QUOTE_SUBMIT_LIMIT, QUOTE_SUBMIT_WINDOW_MS).ok) {
+  if (!(await rateLimit(`quote-submit:${ip}`, QUOTE_SUBMIT_LIMIT, QUOTE_SUBMIT_WINDOW_MS)).ok) {
     return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
   }
   const session = await getServerSession(authOptions);

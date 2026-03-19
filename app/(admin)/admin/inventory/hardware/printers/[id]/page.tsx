@@ -2,13 +2,17 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { PrinterDetail } from "@/components/admin/printer-detail";
+import { PrinterDetailActions } from "@/components/admin/inventory/hardware/PrinterDetailActions";
 
 export default async function PrinterAssetDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { id } = await params;
+  const { tab: tabParam } = await searchParams;
   const [business, asset, maintenanceLogs, linkedItems] = await Promise.all([
     prisma.lFBusinessSettings.findFirst().catch(() => null),
     prisma.printerAsset.findUnique({ where: { id } }),
@@ -58,7 +62,13 @@ export default async function PrinterAssetDetailPage({
     nextServiceHours: log.nextServiceHours,
     notes: log.notes,
     createdAt: log.createdAt.toISOString(),
-    partsUsed: log.partsUsed,
+    partsUsed: log.partsUsed.map((p) => ({
+      id: p.id,
+      partName: p.partName,
+      quantityUsed: p.quantityUsed,
+      unitCostKes: p.unitCostKes,
+      totalCostKes: p.totalCostKes,
+    })),
   }));
 
   const linkedSerialized = linkedItems.map((i) => ({
@@ -69,23 +79,29 @@ export default async function PrinterAssetDetailPage({
     timeHours: i.timeHours ?? null,
   }));
 
+  const initialTab = tabParam === "maintenance" ? 2 : tabParam === "specs" ? 1 : tabParam === "usage" ? 4 : tabParam === "parts" ? 3 : 0;
+
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <Link href="/admin/inventory/hardware/printers" className="text-sm text-primary hover:underline">
-          ← Back to Printers & Machines
-        </Link>
-        <h1 className="font-display text-2xl font-bold mt-1">{asset.name}</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          {asset.assetTag}
-          {asset.location && ` · ${asset.location}`}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <Link href="/admin/inventory/hardware/printers" className="text-sm text-primary hover:underline">
+            ← Back to Printers & Machines
+          </Link>
+          <h1 className="font-display text-2xl font-bold mt-1">{asset.name}</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            {asset.assetTag}
+            {asset.location && ` · ${asset.location}`}
+          </p>
+        </div>
+        <PrinterDetailActions assetId={asset.id} assetName={asset.name} hoursUsedTotal={asset.hoursUsedTotal} />
       </div>
 
       <PrinterDetail
         asset={assetSerialized}
         maintenanceLogs={logsSerialized}
         linkedItems={linkedSerialized}
+        initialTab={initialTab}
       />
     </div>
   );

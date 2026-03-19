@@ -49,7 +49,7 @@ export default async function AdminDashboardPage() {
     prisma.order.count({ where: { status: "PENDING" } }),
     prisma.uploadedFile.count({ where: { status: "UPLOADED" } }),
     prisma.product.findMany({
-      select: { id: true, name: true, stock: true },
+      select: { id: true, name: true, stock: true, lowStockThreshold: true },
       take: 200,
     }),
     prisma.order.findMany({
@@ -75,8 +75,11 @@ export default async function AdminDashboardPage() {
     }).catch(() => []),
     ]);
 
-  // Low stock: stock 0 or stock ≤ 5 (or stock < lowStockThreshold when that column exists)
-  const shopLowStockList = productsWithThreshold.filter((p) => p.stock <= 5);
+  // Low stock: stock ≤ lowStockThreshold when set, else stock ≤ 5 or out of stock
+  const shopLowStockList = productsWithThreshold.filter((p) => {
+    const threshold = p.lowStockThreshold ?? 0;
+    return threshold > 0 ? p.stock <= threshold : p.stock <= 5;
+  });
 
   let lfLow: { name: string; quantityOnHand: number }[] = [];
   let threeDLow: { name: string; quantity: number }[] = [];

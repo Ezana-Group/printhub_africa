@@ -35,10 +35,20 @@ export async function POST(req: Request) {
     }
     const email = vt.identifier.replace("reset:", "");
 
+    const existing = await prisma.user.findUnique({
+      where: { email },
+      select: { status: true },
+    });
+
     const passwordHash = await bcrypt.hash(password, 12);
     await prisma.user.update({
       where: { email },
-      data: { passwordHash },
+      data: {
+        passwordHash,
+        ...(existing?.status === "INVITE_PENDING"
+          ? { status: "ACTIVE", emailVerified: new Date() }
+          : {}),
+      },
     });
     await prisma.verificationToken.delete({ where: { token } });
 

@@ -2,17 +2,31 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 
-export function Hero() {
+const DEFAULT_HERO_IMAGE = "/images/hero/hero-main.webp";
+
+export function Hero({ heroImage }: { heroImage?: string } = {}) {
+  const src = heroImage?.trim() || DEFAULT_HERO_IMAGE;
+  const isExternal = src.startsWith("http");
   return (
     <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-[#0A0A0A]">
-      <Image
-        src="/images/hero/hero-main.webp"
-        alt="Large format printing — PrintHub Nairobi"
-        fill
-        priority
-        quality={90}
-        className="object-cover object-center opacity-40"
-      />
+      {isExternal ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt="Large format and 3D printing services in Nairobi, Kenya"
+          className="absolute inset-0 h-full w-full object-cover object-center opacity-40"
+        />
+      ) : (
+        <Image
+          src={src}
+          alt="Large format and 3D printing services in Nairobi, Kenya"
+          fill
+          priority
+          quality={85}
+          sizes="100vw"
+          className="object-cover object-center opacity-40"
+        />
+      )}
       <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0A] via-[#0A0A0A]/70 to-transparent" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(255,77,0,0.2),transparent)]" />
 

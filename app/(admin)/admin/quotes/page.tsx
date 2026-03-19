@@ -69,6 +69,7 @@ export default async function AdminQuotesPage() {
     quoteNumber: q.quoteNumber,
     type: q.type,
     status: q.status,
+    closedBy: q.closedBy,
     customerName: q.customerName,
     customerEmail: q.customerEmail,
     projectName: q.projectName,

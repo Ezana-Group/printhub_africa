@@ -16,7 +16,13 @@ export default async function AdminStaffPage() {
     where: { role: { in: ["STAFF", "ADMIN", "SUPER_ADMIN"] } },
     orderBy: { createdAt: "desc" },
     include: {
-      staff: { select: { department: true, position: true } },
+      staff: {
+        select: {
+          department: true,
+          position: true,
+          departmentObj: { select: { id: true, name: true, colour: true } },
+        },
+      },
     },
   });
 
@@ -24,11 +30,16 @@ export default async function AdminStaffPage() {
     id: u.id,
     name: u.name,
     email: u.email,
+    personalEmail: u.personalEmail ?? null,
     role: u.role,
+    status: u.status ?? "ACTIVE",
     department: u.staff?.department ?? null,
     position: u.staff?.position ?? null,
+    departmentObj: u.staff?.departmentObj
+      ? { id: u.staff.departmentObj.id, name: u.staff.departmentObj.name, colour: u.staff.departmentObj.colour }
+      : null,
     createdAt: u.createdAt,
-    lastActiveAt: null as Date | null, // TODO: from Session or lastLogin field
+    lastActiveAt: null as Date | null,
   }));
 
   return <StaffAdminClient staff={rows} canInvite={!!canInvite} />;

@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   if (auth instanceof NextResponse) return auth;
   await prisma.seoSettings.update({
     where: { id: "default" },
-    data: { sitemapLastGenerated: new Date(), updatedAt: new Date() },
+    data: { sitemapGeneratedAt: new Date(), updatedAt: new Date() },
   });
   revalidatePath("/sitemap.xml");
   await writeAudit({

@@ -18,11 +18,15 @@ interface ProductItem {
   category: { name: string; slug: string };
   productType: string;
   image: string | null;
+  imagesCount?: number;
   basePrice: number;
   comparePrice: number | null;
   sku: string | null;
   stock: number;
   isFeatured: boolean;
+  tags?: string[];
+  averageRating?: number | null;
+  reviewCount?: number;
 }
 
 export function ShopContent() {
@@ -165,10 +169,14 @@ export function ShopContent() {
                     name={p.name}
                     slug={p.slug}
                     image={p.image}
+                    imagesCount={p.imagesCount}
                     basePrice={p.basePrice}
                     comparePrice={p.comparePrice}
                     category={p.category}
                     stock={p.stock}
+                    tags={p.tags}
+                    averageRating={p.averageRating ?? undefined}
+                    reviewCount={p.reviewCount ?? 0}
                   />
                 ))}
               </div>

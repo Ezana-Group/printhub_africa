@@ -74,3 +74,48 @@ export function getPublicUrl(key: string): string {
   if (!base) throw new Error("Missing R2_PUBLIC_URL or NEXT_PUBLIC_S3_URL for public file URLs. Set one in .env.");
   return `${base.replace(/\/$/, "")}/${key}`;
 }
+
+/** Whether R2/S3 is configured for server-side uploads. */
+export function isUploadConfigured(): boolean {
+  return getClient() !== null && getBucket() !== null;
+}
+
+/**
+ * Upload a buffer to R2/S3 and return the public URL.
+ * Requires R2_* or AWS_* env and R2_PUBLIC_URL or NEXT_PUBLIC_S3_URL for the returned URL.
+ */
+export async function uploadBuffer(key: string, body: Buffer | Uint8Array, contentType: string): Promise<string> {
+  const client = getClient();
+  const bucket = getBucket();
+  if (!client || !bucket) {
+    throw new Error("R2 or S3 is not configured. Set R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_UPLOADS_BUCKET (and R2_PUBLIC_URL for public URLs).");
+  }
+  await client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+    })
+  );
+  return getPublicUrl(key);
+}
+
+/**
+ * Upload a buffer to R2/S3 (private). Returns the key; use getSignedDownloadUrl(key) for a time-limited download link.
+ */
+export async function uploadPrivateBuffer(key: string, body: Buffer | Uint8Array, contentType: string): Promise<void> {
+  const client = getClient();
+  const bucket = getBucket();
+  if (!client || !bucket) {
+    throw new Error("R2 or S3 is not configured. Set R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_UPLOADS_BUCKET.");
+  }
+  await client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+    })
+  );
+}

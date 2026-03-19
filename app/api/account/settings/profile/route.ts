@@ -8,6 +8,7 @@ const profileSchema = z.object({
   name: z.string().min(1).optional(),
   phone: z.string().nullable().optional(),
   dateOfBirth: z.union([z.string(), z.date()]).nullable().optional(),
+  profileImage: z.string().url().nullable().optional(),
 });
 
 export async function GET() {
@@ -26,10 +27,11 @@ export async function PATCH(req: Request) {
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = profileSchema.safeParse(await req.json().catch(() => ({})));
   if (!body.success) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
-  const data: { name?: string; phone?: string | null; dateOfBirth?: Date | null } = {};
+  const data: { name?: string; phone?: string | null; dateOfBirth?: Date | null; profileImage?: string | null } = {};
   if (body.data.name != null) data.name = body.data.name;
   if (body.data.phone !== undefined) data.phone = body.data.phone;
   if (body.data.dateOfBirth !== undefined) data.dateOfBirth = body.data.dateOfBirth ? new Date(body.data.dateOfBirth) : null;
+  if (body.data.profileImage !== undefined) data.profileImage = body.data.profileImage;
   await prisma.user.update({
     where: { id: session.user.id },
     data,

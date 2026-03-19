@@ -57,23 +57,43 @@ export async function POST(req: NextRequest) {
           headers: { "Content-Type": contentType },
         });
         if (!res.ok) {
-          console.error("S3 upload failed:", res.status);
-          return NextResponse.json({ error: "Upload failed." }, { status: 502 });
+          const errText = await res.text().catch(() => "");
+          console.error("S3/R2 upload failed:", res.status, res.statusText, errText.slice(0, 200));
+          return NextResponse.json(
+            { error: "Storage upload failed. Check S3/R2 bucket and credentials." },
+            { status: 502 }
+          );
         }
-        publicUrl = getPublicUrl(key);
+        try {
+          publicUrl = getPublicUrl(key);
+        } catch (e) {
+          console.error("getPublicUrl failed (missing R2_PUBLIC_URL?):", e);
+          return NextResponse.json(
+            { error: "Storage is misconfigured: public URL not set (R2_PUBLIC_URL / NEXT_PUBLIC_S3_URL)." },
+            { status: 502 }
+          );
+        }
         urls.push(publicUrl);
       } else {
         const buffer = Buffer.from(await file.arrayBuffer());
         const { writeFile, mkdir } = await import("fs/promises");
         const path = await import("path");
         const dir = path.join(process.cwd(), "public", "uploads", "quotes");
-        await mkdir(dir, { recursive: true });
-        const filename = `${randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-        const filepath = path.join(dir, filename);
-        await writeFile(filepath, buffer);
-        const base = process.env.NEXT_PUBLIC_APP_URL ?? "";
-        publicUrl = `${base}/uploads/quotes/${filename}`;
-        urls.push(publicUrl);
+        try {
+          await mkdir(dir, { recursive: true });
+          const filename = `${randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+          const filepath = path.join(dir, filename);
+          await writeFile(filepath, buffer);
+          const base = process.env.NEXT_PUBLIC_APP_URL ?? "";
+          publicUrl = `${base}/uploads/quotes/${filename}`;
+          urls.push(publicUrl);
+        } catch (fsErr) {
+          console.error("Local upload failed (read-only fs?):", fsErr);
+          return NextResponse.json(
+            { error: "File storage not available. Configure S3/R2 (R2_* or AWS_* env vars) for uploads." },
+            { status: 503 }
+          );
+        }
       }
       filesMeta.push({
         url: publicUrl,

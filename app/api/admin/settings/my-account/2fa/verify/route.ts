@@ -51,7 +51,7 @@ export async function POST(req: Request) {
 
   await prisma.user.update({
     where: { id: session.user.id },
-    data: { totpSecret: secret },
+    data: { totpSecret: secret, twoFaMethod: "totp", otpCodeHash: null, otpExpiresAt: null },
   });
 
   return NextResponse.json({ success: true });

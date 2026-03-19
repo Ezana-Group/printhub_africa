@@ -41,6 +41,8 @@ export function MaterialCard({
 }) {
   const prefersReducedMotion =
     typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const src = imageSrc?.trim() || "";
+  const isExternal = src.startsWith("http");
 
   const card = (
     <article
@@ -51,13 +53,18 @@ export function MaterialCard({
       )}
     >
       <div className="relative h-48 md:h-auto md:w-64 shrink-0 bg-[var(--surface-dark)]">
-        <Image
-          src={imageSrc}
-          alt={imageAlt}
-          fill
-          sizes="(max-width: 768px) 100vw, 256px"
-          className="object-cover"
-        />
+        {isExternal ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={src} alt={imageAlt} className="absolute inset-0 h-full w-full object-cover" />
+        ) : (
+          <Image
+            src={src}
+            alt={imageAlt}
+            fill
+            sizes="(max-width: 768px) 100vw, 256px"
+            className="object-cover"
+          />
+        )}
         {badge && (
           <span
             className="absolute top-3 left-3 rounded-lg px-2 py-1 font-mono text-xs font-medium text-white"

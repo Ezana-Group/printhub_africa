@@ -34,6 +34,7 @@ export default async function EditProductPage({
         isFeatured: true,
         metaTitle: true,
         metaDescription: true,
+        tags: true,
         category: true,
       },
     }),
@@ -72,6 +73,7 @@ export default async function EditProductPage({
             isFeatured: product.isFeatured,
             metaTitle: product.metaTitle,
             metaDescription: product.metaDescription,
+            tags: product.tags ?? [],
           }}
         />
       </div>

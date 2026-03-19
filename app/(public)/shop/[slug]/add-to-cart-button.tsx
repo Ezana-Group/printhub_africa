@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/store/cart-store";
 import type { CartItem } from "@/store/cart-store";
@@ -125,7 +126,7 @@ export function AddToCartButton({
           {added ? "Added to cart" : "Add to cart"}
         </Button>
         <Button variant="outline" asChild className="rounded-xl">
-          <a href="/checkout">Buy now</a>
+          <Link href="/checkout">Buy now</Link>
         </Button>
       </div>
     </div>

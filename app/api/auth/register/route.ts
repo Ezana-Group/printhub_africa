@@ -14,18 +14,27 @@ const passwordSchema = z
   .regex(/[0-9]/, "Password must include a number")
   .regex(/[^a-zA-Z0-9]/, "Password must include a special character (e.g. !@#$%)");
 
-const schema = z.object({
-  email: z.string().email(),
-  password: passwordSchema,
-  name: z.string().min(1).optional(),
-});
+const schema = z
+  .object({
+    email: z.string().email(),
+    password: passwordSchema,
+    confirmPassword: z.string().min(1, "Please confirm your password"),
+    firstName: z.string().min(1, "First name is required").max(100),
+    lastName: z.string().min(1, "Last name is required").max(100),
+    acceptTerms: z.literal(true).optional(), // optional for backwards compatibility; frontend enforces
+    marketingConsent: z.boolean().optional().default(false),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Password and confirm password do not match.",
+    path: ["confirmPassword"],
+  });
 
 const REGISTER_LIMIT = 5;
 const REGISTER_WINDOW_MS = 60 * 1000;
 
 export async function POST(req: Request) {
   const ip = getRateLimitClientIp(req) ?? "unknown";
-  if (!rateLimit(`register:${ip}`, REGISTER_LIMIT, REGISTER_WINDOW_MS).ok) {
+  if (!(await rateLimit(`register:${ip}`, REGISTER_LIMIT, REGISTER_WINDOW_MS)).ok) {
     return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   }
   try {
@@ -37,7 +46,9 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    const { email, password, name } = parsed.data;
+    const { email, password, firstName, lastName, marketingConsent = false } = parsed.data;
+    // confirmPassword was already validated by refine()
+    const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(" ");
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -48,11 +59,16 @@ export async function POST(req: Request) {
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
+    const now = new Date();
     const user = await prisma.user.create({
       data: {
         email,
-        name: name ?? null,
+        name: fullName || null,
         passwordHash,
+        acceptedTermsAt: now,
+        termsVersion: "1.0",
+        marketingConsent,
+        marketingConsentAt: marketingConsent ? now : null,
       },
     });
 

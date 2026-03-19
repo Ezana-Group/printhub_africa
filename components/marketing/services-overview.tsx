@@ -10,7 +10,7 @@ const SERVICES = [
     description: "Banners, billboards, vehicle wraps, canvas, signage, and more.",
     bullets: ["Vinyl & flex banners", "Vehicle wraps & branding", "Canvas prints", "Event backdrops"],
     cta: "Explore Large Format",
-    image: "/images/services/large-format-hero.webp",
+    defaultImage: "/images/services/large-format-hero.webp",
     alt: "Large format printing — banners, signage, vehicle wraps",
   },
   {
@@ -19,14 +19,24 @@ const SERVICES = [
     description: "From prototypes to finished products. Multiple materials and finishes.",
     bullets: ["FDM & resin printing", "Custom designs", "Ready-made products", "Industrial & consumer"],
     cta: "Explore 3D Printing",
-    image: "/images/services/3d-printing-hero.webp",
+    defaultImage: "/images/services/3d-printing-hero.webp",
     alt: "3D printing — FDM and resin printing Kenya",
   },
 ];
 
-export function ServicesOverview() {
+export function ServicesOverview({
+  largeFormatImage,
+  threeDImage,
+}: {
+  largeFormatImage?: string;
+  threeDImage?: string;
+} = {}) {
+  const images = [
+    largeFormatImage ?? SERVICES[0].defaultImage,
+    threeDImage ?? SERVICES[1].defaultImage,
+  ];
   return (
-    <section className="py-20 md:py-28 bg-slate-50/80">
+    <section id="our-services" className="py-20 md:py-28 bg-slate-50/80">
       <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
         <h2 className="font-display text-3xl md:text-4xl font-bold text-center text-slate-900 mb-4">
           Our Services
@@ -35,19 +45,31 @@ export function ServicesOverview() {
           Professional printing solutions for businesses and creatives across Kenya.
         </p>
         <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
-          {SERVICES.map((service) => (
+          {SERVICES.map((service, i) => {
+            const src = images[i] ?? service.defaultImage;
+            const isExternal = src.startsWith("http");
+            return (
             <Card
               key={service.href}
               className="overflow-hidden border-0 bg-white rounded-3xl shadow-lg shadow-slate-200/60 hover:shadow-xl hover:shadow-slate-200/80 transition-all duration-300 group hover:-translate-y-1"
             >
               <div className="relative aspect-[5/3] rounded-t-3xl overflow-hidden">
-                <Image
-                  src={service.image}
-                  alt={service.alt}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                />
+                {isExternal ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={src}
+                    alt={service.alt}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <Image
+                    src={src}
+                    alt={service.alt}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                  />
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
               </div>
               <CardContent className="p-8">
@@ -69,7 +91,8 @@ export function ServicesOverview() {
                 </Button>
               </CardContent>
             </Card>
-          ))}
+          );
+          })}
         </div>
       </div>
     </section>

@@ -6,7 +6,7 @@ An Ezana Group Company.
 ## Tech stack
 
 - **Frontend:** Next.js 14 (App Router), TypeScript, Tailwind CSS, shadcn/ui
-- **State:** Zustand, React Query
+- **State:** Zustand
 - **Backend:** Next.js API Routes, Prisma
 - **Database:** PostgreSQL
 - **Auth:** NextAuth.js (Email + Google)
@@ -135,9 +135,7 @@ prisma/
 ## Default admin (after seed)
 
 - **Email:** admin@printhub.africa  
-- **Password:** Admin@Printhub2025!  
-
-Change this in production.
+- **Password:** Set by `prisma/seed.ts` — **change immediately in production.** See `docs/TEST_ACCOUNTS.md` for roles; do not commit real passwords.
 
 ## Currency & locale
 
@@ -171,8 +169,7 @@ PrintHub uses ERPNext for finance, inventory, HR and payroll.
 
 - **URL:** http://localhost:8080  
 - **Username:** administrator  
-- **Password:** admin123  
-- **Do NOT use these defaults in production.**
+- **Password:** (default from ERPNext setup — change in production; do not commit real passwords)
 
 ### Troubleshooting
 

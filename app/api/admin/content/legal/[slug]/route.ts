@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/admin-api-guard";
 
-const LEGAL_SLUGS = ["privacy-policy", "terms-of-service", "cookie-policy", "refund-policy"] as const;
-
 function requireContentAdmin(auth: { role: string }) {
   if (auth.role !== "ADMIN" && auth.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -20,10 +18,6 @@ export async function PATCH(
   if (forbidden) return forbidden;
 
   const { slug } = await params;
-  if (!LEGAL_SLUGS.includes(slug as (typeof LEGAL_SLUGS)[number])) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-
   const body = await req.json();
   const content = typeof body.content === "string" ? body.content : undefined;
   const changeNote = typeof body.changeNote === "string" ? body.changeNote : null;

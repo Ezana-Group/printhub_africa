@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 
-const STEPS = [
+const DEFAULT_STEPS = [
   {
     number: "01",
     title: "Choose or upload",
@@ -33,7 +33,16 @@ const STEPS = [
   },
 ];
 
-export function HowItWorks() {
+export function HowItWorks({
+  stepImages = [],
+}: {
+  /** Override images for steps 1–4. Missing entries use defaults. */
+  stepImages?: (string | undefined)[];
+} = {}) {
+  const steps = DEFAULT_STEPS.map((step, i) => ({
+    ...step,
+    image: (stepImages[i]?.trim() || step.image),
+  }));
   return (
     <section className="py-20 md:py-28 bg-white">
       <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
@@ -44,23 +53,32 @@ export function HowItWorks() {
           Four simple steps from idea to delivery.
         </p>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 max-w-6xl mx-auto">
-          {STEPS.map((step, i) => (
+          {steps.map((step, i) => (
             <div key={step.number} className="flex flex-col items-center text-center">
               <div className="relative w-full h-40 rounded-xl overflow-hidden mb-4">
-                <Image
-                  src={step.image}
-                  alt={step.alt}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 50vw, 25vw"
-                />
+                {step.image.startsWith("http") ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={step.image}
+                    alt={step.alt}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <Image
+                    src={step.image}
+                    alt={step.alt}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 50vw, 25vw"
+                  />
+                )}
                 <div className="absolute top-3 left-3 bg-primary text-white text-sm font-mono font-bold px-2 py-1 rounded">
                   {step.number}
                 </div>
               </div>
               <p className="font-display font-semibold text-slate-900">{step.title}</p>
               <p className="text-sm text-slate-600 mt-1">{step.description}</p>
-              {i < STEPS.length - 1 && (
+              {i < steps.length - 1 && (
                 <div className="hidden lg:block absolute top-24 left-[55%] w-[90%] h-px bg-slate-200" />
               )}
             </div>

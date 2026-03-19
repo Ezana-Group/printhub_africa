@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Lock } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -35,6 +36,7 @@ export function QuoteDetailClient({
   customerEstimateLow,
   customerEstimateHigh,
   deadlineHint,
+  closedBy,
 }: {
   quoteId: string;
   quoteNumber: string;
@@ -53,7 +55,11 @@ export function QuoteDetailClient({
   customerEstimateLow?: number | null;
   customerEstimateHigh?: number | null;
   deadlineHint?: string | null;
+  closedBy?: string | null;
+  closedAt?: string | null;
+  closedReason?: string | null;
 }) {
+  const isCustomerClosed = closedBy === "CUSTOMER";
   void quoteNumber;
   void notes;
   const [status, setStatus] = useState(currentStatus);
@@ -222,10 +228,10 @@ export function QuoteDetailClient({
         <CardContent className="space-y-3 text-sm">
           <p className="text-muted-foreground">Time since submitted: {formatTimeAgo(createdAt)}</p>
           <p className="text-muted-foreground">Time to first response: {timeToFirstResponse()}</p>
-          <div>
+          <div className="break-words">
             <span className="text-muted-foreground">Deadline: </span>
             {deadlineStatus ? (
-              <span className="inline-flex items-center gap-1.5">
+              <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
                 {deadlineStatus.urgency === "overdue" && <span className="text-red-600 font-medium">⚠️ Overdue</span>}
                 {deadlineStatus.urgency === "urgent" && <span className="text-red-600 font-medium">🔴 Urgent</span>}
                 {deadlineStatus.urgency === "soon" && <span className="text-amber-600 font-medium">🟡 Due soon</span>}
@@ -235,21 +241,21 @@ export function QuoteDetailClient({
                 )}
               </span>
             ) : deadlineHint ? (
-              <span className="text-muted-foreground italic">Customer mentioned: &quot;{deadlineHint}&quot;</span>
+              <span className="text-muted-foreground italic break-words">Customer mentioned: &quot;{deadlineHint}&quot;</span>
             ) : (
               <span className="text-muted-foreground">—</span>
             )}
           </div>
           <div className="pt-2 border-t border-border">
             <Label className="text-xs text-muted-foreground">Set deadline</Label>
-            <div className="flex gap-2 mt-1">
+            <div className="flex flex-col gap-2 mt-1 sm:flex-row sm:items-center">
               <Input
                 type="date"
                 value={deadlineValue}
                 onChange={(e) => setDeadlineValue(e.target.value)}
-                className="h-8 text-sm"
+                className="h-8 text-sm w-full sm:w-auto sm:min-w-[140px]"
               />
-              <Button size="sm" variant="outline" onClick={handleSaveDeadline} disabled={deadlineSaving || !deadlineValue.trim()}>
+              <Button size="sm" variant="outline" onClick={handleSaveDeadline} disabled={deadlineSaving || !deadlineValue.trim()} className="shrink-0">
                 {deadlineSaving ? "Saving…" : "Save"}
               </Button>
             </div>
@@ -257,57 +263,63 @@ export function QuoteDetailClient({
         </CardContent>
       </Card>
 
-      {/* Status pipeline stepper */}
+      {/* Status pipeline stepper — vertical timeline on small screens, horizontal on md+ */}
+      <div className={isCustomerClosed ? "opacity-60 pointer-events-none select-none" : ""}>
       <Card>
         <CardHeader>
           <h2 className="font-semibold">Status pipeline</h2>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-0">
-            {PIPELINE.map((s, i) => {
+          <div className="flex flex-col lg:flex-row lg:items-center lg:gap-0">
+            {PIPELINE.flatMap((s, i) => {
               const isCompleted = currentIndex > i;
               const isCurrent = status === s;
-              void (currentIndex < i); // isFuture for pipeline styling
-              return (
-                <div key={s} className="flex flex-1 items-center gap-0 min-w-0">
-                  <div className="flex flex-col items-center shrink-0">
-                    <div
-                      className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${
-                        isCompleted
-                          ? "bg-[#E8440A] border-[#E8440A]"
-                          : isCurrent
-                            ? "bg-transparent border-[#E8440A] ring-2 ring-[#E8440A]/30"
-                            : "bg-muted border-muted-foreground/30"
-                      }`}
-                    >
-                      {isCompleted && <span className="text-[10px] text-white font-bold">✓</span>}
-                    </div>
-                    <span
-                      className={`mt-1.5 text-[11px] font-medium text-center max-w-[4rem] leading-tight ${
-                        isCurrent ? "text-foreground font-semibold" : "text-muted-foreground"
-                      }`}
-                    >
-                      {PIPELINE_LABELS[s] ?? s.replace("_", " ")}
-                    </span>
+              const label = PIPELINE_LABELS[s] ?? s.replace("_", " ");
+              const stepEl = (
+                <div
+                  key={s}
+                  className="flex items-center gap-3 py-1 lg:py-0 lg:flex-col lg:flex-1 lg:min-w-0 lg:gap-1.5"
+                >
+                  <div
+                    className={`h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 lg:h-4 lg:w-4 ${
+                      isCompleted
+                        ? "bg-[#E8440A] border-[#E8440A]"
+                        : isCurrent
+                          ? "bg-transparent border-[#E8440A] ring-2 ring-[#E8440A]/30"
+                          : "bg-muted border-muted-foreground/30"
+                    }`}
+                  >
+                    {isCompleted && <span className="text-[10px] text-white font-bold">✓</span>}
                   </div>
-                  {i < PIPELINE.length - 1 && (
-                    <div
-                      className={`flex-1 h-0.5 min-w-[8px] mx-0.5 ${
-                        isCompleted ? "bg-[#E8440A]" : "bg-muted"
-                      }`}
-                    />
-                  )}
+                  <span
+                    className={`text-sm font-medium lg:text-center lg:text-[11px] lg:max-w-[4.5rem] leading-tight ${
+                      isCurrent ? "text-foreground font-semibold" : "text-muted-foreground"
+                    }`}
+                  >
+                    {label}
+                  </span>
                 </div>
               );
+              const connectorEl =
+                i < PIPELINE.length - 1 ? (
+                  <div
+                    key={`conn-${s}`}
+                    className={`shrink-0 lg:flex-1 lg:min-w-[6px] lg:mx-0.5 self-center
+                      w-0.5 min-h-[12px] ml-[9px] my-0.5 lg:w-auto lg:min-h-0 lg:h-0.5 lg:my-0 lg:ml-0 ${
+                      isCompleted ? "bg-[#E8440A]" : "bg-muted"
+                    }`}
+                  />
+                ) : null;
+              return connectorEl ? [stepEl, connectorEl] : [stepEl];
             })}
           </div>
-          <div className="flex flex-col gap-2 pt-2">
+          <div className="flex flex-col gap-2 pt-2 border-t border-border pt-4">
             {nextStatus && (
               <Button
                 size="sm"
                 onClick={() => handleUpdateStatus(nextStatus)}
                 disabled={saving}
-                className="bg-[#E8440A] hover:bg-[#E8440A]/90"
+                className="w-full sm:w-auto bg-[#E8440A] hover:bg-[#E8440A]/90"
               >
                 → Move to: {PIPELINE_LABELS[nextStatus] ?? nextStatus.replace("_", " ")}
               </Button>
@@ -325,8 +337,16 @@ export function QuoteDetailClient({
           </div>
         </CardContent>
       </Card>
+      {isCustomerClosed && (
+        <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
+          <Lock className="w-3 h-3" />
+          Actions disabled — customer closed this quote
+        </p>
+      )}
+      </div>
 
       {/* Assign to staff */}
+      <div className={isCustomerClosed ? "opacity-60 pointer-events-none select-none" : ""}>
       <Card>
         <CardHeader>
           <h2 className="font-semibold">Assign to staff</h2>
@@ -350,6 +370,7 @@ export function QuoteDetailClient({
           </Button>
         </CardContent>
       </Card>
+      </div>
 
       {/* Customer's price estimate */}
       <Card className="border-amber-200 bg-[#FFFBEB]">
@@ -381,7 +402,7 @@ export function QuoteDetailClient({
       </Card>
 
       {/* Send quote to customer */}
-      <Card id="send-quote">
+      <Card id="send-quote" className={isCustomerClosed ? "opacity-60 pointer-events-none select-none" : ""}>
         <CardHeader>
           <h2 className="font-semibold">Send quote to customer</h2>
           <p className="text-xs text-muted-foreground">Customer will receive an email with quote details and a link to accept/decline.</p>
@@ -426,8 +447,17 @@ export function QuoteDetailClient({
               </a>
             </p>
           )}
-          <p className="text-xs text-muted-foreground">Attach quote PDF via file upload (coming soon).</p>
-          <Button onClick={handleSendQuote} disabled={saving} className="bg-[#E8440A] hover:bg-[#E8440A]/90">
+          <p className="text-xs text-muted-foreground">
+            <a href={`/api/quotes/${quoteId}/pdf`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+              Download / generate quote PDF
+            </a>
+          </p>
+          <Button
+            onClick={handleSendQuote}
+            disabled={saving || isCustomerClosed}
+            className={isCustomerClosed ? "opacity-50 cursor-not-allowed bg-[#E8440A] hover:bg-[#E8440A]/90" : "bg-[#E8440A] hover:bg-[#E8440A]/90"}
+            title={isCustomerClosed ? "Cannot send — customer closed this quote" : undefined}
+          >
             Send quote
           </Button>
         </CardContent>

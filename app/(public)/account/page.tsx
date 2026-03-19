@@ -3,28 +3,8 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import {
-  Package,
-  MapPin,
-  ClipboardList,
-  ChevronRight,
-  ShoppingBag,
-} from "lucide-react";
-import { formatPrice } from "@/lib/utils";
-
-function getStatusBadgeClass(status: string): string {
-  const s = status.toUpperCase();
-  if (s === "DELIVERED" || s === "SHIPPED") return "bg-emerald-100 text-emerald-800";
-  if (s === "CANCELLED" || s === "REFUNDED") return "bg-red-100 text-red-800";
-  return "bg-amber-100 text-amber-800";
-}
-
-function formatStatus(status: string): string {
-  return status
-    .split("_")
-    .map((w) => w.charAt(0) + w.slice(1).toLowerCase())
-    .join(" ");
-}
+import { Package, MapPin, ClipboardList, ChevronRight } from "lucide-react";
+import { RecentOrdersTable } from "@/components/account/recent-orders-table";
 
 export default async function AccountPage() {
   const session = await getServerSession(authOptions);
@@ -46,7 +26,7 @@ export default async function AccountPage() {
           status: { notIn: ["DELIVERED", "CANCELLED", "REFUNDED"] },
         },
       }),
-      prisma.address.count({ where: { userId } }),
+      prisma.savedAddress.count({ where: { userId } }),
       prisma.order.findMany({
         where: { userId },
         orderBy: { createdAt: "desc" },
@@ -133,7 +113,7 @@ export default async function AccountPage() {
           </div>
         </Link>
         <Link
-          href="/account/addresses"
+          href="/account/settings/addresses"
           className="group rounded-2xl bg-white p-5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] transition-shadow hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)]"
           style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.06)" }}
         >
@@ -167,79 +147,7 @@ export default async function AccountPage() {
           </Link>
         </div>
         <div className="overflow-x-auto">
-          {recentOrders.length === 0 ? (
-            <div className="px-4 py-12 text-center sm:px-6">
-              <ShoppingBag className="mx-auto h-10 w-10 text-slate-300" />
-              <p className="mt-2 text-slate-500">No orders yet</p>
-              <Link
-                href="/shop"
-                className="mt-2 inline-block text-sm font-medium text-[#E8440A] hover:underline"
-              >
-                Start shopping →
-              </Link>
-            </div>
-          ) : (
-            <table className="w-full min-w-[600px] text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/80">
-                  <th className="px-4 py-3 font-medium text-slate-600 sm:px-6">
-                    Order #
-                  </th>
-                  <th className="px-4 py-3 font-medium text-slate-600 sm:px-6">
-                    Date
-                  </th>
-                  <th className="px-4 py-3 font-medium text-slate-600 sm:px-6">
-                    Items
-                  </th>
-                  <th className="px-4 py-3 font-medium text-slate-600 sm:px-6">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 font-medium text-slate-600 sm:px-6">
-                    Total
-                  </th>
-                  <th className="px-4 py-3 font-medium text-slate-600 sm:px-6">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentOrders.map((order) => (
-                  <tr
-                    key={order.id}
-                    className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50"
-                  >
-                    <td className="px-4 py-3 font-medium text-slate-900 sm:px-6">
-                      {order.orderNumber}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600 sm:px-6">
-                      {new Date(order.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600 sm:px-6">
-                      {order.items.length} item(s)
-                    </td>
-                    <td className="px-4 py-3 sm:px-6">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusBadgeClass(order.status)}`}
-                      >
-                        {formatStatus(order.status)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 font-medium text-slate-900 sm:px-6">
-                      {formatPrice(Number(order.total))}
-                    </td>
-                    <td className="px-4 py-3 sm:px-6">
-                      <Link
-                        href={`/account/orders/${order.id}`}
-                        className="font-medium text-[#E8440A] hover:underline"
-                      >
-                        View
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <RecentOrdersTable orders={recentOrders} />
         </div>
       </div>
     </div>

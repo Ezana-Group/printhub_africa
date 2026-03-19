@@ -59,13 +59,12 @@ interface Item {
 }
 
 interface CatalogueItemDetailProps {
-  slugPromise: Promise<string>;
+  slug: string;
 }
 
-export function CatalogueItemDetail({ slugPromise }: CatalogueItemDetailProps) {
+export function CatalogueItemDetail({ slug }: CatalogueItemDetailProps) {
   const router = useRouter();
   const addItem = useCartStore((s) => s.addItem);
-  const [slug, setSlug] = useState<string | null>(null);
   const [item, setItem] = useState<Item | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -76,37 +75,49 @@ export function CatalogueItemDetail({ slugPromise }: CatalogueItemDetailProps) {
   const [addingToCart, setAddingToCart] = useState(false);
 
   useEffect(() => {
-    slugPromise.then(setSlug);
-  }, [slugPromise]);
-
-  useEffect(() => {
-    if (!slug) return;
+    if (!slug) {
+      setLoading(false);
+      setError(true);
+      return;
+    }
     setLoading(true);
     setError(false);
-    fetch(`/api/catalogue/${slug}`)
+    fetch(`/api/catalogue/${encodeURIComponent(slug)}`)
       .then((r) => {
         if (!r.ok) throw new Error("Not found");
         return r.json();
       })
       .then((data) => {
-        setItem(data);
-        const defaultMat = data.availableMaterials?.find((m: MaterialOption) => m.isDefault) ?? data.availableMaterials?.[0];
-        setSelectedMaterial(defaultMat ?? null);
-        if (defaultMat?.availableColours?.length) {
-          setSelectedColour(defaultMat.availableColours[0]);
+        if (data?.error) {
+          setError(true);
+          return;
         }
+        setItem(data);
+        const materials = Array.isArray(data?.availableMaterials) ? data.availableMaterials : [];
+        const defaultMat = materials.find((m: MaterialOption) => m.isDefault) ?? materials[0];
+        setSelectedMaterial(defaultMat ?? null);
+        const colours = defaultMat && Array.isArray(defaultMat.availableColours) ? defaultMat.availableColours : [];
+        if (colours.length) setSelectedColour(colours[0]);
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [slug]);
 
+  const basePrice = item ? (item.priceOverrideKes ?? item.basePriceKes ?? null) : null;
   const unitPrice =
     item && selectedMaterial
       ? Math.round((item.priceOverrideKes ?? item.basePriceKes ?? 0) + selectedMaterial.priceModifierKes)
-      : null;
+      : basePrice != null
+        ? Math.round(basePrice)
+        : null;
+
+  const hasMaterials = Array.isArray(item?.availableMaterials) && item.availableMaterials.length > 0;
+  const canAddToCart = Boolean(
+    item && unitPrice != null && (!hasMaterials || (selectedMaterial && selectedColour))
+  );
 
   const handleAddToCart = async () => {
-    if (!item || !selectedMaterial || !selectedColour || unitPrice == null) return;
+    if (!item || unitPrice == null || !canAddToCart) return;
     setAddingToCart(true);
     try {
       const res = await fetch("/api/cart/add-catalogue-item", {
@@ -114,8 +125,8 @@ export function CatalogueItemDetail({ slugPromise }: CatalogueItemDetailProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           catalogueItemId: item.id,
-          materialCode: selectedMaterial.materialCode,
-          colourHex: selectedColour,
+          materialCode: selectedMaterial?.materialCode ?? "",
+          colourHex: selectedColour || "#000000",
           quantity,
         }),
       });
@@ -132,7 +143,7 @@ export function CatalogueItemDetail({ slugPromise }: CatalogueItemDetailProps) {
     }
   };
 
-  if (loading || !slug) {
+  if (loading && !item) {
     return (
       <div className="container max-w-7xl mx-auto px-4 py-8">
         <div className="animate-pulse grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -158,7 +169,7 @@ export function CatalogueItemDetail({ slugPromise }: CatalogueItemDetailProps) {
     );
   }
 
-  const photos = item.photos?.length ? item.photos : [];
+  const photos = Array.isArray(item.photos) ? item.photos : [];
   const primaryPhoto = photos[primaryPhotoIndex] ?? photos[0];
 
   return (
@@ -215,7 +226,7 @@ export function CatalogueItemDetail({ slugPromise }: CatalogueItemDetailProps) {
               <div>
                 <p className="text-sm font-medium text-slate-700">Material</p>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {item.availableMaterials.map((m) => (
+                  {(Array.isArray(item.availableMaterials) ? item.availableMaterials : []).map((m) => (
                     <Button
                       key={m.id}
                       variant={selectedMaterial?.id === m.id ? "default" : "outline"}
@@ -233,11 +244,11 @@ export function CatalogueItemDetail({ slugPromise }: CatalogueItemDetailProps) {
                 </div>
               </div>
 
-              {selectedMaterial && selectedMaterial.availableColours?.length > 0 && (
+              {selectedMaterial && Array.isArray(selectedMaterial.availableColours) && selectedMaterial.availableColours.length > 0 && (
                 <div>
                   <p className="text-sm font-medium text-slate-700">Colour</p>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {selectedMaterial.availableColours.map((hex) => (
+                    {selectedMaterial.availableColours.map((hex: string) => (
                       <button
                         key={hex}
                         type="button"
@@ -288,7 +299,7 @@ export function CatalogueItemDetail({ slugPromise }: CatalogueItemDetailProps) {
                 className="mt-4 w-full rounded-xl"
                 size="lg"
                 onClick={handleAddToCart}
-                disabled={!selectedMaterial || !selectedColour || unitPrice == null || addingToCart}
+                disabled={!canAddToCart || addingToCart}
               >
                 <ShoppingCart className="mr-2 h-5 w-5" />
                 {addingToCart ? "Adding…" : "Add to Cart"}
@@ -313,6 +324,16 @@ export function CatalogueItemDetail({ slugPromise }: CatalogueItemDetailProps) {
             )}
           </div>
         </div>
+
+        {/* Full description — show complete description from catalogue (not cut off) */}
+        {item.description?.trim() && (
+          <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-8 border-t border-slate-200">
+            <h2 className="font-display text-xl font-bold text-slate-900 mb-3">Full description</h2>
+            <div className="prose prose-slate max-w-none text-slate-600 whitespace-pre-wrap">
+              {item.description.trim()}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

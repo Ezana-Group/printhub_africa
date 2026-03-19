@@ -2,12 +2,17 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/settings-api";
 import { writeAudit } from "@/lib/audit";
+import { uploadBuffer, isUploadConfigured } from "@/lib/s3";
 
-// Placeholder: upload to R2 and return URL. Replace with your R2 upload logic.
 async function uploadOgImage(formData: FormData): Promise<string> {
   const file = formData.get("file") as File | null;
   if (!file) throw new Error("No file");
-  // TODO: upload to R2, return public URL
+  const ext = file.name.replace(/^.*\./, "") || "jpg";
+  const key = `og/default-${Date.now()}.${ext}`;
+  if (isUploadConfigured()) {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    return uploadBuffer(key, buffer, file.type || "image/jpeg");
+  }
   return `/uploads/og/${Date.now()}-${file.name}`;
 }
 

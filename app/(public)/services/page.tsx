@@ -1,9 +1,8 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Printer,
-  Box,
   FileUp,
   Calculator,
   CreditCard,
@@ -15,6 +14,11 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { getBusinessPublic } from "@/lib/business-public";
+import { getSiteImageSlots } from "@/lib/site-images";
+import { prisma } from "@/lib/prisma";
+
+export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
+export const revalidate = 3600; // 1 hour — services overview changes rarely
 
 const MAIN_SERVICES = [
   {
@@ -33,7 +37,8 @@ const MAIN_SERVICES = [
       "Foam board and rigid displays",
     ],
     cta: "Explore Large Format",
-    icon: Printer,
+    image: "/images/services/large-format-hero.webp",
+    alt: "Large format printing — banners, signage, vehicle wraps",
     specs: "Max print width 3.2m · AI, PDF, PSD, EPS, PNG 300DPI+ · 3–5 day standard, 24–48hr express",
   },
   {
@@ -50,7 +55,8 @@ const MAIN_SERVICES = [
       "Multiple finishes: raw, sanded, painted",
     ],
     cta: "Explore 3D Printing",
-    icon: Box,
+    image: "/images/services/3d-printing-hero.webp",
+    alt: "3D printing — FDM and resin printing Kenya",
     specs: "Formats: STL, OBJ, FBX, 3MF · Instant quote by size, material & quantity",
   },
 ];
@@ -70,8 +76,15 @@ const WHY_US = (city: string) => [
 ];
 
 export default async function ServicesPage() {
-  const business = await getBusinessPublic();
+  const [business, siteImages] = await Promise.all([
+    getBusinessPublic(),
+    getSiteImageSlots(prisma),
+  ]);
   const whyUs = WHY_US(business.city ?? "Nairobi");
+  const serviceImages = [
+    siteImages.services_page_large_format,
+    siteImages.services_page_3d,
+  ];
   return (
     <div className="min-h-screen bg-[#FAFAF8]">
       {/* Hero */}
@@ -107,13 +120,32 @@ export default async function ServicesPage() {
             Two core offerings — large format for signage and branding, and 3D printing for prototypes and products. Both support custom file uploads and instant quoting.
           </p>
           <div className="grid md:grid-cols-2 gap-8 max-w-6xl">
-            {MAIN_SERVICES.map((service) => (
+            {MAIN_SERVICES.map((service, i) => {
+              const src = serviceImages[i] ?? service.image;
+              const isExternal = src.startsWith("http");
+              return (
               <Card
                 key={service.href}
                 className="overflow-hidden border-0 bg-white rounded-3xl shadow-lg shadow-slate-200/60 hover:shadow-xl transition-all duration-300 group"
               >
-                <div className="aspect-[5/3] bg-gradient-to-br from-slate-100 to-slate-200 group-hover:from-primary/10 group-hover:to-primary/5 transition-colors flex items-center justify-center">
-                  <service.icon className="h-20 w-20 text-slate-500 group-hover:text-primary transition-colors" />
+                <div className="relative aspect-[5/3] overflow-hidden">
+                  {isExternal ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={src}
+                      alt={service.alt}
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                    />
+                  ) : (
+                    <Image
+                      src={src}
+                      alt={service.alt}
+                      fill
+                      className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                 </div>
                 <CardContent className="p-8">
                   <h3 className="font-display text-2xl font-bold text-slate-900">{service.title}</h3>
@@ -140,7 +172,8 @@ export default async function ServicesPage() {
                   </Button>
                 </CardContent>
               </Card>
-            ))}
+            );
+            })}
           </div>
         </div>
       </section>

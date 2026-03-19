@@ -17,19 +17,29 @@ export async function GET(req: Request) {
 
 async function updateShipping(req: Request, userId: string) {
   const raw = await req.json().catch(() => ({}));
-  const body = z
+  const parsed = z
     .object({
       freeShippingEnabled: z.union([z.boolean(), z.string()]).optional().transform((v) => (v == null ? undefined : v === true || v === "true")),
+      freeShippingThreshold: z.union([z.number(), z.string()]).optional().transform((v) => (v === "" || v == null ? undefined : Number(v))),
       freeShippingThresholdKes: z.union([z.number(), z.string()]).optional().transform((v) => (v === "" || v == null ? undefined : Number(v))),
       expressEnabled: z.union([z.boolean(), z.string()]).optional().transform((v) => (v == null ? undefined : v === true || v === "true")),
       clickCollectEnabled: z.union([z.boolean(), z.string()]).optional().transform((v) => (v == null ? undefined : v === true || v === "true")),
     })
     .safeParse(raw);
-  if (!body.success) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+  const data = parsed.data;
+  const freeShippingThresholdKes = data.freeShippingThresholdKes ?? data.freeShippingThreshold;
+  const update = {
+    ...(data.freeShippingEnabled !== undefined && { freeShippingEnabled: data.freeShippingEnabled }),
+    ...(freeShippingThresholdKes !== undefined && { freeShippingThresholdKes }),
+    ...(data.expressEnabled !== undefined && { expressEnabled: data.expressEnabled }),
+    ...(data.clickCollectEnabled !== undefined && { clickCollectEnabled: data.clickCollectEnabled }),
+    updatedAt: new Date(),
+  };
   await prisma.shippingSettings.upsert({
     where: { id: "default" },
-    update: { ...body.data, updatedAt: new Date() },
-    create: { id: "default", ...body.data },
+    update,
+    create: { id: "default", ...update },
   });
   await writeAudit({ userId, action: "SHIPPING_SETTINGS_UPDATED", category: "SETTINGS", request: req });
   return NextResponse.json({ success: true });

@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Select } from "@/components/ui/select";
 import { AdminQuotesFilters, type QuoteFiltersState } from "./admin-quotes-filters";
-import { MoreHorizontal, Eye, UserPlus, Send, Trash2, Loader2 } from "lucide-react";
+import { MoreHorizontal, Eye, UserPlus, Send, Trash2, Loader2, Lock } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,6 +33,7 @@ export type QuoteRow = {
   quoteNumber: string;
   type: string;
   status: string;
+  closedBy?: string | null;
   customerName: string;
   customerEmail: string;
   projectName: string | null;
@@ -246,13 +247,20 @@ export function AdminQuotesList({
                         {q.quotedAmount != null ? `KES ${q.quotedAmount.toLocaleString()}` : "—"}
                       </td>
                       <td className="p-4">
-                        <span
-                          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                            STATUS_BADGE_CLASS[q.status] ?? "bg-slate-100 text-slate-700"
-                          }`}
-                        >
-                          {q.status.replace("_", " ")}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                              STATUS_BADGE_CLASS[q.status] ?? "bg-slate-100 text-slate-700"
+                            }`}
+                          >
+                            {q.status.replace("_", " ")}
+                          </span>
+                          {q.closedBy === "CUSTOMER" && (
+                            <span title="Closed by customer — read only">
+                              <Lock className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="p-4 text-muted-foreground text-xs">{q.assignedStaff?.name ?? q.assignedStaff?.email ?? "—"}</td>
                       <td className="p-4" data-no-row-click>

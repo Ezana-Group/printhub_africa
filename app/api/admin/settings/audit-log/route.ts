@@ -11,7 +11,7 @@ export async function GET(req: Request) {
   const user = searchParams.get("user");
   if (user) where.userId = user;
   const category = searchParams.get("category");
-  if (category) where.category = category;
+  if (category) where.entity = category;
   const from = searchParams.get("from");
   const to = searchParams.get("to");
   if (from || to) {
@@ -22,8 +22,8 @@ export async function GET(req: Request) {
   const q = searchParams.get("q");
   if (q) {
     where.OR = [
-      { details: { contains: q, mode: "insensitive" } },
-      { target: { contains: q, mode: "insensitive" } },
+      { entity: { contains: q, mode: "insensitive" } },
+      { entityId: { contains: q, mode: "insensitive" } },
       { action: { contains: q, mode: "insensitive" } },
     ];
   }

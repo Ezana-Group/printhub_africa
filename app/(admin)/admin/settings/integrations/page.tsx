@@ -1,12 +1,29 @@
 import { requireAdminSettings } from "@/lib/auth-guard";
+import { prisma } from "@/lib/prisma";
 import { SectionCard } from "@/components/settings/section-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SettingsSaveButton } from "@/components/settings/settings-save-button";
+import { SettingsSwitch } from "@/components/settings/settings-switch";
 
 export default async function AdminSettingsIntegrationsPage() {
   await requireAdminSettings();
+  let integrations: Record<string, unknown> = {};
+  try {
+    const row = await prisma.pricingConfig.findUnique({ where: { key: "adminSettings:integrations" } });
+    if (row?.valueJson) integrations = (JSON.parse(row.valueJson) as Record<string, unknown>) ?? {};
+  } catch {
+    // use defaults
+  }
+  const algoliaSearchEnabled =
+    integrations.algoliaSearchEnabled === true || integrations.algoliaSearchEnabled === "true";
+  const algoliaConfigured = Boolean(
+    process.env.NEXT_PUBLIC_ALGOLIA_APP_ID &&
+      process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_KEY &&
+      (process.env.ALGOLIA_INDEX_NAME ?? process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME)
+  );
+
   return (
     <div className="space-y-6">
       <h1 className="font-display text-2xl font-bold">Integrations</h1>
@@ -35,11 +52,18 @@ export default async function AdminSettingsIntegrationsPage() {
         </div>
       </SectionCard>
       <SectionCard
-        title="Search"
-        description="Algolia — Application ID, Search API Key, Admin API Key, Index name."
+        title="Search (Algolia)"
+        description="Use Algolia for shop product search. Set NEXT_PUBLIC_ALGOLIA_APP_ID, NEXT_PUBLIC_ALGOLIA_SEARCH_KEY, and ALGOLIA_INDEX_NAME in env. Re-index products when you add or change them."
       >
-        <p className="text-sm text-muted-foreground">Status: Not configured</p>
-        <Button type="button" variant="outline" size="sm">Re-index all products</Button>
+        <p className="text-sm text-muted-foreground mb-2">
+          Status: {algoliaConfigured ? "Configured" : "Not configured (set env vars)"} — {algoliaSearchEnabled ? "On" : "Off"}
+        </p>
+        <SettingsSwitch
+          name="algoliaSearchEnabled"
+          defaultValue={algoliaSearchEnabled}
+          label="Use Algolia for shop search"
+        />
+        <Button type="button" variant="outline" size="sm" className="mt-2">Re-index all products</Button>
       </SectionCard>
       <SectionCard
         title="Error Tracking"

@@ -4,35 +4,8 @@
  * Production: https://api.safaricom.co.ke
  */
 
-const BASE_URL =
-  process.env.MPESA_ENV === "production"
-    ? "https://api.safaricom.co.ke"
-    : "https://sandbox.safaricom.co.ke";
+import { MPESA_BASE_URL, getAccessToken, formatPhone } from "@/lib/mpesa-utils";
 
-async function getAccessToken(): Promise<string> {
-  const key = process.env.MPESA_CONSUMER_KEY;
-  const secret = process.env.MPESA_CONSUMER_SECRET;
-  if (!key || !secret) throw new Error("MPESA_CONSUMER_KEY and MPESA_CONSUMER_SECRET required");
-
-  const auth = Buffer.from(`${key}:${secret}`).toString("base64");
-  const res = await fetch(`${BASE_URL}/oauth/v1/generate?grant_type=client_credentials`, {
-    method: "GET",
-    headers: { Authorization: `Basic ${auth}` },
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`M-Pesa OAuth failed: ${res.status} ${text}`);
-  }
-  const data = (await res.json()) as { access_token: string };
-  return data.access_token;
-}
-
-function formatPhone(phone: string): string {
-  const cleaned = phone.replace(/\D/g, "");
-  if (cleaned.startsWith("254")) return cleaned;
-  if (cleaned.startsWith("0")) return "254" + cleaned.slice(1);
-  return "254" + cleaned;
-}
 
 export interface StkPushResult {
   MerchantRequestID: string;
@@ -75,7 +48,7 @@ export async function stkPush(
     TransactionDesc: transactionDesc,
   };
 
-  const res = await fetch(`${BASE_URL}/mpesa/stkpush/v1/processrequest`, {
+  const res = await fetch(`${MPESA_BASE_URL}/mpesa/stkpush/v1/processrequest`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -116,7 +89,7 @@ export async function stkPushQuery(checkoutRequestId: string): Promise<StkPushQu
     CheckoutRequestID: checkoutRequestId,
   };
 
-  const res = await fetch(`${BASE_URL}/mpesa/stkpushquery/v1/query`, {
+  const res = await fetch(`${MPESA_BASE_URL}/mpesa/stkpushquery/v1/query`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,

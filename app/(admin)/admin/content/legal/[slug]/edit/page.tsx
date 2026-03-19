@@ -17,7 +17,7 @@ export default async function LegalPageEditPage({
 
   const history = await prisma.legalPageHistory.findMany({
     where: { legalPageId: page.id },
-    orderBy: { savedAt: "desc" },
+    orderBy: { createdAt: "desc" },
     take: 20,
   });
 
@@ -27,7 +27,7 @@ export default async function LegalPageEditPage({
         items={[
           { label: "Content", href: "/admin/content/legal" },
           { label: "Legal Pages", href: "/admin/content/legal" },
-          { label: page.title },
+          { label: page.title ?? slug },
         ]}
       />
       <div className="flex items-center gap-4">
@@ -40,15 +40,15 @@ export default async function LegalPageEditPage({
       </div>
       <LegalPageEditorClient
         slug={page.slug}
-        title={page.title}
+        title={page.title ?? page.slug}
         content={page.content}
         version={page.version}
-        lastUpdated={page.lastUpdated}
+        lastUpdated={page.lastUpdated ?? ""}
         isPublished={page.isPublished}
         history={history.map((h) => ({
           id: h.id,
           version: h.version,
-          savedAt: h.savedAt,
+          savedAt: h.createdAt,
           savedBy: h.savedBy,
           changeNote: h.changeNote,
         }))}

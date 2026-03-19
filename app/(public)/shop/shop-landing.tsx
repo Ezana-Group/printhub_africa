@@ -31,6 +31,7 @@ export interface FeaturedProduct {
   comparePrice: number | null;
   category: { name: string; slug: string };
   stock: number;
+  tags?: string[];
 }
 
 /** Card content per category slug (editorial) */
@@ -210,6 +211,7 @@ export function ShopLanding({ categories, featuredProducts, whatsapp: whatsappPr
                       comparePrice={p.comparePrice}
                       category={p.category}
                       stock={p.stock}
+                      tags={p.tags}
                     />
                   ))}
                 </div>

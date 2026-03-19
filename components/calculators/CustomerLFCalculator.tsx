@@ -36,8 +36,8 @@ export function CustomerLFCalculator({
   const [finishingRope, setFinishingRope] = useState(false);
   const [rushMultiplier, setRushMultiplier] = useState(1);
 
-  const materials = rates?.materials ?? [];
-  const laminations = rates?.laminations ?? [];
+  const materials = useMemo(() => rates?.materials ?? [], [rates?.materials]);
+  const laminations = useMemo(() => rates?.laminations ?? [], [rates?.laminations]);
   const rushOptions = rates?.rushOptions ?? [];
 
   useEffect(() => {

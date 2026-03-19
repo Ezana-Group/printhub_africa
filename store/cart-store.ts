@@ -3,6 +3,27 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+const CART_SYNC_DEBOUNCE_MS = 1500;
+let cartSyncTimeout: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleCartSync() {
+  if (typeof window === "undefined") return;
+  if (cartSyncTimeout) clearTimeout(cartSyncTimeout);
+  cartSyncTimeout = setTimeout(() => {
+    cartSyncTimeout = null;
+    const state = useCartStore.getState();
+    fetch("/api/cart/sync", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: state.items,
+        couponCode: state.appliedCoupon?.code ?? undefined,
+      }),
+    }).catch(() => {});
+  }, CART_SYNC_DEBOUNCE_MS);
+}
+
 /** Shop product cart line */
 export interface ShopCartItem {
   productId: string;
@@ -88,6 +109,7 @@ export const useCartStore = create<CartState>()(
             : { ...item, type: "SHOP" as const };
           return { items: [...state.items, normalized] };
         });
+        scheduleCartSync();
       },
       updateQuantity: (productId, variantId, quantity) => {
         if (quantity < 1) {
@@ -100,6 +122,7 @@ export const useCartStore = create<CartState>()(
             cartItemKey(i) === key ? { ...i, quantity } : i
           ),
         }));
+        scheduleCartSync();
       },
       updateCatalogueQuantity: (catalogueItemId, materialCode, colourHex, quantity) => {
         if (quantity < 1) {
@@ -112,21 +135,30 @@ export const useCartStore = create<CartState>()(
             cartItemKey(i) === key ? { ...i, quantity } : i
           ),
         }));
+        scheduleCartSync();
       },
       removeItem: (productId, variantId) => {
         const key = `shop:${productId}:${variantId ?? ""}`;
         set((state) => ({
           items: state.items.filter((i) => cartItemKey(i) !== key),
         }));
+        scheduleCartSync();
       },
       removeCatalogueItem: (catalogueItemId, materialCode, colourHex) => {
         const key = `cat:${catalogueItemId}:${materialCode}:${colourHex}`;
         set((state) => ({
           items: state.items.filter((i) => cartItemKey(i) !== key),
         }));
+        scheduleCartSync();
       },
-      clearCart: () => set({ items: [], appliedCoupon: null }),
-      setAppliedCoupon: (coupon) => set({ appliedCoupon: coupon }),
+      clearCart: () => {
+        set({ items: [], appliedCoupon: null });
+        scheduleCartSync();
+      },
+      setAppliedCoupon: (coupon) => {
+        set({ appliedCoupon: coupon });
+        scheduleCartSync();
+      },
       total: () => get().items.reduce((s, i) => s + i.unitPrice * i.quantity, 0),
       itemCount: () => get().items.reduce((s, i) => s + i.quantity, 0),
     }),

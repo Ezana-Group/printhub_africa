@@ -59,10 +59,10 @@ export async function userCan(
 ): Promise<boolean> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    include: { permissions: { where: { permission } } },
+    include: { userPermissions: { where: { permission } } },
   });
   if (!user) return false;
-  if (user.permissions[0] != null) return user.permissions[0].granted;
+  if (user.userPermissions.length > 0) return true;
   if (user.role === "SUPER_ADMIN") return true;
   const defaults = ROLE_DEFAULTS[user.role];
   return defaults?.includes(permission) ?? false;

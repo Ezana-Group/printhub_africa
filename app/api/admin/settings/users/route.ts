@@ -5,14 +5,15 @@ import { writeAudit } from "@/lib/audit";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
-import { sendEmail } from "@/lib/email";
+import { sendStaffInviteEmail } from "@/lib/email";
+import { isStaffWorkEmail } from "@/lib/staff-email";
 
 export async function GET(req: Request) {
   const auth = await requireRole(req, "SUPER_ADMIN");
   if (auth instanceof NextResponse) return auth;
   const users = await prisma.user.findMany({
     where: { role: { in: ["STAFF", "ADMIN", "SUPER_ADMIN"] } },
-    include: { permissions: true, staff: true },
+    include: { userPermissions: true, staff: true },
     orderBy: { createdAt: "asc" },
   });
   return NextResponse.json(users);
@@ -21,6 +22,7 @@ export async function GET(req: Request) {
 const inviteSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
+  personalEmail: z.string().email().optional().nullable(),
   role: z.enum(["STAFF", "ADMIN"]),
   department: z.string().optional(),
   position: z.string().optional(),
@@ -33,8 +35,27 @@ export async function POST(req: Request) {
   if (!body.success) {
     return NextResponse.json({ error: body.error.message }, { status: 400 });
   }
-  const { name, email, role, department, position } = body.data;
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const { name, email, personalEmail, role, department, position } = body.data;
+
+  if (!isStaffWorkEmail(email)) {
+    return NextResponse.json(
+      { error: "Staff login email must end with @printhub.africa" },
+      { status: 400 }
+    );
+  }
+
+  const workEmail = email.trim().toLowerCase();
+  const invitePersonalEmail =
+    personalEmail && personalEmail.trim().length > 0 ? personalEmail.trim().toLowerCase() : null;
+
+  if (invitePersonalEmail && invitePersonalEmail === workEmail) {
+    return NextResponse.json(
+      { error: "Personal email must be different from the work email" },
+      { status: 400 }
+    );
+  }
+
+  const existing = await prisma.user.findUnique({ where: { email: workEmail } });
   if (existing) {
     return NextResponse.json({ error: "User with this email already exists" }, { status: 400 });
   }
@@ -45,7 +66,8 @@ export async function POST(req: Request) {
   const newUser = await prisma.user.create({
     data: {
       name,
-      email,
+      email: workEmail,
+      personalEmail: invitePersonalEmail,
       role,
       status: "INVITE_PENDING",
       inviteToken: tokenHash,
@@ -63,21 +85,16 @@ export async function POST(req: Request) {
       permissions: [],
     },
   });
-  await sendEmail({
-    to: email,
-    subject: "You've been invited to PrintHub Admin",
-    html: `
-      <p>Hi ${name},</p>
-      <p>You've been invited to join the PrintHub admin team as ${role}.</p>
-      <p><a href="${baseUrl}/admin/accept-invite?token=${token}&id=${newUser.id}">Accept invitation & set your password</a></p>
-      <p>This link expires in 48 hours.</p>
-    `,
-  });
+
+  const deliveryEmail = (invitePersonalEmail ?? workEmail).toLowerCase();
+  const inviteUrl = `${baseUrl}/admin/accept-invite?token=${token}&id=${newUser.id}`;
+  await sendStaffInviteEmail(deliveryEmail, token, workEmail, inviteUrl);
+
   await writeAudit({
     userId: auth.userId,
     action: "STAFF_INVITED",
     category: "STAFF",
-    details: `Invited ${email} as ${role}`,
+    details: `Invited ${workEmail} as ${role}`,
     request: req,
   });
   return NextResponse.json({ success: true, userId: newUser.id });

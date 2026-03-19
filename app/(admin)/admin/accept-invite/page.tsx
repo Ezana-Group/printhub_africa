@@ -59,7 +59,7 @@ export default async function AcceptInvitePage({
   }
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
-      <AcceptInviteForm userId={user.id} email={user.email} name={user.name ?? ""} />
+      <AcceptInviteForm userId={user.id} token={token} email={user.email} name={user.name ?? ""} />
     </div>
   );
 }

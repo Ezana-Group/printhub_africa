@@ -11,12 +11,17 @@ import {
 } from "@/components/services";
 import { LargeFormatServiceGrid } from "@/components/services/LargeFormatServiceGrid";
 import { getBusinessPublic } from "@/lib/business-public";
+import { getSiteImageSlots } from "@/lib/site-images";
+import { prisma } from "@/lib/prisma";
+
+export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
+export const revalidate = 3600; // 1 hour — service page content changes rarely
 
 // Local images (WebP) — large format / print shop / signage
-const HERO_IMAGE = "/images/services/large-format-hero.webp";
-const CAPABILITIES_IMAGE = "/images/services/large-format-hero.webp";
-const APPLICATIONS_IMAGE_1 = "/images/services/event-backdrop.webp";
-const APPLICATIONS_IMAGE_2 = "/images/services/rollup-banner.webp";
+const DEFAULT_HERO_IMAGE = "/images/services/large-format-hero.webp";
+const DEFAULT_CAPABILITIES_IMAGE = "/images/services/large-format-hero.webp";
+const DEFAULT_APPLICATIONS_IMAGE_1 = "/images/services/event-backdrop.webp";
+const DEFAULT_APPLICATIONS_IMAGE_2 = "/images/services/rollup-banner.webp";
 
 const SERVICE_CARDS = [
   {
@@ -369,8 +374,30 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function LargeFormatPrintingPage() {
-  const business = await getBusinessPublic();
+  const [business, siteImages] = await Promise.all([
+    getBusinessPublic(),
+    getSiteImageSlots(prisma),
+  ]);
   const baseUrl = business.website.startsWith("http") ? business.website : `https://${business.website}`;
+  const HERO_IMAGE = siteImages.service_large_format_hero || DEFAULT_HERO_IMAGE;
+  const CAPABILITIES_IMAGE = siteImages.service_large_format_capabilities || DEFAULT_CAPABILITIES_IMAGE;
+  const APPLICATIONS_IMAGE_1 =
+    siteImages.service_large_format_applications_01 || DEFAULT_APPLICATIONS_IMAGE_1;
+  const APPLICATIONS_IMAGE_2 =
+    siteImages.service_large_format_applications_02 || DEFAULT_APPLICATIONS_IMAGE_2;
+
+  const materialImageOverrides = [
+    siteImages.service_large_format_material_outdoor_vinyl,
+    siteImages.service_large_format_material_cast_vinyl,
+    siteImages.service_large_format_material_backlit_film,
+    siteImages.service_large_format_material_canvas,
+    siteImages.service_large_format_material_mesh,
+    siteImages.service_large_format_material_fabric,
+  ];
+  const materials = LARGE_FORMAT_MATERIALS.map((m, i) => ({
+    ...m,
+    imageSrc: materialImageOverrides[i] ?? m.imageSrc,
+  }));
   return (
     <main id="main-content" className="bg-[var(--brand-black)]">
       <nav aria-label="Breadcrumb" className="border-b border-white/10 bg-[var(--surface-dark)] px-6 py-3 md:px-12">
@@ -457,13 +484,22 @@ export default async function LargeFormatPrintingPage() {
               </ul>
             </div>
             <div className="relative aspect-[4/3] rounded-2xl overflow-hidden">
-              <Image
-                src={CAPABILITIES_IMAGE}
-                alt={`${business.businessName} wide-format printer producing a high-resolution banner in ${business.city || "Kenya"}`}
-                fill
-                sizes="(max-width: 768px) 100vw, 50vw"
-                className="object-cover"
-              />
+              {CAPABILITIES_IMAGE.startsWith("http") ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={CAPABILITIES_IMAGE}
+                  alt={`${business.businessName} wide-format printer producing a high-resolution banner in ${business.city || "Kenya"}`}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <Image
+                  src={CAPABILITIES_IMAGE}
+                  alt={`${business.businessName} wide-format printer producing a high-resolution banner in ${business.city || "Kenya"}`}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  className="object-cover"
+                />
+              )}
             </div>
           </div>
         </div>
@@ -482,19 +518,24 @@ export default async function LargeFormatPrintingPage() {
             Not all prints are created equal. Choosing the right substrate makes the difference between a print that fades in three months and one that lasts three years. Our team will always recommend the best material for your specific application, environment, and budget.
           </p>
           <div className="mt-16 space-y-8">
-            {LARGE_FORMAT_MATERIALS.map((mat) => (
+            {materials.map((mat) => (
               <div
                 key={mat.title}
                 className="flex flex-col md:flex-row rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm"
               >
                 <div className="relative h-48 md:w-64 shrink-0 bg-slate-100">
-                  <Image
-                    src={mat.imageSrc}
-                    alt={mat.imageAlt}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 256px"
-                    className="object-cover"
-                  />
+                  {mat.imageSrc.startsWith("http") ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={mat.imageSrc} alt={mat.imageAlt} className="h-full w-full object-cover" />
+                  ) : (
+                    <Image
+                      src={mat.imageSrc}
+                      alt={mat.imageAlt}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 256px"
+                      className="object-cover"
+                    />
+                  )}
                 </div>
                 <div className="p-6 flex-1">
                   <h3 className="font-display text-xl font-bold text-[var(--brand-black)]">
@@ -522,22 +563,40 @@ export default async function LargeFormatPrintingPage() {
         <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-16 items-start">
           <div className="relative">
             <div className="relative aspect-[4/5] rounded-2xl overflow-hidden">
-              <Image
-                src={APPLICATIONS_IMAGE_1}
-                alt="Canvas and wall art large format printing for retail and hospitality"
-                fill
-                sizes="(max-width: 768px) 100vw, 50vw"
-                className="object-cover"
-              />
+              {APPLICATIONS_IMAGE_1.startsWith("http") ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={APPLICATIONS_IMAGE_1}
+                  alt="Canvas and wall art large format printing for retail and hospitality"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <Image
+                  src={APPLICATIONS_IMAGE_1}
+                  alt="Canvas and wall art large format printing for retail and hospitality"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  className="object-cover"
+                />
+              )}
             </div>
             <div className="absolute -bottom-8 -right-8 w-[70%] aspect-[4/3] rounded-2xl overflow-hidden border-4 border-[var(--surface-dark)] shadow-2xl">
-              <Image
-                src={APPLICATIONS_IMAGE_2}
-                alt="Corporate and event branding — who we print for"
-                fill
-                sizes="(max-width: 768px) 80vw, 35vw"
-                className="object-cover"
-              />
+              {APPLICATIONS_IMAGE_2.startsWith("http") ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={APPLICATIONS_IMAGE_2}
+                  alt="Corporate and event branding — who we print for"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <Image
+                  src={APPLICATIONS_IMAGE_2}
+                  alt="Corporate and event branding — who we print for"
+                  fill
+                  sizes="(max-width: 768px) 80vw, 35vw"
+                  className="object-cover"
+                />
+              )}
             </div>
           </div>
           <div>

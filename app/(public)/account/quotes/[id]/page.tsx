@@ -8,6 +8,7 @@ import { formatPrice } from "@/lib/utils";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { QuoteAcceptDecline } from "@/components/account/quote-accept-decline";
+import { getBusinessPublic } from "@/lib/business-public";
 
 const TYPE_LABELS: Record<string, string> = {
   large_format: "Large Format",
@@ -24,16 +25,61 @@ export default async function AccountQuoteDetailPage({
   if (!session?.user?.id) redirect("/login");
   const { id } = await params;
 
-  const [quote, businessSettings] = await Promise.all([
-    prisma.quote.findFirst({ where: { id, customerId: session.user.id } }),
-    prisma.businessSettings.findUnique({ where: { id: "default" }, select: { businessName: true } }).catch(() => null),
+  const userId = session.user.id as string;
+  const userEmail = (session.user.email as string) ?? "";
+  const [quoteByAccount, quoteByEmail, business] = await Promise.all([
+    prisma.quote.findFirst({
+      where: { id, customerId: userId },
+      include: { cancelledByAdmin: { select: { name: true } } },
+    }),
+    userEmail
+      ? prisma.quote.findFirst({
+          where: {
+            id,
+            customerId: null,
+            customerEmail: { equals: userEmail, mode: "insensitive" },
+          },
+          include: { cancelledByAdmin: { select: { name: true } } },
+        })
+      : Promise.resolve(null),
+    getBusinessPublic(),
   ]);
+  const quote = quoteByAccount ?? quoteByEmail ?? null;
 
   if (!quote) notFound();
-  const businessName = businessSettings?.businessName ?? "PrintHub";
+  const businessName = business.businessName;
+  const cancellationReasonLabel =
+    quote.cancellationReason === "customer_cancelled"
+      ? "Withdrawn by you"
+      : quote.cancellationReason === "out_of_stock"
+        ? "Out of stock"
+        : quote.cancellationReason === "technical_issue"
+          ? "Technical issue"
+          : quote.cancellationReason === "customer_request"
+            ? "Customer request"
+            : quote.cancellationReason === "pricing_error"
+              ? "Pricing error"
+              : quote.cancellationReason === "material_unavailable"
+                ? "Material unavailable"
+                : quote.cancellationReason === "other"
+                  ? "Other"
+                  : quote.cancellationReason ?? "Cancelled";
 
   return (
     <div className="space-y-6">
+      {quote.cancelledAt && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
+          <p className="font-semibold">This quote was cancelled</p>
+          <p className="mt-1 text-sm">
+            Reason: {cancellationReasonLabel}
+            {quote.cancelledByAdmin?.name && ` · Cancelled by ${quote.cancelledByAdmin.name}`}
+          </p>
+          {quote.cancellationNotes && (
+            <p className="mt-1 text-sm">{quote.cancellationNotes}</p>
+          )}
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <Link

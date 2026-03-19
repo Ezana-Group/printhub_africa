@@ -3,17 +3,45 @@ import { requireSuperAdmin } from "@/lib/auth-guard";
 import { SectionCard } from "@/components/settings/section-card";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/prisma";
+import { DepartmentsManager } from "@/components/admin/settings/DepartmentsManager";
+import { AboutPageTeamSection } from "@/components/admin/settings/AboutPageTeamSection";
 
 export default async function AdminSettingsUsersPage() {
   await requireSuperAdmin();
   const staff = await prisma.user.findMany({
     where: { role: { in: ["STAFF", "ADMIN", "SUPER_ADMIN"] } },
     orderBy: { createdAt: "desc" },
-    include: { staff: { select: { department: true, position: true } } },
+    include: {
+      staff: {
+        select: {
+          department: true,
+          position: true,
+          showOnAboutPage: true,
+          publicName: true,
+          publicRole: true,
+        },
+      },
+    },
   });
+  const visibleOnAbout = staff.filter((u) => u.staff?.showOnAboutPage).length;
   return (
     <div className="space-y-6">
       <h1 className="font-display text-2xl font-bold">Users & Roles</h1>
+      <AboutPageTeamSection
+        staff={staff.map((u) => ({
+          id: u.id,
+          name: u.name,
+          staff: u.staff
+            ? {
+                showOnAboutPage: u.staff.showOnAboutPage,
+                publicName: u.staff.publicName,
+                publicRole: u.staff.publicRole,
+              }
+            : null,
+        }))}
+        visibleOnAbout={visibleOnAbout}
+        totalStaff={staff.length}
+      />
       <SectionCard
         title="Staff Accounts"
         description="Invite new staff. Roles: STAFF (limited), ADMIN (full except user mgmt), SUPER_ADMIN (unrestricted)."
@@ -63,6 +91,13 @@ export default async function AdminSettingsUsersPage() {
         <p className="text-sm text-muted-foreground">
           Permissions: Orders (View/Edit/Cancel/Refund), Products, Customers, Quotes, Finance, Inventory, Pricing, Marketing, Settings, Staff, Reports, Audit Log. Configure in Staff → [User] → Permissions.
         </p>
+      </SectionCard>
+
+      <SectionCard
+        title="Departments"
+        description="Manage departments used in the staff invite form and staff profiles."
+      >
+        <DepartmentsManager />
       </SectionCard>
     </div>
   );

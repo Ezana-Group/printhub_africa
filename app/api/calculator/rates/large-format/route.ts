@@ -222,6 +222,15 @@ export async function GET(req: Request) {
       BLACK_ONLY: inkCostPerChannel * 1,
     };
 
+    const inkCostsFromInventory = !!(inkChannelSettings && Object.keys(inkChannelSettings).length > 0);
+    const finishingFromInventory = {
+      eyelet: !!eyelet,
+      hemTape: !!hemTape,
+      rope: !!rope,
+      polePocket: !!polePocket,
+      packaging: !!packaging,
+    };
+
     return NextResponse.json({
       printerSettings: printer,
       businessSettings: business,
@@ -229,6 +238,10 @@ export async function GET(req: Request) {
       laminations: laminationsList,
       inkCosts,
       finishingHardware,
+      costSources: {
+        inkCosts: inkCostsFromInventory ? "inventory" : "default",
+        finishing: finishingFromInventory,
+      },
       rushOptions: turnaroundOptions.map((t) => ({
         code: t.code,
         name: t.name,
@@ -258,6 +271,10 @@ export async function GET(req: Request) {
           ropeCostPerM: 8,
           polePocketCostPerM: 50,
           packagingCostKes: 100,
+        },
+        costSources: {
+          inkCosts: "default",
+          finishing: { eyelet: false, hemTape: false, rope: false, polePocket: false, packaging: false },
         },
         rushOptions: [],
         designServiceOptions: [],

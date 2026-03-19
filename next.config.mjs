@@ -20,11 +20,13 @@ const nextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.sentry-cdn.com https://static.cloudflareinsights.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https: https://*.r2.dev https://images.unsplash.com",
-              "connect-src 'self' https: wss:",
+              "connect-src 'self' https: wss: https://*.ingest.sentry.io https://*.ingest.de.sentry.io https://cloudflareinsights.com",
+              "worker-src 'self' blob:",
+              "child-src 'self' blob:",
               "frame-ancestors 'none'",
             ].join("; "),
           },
@@ -33,6 +35,10 @@ const nextConfig = {
     ];
   },
   images: {
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 31536000,
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     remotePatterns: [
       {
         protocol: "https",
@@ -49,14 +55,31 @@ const nextConfig = {
         hostname: "pub-*.r2.dev",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "*.cloudflare.com",
+        pathname: "/**",
+      },
     ],
-    formats: ["image/webp", "image/avif"],
+  },
+  compress: true,
+  experimental: {
+    optimizePackageImports: ["lucide-react", "@radix-ui/react-icons", "recharts"],
   },
 };
 
 export default withSentryConfig(nextConfig, {
-  org: process.env.SENTRY_ORG || "",
-  project: process.env.SENTRY_PROJECT || "",
-  authToken: process.env.SENTRY_AUTH_TOKEN,
-  silent: !process.env.CI || !process.env.SENTRY_AUTH_TOKEN,
+  org: process.env.SENTRY_ORG || "ezana-group",
+  project: process.env.SENTRY_PROJECT || "printhub",
+
+  silent: true,
+  hideSourceMaps: true,
+  widenClientFileUpload: true,
+
+  webpack: {
+    automaticVercelMonitors: true,
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
 });

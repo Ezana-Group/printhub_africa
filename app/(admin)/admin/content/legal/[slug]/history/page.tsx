@@ -16,7 +16,7 @@ export default async function LegalPageHistoryPage({
 
   const history = await prisma.legalPageHistory.findMany({
     where: { legalPageId: page.id },
-    orderBy: { savedAt: "desc" },
+    orderBy: { createdAt: "desc" },
   });
 
   return (
@@ -25,12 +25,12 @@ export default async function LegalPageHistoryPage({
         items={[
           { label: "Content", href: "/admin/content/legal" },
           { label: "Legal Pages", href: "/admin/content/legal" },
-          { label: page.title, href: `/admin/content/legal/${slug}/edit` },
+          { label: page.title ?? slug, href: `/admin/content/legal/${slug}/edit` },
           { label: "History" },
         ]}
       />
       <h1 className="font-display text-2xl font-bold">
-        History — {page.title}
+        History — {page.title ?? slug}
       </h1>
       <Link
         href={`/admin/content/legal/${slug}/edit`}
@@ -45,7 +45,7 @@ export default async function LegalPageHistoryPage({
             className="rounded-lg border p-4 text-sm"
           >
             <p className="font-medium">
-              v{h.version} · {new Date(h.savedAt).toLocaleString()}
+              v{h.version} · {new Date(h.createdAt).toLocaleString()}
             </p>
             {h.changeNote && (
               <p className="text-muted-foreground mt-1">{h.changeNote}</p>

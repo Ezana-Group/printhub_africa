@@ -1,5 +1,5 @@
 /**
- * Client-side Sentry init has moved to instrumentation-client.ts (Turbopack-compatible).
- * This file is kept as a no-op to satisfy any legacy loaders; do not add init here.
+ * @deprecated Use instrumentation-client.ts instead (required for Turbopack).
+ * This file is kept for backward compatibility; instrumentation-client.ts is the canonical client config.
  */
-export {};
+import "./instrumentation-client";

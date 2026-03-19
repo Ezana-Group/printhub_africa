@@ -131,7 +131,7 @@ export function AdminPrintCalculator() {
         }
       })
       .catch(() => setPrinterOptions([]));
-  }, []);
+  }, [selectedPrinterId]);
 
   useEffect(() => {
     if (materialTypes.length && !materialType) {
@@ -148,7 +148,7 @@ export function AdminPrintCalculator() {
       const first = byMaterialType[materialType]?.[0]?.color;
       setColorChoice(first ? (COLOUR_PILLS.find((p) => colorMatches(first, p.id))?.id ?? "") : COLOUR_PILLS[0]?.id ?? "");
     }
-  }, [materialType, availableColorsForType, byMaterialType]);
+  }, [materialType, availableColorsForType, byMaterialType, colorChoice]);
 
   const job: PrintJob = useMemo(
     () => ({
@@ -179,8 +179,9 @@ export function AdminPrintCalculator() {
       quantity: qty,
       costPerKg: selectedFilament.costPerKg,
       profitMarginOverride: effectiveMargin,
+      postProcessing,
     });
-  }, [config, selectedFilament, weightGrams, printTimeHours, quantity, effectiveMargin]);
+  }, [config, selectedFilament, weightGrams, printTimeHours, quantity, effectiveMargin, postProcessing]);
 
   const marginSensitivity = useMemo(() => {
     if (!breakdown || !config) return null;
@@ -520,6 +521,12 @@ export function AdminPrintCalculator() {
                       <span>Labour cost</span>
                       <span>{formatKes(breakdown.labourCost)}</span>
                     </div>
+                    {breakdown.postProcessingCost > 0 && (
+                      <div className="flex justify-between">
+                        <span>Post-processing / support removal</span>
+                        <span>{formatKes(breakdown.postProcessingCost)}</span>
+                      </div>
+                    )}
                     <div className="border-t pt-2 flex justify-between font-medium">
                       <span>Subtotal</span>
                       <span>{formatKes(breakdown.subtotal)}</span>
