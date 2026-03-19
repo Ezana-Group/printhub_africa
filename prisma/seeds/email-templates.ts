@@ -51,6 +51,20 @@ const DEFAULT_TEMPLATES: { slug: string; subject: string; bodyHtml: string }[] =
 </div>`,
   },
   {
+    slug: "staff-invite",
+    subject: "Welcome to {{businessName}} — set your password",
+    bodyHtml: `<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+  <h1 style="color: #FF4D00;">{{businessName}}</h1>
+  <p>You’ve been invited to join the PrintHub admin team.</p>
+  <p><strong>Your login email:</strong> {{loginEmail}}</p>
+  <p>Click the link below to set your password:</p>
+  <p><a href="{{resetUrl}}" style="color: #FF4D00; font-weight: bold;">Set your password</a></p>
+  <p>Or copy this link: {{resetUrl}}</p>
+  <p>This invite link expires in 48 hours. If you weren’t expecting this, ignore this email.</p>
+  <p style="color: #6B6B6B; font-size: 12px;">{{footer}}</p>
+</div>`,
+  },
+  {
     slug: "quote-received",
     subject: "Quote request {{quoteNumber}} received – {{businessName}}",
     bodyHtml: `<div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">

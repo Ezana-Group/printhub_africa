@@ -38,6 +38,7 @@ export const EMAIL_PLACEHOLDER_CATEGORIES: Record<
     placeholders: [
       { key: "verifyUrl", label: "verifyUrl", description: "Email verification link" },
       { key: "resetUrl", label: "resetUrl", description: "Password reset link" },
+      { key: "loginEmail", label: "loginEmail", description: "Email address the user should use to log in" },
     ],
   },
   customer: {

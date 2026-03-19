@@ -9,18 +9,20 @@ async function getEmailBranding() {
   return { businessName: b.businessName, footer };
 }
 
-const from = process.env.FROM_EMAIL ?? "PrintHub <hello@printhub.africa>";
+const defaultFrom = process.env.FROM_EMAIL ?? "PrintHub <hello@printhub.africa>";
 
 export async function sendEmail({
   to,
   subject,
   html,
   text,
+  fromOverride,
 }: {
   to: string;
   subject: string;
   html?: string;
   text?: string;
+  fromOverride?: string;
 }) {
   if (!process.env.RESEND_API_KEY) {
     console.warn("RESEND_API_KEY not set; email not sent:", { to, subject });
@@ -28,7 +30,7 @@ export async function sendEmail({
   }
   const resend = new Resend(process.env.RESEND_API_KEY);
   const payload: { from: string; to: string[]; subject: string; html?: string; text?: string } = {
-    from,
+    from: fromOverride ?? defaultFrom,
     to: [to],
     subject,
   };
@@ -50,12 +52,13 @@ async function sendWithTemplate(
   to: string,
   context: Record<string, string>,
   defaultSubject: string,
-  defaultHtml: string
+  defaultHtml: string,
+  fromOverride?: string
 ) {
   const t = await getEmailTemplate(slug);
   const subject = t ? renderTemplate(t.subject, context) : defaultSubject;
   const html = t ? renderTemplate(t.bodyHtml, context) : defaultHtml;
-  return sendEmail({ to, subject, html });
+  return sendEmail({ to, subject, html, fromOverride });
 }
 
 export async function sendVerificationEmail(email: string, token: string) {
@@ -93,6 +96,43 @@ export async function sendPasswordResetEmail(email: string, token: string) {
       </div>
     `;
   return sendWithTemplate("password-reset", email, context, defaultSubject, defaultHtml);
+}
+
+export async function sendStaffInviteEmail(
+  email: string,
+  token: string,
+  loginEmail: string,
+  inviteUrl?: string
+) {
+  const { businessName, footer } = await getEmailBranding();
+  const url = inviteUrl ?? `${baseUrl}/reset-password?token=${token}`;
+  const context = {
+    businessName,
+    footer,
+    resetUrl: url,
+    loginEmail: loginEmail.trim().toLowerCase(),
+  };
+  const defaultSubject = `Welcome to ${businessName} — set your password`;
+  const defaultHtml = `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h1 style="color: #FF4D00;">${businessName}</h1>
+        <p>You’ve been invited to join the PrintHub admin team.</p>
+        <p><strong>Your login email:</strong> ${context.loginEmail}</p>
+        <p>Click the link below to set your password:</p>
+        <p><a href="${url}" style="color: #FF4D00; font-weight: bold;">Set your password</a></p>
+        <p>Or copy this link: ${url}</p>
+        <p>This invite link expires in 48 hours. If you weren’t expecting this, ignore this email.</p>
+        <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
+      </div>
+    `;
+  return sendWithTemplate(
+    "staff-invite",
+    email,
+    context,
+    defaultSubject,
+    defaultHtml,
+    "PrintHub <welcome@printhub.africa>"
+  );
 }
 
 export async function sendQuoteReceivedEmail(

@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { writeAudit } from "@/lib/audit";
-import { sendPasswordResetEmail } from "@/lib/email";
+import { sendPasswordResetEmail, sendStaffInviteEmail } from "@/lib/email";
 import { generateToken, getResetPasswordExpiry, getStaffInviteExpiry } from "@/lib/tokens";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
@@ -45,7 +45,11 @@ export async function POST(
     data: { identifier, token, expires: expiresAt },
   });
 
-  await sendPasswordResetEmail(deliveryEmail, token);
+  if (isPendingInvite) {
+    await sendStaffInviteEmail(deliveryEmail, token, user.email);
+  } else {
+    await sendPasswordResetEmail(deliveryEmail, token);
+  }
 
   await writeAudit({
     userId: actorId,
@@ -62,6 +66,6 @@ export async function POST(
   });
 
   return NextResponse.json({
-    message: "Password reset email sent.",
+    message: isPendingInvite ? "Invite email sent." : "Password reset email sent.",
   });
 }

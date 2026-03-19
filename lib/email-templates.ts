@@ -31,6 +31,10 @@ export const EMAIL_TEMPLATE_META: Record<
     name: "Password reset",
     description: "Sent when user requests password reset.",
   },
+  "staff-invite": {
+    name: "welcome@printhub.africa",
+    description: "Sent when admin invites a staff member and they set their password.",
+  },
   "quote-received": {
     name: "Quote request received",
     description: "Sent to customer when quote request is submitted.",
@@ -163,7 +167,7 @@ export const EMAIL_TEMPLATE_SLUGS = Object.keys(
 
 const BASE_SAMPLE = {
   businessName: "PrintHub Africa",
-  footer: "PrintHub Africa · Nairobi, Kenya",
+  footer: "PrintHub Africa · Kenya",
   baseUrl: "https://printhub.africa",
 };
 
@@ -175,6 +179,12 @@ export function getSampleContextForSlug(slug: string): Record<string, string> {
       return { ...base, verifyUrl: `${base.baseUrl}/verify-email?token=sample-token` };
     case "password-reset":
       return { ...base, resetUrl: `${base.baseUrl}/reset-password?token=sample-token` };
+    case "staff-invite":
+      return {
+        ...base,
+        resetUrl: `${base.baseUrl}/reset-password?token=sample-token`,
+        loginEmail: "staff@printhub.africa",
+      };
     case "quote-received":
       return { ...base, quoteNumber: "Q-2025-001", typeLabel: "Bulk print", quotesUrl: `${base.baseUrl}/account/quotes` };
     case "order-confirmation":

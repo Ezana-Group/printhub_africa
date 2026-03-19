@@ -4,12 +4,33 @@ import Link from "next/link";
 import { AdminBreadcrumbs } from "@/components/admin/admin-breadcrumbs";
 import { EMAIL_TEMPLATE_META, EMAIL_TEMPLATE_SLUGS } from "@/lib/email-templates";
 
-export default async function AdminContentEmailTemplatesPage() {
+export default async function AdminContentEmailTemplatesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string | string[] }>;
+}) {
   await requireAdminSettings();
+  const { q: qRaw } = await searchParams;
   const rows = await prisma.emailTemplate.findMany({
     orderBy: { slug: "asc" },
   });
   const bySlug = new Map(rows.map((r) => [r.slug, r]));
+  const q = typeof qRaw === "string" ? qRaw.trim().toLowerCase() : "";
+  const slugsToShow = q
+    ? EMAIL_TEMPLATE_SLUGS.filter((slug) => {
+        const meta = EMAIL_TEMPLATE_META[slug];
+        const row = bySlug.get(slug);
+        const name = (meta?.name ?? row?.name ?? slug).toLowerCase();
+        const desc = (meta?.description ?? row?.description ?? "").toLowerCase();
+        const subject = (row?.subject ?? "").toLowerCase();
+        return (
+          slug.toLowerCase().includes(q) ||
+          name.includes(q) ||
+          desc.includes(q) ||
+          subject.includes(q)
+        );
+      })
+    : EMAIL_TEMPLATE_SLUGS;
 
   return (
     <div className="space-y-6">
@@ -24,6 +45,27 @@ export default async function AdminContentEmailTemplatesPage() {
         <p className="text-slate-600 text-sm mt-1">
           Edit subject and body for automated emails. Use placeholders like {`{{businessName}}`}, {`{{orderNumber}}`} in subject and body.
         </p>
+        <form method="GET" className="mt-4 flex flex-col sm:flex-row gap-3 sm:items-center">
+          <div className="relative flex-1 max-w-xl">
+            <input
+              name="q"
+              defaultValue={q}
+              placeholder="Search templates…"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+            />
+          </div>
+          <button
+            type="submit"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
+          >
+            Search
+          </button>
+          {q ? (
+            <Link href="/admin/content/email-templates" className="text-sm text-muted-foreground hover:text-slate-900">
+              Clear
+            </Link>
+          ) : null}
+        </form>
       </div>
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         <table className="w-full text-sm">
@@ -36,7 +78,7 @@ export default async function AdminContentEmailTemplatesPage() {
             </tr>
           </thead>
           <tbody>
-            {EMAIL_TEMPLATE_SLUGS.map((slug) => {
+            {slugsToShow.map((slug) => {
               const meta = EMAIL_TEMPLATE_META[slug];
               const row = bySlug.get(slug);
               return (

@@ -19,7 +19,7 @@ function ResetPasswordForm() {
 
   if (!token) {
     return (
-      <Card>
+      <Card className="w-full max-w-md mx-auto">
         <CardHeader>
           <CardTitle>Invalid link</CardTitle>
           <CardDescription>This reset link is invalid. Request a new one from the forgot password page.</CardDescription>
@@ -64,7 +64,7 @@ function ResetPasswordForm() {
 
   if (success) {
     return (
-      <Card>
+      <Card className="w-full max-w-md mx-auto">
         <CardHeader>
           <CardTitle>Password updated</CardTitle>
           <CardDescription>You can now sign in with your new password.</CardDescription>
@@ -79,7 +79,7 @@ function ResetPasswordForm() {
   }
 
   return (
-    <Card>
+    <Card className="w-full max-w-md mx-auto">
       <CardHeader className="space-y-1">
         <Link href="/" className="text-2xl font-display font-bold text-primary">
           PrintHub
@@ -88,7 +88,7 @@ function ResetPasswordForm() {
         <CardDescription>Enter your new password twice</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           {error && (
             <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-2">
               {error}

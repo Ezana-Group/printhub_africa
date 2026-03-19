@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { writeAudit } from "@/lib/audit";
-import { sendPasswordResetEmail } from "@/lib/email";
+import { sendStaffInviteEmail } from "@/lib/email";
 import { generateToken, getStaffInviteExpiry } from "@/lib/tokens";
 import { isStaffWorkEmail } from "@/lib/staff-email";
 
@@ -138,7 +138,7 @@ export async function POST(req: Request) {
           expires: getStaffInviteExpiry(),
         },
       });
-      await sendPasswordResetEmail(inviteDeliveryEmail, token);
+      await sendStaffInviteEmail(inviteDeliveryEmail, token, workEmail);
     }
 
     await writeAudit({
