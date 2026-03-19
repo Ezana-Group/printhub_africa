@@ -49,12 +49,18 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
       { href: "/admin/deliveries", label: "Deliveries", icon: Truck },
-      { href: "/admin/support", label: "Support", icon: HelpCircle },
-      { href: "/admin/email/inbox", label: "Email", icon: Mail },
       { href: "/admin/products", label: "Products", icon: Package },
-      { href: "/admin/reviews", label: "Reviews", icon: BarChart3 },
       { href: "/admin/categories", label: "Categories", icon: FolderTree },
       { href: "/admin/catalogue", label: "Catalogue", icon: Layers },
+    ],
+  },
+  {
+    label: "COMMUNICATION",
+    items: [
+      { href: "/admin/email/inbox", label: "Email", icon: Mail },
+      { href: "/admin/content/email-templates", label: "Email Templates", icon: Mail },
+      { href: "/admin/support", label: "Support", icon: HelpCircle },
+      { href: "/admin/reviews", label: "Reviews", icon: BarChart3 },
     ],
   },
   {
@@ -88,7 +94,6 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/content/legal", label: "Legal Pages", icon: Scale },
       { href: "/admin/content/faq", label: "FAQ Manager", icon: HelpCircle },
-      { href: "/admin/content/email-templates", label: "Email Templates", icon: Mail },
       { href: "/admin/content/site-images", label: "Site Images", icon: ImageIcon },
       { href: "/admin/content/auth-panel", label: "Login panel", icon: PanelLeft },
     ],
