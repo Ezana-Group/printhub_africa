@@ -8,8 +8,6 @@ import { Prisma } from "@prisma/client";
 
 const ADMIN_ROLES = ["STAFF", "ADMIN", "SUPER_ADMIN"];
 
-const statusSchema = z.enum(["OPEN", "CLOSED", "SPAM"]);
-
 function stripHtml(html: string): string {
   return html
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
@@ -70,7 +68,7 @@ export async function GET(req: NextRequest) {
     where.status = "SPAM";
   } else {
     // inbox
-    where.status = (statusParam as any) ?? "OPEN";
+    where.status = (statusParam as "OPEN" | "CLOSED" | "SPAM") ?? "OPEN";
   }
   if (mailboxId) where.mailboxId = mailboxId;
   if (assignedToId) where.assignedToId = assignedToId;

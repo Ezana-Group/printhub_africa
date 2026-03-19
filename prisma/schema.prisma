@@ -560,6 +560,7 @@ model Refund {
   mpesaPhone          String?
   mpesaReceiptNo      String?
   mpesaConversationId String?
+  providerRefReference String?
   order               Order     @relation(fields: [orderId], references: [id])
 
   @@index([orderId])
@@ -1149,6 +1150,7 @@ model Inventory {
   lowStockThreshold Int             @default(5)
   location          String?
   unitCostKes       Float?
+  reservedQuantity  Int             @default(0)
   productVariantId  String?
   variantId         String?
   product           Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
