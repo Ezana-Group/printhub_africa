@@ -28,13 +28,25 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const role = (session?.user as { role?: string })?.role;
   const permissions = (session?.user as { permissions?: string[] })?.permissions;
+  const currentUserId = session?.user?.id as string | undefined;
 
-  if (!session?.user?.id || !role || !ADMIN_ROLES.includes(role)) {
+  if (!currentUserId || !role || !ADMIN_ROLES.includes(role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   if (!canAccessRoute("/admin/email/inbox", role, permissions ?? [])) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+
+  const hasEmailManage = (permissions ?? []).includes("email_manage");
+  const isFullAccess = role === "ADMIN" || role === "SUPER_ADMIN" || hasEmailManage;
+  const allowedMailboxIds = !isFullAccess
+    ? (
+        await prisma.emailMailboxViewer.findMany({
+          where: { userId: currentUserId },
+          select: { mailboxId: true },
+        })
+      ).map((r) => r.mailboxId)
+    : undefined;
 
   const url = new URL(req.url);
   const qp = url.searchParams;
@@ -59,10 +71,27 @@ export async function GET(req: NextRequest) {
   if (mailboxId) where.mailboxId = mailboxId;
   if (assignedToId) where.assignedToId = assignedToId;
 
+  const finalWhere: Prisma.EmailThreadWhereInput = {
+    ...where,
+    isActive: true,
+    ...(isFullAccess
+      ? {}
+      : {
+          AND: [
+            {
+              OR: [
+                { assignedToId: currentUserId },
+                { mailboxId: { in: allowedMailboxIds ?? [] } },
+              ],
+            },
+          ],
+        }),
+  };
+
   const [total, threads] = await Promise.all([
-    prisma.emailThread.count({ where: { ...where, isActive: true } }),
+    prisma.emailThread.count({ where: finalWhere }),
     prisma.emailThread.findMany({
-      where: { ...where, isActive: true },
+      where: finalWhere,
       orderBy: { updatedAt: "desc" },
       skip,
       take: limit,

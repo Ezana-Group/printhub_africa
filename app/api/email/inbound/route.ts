@@ -99,6 +99,15 @@ export async function POST(req: NextRequest) {
   const customer = extractEmail(from);
   if (!customer.email) return NextResponse.json({ success: true }, { status: 200 });
 
+  // Ignore emails sent by internal staff (so business inboxes only show customer/business messages).
+  const internalSender = await prisma.user.findFirst({
+    where: {
+      OR: [{ email: customer.email }, { personalEmail: customer.email }],
+    },
+    select: { id: true },
+  });
+  if (internalSender) return NextResponse.json({ success: true }, { status: 200 });
+
   const baseSubject = normalizeSubject(subject);
 
   const fallbackCreator = await prisma.user.findFirst({

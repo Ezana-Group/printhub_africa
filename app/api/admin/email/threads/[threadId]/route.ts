@@ -19,8 +19,9 @@ export async function GET(
   const session = await getServerSession(authOptions);
   const role = (session?.user as { role?: string })?.role;
   const permissions = (session?.user as { permissions?: string[] })?.permissions;
+  const currentUserId = session?.user?.id as string | undefined;
 
-  if (!session?.user?.id || !role || !ADMIN_ROLES.includes(role)) {
+  if (!currentUserId || !role || !ADMIN_ROLES.includes(role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   if (!canAccessRoute("/admin/email/thread", role, permissions ?? [])) {
@@ -29,8 +30,28 @@ export async function GET(
 
   const { threadId } = await params;
 
-  const thread = await prisma.emailThread.findUnique({
-    where: { id: threadId },
+  const hasEmailManage = (permissions ?? []).includes("email_manage");
+  const isFullAccess = role === "ADMIN" || role === "SUPER_ADMIN" || hasEmailManage;
+  const allowedMailboxIds = isFullAccess
+    ? undefined
+    : (
+        await prisma.emailMailboxViewer.findMany({
+          where: { userId: currentUserId },
+          select: { mailboxId: true },
+        })
+      ).map((r) => r.mailboxId);
+
+  // Re-fetch with full include once visibility constraint is applied.
+  const finalThread = await prisma.emailThread.findFirst({
+    where: isFullAccess
+      ? { id: threadId }
+      : {
+          id: threadId,
+          OR: [
+            { assignedToId: currentUserId },
+            { mailboxId: { in: allowedMailboxIds ?? [] } },
+          ],
+        },
     include: {
       mailbox: { select: { id: true, address: true, label: true } },
       assignedTo: { select: { id: true, name: true, email: true } },
@@ -53,23 +74,23 @@ export async function GET(
     },
   });
 
-  if (!thread) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!finalThread) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   return NextResponse.json({
     thread: {
-      id: thread.id,
-      subject: thread.subject,
-      status: thread.status,
-      hasUnread: thread.hasUnread,
-      customerName: thread.customerName,
-      customerEmail: thread.customerEmail,
-      assignedToId: thread.assignedToId,
-      assignedTo: thread.assignedTo
-        ? { id: thread.assignedTo.id, name: thread.assignedTo.name, email: thread.assignedTo.email }
+      id: finalThread.id,
+      subject: finalThread.subject,
+      status: finalThread.status,
+      hasUnread: finalThread.hasUnread,
+      customerName: finalThread.customerName,
+      customerEmail: finalThread.customerEmail,
+      assignedToId: finalThread.assignedToId,
+      assignedTo: finalThread.assignedTo
+        ? { id: finalThread.assignedTo.id, name: finalThread.assignedTo.name, email: finalThread.assignedTo.email }
         : null,
-      mailbox: thread.mailbox,
+      mailbox: finalThread.mailbox,
     },
-    emails: thread.emails.map((e) => ({
+    emails: finalThread.emails.map((e) => ({
       id: e.id,
       direction: e.direction,
       isRead: e.isRead,
@@ -92,8 +113,9 @@ export async function PATCH(
   const session = await getServerSession(authOptions);
   const role = (session?.user as { role?: string })?.role;
   const permissions = (session?.user as { permissions?: string[] })?.permissions;
+  const currentUserId = session?.user?.id as string | undefined;
 
-  if (!session?.user?.id || !role || !ADMIN_ROLES.includes(role)) {
+  if (!currentUserId || !role || !ADMIN_ROLES.includes(role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   if (!canAccessRoute("/admin/email/settings", role, permissions ?? [])) {
@@ -117,6 +139,31 @@ export async function PATCH(
   const updateData: { status?: "OPEN" | "CLOSED" | "SPAM"; assignedToId?: string | null } = {};
   if (parsed.data.status !== undefined) updateData.status = parsed.data.status;
   if (parsed.data.assignedToId !== undefined) updateData.assignedToId = parsed.data.assignedToId;
+
+  const hasEmailManage = (permissions ?? []).includes("email_manage");
+  const isFullAccess = role === "ADMIN" || role === "SUPER_ADMIN" || hasEmailManage;
+  const allowedMailboxIds = isFullAccess
+    ? undefined
+    : (
+        await prisma.emailMailboxViewer.findMany({
+          where: { userId: currentUserId },
+          select: { mailboxId: true },
+        })
+      ).map((r) => r.mailboxId);
+
+  const visibleThread = await prisma.emailThread.findFirst({
+    where: isFullAccess
+      ? { id: threadId }
+      : {
+          id: threadId,
+          OR: [
+            { assignedToId: currentUserId },
+            { mailboxId: { in: allowedMailboxIds ?? [] } },
+          ],
+        },
+    select: { id: true },
+  });
+  if (!visibleThread) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   try {
     await prisma.$transaction([

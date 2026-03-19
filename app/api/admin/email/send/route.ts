@@ -28,8 +28,9 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const role = (session?.user as { role?: string })?.role;
   const permissions = (session?.user as { permissions?: string[] })?.permissions;
+  const currentUserId = session?.user?.id as string | undefined;
 
-  if (!session?.user?.id || !role || !ADMIN_ROLES.includes(role)) {
+  if (!currentUserId || !role || !ADMIN_ROLES.includes(role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   // Replies are part of viewing a thread; require `email_view` rather than full mailbox management.
@@ -63,6 +64,21 @@ export async function POST(req: NextRequest) {
   });
 
   if (!thread) return NextResponse.json({ error: "Thread not found" }, { status: 404 });
+
+  const hasEmailManage = (permissions ?? []).includes("email_manage");
+  const isFullAccess = role === "ADMIN" || role === "SUPER_ADMIN" || hasEmailManage;
+  if (!isFullAccess) {
+    const canSee =
+      thread.assignedToId === currentUserId ||
+      (await prisma.emailMailboxViewer.findFirst({
+        where: { userId: currentUserId, mailboxId: thread.mailbox.id },
+        select: { id: true },
+      }))
+        ? true
+        : false;
+
+    if (!canSee) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
 
   const fromMailbox =
     fromAddressId && fromAddressId !== thread.mailbox.id

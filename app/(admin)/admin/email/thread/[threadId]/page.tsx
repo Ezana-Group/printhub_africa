@@ -33,20 +33,28 @@ export default async function AdminEmailThreadPage({
   if (!session?.user) return notFound();
   const currentUser = session.user as { id?: string; role?: string; permissions?: string[] };
 
-  // Mark the selected thread as read on load (inbound messages only).
-  await prisma.$transaction([
-    prisma.email.updateMany({
-      where: { threadId, direction: "INBOUND", isRead: false },
-      data: { isRead: true },
-    }),
-    prisma.emailThread.updateMany({
-      where: { id: threadId },
-      data: { hasUnread: false },
-    }),
-  ]);
+  const currentUserId = currentUser.id as string;
+  const hasEmailManage = (currentUser.permissions ?? []).includes("email_manage");
+  const isFullAccess = currentUser.role === "ADMIN" || currentUser.role === "SUPER_ADMIN" || hasEmailManage;
+  const allowedMailboxIds = isFullAccess
+    ? undefined
+    : (
+        await prisma.emailMailboxViewer.findMany({
+          where: { userId: currentUserId },
+          select: { mailboxId: true },
+        })
+      ).map((r) => r.mailboxId);
 
-  const thread = await prisma.emailThread.findUnique({
-    where: { id: threadId },
+  const thread = await prisma.emailThread.findFirst({
+    where: isFullAccess
+      ? { id: threadId }
+      : {
+          id: threadId,
+          OR: [
+            { assignedToId: currentUserId },
+            { mailboxId: { in: allowedMailboxIds ?? [] } },
+          ],
+        },
     include: {
       mailbox: { select: { id: true, address: true, label: true } },
       emails: {
@@ -70,12 +78,36 @@ export default async function AdminEmailThreadPage({
 
   if (!thread) notFound();
 
+  // Mark the selected thread as read on load (inbound messages only).
+  await prisma.$transaction([
+    prisma.email.updateMany({
+      where: { threadId, direction: "INBOUND", isRead: false },
+      data: { isRead: true },
+    }),
+    prisma.emailThread.updateMany({
+      where: { id: threadId },
+      data: { hasUnread: false },
+    }),
+  ]);
+
   const sidebarThreads = await prisma.emailThread.findMany({
     where: {
       isActive: true,
       status,
       ...(mailboxId ? { mailboxId } : {}),
       ...(assignedToId ? { assignedToId } : {}),
+      ...(isFullAccess
+        ? {}
+        : {
+            AND: [
+              {
+                OR: [
+                  { assignedToId: currentUserId },
+                  { mailboxId: { in: allowedMailboxIds ?? [] } },
+                ],
+              },
+            ],
+          }),
     },
     orderBy: { updatedAt: "desc" },
     take: 40,

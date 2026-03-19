@@ -16,6 +16,27 @@ export default async function AdminEmailSettingsPage() {
     },
   });
 
+  const staff = await prisma.user.findMany({
+    where: { role: "STAFF" },
+    select: { id: true, name: true, email: true },
+    orderBy: { name: "asc" },
+    take: 200,
+  });
+
+  const mailboxIds = mailboxes.map((m) => m.id);
+  const viewers = mailboxIds.length
+    ? await prisma.emailMailboxViewer.findMany({
+        where: { mailboxId: { in: mailboxIds } },
+        select: { mailboxId: true, userId: true },
+      })
+    : [];
+
+  const viewersByMailboxId: Record<string, string[]> = {};
+  for (const v of viewers) {
+    if (!viewersByMailboxId[v.mailboxId]) viewersByMailboxId[v.mailboxId] = [];
+    viewersByMailboxId[v.mailboxId].push(v.userId);
+  }
+
   return (
     <EmailMailboxSettingsClient
       mailboxes={mailboxes.map((m) => ({
@@ -25,6 +46,8 @@ export default async function AdminEmailSettingsPage() {
         isActive: m.isActive,
         createdAt: m.createdAt.toISOString(),
       }))}
+      staff={staff.map((s) => ({ id: s.id, name: s.name, email: s.email }))}
+      viewersByMailboxId={viewersByMailboxId}
     />
   );
 }

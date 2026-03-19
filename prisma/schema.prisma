@@ -82,6 +82,7 @@ model User {
   performedByMovements ThreeDConsumableMovement[]
   emailThreadsCreated EmailThread[] @relation("EmailThreadCreatedBy")
   assignedEmailThreads EmailThread[] @relation("AssignedThreads")
+  emailMailboxViewers EmailMailboxViewer[]
 }
 
 model Address {
@@ -2431,6 +2432,7 @@ model EmailAddress {
   updatedAt DateTime @updatedAt
 
   threads EmailThread[]
+  viewers EmailMailboxViewer[]
 }
 
 model EmailThread {
@@ -2488,5 +2490,20 @@ model Email {
 
   // Array of { name, r2Key, size, mimeType }
   attachments Json          @default("[]")
+}
+
+model EmailMailboxViewer {
+  id        String        @id @default(cuid())
+  mailboxId String
+  mailbox   EmailAddress  @relation(fields: [mailboxId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([mailboxId, userId])
+  @@index([userId])
+  @@index([mailboxId])
 }
 

@@ -9,6 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Loader2, Mail, Plus } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 type EmailMailbox = {
   id: string;
@@ -18,10 +26,20 @@ type EmailMailbox = {
   createdAt: string;
 };
 
+type StaffUser = {
+  id: string;
+  name: string | null;
+  email: string;
+};
+
 export function EmailMailboxSettingsClient({
   mailboxes,
+  staff,
+  viewersByMailboxId,
 }: {
   mailboxes: EmailMailbox[];
+  staff: StaffUser[];
+  viewersByMailboxId: Record<string, string[]>;
 }) {
   const router = useRouter();
 
@@ -30,6 +48,7 @@ export function EmailMailboxSettingsClient({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [togglingKey, setTogglingKey] = useState<string | null>(null);
 
   const normalizedAddress = useMemo(() => address.trim().toLowerCase(), [address]);
 
@@ -69,6 +88,30 @@ export function EmailMailboxSettingsClient({
       router.refresh();
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleToggleAccess(mailboxId: string, userId: string, allowed: boolean) {
+    const key = `${mailboxId}:${userId}`;
+    setTogglingKey(key);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch("/api/admin/email/mailboxes/permissions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mailboxId, userId, allowed }),
+      });
+
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setError(d.error ?? "Failed to update access");
+        return;
+      }
+
+      router.refresh();
+    } finally {
+      setTogglingKey(null);
     }
   }
 
@@ -148,6 +191,55 @@ export function EmailMailboxSettingsClient({
                   <p className="text-xs text-muted-foreground">
                     Created: {new Date(m.createdAt).toLocaleDateString("en-GB")}
                   </p>
+                </div>
+
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm text-muted-foreground">
+                    Viewers: <span className="font-medium text-foreground">{(viewersByMailboxId[m.id] ?? []).length}</span>
+                  </p>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        Manage access
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Access for {m.label}</DialogTitle>
+                        <DialogDescription>
+                          Toggle which staff can view this business mailbox. Even if a staff member is not granted mailbox access,
+                          they will still be able to see threads assigned to them.
+                        </DialogDescription>
+                      </DialogHeader>
+
+                      <div className="mt-2 space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+                        {staff.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">No staff users found.</p>
+                        ) : (
+                          staff.map((s) => {
+                            const allowed = (viewersByMailboxId[m.id] ?? []).includes(s.id);
+                            const toggleKey = `${m.id}:${s.id}`;
+                            return (
+                              <div key={s.id} className="flex items-center justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium truncate">
+                                    {s.name ?? s.email}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground font-mono truncate">{s.email}</p>
+                                </div>
+                                <Switch
+                                  checked={allowed}
+                                  disabled={togglingKey === toggleKey}
+                                  onCheckedChange={(next) => void handleToggleAccess(m.id, s.id, next)}
+                                  aria-label={`Toggle access ${s.email} -> ${m.label}`}
+                                />
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </CardContent>
             </Card>
