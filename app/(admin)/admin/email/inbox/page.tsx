@@ -43,7 +43,7 @@ export default async function AdminEmailInboxPage({
   const skip = (pageNum - 1) * limitNum;
 
   const emailThreadWhere: Prisma.EmailThreadWhereInput = {
-    status: "OPEN",
+    ...(isFullAccess ? {} : { status: "OPEN" }),
     isActive: true,
     ...(isFullAccess
       ? {}

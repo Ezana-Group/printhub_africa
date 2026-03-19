@@ -40,7 +40,7 @@ export function EmailInboxClient({
 
       {threads.length === 0 ? (
         <div className="rounded-xl border border-dashed p-6 text-center text-muted-foreground">
-          No open threads.
+          No threads found.
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3">
