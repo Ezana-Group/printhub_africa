@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canAccessRoute } from "@/lib/admin-permissions";
 import { z } from "zod";
-import { Prisma } from "@prisma/client";
+import { Prisma, ThreadStatus } from "@prisma/client";
 
 const ADMIN_ROLES = ["STAFF", "ADMIN", "SUPER_ADMIN"];
 
@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
     where.status = "SPAM";
   } else {
     // inbox
-    where.status = (statusParam as "OPEN" | "CLOSED" | "SPAM") ?? "OPEN";
+    where.status = (statusParam as ThreadStatus) ?? ThreadStatus.OPEN;
   }
   if (mailboxId) where.mailboxId = mailboxId;
   if (assignedToId) where.assignedToId = assignedToId;

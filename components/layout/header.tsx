@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { Menu, Search, ShoppingCart, User } from "lucide-react";
@@ -75,10 +76,13 @@ export function Header({ business }: { business?: BusinessPublic }) {
           >
             {/* Fixed header — logo (close button is absolute in SheetContent) */}
             <div className="flex flex-shrink-0 items-center border-b border-slate-200 px-6 py-4 pr-14">
-              <img
+              <Image
                 src={business?.logo ?? "/logo.png"}
                 alt={siteName}
-                className="h-8 w-auto max-w-[120px] object-contain"
+                width={120}
+                height={32}
+                className="h-8 w-auto object-contain"
+                priority
               />
             </div>
 
@@ -227,10 +231,13 @@ export function Header({ business }: { business?: BusinessPublic }) {
           href="/"
           className="font-display text-xl font-bold text-slate-900 flex items-center gap-2.5"
         >
-          <img
+          <Image
             src={business?.logo ?? "/logo.png"}
             alt={siteName}
-            className="h-9 w-auto max-w-[140px] object-contain object-left"
+            width={140}
+            height={36}
+            className="h-9 w-auto object-contain object-left"
+            priority
           />
         </Link>
 
