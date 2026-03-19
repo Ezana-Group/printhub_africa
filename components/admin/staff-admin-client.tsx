@@ -97,6 +97,9 @@ export function StaffAdminClient({
       }
       setDeleteTarget(null);
       router.refresh();
+    } catch (error) {
+      console.error("Delete account error:", error);
+      alert(error instanceof Error ? error.message : "Failed to delete account");
     } finally {
       setDeleteLoading(false);
     }
@@ -292,9 +295,8 @@ export function StaffAdminClient({
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem
-                onClick={(e) => {
+                onSelect={(e) => {
                   e.preventDefault();
-                  e.stopPropagation();
                   handleReset2faClick(s);
                 }}
               >
@@ -314,9 +316,8 @@ export function StaffAdminClient({
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
-                onClick={(e) => {
+                onSelect={(e) => {
                   e.preventDefault();
-                  e.stopPropagation();
                   handleDeleteClick(s);
                 }}
               >

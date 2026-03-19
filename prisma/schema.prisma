@@ -466,7 +466,7 @@ model Order {
   courier              Courier?             @relation(fields: [courierId], references: [id])
   deliveryZone         DeliveryZone?        @relation(fields: [deliveryZoneId], references: [id])
   pickupLocation       PickupLocation?      @relation(fields: [pickupLocationId], references: [id])
-  user                 User?                @relation(fields: [userId], references: [id])
+  user                 User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
   items                OrderItem[]
   timeline             OrderTimeline[]
   trackingEvents       OrderTrackingEvent[]
@@ -743,7 +743,7 @@ model UploadedFile {
   virusScanStatus String?
   printQuotes     PrintQuote[]
   quote           Quote?             @relation(fields: [quoteId], references: [id])
-  user            User?              @relation(fields: [userId], references: [id])
+  user            User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
 
 model PrintQuote {
@@ -807,8 +807,8 @@ model Quote {
   cancellationNotes  String?
   cancelledByAdminId String?
   assignedStaff      Staff?              @relation(fields: [assignedStaffId], references: [id])
-  cancelledByAdmin   User?               @relation("QuoteCancelledByAdmin", fields: [cancelledByAdminId], references: [id])
-  customer           User?               @relation(fields: [customerId], references: [id])
+  cancelledByAdmin   User?               @relation("QuoteCancelledByAdmin", fields: [cancelledByAdminId], references: [id], onDelete: SetNull)
+  customer           User?               @relation(fields: [customerId], references: [id], onDelete: SetNull)
   quoteCancellations QuoteCancellation[]
   quotePdfs          QuotePdf[]
   uploadedFiles      UploadedFile[]
@@ -829,7 +829,7 @@ model QuoteCancellation {
   notes             String?
   notificationSent  Boolean  @default(false)
   createdAt         DateTime @default(now())
-  cancelledByUser   User?    @relation(fields: [cancelledByUserId], references: [id])
+  cancelledByUser   User?    @relation(fields: [cancelledByUserId], references: [id], onDelete: SetNull)
   quote             Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
 
   @@index([quoteId])
@@ -1394,7 +1394,7 @@ model AuditLog {
   after     Json?
   ipAddress String?
   timestamp DateTime @default(now())
-  user      User?    @relation(fields: [userId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([entity, entityId])
@@ -1416,7 +1416,7 @@ model SupportTicket {
   assignedTo   String?
   resolvedAt   DateTime?
   closedAt     DateTime?
-  user         User?           @relation(fields: [userId], references: [id])
+  user         User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   messages     TicketMessage[]
 }
 
@@ -1957,7 +1957,7 @@ model EmailThread {
   id            String       @id @default(cuid())
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
-  createdById   String
+  createdById   String?
   isActive      Boolean      @default(true)
   label         String
   subject       String
@@ -1968,8 +1968,8 @@ model EmailThread {
   hasUnread     Boolean      @default(true)
   status        ThreadStatus @default(OPEN)
   emails        Email[]
-  assignedTo    User?        @relation("AssignedThreads", fields: [assignedToId], references: [id])
-  createdBy     User         @relation("EmailThreadCreatedBy", fields: [createdById], references: [id])
+  assignedTo    User?        @relation("AssignedThreads", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdBy     User?        @relation("EmailThreadCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   mailbox       EmailAddress @relation(fields: [mailboxId], references: [id])
 
   @@index([mailboxId])
