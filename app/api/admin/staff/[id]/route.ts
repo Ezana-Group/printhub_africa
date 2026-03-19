@@ -17,6 +17,7 @@ const patchProfileSchema = z.object({
   department: z.string().max(100).nullable().optional(),
   departmentId: z.string().nullable().optional(),
   position: z.string().max(100).nullable().optional(),
+  status: z.string().optional(),
 });
 
 /** PATCH: Update staff profile (name, email, phone, department, position). ADMIN/SUPER_ADMIN only for other users. */
@@ -96,6 +97,7 @@ export async function PATCH(
         ...(data.email != null && { email: data.email.trim().toLowerCase() }),
         ...(data.personalEmail !== undefined && { personalEmail: nextPersonal }),
         ...(data.phone !== undefined && { phone: data.phone }),
+        ...(data.status !== undefined && { status: data.status }),
       },
     });
   } catch (e) {
@@ -138,6 +140,7 @@ export async function PATCH(
       after: {
         name: data.name,
         email: data.email,
+        status: data.status,
         ...(data.personalEmail !== undefined && { personalEmail: nextPersonal }),
         phone: data.phone,
         department: data.department,
