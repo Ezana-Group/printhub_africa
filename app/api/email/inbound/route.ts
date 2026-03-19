@@ -27,6 +27,15 @@ function safeFileName(name: string) {
   return name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
 }
 
+function mailboxLabelFromAddress(address: string): string {
+  const localPart = address.split("@")[0] ?? address;
+  return localPart
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 type ResendWebhookData = {
   email_id?: string;
   subject?: string;
@@ -85,16 +94,47 @@ export async function POST(req: NextRequest) {
   }
 
   const toNormalized = to.map(normalizeAddress).filter((a) => a.endsWith(EMAIL_SUFFIX));
-  const mailbox = await prisma.emailAddress.findFirst({
+  if (toNormalized.length === 0) return NextResponse.json({ success: true }, { status: 200 });
+
+  // Only treat non-user addresses as business inboxes.
+  const internalUsers = await prisma.user.findMany({
     where: {
-      address: { in: toNormalized },
+      OR: [{ email: { in: toNormalized } }, { personalEmail: { in: toNormalized } }],
+    },
+    select: { email: true, personalEmail: true },
+  });
+  const userAddressSet = new Set<string>();
+  for (const u of internalUsers) {
+    if (u.email) userAddressSet.add(normalizeAddress(u.email));
+    if (u.personalEmail) userAddressSet.add(normalizeAddress(u.personalEmail));
+  }
+  const businessRecipients = toNormalized.filter((addr) => !userAddressSet.has(addr));
+  if (businessRecipients.length === 0) {
+    return NextResponse.json({ success: true }, { status: 200 });
+  }
+
+  let mailbox = await prisma.emailAddress.findFirst({
+    where: {
+      address: { in: businessRecipients },
       isActive: true,
     },
     select: { id: true, address: true, label: true, isActive: true },
   });
 
-  // If the mailbox doesn't exist, ignore silently.
-  if (!mailbox) return NextResponse.json({ success: true }, { status: 200 });
+  // If a business mailbox record does not exist yet, auto-create one so threads are visible in admin inbox.
+  if (!mailbox) {
+    const targetAddress = businessRecipients[0];
+    mailbox = await prisma.emailAddress.upsert({
+      where: { address: targetAddress },
+      update: { isActive: true },
+      data: {
+        address: targetAddress,
+        label: mailboxLabelFromAddress(targetAddress) || "Mailbox",
+        isActive: true,
+      },
+      select: { id: true, address: true, label: true, isActive: true },
+    });
+  }
 
   const customer = extractEmail(from);
   if (!customer.email) return NextResponse.json({ success: true }, { status: 200 });

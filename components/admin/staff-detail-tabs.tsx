@@ -94,13 +94,25 @@ const ACTIVITY_TYPE_LABELS: Record<string, string> = {
   DANGER: "Danger zone",
 };
 
-// Placeholder performance chart data
-const PLACEHOLDER_PERF_DATA = [
-  { week: "Week 1", orders: 12, quotes: 8 },
-  { week: "Week 2", orders: 18, quotes: 14 },
-  { week: "Week 3", orders: 15, quotes: 11 },
-  { week: "Week 4", orders: 22, quotes: 16 },
-];
+type StaffPerformanceChartRow = {
+  week: string;
+  orders: number;
+  quotes: number;
+};
+
+type StaffPerformanceResponse = {
+  summary: {
+    ordersProcessed: number;
+    quotesHandled: number;
+    avgResponseHours: number | null;
+    ticketsResponded: number;
+  };
+  chart: StaffPerformanceChartRow[];
+  range: {
+    from: string;
+    to: string;
+  };
+};
 
 export function StaffDetailTabs({
   user,
@@ -169,6 +181,8 @@ export function StaffDetailTabs({
   const [appliedActivityTo, setAppliedActivityTo] = useState("");
   const [appliedActivityType, setAppliedActivityType] = useState("");
   const [appliedActivityQuery, setAppliedActivityQuery] = useState("");
+  const [performanceData, setPerformanceData] = useState<StaffPerformanceResponse | null>(null);
+  const [performanceLoading, setPerformanceLoading] = useState(false);
 
   const fetchActivity = useCallback(async () => {
     setActivityLoading(true);
@@ -220,6 +234,31 @@ export function StaffDetailTabs({
     if (activeTab !== "activity") return;
     void fetchActivity();
   }, [activeTab, fetchActivity]);
+
+  useEffect(() => {
+    if (activeTab !== "performance") return;
+    let cancelled = false;
+    const run = async () => {
+      setPerformanceLoading(true);
+      try {
+        const res = await fetch(`/api/admin/staff/${user.id}/performance`);
+        const body = await res.json().catch(() => null);
+        if (!res.ok || !body?.summary || !Array.isArray(body?.chart)) {
+          if (!cancelled) setPerformanceData(null);
+          return;
+        }
+        if (!cancelled) setPerformanceData(body as StaffPerformanceResponse);
+      } catch {
+        if (!cancelled) setPerformanceData(null);
+      } finally {
+        if (!cancelled) setPerformanceLoading(false);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, user.id]);
 
   const applyActivityFilters = () => {
     setActivityPage(1);
@@ -763,29 +802,44 @@ export function StaffDetailTabs({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <p className="text-sm text-muted-foreground">
-              These metrics and the chart below are not connected to live data yet — they are UI placeholders until
-              reporting is implemented.
-            </p>
+            {performanceLoading ? (
+              <p className="text-sm text-muted-foreground">Loading performance metrics...</p>
+            ) : performanceData ? (
+              <p className="text-sm text-muted-foreground">
+                Showing live stats from the last 4 weeks.
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Performance data is unavailable right now.
+              </p>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="rounded-lg border border-[#E5E7EB] p-4">
                 <p className="text-xs uppercase tracking-wider text-[#6B7280]">Orders processed</p>
-                <p className="text-2xl font-bold text-[#111] mt-1">67</p>
+                <p className="text-2xl font-bold text-[#111] mt-1">
+                  {performanceData?.summary.ordersProcessed ?? 0}
+                </p>
               </div>
               <div className="rounded-lg border border-[#E5E7EB] p-4">
                 <p className="text-xs uppercase tracking-wider text-[#6B7280]">Quotes handled</p>
-                <p className="text-2xl font-bold text-[#111] mt-1">49</p>
+                <p className="text-2xl font-bold text-[#111] mt-1">
+                  {performanceData?.summary.quotesHandled ?? 0}
+                </p>
               </div>
               <div className="rounded-lg border border-[#E5E7EB] p-4">
                 <p className="text-xs uppercase tracking-wider text-[#6B7280]">Avg. response time</p>
-                <p className="text-2xl font-bold text-[#111] mt-1">2.4h</p>
+                <p className="text-2xl font-bold text-[#111] mt-1">
+                  {performanceData?.summary.avgResponseHours != null
+                    ? `${performanceData.summary.avgResponseHours.toFixed(1)}h`
+                    : "—"}
+                </p>
               </div>
             </div>
             <div>
               <p className="text-sm font-medium text-[#374151] mb-3">Activity (last 4 weeks)</p>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={PLACEHOLDER_PERF_DATA}>
+                  <BarChart data={performanceData?.chart ?? []}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                     <XAxis dataKey="week" tick={{ fontSize: 12 }} />
                     <YAxis tick={{ fontSize: 12 }} />
