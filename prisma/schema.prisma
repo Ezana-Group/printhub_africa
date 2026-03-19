@@ -80,6 +80,8 @@ model User {
   userNotificationPrefs UserNotificationPrefs?
   userPermissions     UserPermission[]
   performedByMovements ThreeDConsumableMovement[]
+  emailThreadsCreated EmailThread[] @relation("EmailThreadCreatedBy")
+  assignedEmailThreads EmailThread[] @relation("AssignedThreads")
 }
 
 model Address {
@@ -2405,3 +2407,86 @@ model JobApplication {
   @@index([status])
   @@index([email])
 }
+
+// ============== INTERNAL EMAIL SYSTEM ==============
+// Handles inbound/outbound messages forwarded from Cloudflare Email Routing → Resend inbound webhook.
+
+enum EmailDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum ThreadStatus {
+  OPEN
+  CLOSED
+  SPAM
+}
+
+model EmailAddress {
+  id        String   @id @default(cuid())
+  address   String   @unique // e.g. orders@printhub.africa
+  label     String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  threads EmailThread[]
+}
+
+model EmailThread {
+  id            String        @id @default(cuid())
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  createdById   String
+  createdBy     User          @relation("EmailThreadCreatedBy", fields: [createdById], references: [id])
+
+  isActive      Boolean       @default(true)
+  label         String        // display label (usually the mailbox label)
+  subject       String        // canonical subject (no "Re:" prefix)
+
+  customerName  String?
+  customerEmail String
+
+  mailbox       EmailAddress  @relation(fields: [mailboxId], references: [id])
+  mailboxId     String
+
+  assignedTo    User?         @relation("AssignedThreads", fields: [assignedToId], references: [id])
+  assignedToId  String?
+
+  hasUnread     Boolean       @default(true)
+  status        ThreadStatus  @default(OPEN)
+
+  emails        Email[]
+
+  @@index([mailboxId])
+  @@index([customerEmail])
+  @@index([status])
+  @@index([assignedToId])
+  @@index([updatedAt])
+}
+
+model Email {
+  id        String         @id @default(cuid())
+  sentAt    DateTime       @default(now())
+
+  thread    EmailThread    @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  threadId  String
+
+  isRead     Boolean       @default(false)
+  direction  EmailDirection
+
+  resendMessageId String?  @unique
+
+  bodyText   String?       @db.Text
+  bodyHtml   String        @db.Text
+  subject    String
+  cc         String?
+
+  toAddress    String
+  fromAddress  String
+
+  // Array of { name, r2Key, size, mimeType }
+  attachments Json          @default("[]")
+}
+

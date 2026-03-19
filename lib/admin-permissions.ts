@@ -81,6 +81,13 @@ export const PERMISSION_GROUPS = [
     ],
   },
   {
+    category: "Email",
+    permissions: [
+      { key: "email_view", label: "View email inbox/threads" },
+      { key: "email_manage", label: "Manage email threads/mailboxes" },
+    ],
+  },
+  {
     category: "Admin Areas",
     permissions: [
       { key: "reports_view", label: "View reports" },
@@ -123,6 +130,10 @@ const ROUTE_PREFIX_POLICIES: { prefix: string; permission: PermissionKey }[] = [
   { prefix: "/admin/careers", permission: "careers_view" },
   { prefix: "/admin/staff", permission: "staff_view" },
   { prefix: "/admin/settings", permission: "settings_view" },
+  { prefix: "/admin/email", permission: "email_view" },
+  { prefix: "/admin/email/thread", permission: "email_view" },
+  { prefix: "/admin/email/inbox", permission: "email_view" },
+  { prefix: "/admin/email/settings", permission: "email_manage" },
 ];
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];

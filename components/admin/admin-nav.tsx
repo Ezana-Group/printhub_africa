@@ -50,6 +50,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
       { href: "/admin/deliveries", label: "Deliveries", icon: Truck },
       { href: "/admin/support", label: "Support", icon: HelpCircle },
+      { href: "/admin/email/inbox", label: "Email", icon: Mail },
       { href: "/admin/products", label: "Products", icon: Package },
       { href: "/admin/reviews", label: "Reviews", icon: BarChart3 },
       { href: "/admin/categories", label: "Categories", icon: FolderTree },
