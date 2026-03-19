@@ -23,7 +23,7 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 
-export type StaffDetailTab = "profile" | "permissions" | "activity" | "performance";
+export type StaffDetailTab = "profile" | "permissions" | "activity" | "performance" | "actions";
 
 export interface StaffDetailUser {
   id: string;
@@ -55,6 +55,7 @@ const TABS: { id: StaffDetailTab; label: string }[] = [
   { id: "permissions", label: "Permissions" },
   { id: "activity", label: "Activity" },
   { id: "performance", label: "Performance" },
+  { id: "actions", label: "Actions" },
 ];
 
 type StaffActivityLogRow = {
@@ -852,6 +853,99 @@ export function StaffDetailTabs({
                     <Bar dataKey="quotes" fill="#00C896" name="Quotes" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {activeTab === "actions" && (
+        <Card className="mt-6 bg-white border-[#E5E7EB]">
+          <CardHeader>
+            <CardTitle className="text-[14px] font-semibold uppercase tracking-wider text-[#111]">
+              Administrative Actions
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Account Management */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-slate-900 border-b pb-2">Account Management</h3>
+
+                <div className="flex items-center justify-between p-4 rounded-lg border border-slate-200 bg-slate-50">
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold">Account Status</p>
+                    <p className="text-xs text-slate-500">Currently {user.status === "SUSPENDED" ? "Suspended" : "Active"}</p>
+                  </div>
+                  <Button
+                    variant={user.status === "SUSPENDED" ? "default" : "outline"}
+                    size="sm"
+                    className="ml-4"
+                    onClick={async () => {
+                      const nextStatus = user.status === "SUSPENDED" ? "ACTIVE" : "SUSPENDED";
+                      if (!confirm(`Are you sure you want to ${nextStatus === "SUSPENDED" ? "suspend" : "reactivate"} this account?`)) return;
+                      try {
+                        const res = await fetch(`/api/admin/staff/${user.id}`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ status: nextStatus }),
+                        });
+                        if (!res.ok) throw new Error("Failed to update status");
+                        router.refresh();
+                      } catch (e) {
+                        alert(e instanceof Error ? e.message : "Error updating status");
+                      }
+                    }}
+                  >
+                    {user.status === "SUSPENDED" ? "Reactivate Account" : "Suspend Account"}
+                  </Button>
+                </div>
+
+                <div className="flex items-center justify-between p-4 rounded-lg border border-red-100 bg-red-50">
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-red-900">Delete Account</p>
+                    <p className="text-xs text-red-700">Permanently remove this staff member and their access</p>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="ml-4"
+                    onClick={async () => {
+                      if (!confirm("Are you sure you want to PERMANENTLY delete this account? This will remove their staff profile and user account. This action cannot be undone.")) return;
+                      try {
+                        const res = await fetch(`/api/admin/staff/${user.id}`, { method: "DELETE" });
+                        if (!res.ok) {
+                          const data = await res.json().catch(() => ({}));
+                          throw new Error(data.error ?? "Failed to delete account");
+                        }
+                        router.push("/admin/staff");
+                        router.refresh();
+                      } catch (e) {
+                        alert(e instanceof Error ? e.message : "Error deleting account");
+                      }
+                    }}
+                  >
+                    Delete Account
+                  </Button>
+                </div>
+              </div>
+
+              {/* Data Export */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-slate-900 border-b pb-2">Data Export</h3>
+                <div className="p-4 rounded-lg border border-slate-200 bg-slate-50 space-y-3">
+                  <p className="text-xs text-slate-600">
+                    Download all work-related data for this staff member as a JSON file. This includes handled email threads, uploaded files metadata, and audit logs.
+                  </p>
+                  <Button
+                    className="w-full bg-[#E8440A] hover:bg-[#D63D09] text-white"
+                    onClick={() => {
+                      window.location.href = `/api/admin/staff/${user.id}/export`;
+                    }}
+                  >
+                    Download Work Data (.json)
+                  </Button>
+                </div>
               </div>
             </div>
           </CardContent>
