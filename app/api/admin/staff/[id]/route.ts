@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { Prisma } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { writeAudit } from "@/lib/audit";
 import { z } from "zod";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
@@ -23,6 +24,7 @@ export async function PATCH(
 ) {
   const session = await getServerSession(authOptions);
   const role = (session?.user as { role?: string })?.role;
+  const actorId = (session?.user as { id?: string } | undefined)?.id;
   if (!session?.user || !role || !ADMIN_ROLES.includes(role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -92,6 +94,23 @@ export async function PATCH(
         ...(data.position !== undefined && { position: data.position }),
       },
     });
+
+    await writeAudit({
+      userId: actorId,
+      action: "STAFF_PROFILE_UPDATED",
+      entity: "STAFF",
+      entityId: user.id,
+      after: {
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        department: data.department,
+        departmentId: data.departmentId,
+        position: data.position,
+      },
+      request: req,
+    });
+
     return NextResponse.json({ success: true });
   } catch (e) {
     console.error("Staff profile PATCH error (staff upsert):", e);
@@ -101,11 +120,12 @@ export async function PATCH(
 
 /** DELETE: Remove staff/admin user. SUPER_ADMIN only. */
 export async function DELETE(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   const role = (session?.user as { role?: string })?.role;
+  const actorId = (session?.user as { id?: string } | undefined)?.id;
   if (role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -125,6 +145,17 @@ export async function DELETE(
   }
 
   try {
+    await writeAudit({
+      userId: actorId,
+      action: "STAFF_DELETED",
+      entity: "STAFF",
+      entityId: user.id,
+      after: {
+        deletedEmail: user.email,
+        deletedRole: user.role,
+      },
+      request: req,
+    });
     await prisma.staff.deleteMany({ where: { userId: user.id } });
     await prisma.user.delete({ where: { id: user.id } });
     return NextResponse.json({ ok: true });

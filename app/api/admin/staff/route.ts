@@ -5,6 +5,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
+import { writeAudit } from "@/lib/audit";
 import { sendPasswordResetEmail } from "@/lib/email";
 import { generateToken, getResetPasswordExpiry } from "@/lib/tokens";
 
@@ -25,6 +26,7 @@ const schema = z.object({
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   const role = (session?.user as { role?: string })?.role;
+  const actorId = (session?.user as { id?: string } | undefined)?.id;
   if (!session?.user || !role || !ADMIN_ROLES.includes(role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -102,6 +104,22 @@ export async function POST(req: Request) {
       });
       await sendPasswordResetEmail(email, token);
     }
+
+    await writeAudit({
+      userId: actorId,
+      action: useInviteFlow ? "STAFF_INVITED" : "STAFF_CREATED",
+      entity: "STAFF",
+      entityId: user.id,
+      after: {
+        email: user.email,
+        role: user.role,
+        invite: useInviteFlow,
+        department: departmentName,
+        departmentId: departmentId ?? null,
+        position: position ?? null,
+      },
+      request: req,
+    });
 
     return NextResponse.json({
       message: useInviteFlow ? "Invite sent. They can set their password via the email link." : "Staff added successfully.",

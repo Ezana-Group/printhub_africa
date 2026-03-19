@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { writeAudit } from "@/lib/audit";
 import { sendPasswordResetEmail } from "@/lib/email";
 import { generateToken, getResetPasswordExpiry } from "@/lib/tokens";
 
@@ -9,11 +10,12 @@ const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
 /** POST: Send password reset email to this staff member. ADMIN/SUPER_ADMIN only. */
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   const role = (session?.user as { role?: string })?.role;
+  const actorId = (session?.user as { id?: string } | undefined)?.id;
   if (!session?.user || !role || !ADMIN_ROLES.includes(role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -46,6 +48,18 @@ export async function POST(
   });
 
   await sendPasswordResetEmail(user.email, token);
+
+  await writeAudit({
+    userId: actorId,
+    action: "STAFF_PASSWORD_RESET_SENT",
+    entity: "STAFF",
+    entityId: user.id,
+    after: {
+      email: user.email,
+      role: user.role,
+    },
+    request: req,
+  });
 
   return NextResponse.json({
     message: "Password reset email sent.",

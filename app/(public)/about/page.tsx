@@ -241,23 +241,23 @@ export default async function AboutPage() {
       </section>
 
       {/* SECTION 5 — TEAM (from admin-controlled staff) */}
-      <section id="team" className="bg-[#0A0A0A] py-20 md:py-28 px-4 md:px-6 lg:px-8">
-        <div className="container max-w-6xl mx-auto">
-          <p className="font-mono text-xs uppercase tracking-widest text-primary mb-4">
-            THE TEAM
-          </p>
-          <h2 className="font-display text-3xl md:text-[40px] font-bold text-white leading-tight mb-4">
-            The People Behind
-            <br />
-            the Prints.
-          </h2>
-          <p className="font-body text-base text-white/60 max-w-xl mb-12">
-            Our team of print technicians, designers, and customer service
-            specialists are dedicated to making your project a success.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-            {teamMembers.length > 0 ? (
-              teamMembers.map((member) => {
+      {teamMembers.length > 0 && (
+        <section id="team" className="bg-[#0A0A0A] py-20 md:py-28 px-4 md:px-6 lg:px-8">
+          <div className="container max-w-6xl mx-auto">
+            <p className="font-mono text-xs uppercase tracking-widest text-primary mb-4">
+              THE TEAM
+            </p>
+            <h2 className="font-display text-3xl md:text-[40px] font-bold text-white leading-tight mb-4">
+              The People Behind
+              <br />
+              the Prints.
+            </h2>
+            <p className="font-body text-base text-white/60 max-w-xl mb-12">
+              Our team of print technicians, designers, and customer service
+              specialists are dedicated to making your project a success.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+              {teamMembers.map((member) => {
                 const displayName = member.publicName ?? member.name ?? "Team Member";
                 const initials = displayName
                   .split(" ")
@@ -295,56 +295,52 @@ export default async function AboutPage() {
                     )}
                   </div>
                 );
-              })
-            ) : (
-              <div className="col-span-full text-center py-8 text-white/30 text-sm">
-                No team members configured to show yet. Admin can enable this in Settings → Users & Roles.
-              </div>
-            )}
+              })}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* SECTION 6 — LOCATION (map + CTA; contact details are in footer) */}
-      <section className="relative bg-primary py-20 md:py-28 px-4 md:px-6 lg:px-8 overflow-hidden">
-        <div className="absolute inset-0">
-          <Image src={siteImages.about_location_background} alt="" fill className="object-cover opacity-20" sizes="100vw" />
-        </div>
-        <div className="container max-w-6xl mx-auto relative z-10">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="font-display text-3xl md:text-[48px] font-bold text-black leading-tight mb-4">
-                Come See Us in {business.city || "Kenya"}.
-              </h2>
-              <p className="font-body text-lg text-black/70 mb-6">
-                We&apos;re based in {[business.city, business.country].filter(Boolean).join(", ") || "Kenya"}. Walk-ins welcome during business hours.
-              </p>
-              {[business.address1, business.address2, business.city].filter(Boolean).length > 0 && (
-                <p className="text-black/80 text-base mb-8 font-medium">
-                  {[business.address1, business.address2, business.city].filter(Boolean).join(", ")}
+      {business.googleMapsUrl && (
+        <section className="relative bg-primary py-20 md:py-28 px-4 md:px-6 lg:px-8 overflow-hidden">
+          <div className="absolute inset-0">
+            <Image src={siteImages.about_location_background} alt="" fill className="object-cover opacity-20" sizes="100vw" />
+          </div>
+          <div className="container max-w-6xl mx-auto relative z-10">
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              <div>
+                <h2 className="font-display text-3xl md:text-[48px] font-bold text-black leading-tight mb-4">
+                  Come See Us in {business.city || "Kenya"}.
+                </h2>
+                <p className="font-body text-lg text-black/70 mb-6">
+                  We&apos;re based in {[business.city, business.country].filter(Boolean).join(", ") || "Kenya"}. Walk-ins welcome during business hours.
                 </p>
-              )}
-              <div className="flex flex-wrap gap-3">
-                <Link
-                  href="/get-a-quote"
-                  className="inline-flex items-center gap-2 rounded-lg bg-black text-white px-5 py-3 font-medium hover:bg-black/90 transition-colors"
-                >
-                  Get a Quote
-                </Link>
-                {business.whatsapp && (
-                  <a
-                    href={whatsappHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                {[business.address1, business.address2, business.city].filter(Boolean).length > 0 && (
+                  <p className="text-black/80 text-base mb-8 font-medium">
+                    {[business.address1, business.address2, business.city].filter(Boolean).join(", ")}
+                  </p>
+                )}
+                <div className="flex flex-wrap gap-3">
+                  <Link
+                    href="/get-a-quote"
                     className="inline-flex items-center gap-2 rounded-lg bg-black text-white px-5 py-3 font-medium hover:bg-black/90 transition-colors"
                   >
-                    WhatsApp Us
-                  </a>
-                )}
+                    Get a Quote
+                  </Link>
+                  {business.whatsapp && (
+                    <a
+                      href={whatsappHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 rounded-lg bg-black text-white px-5 py-3 font-medium hover:bg-black/90 transition-colors"
+                    >
+                      WhatsApp Us
+                    </a>
+                  )}
+                </div>
               </div>
-            </div>
-            <div className="rounded-2xl overflow-hidden shadow-lg aspect-video bg-black/10">
-              {business.googleMapsUrl ? (
+              <div className="rounded-2xl overflow-hidden shadow-lg aspect-video bg-black/10">
                 <iframe
                   src={business.googleMapsUrl}
                   width="100%"
@@ -356,15 +352,11 @@ export default async function AboutPage() {
                   title="Location map"
                   className="w-full h-64 lg:h-80"
                 />
-              ) : (
-                <div className="w-full h-64 lg:h-80 flex items-center justify-center text-black/40 text-sm">
-                  Add a map URL (OpenStreetMap, Google Maps, etc.) in Admin → Settings → Business
-                </div>
-              )}
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   );
 }

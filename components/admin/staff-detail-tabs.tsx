@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { EditableSection } from "@/components/admin/editable-section";
 import { FileUploader } from "@/components/upload/FileUploader";
-import { formatRelativeTime, formatDateForDisplay } from "@/lib/admin-utils";
+import { formatDateForDisplay } from "@/lib/admin-utils";
 import { PERMISSION_GROUPS, PERMISSION_KEYS } from "@/lib/admin-permissions";
 import {
   BarChart,
@@ -52,14 +53,43 @@ const TABS: { id: StaffDetailTab; label: string }[] = [
   { id: "performance", label: "Performance" },
 ];
 
-// Placeholder activity log entries
-const PLACEHOLDER_ACTIVITY = [
-  { id: "1", action: "Updated order #1234", timestamp: new Date(Date.now() - 1000 * 60 * 15) },
-  { id: "2", action: "Added product \"Business Cards A4\"", timestamp: new Date(Date.now() - 1000 * 60 * 45) },
-  { id: "3", action: "Logged in", timestamp: new Date(Date.now() - 1000 * 60 * 120) },
-  { id: "4", action: "Processed quote #567", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2) },
-  { id: "5", action: "Updated inventory: Matte Paper", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5) },
-];
+type StaffActivityLogRow = {
+  id: string;
+  timestamp: string;
+  action: string;
+  entity: string;
+  entityId: string | null;
+  ipAddress: string | null;
+};
+
+type StaffActivityResponse = {
+  logs: StaffActivityLogRow[];
+  total: number;
+  page: number;
+  perPage: number;
+  totalPages: number;
+  availableTypes: string[];
+};
+
+const ACTIVITY_ACTION_LABELS: Record<string, string> = {
+  STAFF_CREATED: "Created staff account",
+  STAFF_INVITED: "Invited staff member",
+  STAFF_PROFILE_UPDATED: "Updated profile details",
+  STAFF_PERMISSIONS_UPDATED: "Updated permissions",
+  STAFF_PUBLIC_PROFILE_UPDATED: "Updated About page profile",
+  STAFF_PASSWORD_RESET_SENT: "Sent password reset email",
+  STAFF_DELETED: "Deleted staff account",
+};
+
+const ACTIVITY_TYPE_LABELS: Record<string, string> = {
+  STAFF: "Staff",
+  SETTINGS: "Settings",
+  ORDERS: "Orders",
+  PRODUCTS: "Products",
+  CATALOGUE: "Catalogue",
+  USERS: "Users",
+  DANGER: "Danger zone",
+};
 
 // Placeholder performance chart data
 const PLACEHOLDER_PERF_DATA = [
@@ -122,6 +152,106 @@ export function StaffDetailTabs({
   const setPermission = useCallback((key: string, value: boolean) => {
     setPermissions((prev) => ({ ...prev, [key]: value }));
   }, []);
+
+  const [activityData, setActivityData] = useState<StaffActivityResponse | null>(null);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityPage, setActivityPage] = useState(1);
+  const [activityFrom, setActivityFrom] = useState("");
+  const [activityTo, setActivityTo] = useState("");
+  const [activityType, setActivityType] = useState("");
+  const [activityQuery, setActivityQuery] = useState("");
+  const [appliedActivityFrom, setAppliedActivityFrom] = useState("");
+  const [appliedActivityTo, setAppliedActivityTo] = useState("");
+  const [appliedActivityType, setAppliedActivityType] = useState("");
+  const [appliedActivityQuery, setAppliedActivityQuery] = useState("");
+
+  const fetchActivity = useCallback(async () => {
+    setActivityLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("page", String(activityPage));
+      params.set("perPage", "20");
+      if (appliedActivityFrom) params.set("from", appliedActivityFrom);
+      if (appliedActivityTo) params.set("to", appliedActivityTo);
+      if (appliedActivityType) params.set("type", appliedActivityType);
+      if (appliedActivityQuery.trim()) params.set("q", appliedActivityQuery.trim());
+
+      const res = await fetch(`/api/admin/staff/${user.id}/activity?${params.toString()}`);
+      const body = await res.json().catch(() => null);
+      if (!res.ok || !body || !Array.isArray(body.logs)) {
+        setActivityData({
+          logs: [],
+          total: 0,
+          page: 1,
+          perPage: 20,
+          totalPages: 1,
+          availableTypes: [],
+        });
+        return;
+      }
+      setActivityData(body as StaffActivityResponse);
+    } catch {
+      setActivityData({
+        logs: [],
+        total: 0,
+        page: 1,
+        perPage: 20,
+        totalPages: 1,
+        availableTypes: [],
+      });
+    } finally {
+      setActivityLoading(false);
+    }
+  }, [
+    activityPage,
+    appliedActivityFrom,
+    appliedActivityTo,
+    appliedActivityType,
+    appliedActivityQuery,
+    user.id,
+  ]);
+
+  useEffect(() => {
+    if (activeTab !== "activity") return;
+    void fetchActivity();
+  }, [activeTab, fetchActivity]);
+
+  const applyActivityFilters = () => {
+    setActivityPage(1);
+    setAppliedActivityFrom(activityFrom);
+    setAppliedActivityTo(activityTo);
+    setAppliedActivityType(activityType);
+    setAppliedActivityQuery(activityQuery);
+  };
+
+  const resetActivityFilters = () => {
+    setActivityFrom("");
+    setActivityTo("");
+    setActivityType("");
+    setActivityQuery("");
+    setActivityPage(1);
+    setAppliedActivityFrom("");
+    setAppliedActivityTo("");
+    setAppliedActivityType("");
+    setAppliedActivityQuery("");
+  };
+
+  const formatActivityTimestamp = (timestamp: string) => {
+    try {
+      return new Date(timestamp).toLocaleString("en-GB", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
+    } catch {
+      return timestamp;
+    }
+  };
+
+  const getActivityActionLabel = (action: string) =>
+    ACTIVITY_ACTION_LABELS[action] ?? action.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
+
+  const getActivityTypeLabel = (type: string) =>
+    ACTIVITY_TYPE_LABELS[type] ?? type.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
 
   return (
     <>
@@ -481,20 +611,108 @@ export function StaffDetailTabs({
         <Card className="mt-6 bg-white border-[#E5E7EB]">
           <CardHeader>
             <CardTitle className="text-[14px] font-semibold uppercase tracking-wider text-[#111]">
-              Recent activity
+              Activity log
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <ul className="space-y-0 divide-y divide-[#E5E7EB]">
-              {PLACEHOLDER_ACTIVITY.map((item) => (
-                <li key={item.id} className="py-3 first:pt-0 flex justify-between items-start gap-4">
-                  <span className="text-sm text-[#111]">{item.action}</span>
-                  <span className="text-xs text-[#6B7280] shrink-0">
-                    {formatRelativeTime(item.timestamp)}
-                  </span>
-                </li>
-              ))}
-            </ul>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                type="date"
+                className="h-10 w-[160px]"
+                value={activityFrom}
+                onChange={(e) => setActivityFrom(e.target.value)}
+              />
+              <Input
+                type="date"
+                className="h-10 w-[160px]"
+                value={activityTo}
+                onChange={(e) => setActivityTo(e.target.value)}
+              />
+              <select
+                value={activityType}
+                onChange={(e) => setActivityType(e.target.value)}
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="">All activity types</option>
+                {(activityData?.availableTypes ?? []).map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+              <Input
+                type="search"
+                placeholder="Search action or target"
+                className="h-10 w-56"
+                value={activityQuery}
+                onChange={(e) => setActivityQuery(e.target.value)}
+              />
+              <Button type="button" variant="outline" size="sm" onClick={applyActivityFilters}>
+                Apply
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={resetActivityFilters}>
+                Reset
+              </Button>
+            </div>
+
+            {activityLoading ? (
+              <p className="text-sm text-muted-foreground py-8">Loading activity...</p>
+            ) : !activityData?.logs?.length ? (
+              <p className="text-sm text-muted-foreground py-8">No activity found for the selected filters.</p>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-[#E5E7EB]">
+                        <th className="text-left py-2 font-medium text-muted-foreground">Date & time</th>
+                        <th className="text-left py-2 font-medium text-muted-foreground">Type</th>
+                        <th className="text-left py-2 font-medium text-muted-foreground">Activity</th>
+                        <th className="text-left py-2 font-medium text-muted-foreground">Target</th>
+                        <th className="text-left py-2 font-medium text-muted-foreground">IP</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {activityData.logs.map((row) => (
+                        <tr key={row.id} className="border-b border-[#E5E7EB]">
+                          <td className="py-3 whitespace-nowrap">{formatActivityTimestamp(row.timestamp)}</td>
+                          <td className="py-3 text-xs text-muted-foreground">{getActivityTypeLabel(row.entity)}</td>
+                          <td className="py-3">{getActivityActionLabel(row.action)}</td>
+                          <td className="py-3">{row.entityId ?? "—"}</td>
+                          <td className="py-3 text-muted-foreground">{row.ipAddress ?? "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {activityData.totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={activityPage <= 1}
+                      onClick={() => setActivityPage((p) => Math.max(1, p - 1))}
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      Page {activityData.page} of {activityData.totalPages} ({activityData.total} total)
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={activityPage >= activityData.totalPages}
+                      onClick={() => setActivityPage((p) => p + 1)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
           </CardContent>
         </Card>
       )}

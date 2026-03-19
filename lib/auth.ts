@@ -6,6 +6,7 @@ import FacebookProvider from "next-auth/providers/facebook";
 import AppleProvider from "next-auth/providers/apple";
 import EmailProvider from "next-auth/providers/email";
 import { prisma } from "@/lib/prisma";
+import { writeAudit } from "@/lib/audit";
 import bcrypt from "bcryptjs";
 import { verifySync } from "otplib";
 import { sendEmail } from "@/lib/email";
@@ -281,6 +282,63 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
+    async signIn({ user, account }) {
+      const email = user.email?.trim().toLowerCase();
+      if (!email) return false;
+
+      const dbUser = await prisma.user.findUnique({
+        where: { email },
+        select: { id: true, role: true, status: true },
+      });
+
+      // Do not allow inactive/invite-pending accounts to sign in via OAuth/email.
+      if (dbUser && (dbUser.status === "DEACTIVATED" || dbUser.status === "INVITE_PENDING")) {
+        return false;
+      }
+
+      const isSocialOAuth =
+        account?.type === "oauth" &&
+        (account.provider === "google" ||
+          account.provider === "facebook" ||
+          account.provider === "apple");
+
+      // Security hardening: privileged accounts must not be auto-linked by email on social sign-in.
+      // Allow only when this exact OAuth account is already linked to the same user.
+      if (
+        isSocialOAuth &&
+        dbUser &&
+        (dbUser.role === "STAFF" || dbUser.role === "ADMIN" || dbUser.role === "SUPER_ADMIN")
+      ) {
+        const linked = await prisma.account.findUnique({
+          where: {
+            provider_providerAccountId: {
+              provider: account.provider,
+              providerAccountId: account.providerAccountId,
+            },
+          },
+          select: { userId: true },
+        });
+
+        if (!linked || linked.userId !== dbUser.id) {
+          await writeAudit({
+            userId: dbUser.id,
+            action: "SOCIAL_SIGNIN_BLOCKED_FOR_PRIVILEGED_ACCOUNT",
+            entity: "AUTH",
+            entityId: dbUser.id,
+            after: {
+              reason: "UNLINKED_SOCIAL_PROVIDER_FOR_PRIVILEGED_ACCOUNT",
+              provider: account.provider,
+              providerAccountId: account.providerAccountId,
+              email,
+              role: dbUser.role,
+            },
+          });
+          return "/login?error=SocialAdminDisabled";
+        }
+      }
+
+      return true;
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;

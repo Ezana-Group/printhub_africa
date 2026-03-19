@@ -3,6 +3,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { writeAudit } from "@/lib/audit";
 import { z } from "zod";
 
 const ALLOWED_ROLES = ["ADMIN", "STAFF", "SUPER_ADMIN"];
@@ -23,6 +24,7 @@ export async function PATCH(
 ) {
   const session = await getServerSession(authOptions);
   const role = (session?.user as { role?: string })?.role;
+  const actorId = (session?.user as { id?: string } | undefined)?.id;
   if (!session?.user || !role || !ALLOWED_ROLES.includes(role)) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
   }
@@ -76,6 +78,22 @@ export async function PATCH(
       profilePhotoUrl: data.profilePhotoUrl ?? null,
       aboutPageOrder: data.aboutPageOrder ?? 0,
     },
+  });
+
+  await writeAudit({
+    userId: actorId,
+    action: "STAFF_PUBLIC_PROFILE_UPDATED",
+    entity: "STAFF",
+    entityId: userId,
+    after: {
+      showOnAboutPage: data.showOnAboutPage,
+      publicName: data.publicName,
+      publicRole: data.publicRole,
+      publicBio: data.publicBio,
+      profilePhotoUrl: data.profilePhotoUrl,
+      aboutPageOrder: data.aboutPageOrder,
+    },
+    request: req,
   });
 
   revalidatePath("/about");

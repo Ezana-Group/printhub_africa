@@ -44,6 +44,8 @@ function LoginMessages({
       ? "Invalid email or password."
       : errorParam === "AccessDenied"
         ? "Social sign-in was cancelled or permission was denied."
+        : errorParam === "SocialAdminDisabled"
+          ? "For security, admin/staff accounts cannot sign in with a new social account. Use email/password."
         : errorParam === "OAuthSignin" ||
             errorParam === "OAuthCallback" ||
             errorParam === "OAuthCreateAccount" ||
