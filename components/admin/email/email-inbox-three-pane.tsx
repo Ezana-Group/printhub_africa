@@ -216,8 +216,7 @@ export function EmailInboxThreePane({
       try {
         const params = new URLSearchParams();
         if (mailboxId) params.set("mailboxId", mailboxId);
-        if (activeFolder === "inbox") params.set("status", "OPEN");
-        else if (activeFolder === "trash") params.set("status", "SPAM");
+        params.set("folder", activeFolder);
         params.set("limit", "50");
 
         const res = await fetch(`/api/admin/email/threads?${params.toString()}`);
@@ -627,6 +626,12 @@ export function EmailInboxThreePane({
           {loadingThreads ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : activeFolder === "drafts" ? (
+            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+              <FileText className="h-8 w-8 text-muted-foreground/40 mb-2" />
+              <p className="text-sm text-muted-foreground">No drafts yet</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">Drafting is not yet implemented</p>
             </div>
           ) : filteredThreads.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-4 text-center">

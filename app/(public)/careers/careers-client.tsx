@@ -47,7 +47,7 @@ export function CareersClient({ initialJobs }: { initialJobs: Job[] }) {
           We&apos;re always interested in talented people. Send us your CV.
         </p>
         <Link
-          href="/get-a-quote"
+          href="/careers/speculative-application"
           className="inline-flex items-center gap-2 mt-6 text-primary font-medium hover:underline"
         >
           Send Speculative Application →

@@ -51,7 +51,8 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const qp = url.searchParams;
 
-  const status = qp.get("status");
+  const folder = qp.get("folder") ?? "inbox";
+  const statusParam = qp.get("status");
   const mailboxId = qp.get("mailboxId") ?? undefined;
   const assignedToId = qp.get("assignedToId") ?? undefined;
   const page = Math.max(1, Number(qp.get("page") ?? "1"));
@@ -59,14 +60,17 @@ export async function GET(req: NextRequest) {
   const skip = (page - 1) * limit;
 
   const where: Prisma.EmailThreadWhereInput = {};
-  if (status) {
-    const parsed = statusSchema.safeParse(status);
-    if (!parsed.success) {
-      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
-    }
-    where.status = parsed.data;
-  } else {
+
+  if (folder === "sent") {
+    where.emails = {
+      some: { direction: "OUTBOUND" }
+    };
     where.status = "OPEN";
+  } else if (folder === "trash") {
+    where.status = "SPAM";
+  } else {
+    // inbox
+    where.status = (statusParam as any) ?? "OPEN";
   }
   if (mailboxId) where.mailboxId = mailboxId;
   if (assignedToId) where.assignedToId = assignedToId;

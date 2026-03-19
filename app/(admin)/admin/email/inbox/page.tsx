@@ -78,7 +78,13 @@ export default async function AdminEmailInboxPage() {
 
   /* Filter out personal staff email addresses — only show shared/company mailboxes */
   const staffEmailSet = new Set(staffUsers.map((u) => u.email?.toLowerCase()).filter(Boolean));
-  const sharedMailboxes = allMailboxes.filter((m) => !staffEmailSet.has(m.address.toLowerCase()));
+  const currentUserEmail = session?.user?.email?.toLowerCase();
+  
+  const sharedMailboxes = allMailboxes.filter((m) => {
+    const addr = m.address.toLowerCase();
+    if (addr === currentUserEmail) return true; // Always show current user's mailbox
+    return !staffEmailSet.has(addr); // Filter out other staff personal mailboxes
+  });
 
   /* Compute per-mailbox unread counts */
   const unreadByMailbox = await prisma.emailThread.groupBy({

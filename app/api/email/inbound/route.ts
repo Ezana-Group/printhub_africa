@@ -89,12 +89,20 @@ export async function POST(req: NextRequest) {
   const to = data?.to ?? [];
   const messageId = data?.message_id ?? null;
 
-  if (!emailId || !from || !to.length) {
+  if (!from || !to.length) {
     return NextResponse.json({ success: true }, { status: 200 });
   }
 
-  const toNormalized = to.map(normalizeAddress).filter((a) => a.endsWith(EMAIL_SUFFIX));
-  if (toNormalized.length === 0) return NextResponse.json({ success: true }, { status: 200 });
+  console.log(`[InboundEmail] ID: ${emailId}, From: ${from}, To: ${to.join(", ")}`);
+
+  const toNormalized = to
+    .map((addr) => extractEmail(addr).email)
+    .filter((a): a is string => !!a && a.endsWith(EMAIL_SUFFIX));
+  
+  if (toNormalized.length === 0) {
+    console.log(`[InboundEmail] Ignored: No recipients matching ${EMAIL_SUFFIX}`);
+    return NextResponse.json({ success: true }, { status: 200 });
+  }
 
   // Only treat non-user addresses as business inboxes.
   const internalUsers = await prisma.user.findMany({
@@ -142,7 +150,7 @@ export async function POST(req: NextRequest) {
   // Ignore emails sent by internal staff (so business inboxes only show customer/business messages).
   const internalSender = await prisma.user.findFirst({
     where: {
-      OR: [{ email: customer.email }, { personalEmail: customer.email }],
+      OR: [{ email: customer.email! }, { personalEmail: customer.email! }],
     },
     select: { id: true },
   });
@@ -188,6 +196,11 @@ export async function POST(req: NextRequest) {
           status: "OPEN",
         },
       });
+
+  if (!emailId) {
+    console.log("[InboundEmail] Ignored: Missing emailId in webhook data");
+    return NextResponse.json({ success: true }, { status: 200 });
+  }
 
   // 2) Retrieve full email content from Resend.
   const received = await resend.emails.receiving.get(emailId);
