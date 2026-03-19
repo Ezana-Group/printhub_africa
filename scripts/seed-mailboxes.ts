@@ -6,9 +6,23 @@
  * must be configured separately via the admin UI or Cloudflare dashboard.
  */
 
-import { PrismaClient } from "@prisma/client";
+import path from "node:path";
+import { config } from "dotenv";
 
-const prisma = new PrismaClient();
+// Load env from project root (same approach as prisma/seed.ts)
+const root = path.resolve(__dirname, "..");
+config({ path: path.join(root, ".env.local") });
+config({ path: path.join(root, ".env") });
+
+import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  throw new Error("DATABASE_URL is not set. Add it to .env or .env.local.");
+}
+const adapter = new PrismaPg({ connectionString });
+const prisma = new PrismaClient({ adapter, log: ["error", "warn"] });
 
 const DEFAULT_MAILBOXES = [
   { address: "admin@printhub.africa", label: "Admin" },
@@ -16,6 +30,7 @@ const DEFAULT_MAILBOXES = [
   { address: "support@printhub.africa", label: "Support" },
   { address: "careers@printhub.africa", label: "Careers" },
   { address: "dpo@printhub.africa", label: "Data Protection" },
+  { address: "welcome@printhub.africa", label: "Welcome" },
 ];
 
 async function main() {
