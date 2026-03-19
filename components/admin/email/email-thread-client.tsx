@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/admin/email/rich-text-editor";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import {
@@ -461,18 +461,12 @@ export function EmailThreadClient({
             <h3 className="font-semibold text-lg">Reply</h3>
             <div className="grid grid-cols-1 md:grid-cols-[1fr_220px] gap-3">
               <div className="space-y-2">
-                <Label htmlFor="bodyHtml">Message (HTML)</Label>
-                <Textarea
-                  id="bodyHtml"
+                <Label>Message</Label>
+                <RichTextEditor
                   value={bodyHtml}
-                  onChange={(e) => setBodyHtml(e.target.value)}
-                  rows={6}
-                  className="prose prose-sm max-w-none font-mono resize-y"
-                  placeholder={`<p>Hi,</p><p>Thanks for reaching out.</p>`}
+                  onChange={setBodyHtml}
+                  placeholder="Write your reply…"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Tip: You can paste HTML. The preview is rendered in the conversation above.
-                </p>
               </div>
 
               <div className="space-y-2">

@@ -100,6 +100,12 @@ export default async function AdminEmailInboxPage({
     };
   });
 
-  return <EmailInboxClient threads={serializedThreads} mailboxes={mailboxes} />;
+  return (
+    <EmailInboxClient
+      threads={serializedThreads}
+      mailboxes={mailboxes}
+      currentUserEmail={session?.user?.email ?? undefined}
+    />
+  );
 }
 

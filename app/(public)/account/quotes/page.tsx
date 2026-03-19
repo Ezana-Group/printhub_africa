@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import type { QuoteStatus } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { QuotesList } from './QuotesList'
@@ -51,12 +52,12 @@ export default async function QuotesPage({
             Track and manage your quote requests
           </p>
         </div>
-        <a
+        <Link
           href="/get-a-quote"
           className="bg-[#FF4D00] hover:bg-[#e64400] text-white px-4 py-2 rounded-lg text-sm font-medium transition"
         >
           + New Quote
-        </a>
+        </Link>
       </div>
 
       <Suspense fallback={<div className="animate-pulse rounded-xl h-12 bg-gray-100" />}>

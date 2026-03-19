@@ -9,11 +9,16 @@ import { Resend } from "resend";
 const ADMIN_ROLES = ["STAFF", "ADMIN", "SUPER_ADMIN"];
 
 const replySchema = z.object({
-  threadId: z.string().min(1),
+  threadId: z.string().min(1).optional(),
+  to: z.string().email().optional(),
+  subject: z.string().min(1).optional(),
   bodyHtml: z.string().min(1),
   cc: z.string().optional().nullable(),
   fromAddressId: z.string().optional().nullable(),
-});
+}).refine(
+  (d) => d.threadId || (d.to && d.subject),
+  { message: "Either threadId or both to and subject are required" }
+);
 
 function stripHtml(html: string): string {
   return html
@@ -54,20 +59,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Resend is not configured (missing RESEND_API_KEY)" }, { status: 503 });
   }
 
-  const { threadId, bodyHtml, cc, fromAddressId } = parsed.data;
+  const { threadId, to: toAddress, subject: inputSubject, bodyHtml, cc, fromAddressId } = parsed.data;
 
-  const thread = await prisma.emailThread.findUnique({
-    where: { id: threadId },
-    include: {
-      mailbox: { select: { id: true, address: true, label: true } },
-    },
-  });
+  let thread = threadId
+    ? await prisma.emailThread.findUnique({
+        where: { id: threadId },
+        include: {
+          mailbox: { select: { id: true, address: true, label: true } },
+        },
+      })
+    : null;
 
-  if (!thread) return NextResponse.json({ error: "Thread not found" }, { status: 404 });
+  if (threadId && !thread) return NextResponse.json({ error: "Thread not found" }, { status: 404 });
 
   const hasEmailManage = (permissions ?? []).includes("email_manage");
   const isFullAccess = role === "ADMIN" || role === "SUPER_ADMIN" || hasEmailManage;
-  if (!isFullAccess) {
+  if (!isFullAccess && thread) {
     const canSee =
       thread.assignedToId === currentUserId ||
       (await prisma.emailMailboxViewer.findFirst({
@@ -81,17 +88,72 @@ export async function POST(req: NextRequest) {
   }
 
   const fromMailbox =
-    fromAddressId && fromAddressId !== thread.mailbox.id
+    fromAddressId && fromAddressId !== (thread?.mailbox?.id ?? "")
       ? await prisma.emailAddress.findUnique({
           where: { id: fromAddressId },
           select: { id: true, address: true, label: true, isActive: true },
         })
-      : thread.mailbox;
+      : thread?.mailbox ?? null;
 
-  if (!fromMailbox) return NextResponse.json({ error: "From mailbox not found" }, { status: 404 });
-  if (fromMailbox && "isActive" in fromMailbox && fromMailbox.isActive === false) {
-    return NextResponse.json({ error: "From mailbox is inactive" }, { status: 400 });
+  if (!fromMailbox) {
+    // For standalone compose, try the specified fromAddressId directly
+    if (fromAddressId) {
+      const mb = await prisma.emailAddress.findUnique({
+        where: { id: fromAddressId },
+        select: { id: true, address: true, label: true, isActive: true },
+      });
+      if (!mb) return NextResponse.json({ error: "From mailbox not found" }, { status: 404 });
+      if (!mb.isActive) return NextResponse.json({ error: "From mailbox is inactive" }, { status: 400 });
+      // Use mb as the mailbox for creating the new thread
+      if (!thread && toAddress && inputSubject) {
+        thread = await prisma.emailThread.create({
+          data: {
+            createdById: currentUserId,
+            isActive: true,
+            label: mb.label,
+            subject: inputSubject.replace(/^(re|fwd|fw)\s*:\s*/gi, "").trim(),
+            customerName: null,
+            customerEmail: toAddress.toLowerCase(),
+            mailboxId: mb.id,
+            assignedToId: null,
+            hasUnread: false,
+            status: "OPEN",
+          },
+          include: { mailbox: { select: { id: true, address: true, label: true } } },
+        });
+      } else {
+        return NextResponse.json({ error: "From mailbox not found" }, { status: 404 });
+      }
+    } else {
+      return NextResponse.json({ error: "From mailbox not found" }, { status: 404 });
+    }
+  } else {
+    if ("isActive" in fromMailbox && fromMailbox.isActive === false) {
+      return NextResponse.json({ error: "From mailbox is inactive" }, { status: 400 });
+    }
+    // Create new thread for standalone compose
+    if (!thread && toAddress && inputSubject) {
+      thread = await prisma.emailThread.create({
+        data: {
+          createdById: currentUserId,
+          isActive: true,
+          label: fromMailbox.label,
+          subject: inputSubject.replace(/^(re|fwd|fw)\s*:\s*/gi, "").trim(),
+          customerName: null,
+          customerEmail: toAddress.toLowerCase(),
+          mailboxId: fromMailbox.id,
+          assignedToId: null,
+          hasUnread: false,
+          status: "OPEN",
+        },
+        include: { mailbox: { select: { id: true, address: true, label: true } } },
+      });
+    }
   }
+
+  if (!thread) return NextResponse.json({ error: "Could not resolve thread" }, { status: 400 });
+
+  const resolvedMailbox = fromMailbox && "isActive" in fromMailbox ? fromMailbox : thread.mailbox;
 
   const to = thread.customerEmail;
   const subject = `Re: ${thread.subject}`;
@@ -110,7 +172,7 @@ export async function POST(req: NextRequest) {
     text?: string;
     cc?: string[] | string;
   } = {
-    from: `${fromMailbox.label} <${fromMailbox.address}>`,
+    from: `${resolvedMailbox.label} <${resolvedMailbox.address}>`,
     to: [to],
     subject,
     html: bodyHtml,
@@ -140,13 +202,13 @@ export async function POST(req: NextRequest) {
 
   const replyEmail = await prisma.$transaction(async (tx) => {
     await tx.email.updateMany({
-      where: { threadId, direction: "INBOUND", isRead: false },
+      where: { threadId: thread.id, direction: "INBOUND", isRead: false },
       data: { isRead: true },
     });
 
     const created = await tx.email.create({
       data: {
-        threadId,
+        threadId: thread.id,
         direction: "OUTBOUND",
         isRead: true,
         resendMessageId,
@@ -155,19 +217,19 @@ export async function POST(req: NextRequest) {
         subject,
         cc: ccList.length ? ccList.join(",") : null,
         toAddress: to,
-        fromAddress: fromMailbox.address,
+        fromAddress: resolvedMailbox.address,
         attachments: [],
       },
     });
 
     await tx.emailThread.update({
-      where: { id: threadId },
+      where: { id: thread.id },
       data: { hasUnread: false },
     });
 
     return created;
   });
 
-  return NextResponse.json({ success: true, emailId: replyEmail.id });
+  return NextResponse.json({ success: true, emailId: replyEmail.id, threadId: thread.id });
 }
 

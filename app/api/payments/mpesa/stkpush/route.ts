@@ -20,7 +20,11 @@ export async function POST(req: Request) {
   if (!(await rateLimit(`stkpush:${ip}`, STKPUSH_LIMIT, STKPUSH_WINDOW_MS)).ok) {
     return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   }
-  await getServerSession(authOptions);
+  const session = await getServerSession(authOptions);
+  const userId = (session?.user as { id?: string })?.id;
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const parsed = schema.safeParse(await req.json());
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
@@ -32,6 +36,9 @@ export async function POST(req: Request) {
     include: { payments: true },
   });
   if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
+  if (order.userId && order.userId !== userId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   if (order.status === "CONFIRMED" || order.status === "DELIVERED") {
     return NextResponse.json({ error: "Order already paid" }, { status: 400 });
   }

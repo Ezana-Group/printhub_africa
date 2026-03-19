@@ -13,7 +13,7 @@ import { sendEmail } from "@/lib/email";
 import { isPrivilegedStaffRole, isStaffWorkEmail } from "@/lib/staff-email";
 
 /** Cache staff permissions by userId with 5 min TTL to avoid DB hit on every request. */
-const STAFF_PERMISSIONS_CACHE_TTL_MS = 5 * 60 * 1000;
+const CACHE_TTL_MS = 5 * 60 * 1000;
 const staffPermissionsCache = new Map<
   string,
   { permissions: string[]; expiresAt: number }
@@ -28,8 +28,33 @@ function getCachedStaffPermissions(userId: string): string[] | undefined {
 function setCachedStaffPermissions(userId: string, permissions: string[]) {
   staffPermissionsCache.set(userId, {
     permissions,
-    expiresAt: Date.now() + STAFF_PERMISSIONS_CACHE_TTL_MS,
+    expiresAt: Date.now() + CACHE_TTL_MS,
   });
+}
+
+/** Cache corporate membership by userId with same TTL to avoid DB hit on every request. */
+interface CorporateCacheEntry {
+  isCorporate: boolean;
+  corporateId?: string;
+  corporateRole?: string;
+  corporateTier?: string;
+  expiresAt: number;
+}
+const corporateCache = new Map<string, CorporateCacheEntry>();
+
+function getCachedCorporate(userId: string): CorporateCacheEntry | undefined {
+  const entry = corporateCache.get(userId);
+  if (!entry || Date.now() > entry.expiresAt) return undefined;
+  return entry;
+}
+
+function setCachedCorporate(userId: string, data: Omit<CorporateCacheEntry, "expiresAt">) {
+  corporateCache.set(userId, { ...data, expiresAt: Date.now() + CACHE_TTL_MS });
+}
+
+/** Call when corporate membership changes so cache is invalidated. */
+export function invalidateCorporateCache(userId: string) {
+  corporateCache.delete(userId);
 }
 
 /** Call when admin updates staff permissions so cache is invalidated. */
@@ -370,23 +395,38 @@ export const authOptions: NextAuthOptions = {
         const role = (user as { role?: string }).role ?? "CUSTOMER";
         token.role = role;
       }
-      // Corporate: add corporate membership to token for approved accounts
+      // Corporate: add corporate membership to token for approved accounts (cached, 5 min TTL)
       const userId = token.id as string;
       if (userId) {
-        const membership = await prisma.corporateTeamMember.findFirst({
-          where: { userId, isActive: true },
-          include: { corporate: { select: { id: true, status: true, tier: true } } },
-        });
-        if (membership?.corporate?.status === "APPROVED") {
-          token.isCorporate = true;
-          token.corporateId = membership.corporateId;
-          token.corporateRole = membership.role;
-          token.corporateTier = membership.corporate.tier;
+        const cached = getCachedCorporate(userId);
+        if (cached) {
+          token.isCorporate = cached.isCorporate;
+          token.corporateId = cached.corporateId;
+          token.corporateRole = cached.corporateRole;
+          token.corporateTier = cached.corporateTier;
         } else {
-          token.isCorporate = false;
-          token.corporateId = undefined;
-          token.corporateRole = undefined;
-          token.corporateTier = undefined;
+          const membership = await prisma.corporateTeamMember.findFirst({
+            where: { userId, isActive: true },
+            include: { corporate: { select: { id: true, status: true, tier: true } } },
+          });
+          if (membership?.corporate?.status === "APPROVED") {
+            token.isCorporate = true;
+            token.corporateId = membership.corporateId;
+            token.corporateRole = membership.role;
+            token.corporateTier = membership.corporate.tier;
+            setCachedCorporate(userId, {
+              isCorporate: true,
+              corporateId: membership.corporateId,
+              corporateRole: membership.role,
+              corporateTier: membership.corporate.tier,
+            });
+          } else {
+            token.isCorporate = false;
+            token.corporateId = undefined;
+            token.corporateRole = undefined;
+            token.corporateTier = undefined;
+            setCachedCorporate(userId, { isCorporate: false });
+          }
         }
       }
       // STAFF: use cached permissions (5 min TTL) to avoid DB on every request; invalidate via invalidateStaffPermissionsCache when admin changes permissions

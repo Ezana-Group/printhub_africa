@@ -296,12 +296,12 @@ export function QuotesList({
           <p className="mx-auto mb-6 max-w-sm text-gray-400">
             {EMPTY_STATES[activeTab]?.subtitle ?? 'Try another tab or submit a new quote.'}
           </p>
-          <a
+          <Link
             href="/get-a-quote"
             className="inline-block rounded-xl bg-[#FF4D00] px-6 py-3 font-medium text-white transition hover:bg-[#e64400]"
           >
             {activeTab === 'all' ? 'Get your first quote →' : 'New quote request'}
-          </a>
+          </Link>
         </div>
       ) : (
         <>
@@ -627,12 +627,12 @@ export function QuotesList({
                 )}
 
                 {['rejected', 'cancelled'].includes(quote.status) && (
-                  <a
+                  <Link
                     href="/get-a-quote"
                     className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 py-2.5 text-sm font-medium transition hover:bg-gray-50"
                   >
                     Submit a new request →
-                  </a>
+                  </Link>
                 )}
               </div>
             )}

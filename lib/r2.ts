@@ -24,9 +24,15 @@ const R2_UPLOADS_BUCKET = process.env.R2_UPLOADS_BUCKET ?? "printhub-uploads";
 const R2_PUBLIC_BUCKET = process.env.R2_PUBLIC_BUCKET ?? "printhub-public";
 const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL;
 
+let _client: S3Client | null | undefined;
+
 function getClient(): S3Client | null {
-  if (!R2_ENDPOINT || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) return null;
-  return new S3Client({
+  if (_client !== undefined) return _client;
+  if (!R2_ENDPOINT || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
+    _client = null;
+    return null;
+  }
+  _client = new S3Client({
     region: "auto",
     endpoint: R2_ENDPOINT,
     credentials: {
@@ -34,6 +40,7 @@ function getClient(): S3Client | null {
       secretAccessKey: R2_SECRET_ACCESS_KEY,
     },
   });
+  return _client;
 }
 
 export const PRIVATE_BUCKET = R2_UPLOADS_BUCKET;

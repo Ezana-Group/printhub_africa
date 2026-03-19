@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { sendQuoteCancelledByAdminEmail } from "@/lib/email";
 
 const REASONS = [
   "out_of_stock",
@@ -126,12 +127,21 @@ export async function POST(
       cancelledByUserId: session!.user!.id,
       reason: cancellationReasonLabel,
       notes: cancellationNotes,
-      notificationSent: false,
+      notificationSent: !!(notify_customer && quote.customer?.email),
     },
   });
 
   if (notify_customer && quote.customer?.email) {
-    // TODO: send email to customer (e.g. sendQuoteCancelledByAdminEmail)
+    try {
+      await sendQuoteCancelledByAdminEmail(
+        quote.customer.email,
+        quote.quoteNumber,
+        cancellationReasonLabel,
+        message_to_customer?.trim() || null
+      );
+    } catch (e) {
+      console.error("Failed to send quote cancellation email:", e);
+    }
   }
 
   return NextResponse.json({ success: true, message: "Quote cancelled" });

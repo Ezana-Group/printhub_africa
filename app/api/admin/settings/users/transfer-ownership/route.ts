@@ -5,12 +5,18 @@ import { writeAudit } from "@/lib/audit";
 import { z } from "zod";
 import { sendEmail } from "@/lib/email";
 import bcrypt from "bcryptjs";
+import { verifySync } from "otplib";
 
 const bodySchema = z.object({ targetUserId: z.string(), password: z.string(), totpCode: z.string().optional() });
 
 function verifyTotp(secret: string, code: string): boolean {
-  if (!secret || !code) return false;
-  return true; // TODO: use otplib
+  if (!secret || !code || code.length !== 6) return false;
+  try {
+    const result = verifySync({ secret, token: code });
+    return result.valid;
+  } catch {
+    return false;
+  }
 }
 
 export async function POST(req: Request) {

@@ -49,13 +49,37 @@ export function ProfileSettingsForm({ name, email }: ProfileSettingsFormProps) {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [saving, setSaving] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setSaved(false);
-    // TODO: call API to save profile
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    setSaving(true);
+    try {
+      const formData = new FormData(e.currentTarget);
+      const body: Record<string, string | null> = {};
+      const nameVal = formData.get("name");
+      if (nameVal != null) body.name = String(nameVal).trim();
+      const phoneVal = formData.get("phone");
+      body.phone = phoneVal ? String(phoneVal).trim() || null : null;
+      const res = await fetch("/api/account/settings/profile", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Failed to save profile");
+      }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save profile");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -193,7 +217,9 @@ export function ProfileSettingsForm({ name, email }: ProfileSettingsFormProps) {
       {error && (
         <p className="text-sm text-destructive">✗ Error — {error}</p>
       )}
-      <Button type="submit">Save Changes</Button>
+      <Button type="submit" disabled={saving}>
+        {saving ? "Saving…" : "Save Changes"}
+      </Button>
     </form>
   );
 }

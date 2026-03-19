@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CheckCircle, XCircle, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
 
@@ -87,12 +88,12 @@ export function AdminCatalogueQueueClient({ className, initialItems }: AdminCata
         <p className="text-sm text-slate-400 mt-1">
           Items appear here when you click &quot;Submit for review&quot; on a DRAFT item
         </p>
-        <a
+        <Link
           href="/admin/catalogue"
           className="mt-4 inline-block text-sm text-[#FF4D00] hover:underline"
         >
           ← Back to catalogue
-        </a>
+        </Link>
       </div>
     );
   }

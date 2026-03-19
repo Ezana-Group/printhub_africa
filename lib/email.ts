@@ -82,7 +82,7 @@ export async function sendVerificationEmail(email: string, token: string) {
 
 export async function sendPasswordResetEmail(email: string, token: string) {
   const { businessName, footer } = await getEmailBranding();
-  const url = `${baseUrl}/reset-password?token=${token}`;
+  const url = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
   const context = { businessName, footer, resetUrl: url };
   const defaultSubject = `Reset your ${businessName} password`;
   const defaultHtml = `
@@ -962,4 +962,43 @@ export async function sendTicketResolvedEmail(
       </div>
     `;
   return sendWithTemplate("ticket-resolved", email, context, defaultSubject, defaultHtml);
+}
+
+/** When admin cancels a quote — notify customer with reason. */
+export async function sendQuoteCancelledByAdminEmail(
+  email: string,
+  quoteNumber: string,
+  reason: string,
+  messageToCustomer?: string | null
+) {
+  const { businessName, footer } = await getEmailBranding();
+  const quotesUrl = `${baseUrl}/account/quotes`;
+  const reasonHtml = reason
+    ? `<p><strong>Reason:</strong> ${reason.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`
+    : "";
+  const messageHtml = messageToCustomer
+    ? `<p><strong>Message from our team:</strong></p><p style="white-space: pre-wrap;">${messageToCustomer.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`
+    : "";
+  const context = {
+    businessName,
+    footer,
+    quoteNumber,
+    reason: reason ?? "",
+    reasonHtml,
+    messageHtml,
+    quotesUrl,
+  };
+  const defaultSubject = `Quote ${quoteNumber} cancelled – ${businessName}`;
+  const defaultHtml = `
+      <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto;">
+        <h2 style="color: #FF4D00;">${businessName}</h2>
+        <p>Your quote request <strong>${quoteNumber}</strong> has been cancelled.</p>
+        ${reasonHtml}
+        ${messageHtml}
+        <p>If you have questions or would like to submit a new request, please visit your account or contact us.</p>
+        <p><a href="${quotesUrl}" style="color: #FF4D00; font-weight: bold;">View my quotes</a></p>
+        <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
+      </div>
+    `;
+  return sendWithTemplate("quote-cancelled-admin", email, context, defaultSubject, defaultHtml);
 }

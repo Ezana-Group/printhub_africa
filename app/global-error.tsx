@@ -40,6 +40,7 @@ export default function GlobalError({
               Try again
             </button>
 
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- Error boundary: Link component may not work */}
             <a
               href="/"
               className="w-full flex items-center justify-center py-3 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 font-medium transition"
