@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { writeAudit } from "@/lib/audit";
 import { sendPasswordResetEmail } from "@/lib/email";
-import { generateToken, getResetPasswordExpiry } from "@/lib/tokens";
+import { generateToken, getResetPasswordExpiry, getStaffInviteExpiry } from "@/lib/tokens";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
@@ -35,19 +35,17 @@ export async function POST(
   }
 
   const token = generateToken();
-  await prisma.verificationToken.upsert({
-    where: {
-      identifier_token: { identifier: `reset:${user.email}`, token },
-    },
-    update: { token, expires: getResetPasswordExpiry() },
-    create: {
-      identifier: `reset:${user.email}`,
-      token,
-      expires: getResetPasswordExpiry(),
-    },
+  const identifier = `reset:${user.email}`;
+  const isPendingInvite = user.status === "INVITE_PENDING";
+  const expiresAt = isPendingInvite ? getStaffInviteExpiry() : getResetPasswordExpiry();
+  const deliveryEmail = (user.personalEmail?.trim() || user.email).toLowerCase();
+
+  await prisma.verificationToken.deleteMany({ where: { identifier } });
+  await prisma.verificationToken.create({
+    data: { identifier, token, expires: expiresAt },
   });
 
-  await sendPasswordResetEmail(user.email, token);
+  await sendPasswordResetEmail(deliveryEmail, token);
 
   await writeAudit({
     userId: actorId,
@@ -56,6 +54,8 @@ export async function POST(
     entityId: user.id,
     after: {
       email: user.email,
+      deliveryEmail,
+      invitePending: isPendingInvite,
       role: user.role,
     },
     request: req,

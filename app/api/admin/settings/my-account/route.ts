@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { isStaffWorkEmail } from "@/lib/staff-email";
 
 const STAFF_OR_ADMIN = ["STAFF", "ADMIN", "SUPER_ADMIN"];
 
@@ -27,6 +28,7 @@ export async function GET() {
     select: {
       name: true,
       email: true,
+      personalEmail: true,
       phone: true,
       createdAt: true,
       staff: {
@@ -43,6 +45,7 @@ export async function GET() {
   return NextResponse.json({
     name: user.name,
     email: user.email,
+    personalEmail: user.personalEmail,
     phone: user.phone,
     role,
     createdAt: user.createdAt,
@@ -80,17 +83,26 @@ export async function POST(req: Request) {
   }
   const data = parsed.data;
   if (data.email !== undefined && data.email !== session.user.email) {
-    const existing = await prisma.user.findUnique({ where: { email: data.email } });
+    if (!isStaffWorkEmail(data.email)) {
+      return NextResponse.json(
+        { error: "Your login email must end with @printhub.africa" },
+        { status: 400 }
+      );
+    }
+    const normalized = data.email.trim().toLowerCase();
+    const existing = await prisma.user.findUnique({ where: { email: normalized } });
     if (existing) {
       return NextResponse.json({ error: "Email already in use" }, { status: 400 });
     }
   }
   try {
+    const emailToSave =
+      data.email != null ? data.email.trim().toLowerCase() : undefined;
     await prisma.user.update({
       where: { id: session.user.id },
       data: {
         ...(data.name != null && { name: data.name }),
-        ...(data.email != null && { email: data.email }),
+        ...(emailToSave != null && { email: emailToSave }),
         ...(data.phone !== undefined && { phone: data.phone ?? null }),
       },
     });

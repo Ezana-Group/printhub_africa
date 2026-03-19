@@ -49,7 +49,9 @@ export type StaffRow = {
   id: string;
   name: string | null;
   email: string;
+  personalEmail: string | null;
   role: string;
+  status: string | null;
   department: string | null;
   position: string | null;
   departmentObj: { id: string; name: string; colour: string | null } | null;
@@ -136,8 +138,20 @@ export function StaffAdminClient({
 
   const filtered = staff.filter((s) => {
     const q = search.toLowerCase().trim();
-    if (q && !(s.name?.toLowerCase().includes(q) || s.email.toLowerCase().includes(q))) return false;
+    if (
+      q &&
+      !(
+        s.name?.toLowerCase().includes(q) ||
+        s.email.toLowerCase().includes(q) ||
+        (s.personalEmail && s.personalEmail.toLowerCase().includes(q))
+      )
+    )
+      return false;
     if (roleFilter && s.role !== roleFilter) return false;
+    const st = s.status ?? "ACTIVE";
+    if (statusFilter === "active" && (st === "INVITE_PENDING" || st === "DEACTIVATED")) return false;
+    if (statusFilter === "pending" && st !== "INVITE_PENDING") return false;
+    if (statusFilter === "suspended" && st !== "DEACTIVATED") return false;
     return true;
   });
 
@@ -211,12 +225,31 @@ export function StaffAdminClient({
     {
       id: "status",
       header: "Status",
-      cell: () => (
-        <span className="flex items-center gap-1.5 text-sm text-[#10B981]">
-          <span className="h-2 w-2 rounded-full bg-[#10B981]" />
-          Active
-        </span>
-      ),
+      cell: ({ row }) => {
+        const st = row.original.status ?? "ACTIVE";
+        if (st === "INVITE_PENDING") {
+          return (
+            <span className="flex items-center gap-1.5 text-sm text-amber-700">
+              <span className="h-2 w-2 rounded-full bg-amber-500" />
+              Invite pending
+            </span>
+          );
+        }
+        if (st === "DEACTIVATED") {
+          return (
+            <span className="flex items-center gap-1.5 text-sm text-[#6B7280]">
+              <span className="h-2 w-2 rounded-full bg-[#9CA3AF]" />
+              Suspended
+            </span>
+          );
+        }
+        return (
+          <span className="flex items-center gap-1.5 text-sm text-[#10B981]">
+            <span className="h-2 w-2 rounded-full bg-[#10B981]" />
+            Active
+          </span>
+        );
+      },
     },
     {
       accessorKey: "lastActiveAt",

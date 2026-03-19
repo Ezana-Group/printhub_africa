@@ -7,12 +7,14 @@ import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { writeAudit } from "@/lib/audit";
 import { sendPasswordResetEmail } from "@/lib/email";
-import { generateToken, getResetPasswordExpiry } from "@/lib/tokens";
+import { generateToken, getStaffInviteExpiry } from "@/lib/tokens";
+import { isStaffWorkEmail } from "@/lib/staff-email";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
 const schema = z.object({
   email: z.string().email(),
+  personalEmail: z.string().email().optional().nullable(),
   password: z.string().min(8, "At least 8 characters").optional(),
   name: z.string().min(1, "Name required"),
   role: z.enum(["STAFF", "ADMIN", "SUPER_ADMIN"]),
@@ -42,9 +44,40 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    const { email, password, name, role: newRole, department, departmentId, position, invite } = parsed.data;
+    const {
+      email,
+      personalEmail: personalEmailRaw,
+      password,
+      name,
+      role: newRole,
+      department,
+      departmentId,
+      position,
+      phone,
+      invite,
+    } = parsed.data;
 
-    const existing = await prisma.user.findUnique({ where: { email } });
+    if (!isStaffWorkEmail(email)) {
+      return NextResponse.json(
+        { error: "Staff login email must end with @printhub.africa" },
+        { status: 400 }
+      );
+    }
+
+    const workEmail = email.trim().toLowerCase();
+
+    const personalEmail =
+      personalEmailRaw && personalEmailRaw.trim().length > 0
+        ? personalEmailRaw.trim().toLowerCase()
+        : null;
+    if (personalEmail && personalEmail === workEmail) {
+      return NextResponse.json(
+        { error: "Personal email must be different from the work email, or leave it blank to send the invite to the work address." },
+        { status: 400 }
+      );
+    }
+
+    const existing = await prisma.user.findUnique({ where: { email: workEmail } });
     if (existing) {
       return NextResponse.json(
         { error: "A user with this email already exists." },
@@ -56,13 +89,18 @@ export async function POST(req: Request) {
     const rawPassword = useInviteFlow ? crypto.randomBytes(16).toString("hex") : password!;
     const passwordHash = await bcrypt.hash(rawPassword, 12);
 
+    const inviteDeliveryEmail = personalEmail ?? workEmail;
+
     const user = await prisma.user.create({
       data: {
-        email,
+        email: workEmail,
+        ...(personalEmail != null && { personalEmail }),
+        ...(phone != null && phone.trim() !== "" && { phone: phone.trim() }),
         name,
         passwordHash,
         role: newRole,
         emailVerified: useInviteFlow ? null : new Date(),
+        status: useInviteFlow ? "INVITE_PENDING" : "ACTIVE",
       },
     });
 
@@ -91,18 +129,16 @@ export async function POST(req: Request) {
 
     if (useInviteFlow) {
       const token = generateToken();
-      await prisma.verificationToken.upsert({
-        where: {
-          identifier_token: { identifier: `reset:${email}`, token },
-        },
-        update: { token, expires: getResetPasswordExpiry() },
-        create: {
-          identifier: `reset:${email}`,
+      const identifier = `reset:${user.email}`;
+      await prisma.verificationToken.deleteMany({ where: { identifier } });
+      await prisma.verificationToken.create({
+        data: {
+          identifier,
           token,
-          expires: getResetPasswordExpiry(),
+          expires: getStaffInviteExpiry(),
         },
       });
-      await sendPasswordResetEmail(email, token);
+      await sendPasswordResetEmail(inviteDeliveryEmail, token);
     }
 
     await writeAudit({
@@ -112,6 +148,8 @@ export async function POST(req: Request) {
       entityId: user.id,
       after: {
         email: user.email,
+        personalEmail: user.personalEmail,
+        inviteTo: inviteDeliveryEmail,
         role: user.role,
         invite: useInviteFlow,
         department: departmentName,

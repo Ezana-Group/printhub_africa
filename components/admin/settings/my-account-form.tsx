@@ -22,6 +22,7 @@ type Dept = { id: string; name: string; isActive?: boolean };
 interface MyAccountFormProps {
   name: string;
   email: string;
+  personalEmail?: string | null;
   phone?: string | null;
   twoFaEnabled?: boolean;
   twoFaMethod?: string | null;
@@ -36,6 +37,7 @@ interface MyAccountFormProps {
 export function MyAccountForm({
   name,
   email,
+  personalEmail = null,
   phone = null,
   twoFaEnabled = false,
   twoFaMethod = null,
@@ -320,9 +322,15 @@ export function MyAccountForm({
           <Input id="name" name="name" defaultValue={name} required />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="email">Email *</Label>
+          <Label htmlFor="email">Work email (login) *</Label>
           <Input id="email" name="email" type="email" defaultValue={email} required />
-          <p className="text-xs text-muted-foreground">Changing email may require admin approval.</p>
+          <p className="text-xs text-muted-foreground">Must stay on @printhub.africa. Contact an admin to change your personal email for notifications.</p>
+          {personalEmail?.trim() ? (
+            <div className="mt-3 rounded-md border border-border bg-muted/40 px-3 py-2">
+              <p className="text-xs font-medium text-muted-foreground">Personal email (notifications)</p>
+              <p className="text-sm font-medium text-foreground mt-0.5">{personalEmail}</p>
+            </div>
+          ) : null}
         </div>
         <div className="grid gap-2">
           <Label htmlFor="phone">Phone</Label>

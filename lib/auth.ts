@@ -10,6 +10,7 @@ import { writeAudit } from "@/lib/audit";
 import bcrypt from "bcryptjs";
 import { verifySync } from "otplib";
 import { sendEmail } from "@/lib/email";
+import { isPrivilegedStaffRole, isStaffWorkEmail } from "@/lib/staff-email";
 
 /** Cache staff permissions by userId with 5 min TTL to avoid DB hit on every request. */
 const STAFF_PERMISSIONS_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -111,9 +112,20 @@ export const authOptions: NextAuthOptions = {
           if (!userId) return null;
           const user = await prisma.user.findUnique({
             where: { id: userId },
-            select: { id: true, email: true, name: true, profileImage: true, role: true, totpSecret: true, twoFaMethod: true, otpCodeHash: true, otpExpiresAt: true },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              profileImage: true,
+              role: true,
+              totpSecret: true,
+              twoFaMethod: true,
+              otpCodeHash: true,
+              otpExpiresAt: true,
+            },
           });
           if (!user) return null;
+          if (isPrivilegedStaffRole(user.role) && !isStaffWorkEmail(user.email)) return null;
           if (user.totpSecret) {
             try {
               const result = verifySync({ secret: user.totpSecret, token: code });
@@ -144,8 +156,9 @@ export const authOptions: NextAuthOptions = {
         }
 
         if (!credentials?.email || !credentials?.password) return null;
+        const normalizedEmail = credentials.email.trim().toLowerCase();
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email: normalizedEmail },
           select: {
             id: true,
             email: true,
@@ -182,6 +195,10 @@ export const authOptions: NextAuthOptions = {
               lockedUntil,
             },
           });
+          return null;
+        }
+
+        if (isPrivilegedStaffRole(user.role) && !isStaffWorkEmail(normalizedEmail)) {
           return null;
         }
 
@@ -293,6 +310,14 @@ export const authOptions: NextAuthOptions = {
 
       // Do not allow inactive/invite-pending accounts to sign in via OAuth/email.
       if (dbUser && (dbUser.status === "DEACTIVATED" || dbUser.status === "INVITE_PENDING")) {
+        return false;
+      }
+
+      if (
+        dbUser &&
+        isPrivilegedStaffRole(dbUser.role) &&
+        !isStaffWorkEmail(email)
+      ) {
         return false;
       }
 

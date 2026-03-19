@@ -6,11 +6,13 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { signTwoFaToken } from "@/lib/twofa-token";
+import { isPrivilegedStaffRole, isStaffWorkEmail } from "@/lib/staff-email";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
-    const email = typeof body.email === "string" ? body.email.trim() : "";
+    const rawEmail = typeof body.email === "string" ? body.email.trim() : "";
+    const email = rawEmail.toLowerCase();
     const password = typeof body.password === "string" ? body.password : "";
     if (!email || !password) {
       return NextResponse.json({ error: "Email and password required" }, { status: 400 });
@@ -20,6 +22,7 @@ export async function POST(req: Request) {
       where: { email },
       select: {
         id: true,
+        role: true,
         passwordHash: true,
         status: true,
         lockedUntil: true,
@@ -46,6 +49,10 @@ export async function POST(req: Request) {
         where: { id: user.id },
         data: { failedLoginAttempts: attempts, lockedUntil },
       });
+      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+    }
+
+    if (isPrivilegedStaffRole(user.role) && !isStaffWorkEmail(email)) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
     }
 

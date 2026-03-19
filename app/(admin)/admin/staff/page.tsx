@@ -30,7 +30,9 @@ export default async function AdminStaffPage() {
     id: u.id,
     name: u.name,
     email: u.email,
+    personalEmail: u.personalEmail ?? null,
     role: u.role,
+    status: u.status ?? "ACTIVE",
     department: u.staff?.department ?? null,
     position: u.staff?.position ?? null,
     departmentObj: u.staff?.departmentObj

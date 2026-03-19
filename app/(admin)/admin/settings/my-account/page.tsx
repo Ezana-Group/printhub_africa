@@ -17,6 +17,7 @@ export default async function AdminMyAccountPage() {
       productionPinHash: true,
       name: true,
       email: true,
+      personalEmail: true,
       phone: true,
       createdAt: true,
       staff: {
@@ -47,6 +48,7 @@ export default async function AdminMyAccountPage() {
       <MyAccountForm
         name={user?.name ?? session.user.name ?? ""}
         email={user?.email ?? session.user.email ?? ""}
+        personalEmail={user?.personalEmail ?? null}
         phone={user?.phone ?? null}
         twoFaEnabled={twoFaEnabled}
         twoFaMethod={twoFaMethod}

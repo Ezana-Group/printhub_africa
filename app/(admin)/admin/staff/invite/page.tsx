@@ -30,7 +30,8 @@ export default async function AdminStaffInvitePage() {
         </Link>
         <h1 className="mt-3 text-2xl font-bold text-[#111]">Invite Staff Member</h1>
         <p className="mt-1 text-sm text-[#6B7280]">
-          Create a staff invite. The user will receive an email to set their password.
+          Work email must be @printhub.africa (used to sign in). Optionally send the invite to a personal inbox
+          instead.
         </p>
       </div>
       <InviteStaffPageClient

@@ -42,8 +42,11 @@ export default async function AdminStaffDetailPage({
     id: user.id,
     name: user.name,
     email: user.email,
+    personalEmail: user.personalEmail ?? null,
     phone: user.phone,
     role: user.role,
+    status: user.status ?? "ACTIVE",
+    emailVerified: user.emailVerified?.toISOString() ?? null,
     createdAt: user.createdAt.toISOString(),
     staff: user.staff
       ? {
@@ -82,7 +85,19 @@ export default async function AdminStaffDetailPage({
             {getInitials(user.name)}
           </div>
           <div>
-            <h1 className="text-[24px] font-bold text-[#111]">{displayName}</h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-[24px] font-bold text-[#111]">{displayName}</h1>
+              {(user.status ?? "ACTIVE") === "INVITE_PENDING" && (
+                <span className="text-xs font-medium rounded-full bg-amber-100 text-amber-900 px-2.5 py-0.5 border border-amber-200">
+                  Invite pending
+                </span>
+              )}
+              {(user.status ?? "ACTIVE") === "DEACTIVATED" && (
+                <span className="text-xs font-medium rounded-full bg-[#F3F4F6] text-[#6B7280] px-2.5 py-0.5 border border-[#E5E7EB]">
+                  Suspended
+                </span>
+              )}
+            </div>
             <p className="text-sm text-[#6B7280]">
               {getStaffRoleLabel(user.role)} {user.staff?.department && `· ${user.staff.department}`}
             </p>
@@ -94,7 +109,11 @@ export default async function AdminStaffDetailPage({
           <Button variant="outline" size="sm" asChild>
             <Link href={`/admin/staff/${id}#profile`}>Edit</Link>
           </Button>
-          <ResetPasswordButton staffId={id} staffEmail={user.email ?? ""} />
+          <ResetPasswordButton
+            staffId={id}
+            staffEmail={user.email ?? ""}
+            invitePending={(user.status ?? "ACTIVE") === "INVITE_PENDING"}
+          />
         </div>
       </div>
 

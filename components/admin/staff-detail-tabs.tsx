@@ -28,8 +28,11 @@ export interface StaffDetailUser {
   id: string;
   name: string | null;
   email: string;
+  personalEmail?: string | null;
   phone: string | null;
   role: string;
+  status?: string | null;
+  emailVerified?: string | null;
   createdAt: string;
   staff?: {
     department: string | null;
@@ -115,6 +118,7 @@ export function StaffDetailTabs({
   const [profile, setProfile] = useState({
     name: user.name ?? "",
     email: user.email ?? "",
+    personalEmail: user.personalEmail ?? "",
     phone: user.phone ?? "",
     departmentId: user.staff?.departmentId ?? "",
     position: user.staff?.position ?? "",
@@ -131,6 +135,7 @@ export function StaffDetailTabs({
     setProfile({
       name: user.name ?? "",
       email: user.email ?? "",
+      personalEmail: user.personalEmail ?? "",
       phone: user.phone ?? "",
       departmentId: user.staff?.departmentId ?? "",
       position: user.staff?.position ?? "",
@@ -275,16 +280,30 @@ export function StaffDetailTabs({
 
       {activeTab === "profile" && (
         <div id="profile" className="mt-6 scroll-mt-4">
+          {(user.status ?? "ACTIVE") === "INVITE_PENDING" && (
+            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <p className="font-medium">Invite pending</p>
+              <p className="mt-1 text-amber-800/90">
+                This person cannot sign in until they open the link in their email and set a password. Use{" "}
+                “Resend invite email” if the link expired or they need a new message. You can update
+                their personal email below, then resend.
+              </p>
+            </div>
+          )}
           <EditableSection
             id="staff-profile"
             title="Profile"
-            description="Name, email, phone, department, position."
+            description="Work login email (@printhub.africa), personal email for invites, phone, department, position."
             canEdit={canEditProfile}
             viewContent={
               <div className="space-y-0">
                 {[
                   { label: "Name", value: user.name ?? "—" },
-                  { label: "Email", value: user.email },
+                  { label: "Work email (login)", value: user.email },
+                  {
+                    label: "Personal email",
+                    value: user.personalEmail?.trim() ? user.personalEmail : "— (invites sent to work email)",
+                  },
                   { label: "Phone", value: user.phone ?? "—" },
                   { label: "Department", value: user.staff?.departmentObj?.name ?? user.staff?.department ?? "—" },
                   { label: "Position", value: user.staff?.position ?? "—" },
@@ -307,8 +326,26 @@ export function StaffDetailTabs({
                   <Input value={profile.name} onChange={(e) => setProfile((p) => ({ ...p, name: e.target.value }))} className="focus-visible:ring-orange-500" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Email</Label>
-                  <Input type="email" value={profile.email} onChange={(e) => setProfile((p) => ({ ...p, email: e.target.value }))} className="focus-visible:ring-orange-500" />
+                  <Label>Work email (login)</Label>
+                  <Input
+                    type="email"
+                    value={profile.email}
+                    onChange={(e) => setProfile((p) => ({ ...p, email: e.target.value }))}
+                    className="focus-visible:ring-orange-500"
+                    placeholder="name@printhub.africa"
+                  />
+                  <p className="text-xs text-muted-foreground">Must end with @printhub.africa. Changing it invalidates pending invite links until you resend.</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Personal email</Label>
+                  <Input
+                    type="email"
+                    value={profile.personalEmail}
+                    onChange={(e) => setProfile((p) => ({ ...p, personalEmail: e.target.value }))}
+                    className="focus-visible:ring-orange-500"
+                    placeholder="Leave blank to send invites to work email"
+                  />
+                  <p className="text-xs text-muted-foreground">Invitation and password-setup emails are sent here when set; must differ from work email.</p>
                 </div>
                 <div className="space-y-1.5">
                   <Label>Phone</Label>
@@ -346,6 +383,7 @@ export function StaffDetailTabs({
                   body: JSON.stringify({
                     name: profile.name || undefined,
                     email: profile.email || undefined,
+                    personalEmail: profile.personalEmail.trim() ? profile.personalEmail.trim() : null,
                     phone: profile.phone || null,
                     departmentId: profile.departmentId || null,
                     position: profile.position || null,
@@ -725,6 +763,10 @@ export function StaffDetailTabs({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
+            <p className="text-sm text-muted-foreground">
+              These metrics and the chart below are not connected to live data yet — they are UI placeholders until
+              reporting is implemented.
+            </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="rounded-lg border border-[#E5E7EB] p-4">
                 <p className="text-xs uppercase tracking-wider text-[#6B7280]">Orders processed</p>

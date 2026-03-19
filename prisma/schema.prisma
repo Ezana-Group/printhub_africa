@@ -49,6 +49,8 @@ model User {
   termsVersion       String?   // Version of terms accepted (e.g. "1.0")
   marketingConsent   Boolean   @default(false)
   marketingConsentAt DateTime?
+  /// Where invite / password-setup emails are sent (optional). Login email remains `email`.
+  personalEmail      String?
 
   accounts         Account[]
   sessions         Session[]

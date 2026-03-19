@@ -18,6 +18,7 @@ export function InviteStaffPageClient({
   const [error, setError] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [personalEmail, setPersonalEmail] = useState("");
   const [role, setRole] = useState<"STAFF" | "ADMIN">("STAFF");
   const [departmentId, setDepartmentId] = useState("");
   const [position, setPosition] = useState("");
@@ -34,6 +35,7 @@ export function InviteStaffPageClient({
         body: JSON.stringify({
           name,
           email,
+          personalEmail: personalEmail.trim() || undefined,
           role,
           departmentId: departmentId || undefined,
           position: position || undefined,
@@ -76,7 +78,7 @@ export function InviteStaffPageClient({
           />
         </div>
         <div>
-          <Label htmlFor="invite-email">Email Address *</Label>
+          <Label htmlFor="invite-email">Work email (login) *</Label>
           <Input
             id="invite-email"
             type="email"
@@ -85,7 +87,22 @@ export function InviteStaffPageClient({
             autoComplete="email"
             required
             className="mt-1"
+            placeholder="name@printhub.africa"
           />
+          <p className="text-xs text-[#6B7280] mt-1">Must end with @printhub.africa — used to sign in after they set a password.</p>
+        </div>
+        <div>
+          <Label htmlFor="invite-personal-email">Personal email</Label>
+          <Input
+            id="invite-personal-email"
+            type="email"
+            value={personalEmail}
+            onChange={(e) => setPersonalEmail(e.target.value)}
+            autoComplete="email"
+            className="mt-1"
+            placeholder="Optional — invite link sent here instead of work email"
+          />
+          <p className="text-xs text-[#6B7280] mt-1">If set, must be different from the work email. Leave blank to send the invite to the work address.</p>
         </div>
         <div>
           <Label htmlFor="invite-role">Role *</Label>
@@ -140,7 +157,8 @@ export function InviteStaffPageClient({
       </div>
 
       <p className="text-xs text-[#6B7280]">
-        An invite email will be sent so they can set their own password. Link expires in 48 hours.
+        An email with a link to set their password is sent to the personal email when provided, otherwise to the work
+        email. The link expires in 48 hours.
       </p>
 
       <div className="flex items-center justify-end gap-2">

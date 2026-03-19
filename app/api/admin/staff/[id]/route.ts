@@ -5,12 +5,14 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { writeAudit } from "@/lib/audit";
 import { z } from "zod";
+import { isStaffWorkEmail } from "@/lib/staff-email";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
 const patchProfileSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   email: z.string().email().optional(),
+  personalEmail: z.string().email().nullable().optional(),
   phone: z.string().max(50).nullable().optional(),
   department: z.string().max(100).nullable().optional(),
   departmentId: z.string().nullable().optional(),
@@ -54,12 +56,45 @@ export async function PATCH(
 
   const data = parsed.data;
 
+  const nextWorkEmail =
+    data.email != null ? data.email.trim().toLowerCase() : user.email.trim().toLowerCase();
+  if (data.email != null && !isStaffWorkEmail(data.email)) {
+    return NextResponse.json(
+      { error: "Staff login email must end with @printhub.africa" },
+      { status: 400 }
+    );
+  }
+
+  let nextPersonal: string | null | undefined = undefined;
+  if (data.personalEmail !== undefined) {
+    nextPersonal =
+      data.personalEmail && data.personalEmail.trim().length > 0
+        ? data.personalEmail.trim().toLowerCase()
+        : null;
+    if (nextPersonal && nextPersonal === nextWorkEmail) {
+      return NextResponse.json(
+        {
+          error:
+            "Personal email must differ from the work email, or leave it blank to use the work address for notifications.",
+        },
+        { status: 400 }
+      );
+    }
+  }
+
+  if (data.email != null && data.email.trim().toLowerCase() !== user.email.toLowerCase()) {
+    await prisma.verificationToken.deleteMany({
+      where: { identifier: `reset:${user.email}` },
+    });
+  }
+
   try {
     await prisma.user.update({
       where: { id: user.id },
       data: {
         ...(data.name != null && { name: data.name }),
-        ...(data.email != null && { email: data.email }),
+        ...(data.email != null && { email: data.email.trim().toLowerCase() }),
+        ...(data.personalEmail !== undefined && { personalEmail: nextPersonal }),
         ...(data.phone !== undefined && { phone: data.phone }),
       },
     });
@@ -103,6 +138,7 @@ export async function PATCH(
       after: {
         name: data.name,
         email: data.email,
+        ...(data.personalEmail !== undefined && { personalEmail: nextPersonal }),
         phone: data.phone,
         department: data.department,
         departmentId: data.departmentId,
