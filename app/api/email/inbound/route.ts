@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
     mailbox = await prisma.emailAddress.upsert({
       where: { address: targetAddress },
       update: { isActive: true },
-      data: {
+      create: {
         address: targetAddress,
         label: mailboxLabelFromAddress(targetAddress) || "Mailbox",
         isActive: true,
