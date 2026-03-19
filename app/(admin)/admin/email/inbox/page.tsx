@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { requireAdminSection } from "@/lib/admin-route-guard";
-import { EmailInboxClient } from "@/components/admin/email/email-inbox-client";
+import { EmailInboxThreePane } from "@/components/admin/email/email-inbox-three-pane";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
@@ -14,11 +14,7 @@ function stripHtml(html: string): string {
     .trim();
 }
 
-export default async function AdminEmailInboxPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ page?: string; limit?: string }>;
-}) {
+export default async function AdminEmailInboxPage() {
   await requireAdminSection("/admin/email/inbox");
 
   const session = await getServerSession(authOptions);
@@ -37,13 +33,8 @@ export default async function AdminEmailInboxPage({
         })
       ).map((r) => r.mailboxId);
 
-  const { page, limit } = await searchParams;
-  const pageNum = Math.max(1, Number(page ?? "1"));
-  const limitNum = Math.max(1, Math.min(100, Number(limit ?? "20")));
-  const skip = (pageNum - 1) * limitNum;
-
   const emailThreadWhere: Prisma.EmailThreadWhereInput = {
-    ...(isFullAccess ? {} : { status: "OPEN" }),
+    status: "OPEN",
     isActive: true,
     ...(isFullAccess
       ? {}
@@ -59,18 +50,17 @@ export default async function AdminEmailInboxPage({
         }),
   };
 
-  const [threads, mailboxes] = await Promise.all([
+  const [threads, allMailboxes, staffUsers] = await Promise.all([
     prisma.emailThread.findMany({
       where: emailThreadWhere,
       orderBy: { updatedAt: "desc" },
-      skip,
-      take: limitNum,
+      take: 50,
       include: {
         mailbox: { select: { id: true, label: true, address: true } },
         emails: {
           orderBy: { sentAt: "desc" },
           take: 1,
-          select: { bodyText: true, bodyHtml: true },
+          select: { bodyText: true, bodyHtml: true, sentAt: true, direction: true },
         },
       },
     }),
@@ -79,7 +69,24 @@ export default async function AdminEmailInboxPage({
       select: { id: true, label: true, address: true },
       orderBy: { createdAt: "desc" },
     }),
+    /* Fetch staff/admin User emails so we can exclude personal mailboxes from the sidebar */
+    prisma.user.findMany({
+      where: { role: { in: ["STAFF", "ADMIN", "SUPER_ADMIN"] } },
+      select: { email: true },
+    }),
   ]);
+
+  /* Filter out personal staff email addresses — only show shared/company mailboxes */
+  const staffEmailSet = new Set(staffUsers.map((u) => u.email?.toLowerCase()).filter(Boolean));
+  const sharedMailboxes = allMailboxes.filter((m) => !staffEmailSet.has(m.address.toLowerCase()));
+
+  /* Compute per-mailbox unread counts */
+  const unreadByMailbox = await prisma.emailThread.groupBy({
+    by: ["mailboxId"],
+    where: { ...emailThreadWhere, hasUnread: true },
+    _count: { id: true },
+  });
+  const unreadMap = new Map(unreadByMailbox.map((r) => [r.mailboxId, r._count.id]));
 
   const serializedThreads = threads.map((t) => {
     const latest = t.emails[0];
@@ -97,14 +104,104 @@ export default async function AdminEmailInboxPage({
       hasUnread: t.hasUnread,
       mailbox: t.mailbox,
       latestSnippet: snippet,
+      latestEmailAt: latest?.sentAt?.toISOString() ?? null,
+      latestDirection: latest?.direction ?? null,
     };
   });
 
+  const mailboxesWithUnread = sharedMailboxes.map((m) => ({
+    ...m,
+    unreadCount: unreadMap.get(m.id) ?? 0,
+  }));
+
+  /* Pre-fetch first thread detail for initial Pane 3 render */
+  const firstThread = threads[0] ?? null;
+  let initialSelectedThread = null;
+  let initialEmails: {
+    id: string;
+    direction: "INBOUND" | "OUTBOUND";
+    isRead: boolean;
+    sentAt: string;
+    bodyHtml: string;
+    bodyText: string | null;
+    subject: string;
+    cc: string | null;
+    toAddress: string;
+    fromAddress: string;
+    attachments: unknown;
+  }[] = [];
+
+  if (firstThread) {
+    const fullThread = await prisma.emailThread.findUnique({
+      where: { id: firstThread.id },
+      include: {
+        mailbox: { select: { id: true, address: true, label: true } },
+        emails: {
+          orderBy: { sentAt: "asc" },
+          select: {
+            id: true,
+            direction: true,
+            isRead: true,
+            sentAt: true,
+            bodyHtml: true,
+            bodyText: true,
+            subject: true,
+            cc: true,
+            toAddress: true,
+            fromAddress: true,
+            attachments: true,
+          },
+        },
+      },
+    });
+
+    if (fullThread) {
+      initialSelectedThread = {
+        id: fullThread.id,
+        subject: fullThread.subject,
+        status: fullThread.status,
+        hasUnread: fullThread.hasUnread,
+        customerName: fullThread.customerName,
+        customerEmail: fullThread.customerEmail,
+        assignedToId: fullThread.assignedToId,
+        mailbox: fullThread.mailbox,
+      };
+
+      initialEmails = fullThread.emails.map((e) => ({
+        id: e.id,
+        direction: e.direction,
+        isRead: e.isRead,
+        sentAt: e.sentAt.toISOString(),
+        bodyHtml: e.bodyHtml,
+        bodyText: e.bodyText,
+        subject: e.subject,
+        cc: e.cc,
+        toAddress: e.toAddress,
+        fromAddress: e.fromAddress,
+        attachments: e.attachments,
+      }));
+
+      // Mark first thread as read
+      await prisma.$transaction([
+        prisma.email.updateMany({
+          where: { threadId: firstThread.id, direction: "INBOUND", isRead: false },
+          data: { isRead: true },
+        }),
+        prisma.emailThread.updateMany({
+          where: { id: firstThread.id },
+          data: { hasUnread: false },
+        }),
+      ]);
+    }
+  }
+
   return (
-    <EmailInboxClient
-      threads={serializedThreads}
-      mailboxes={mailboxes}
+    <EmailInboxThreePane
+      initialThreads={serializedThreads}
+      mailboxes={mailboxesWithUnread}
       currentUserEmail={session?.user?.email ?? undefined}
+      initialSelectedThread={initialSelectedThread}
+      initialEmails={initialEmails}
     />
   );
 }
