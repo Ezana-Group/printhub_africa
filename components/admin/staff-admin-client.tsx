@@ -70,9 +70,11 @@ function RoleBadge({ role }: { role: string }) {
 export function StaffAdminClient({
   staff,
   canInvite,
+  currentUserId,
 }: {
   staff: StaffRow[];
   canInvite: boolean;
+  currentUserId?: string;
 }) {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
@@ -316,6 +318,7 @@ export function StaffAdminClient({
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
+                disabled={s.id === currentUserId}
                 onSelect={(e) => {
                   e.preventDefault();
                   handleDeleteClick(s);

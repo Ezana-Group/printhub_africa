@@ -6,6 +6,11 @@ import { requireAdminSection } from "@/lib/admin-route-guard";
 
 const CAN_ADD_STAFF = ["ADMIN", "SUPER_ADMIN"];
 
+interface SessionUser {
+  id: string;
+  role: string;
+}
+
 export default async function AdminStaffPage() {
   await requireAdminSection("/admin/staff");
   const session = await getServerSession(authOptions);
@@ -42,5 +47,13 @@ export default async function AdminStaffPage() {
     lastActiveAt: null as Date | null,
   }));
 
-  return <StaffAdminClient staff={rows} canInvite={!!canInvite} />;
+  const userId = session?.user ? (session.user as SessionUser).id : undefined;
+
+  return (
+    <StaffAdminClient
+      staff={rows}
+      canInvite={!!canInvite}
+      currentUserId={userId}
+    />
+  );
 }

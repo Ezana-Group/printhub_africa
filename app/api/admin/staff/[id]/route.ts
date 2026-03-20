@@ -18,6 +18,7 @@ const patchProfileSchema = z.object({
   departmentId: z.string().nullable().optional(),
   position: z.string().max(100).nullable().optional(),
   status: z.string().optional(),
+  role: z.enum(["STAFF", "ADMIN", "SUPER_ADMIN"]).optional(),
 });
 
 /** PATCH: Update staff profile (name, email, phone, department, position). ADMIN/SUPER_ADMIN only for other users. */
@@ -56,6 +57,20 @@ export async function PATCH(
   }
 
   const data = parsed.data;
+
+  // ROLE GUARDS: Only SUPER_ADMIN can promote someone to SUPER_ADMIN
+  // or edit a person who is currently a SUPER_ADMIN.
+  if (user.role === "SUPER_ADMIN" && role !== "SUPER_ADMIN") {
+    return NextResponse.json({ error: "Only a Super Admin can modify a Super Admin profile" }, { status: 403 });
+  }
+  if (data.role === "SUPER_ADMIN" && role !== "SUPER_ADMIN") {
+    return NextResponse.json({ error: "Only a Super Admin can promote someone to Super Admin" }, { status: 403 });
+  }
+
+  // Prevent self-demotion from SUPER_ADMIN
+  if (user.id === actorId && user.role === "SUPER_ADMIN" && data.role && data.role !== "SUPER_ADMIN") {
+    return NextResponse.json({ error: "You cannot demote yourself from Super Admin" }, { status: 400 });
+  }
 
   const nextWorkEmail =
     data.email != null ? data.email.trim().toLowerCase() : user.email.trim().toLowerCase();
@@ -98,6 +113,7 @@ export async function PATCH(
         ...(data.personalEmail !== undefined && { personalEmail: nextPersonal }),
         ...(data.phone !== undefined && { phone: data.phone }),
         ...(data.status !== undefined && { status: data.status }),
+        ...(data.role !== undefined && { role: data.role }),
       },
     });
   } catch (e) {

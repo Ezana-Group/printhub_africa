@@ -36,6 +36,7 @@ export default async function AdminStaffInvitePage() {
       </div>
       <InviteStaffPageClient
         departments={departments}
+        currentUserRole={role as "ADMIN" | "SUPER_ADMIN"}
       />
     </div>
   );

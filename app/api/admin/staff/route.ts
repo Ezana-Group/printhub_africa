@@ -57,6 +57,13 @@ export async function POST(req: Request) {
       invite,
     } = parsed.data;
 
+    if (newRole === "SUPER_ADMIN" && role !== "SUPER_ADMIN") {
+      return NextResponse.json(
+        { error: "Only a Super Admin can create another Super Admin" },
+        { status: 403 }
+      );
+    }
+
     if (!isStaffWorkEmail(email)) {
       return NextResponse.json(
         { error: "Staff login email must end with @printhub.africa" },

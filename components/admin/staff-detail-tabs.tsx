@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -24,6 +25,13 @@ import {
 import { cn } from "@/lib/utils";
 
 export type StaffDetailTab = "profile" | "permissions" | "activity" | "performance" | "actions";
+
+interface SessionUser {
+  id: string;
+  role: string;
+  name?: string | null;
+  email?: string | null;
+}
 
 export interface StaffDetailUser {
   id: string;
@@ -126,6 +134,8 @@ export function StaffDetailTabs({
   canEditPermissions?: boolean;
 }) {
   const router = useRouter();
+  const { data: sessionData } = useSession();
+  const session = sessionData?.user as SessionUser | undefined;
   const [activeTab, setActiveTab] = useState<StaffDetailTab>("profile");
   const [departments, setDepartments] = useState<{ id: string; name: string; isActive: boolean }[]>([]);
 
@@ -136,6 +146,7 @@ export function StaffDetailTabs({
     phone: user.phone ?? "",
     departmentId: user.staff?.departmentId ?? "",
     position: user.staff?.position ?? "",
+    role: user.role,
   });
 
   useEffect(() => {
@@ -153,6 +164,7 @@ export function StaffDetailTabs({
       phone: user.phone ?? "",
       departmentId: user.staff?.departmentId ?? "",
       position: user.staff?.position ?? "",
+      role: user.role,
     });
   }, [user]);
 
@@ -413,6 +425,24 @@ export function StaffDetailTabs({
                   <Label>Position</Label>
                   <Input value={profile.position} onChange={(e) => setProfile((p) => ({ ...p, position: e.target.value }))} className="focus-visible:ring-orange-500" />
                 </div>
+                <div className="space-y-1.5">
+                  <Label>Role</Label>
+                  <select
+                    value={profile.role}
+                    onChange={(e) => setProfile((p) => ({ ...p, role: e.target.value }))}
+                    disabled={user.role === "SUPER_ADMIN" && session?.role !== "SUPER_ADMIN"}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:ring-orange-500 focus-visible:outline-none disabled:bg-slate-50 disabled:text-slate-500"
+                  >
+                    <option value="STAFF">Staff</option>
+                    <option value="ADMIN">Admin</option>
+                    {(session?.role === "SUPER_ADMIN" || user.role === "SUPER_ADMIN") && (
+                      <option value="SUPER_ADMIN">Super Admin</option>
+                    )}
+                  </select>
+                  {user.role === "SUPER_ADMIN" && session?.role !== "SUPER_ADMIN" && (
+                    <p className="text-xs text-amber-600">Only a Super Admin can modify another Super Admin&apos;s role.</p>
+                  )}
+                </div>
               </div>
             )}
             onSave={async () => {
@@ -428,6 +458,7 @@ export function StaffDetailTabs({
                     phone: profile.phone || null,
                     departmentId: profile.departmentId || null,
                     position: profile.position || null,
+                    role: profile.role,
                   }),
                 });
               } catch (err) {
@@ -881,6 +912,7 @@ export function StaffDetailTabs({
                     variant={user.status === "SUSPENDED" ? "default" : "outline"}
                     size="sm"
                     className="ml-4"
+                    disabled={user.id === session?.id}
                     onClick={async () => {
                       const nextStatus = user.status === "SUSPENDED" ? "ACTIVE" : "SUSPENDED";
                       if (!confirm(`Are you sure you want to ${nextStatus === "SUSPENDED" ? "suspend" : "reactivate"} this account?`)) return;
@@ -910,6 +942,7 @@ export function StaffDetailTabs({
                     variant="destructive"
                     size="sm"
                     className="ml-4"
+                    disabled={user.id === session?.id}
                     onClick={async () => {
                       if (!confirm("Are you sure you want to PERMANENTLY delete this account? This will remove their staff profile and user account. This action cannot be undone.")) return;
                       try {
