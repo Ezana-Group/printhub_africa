@@ -577,7 +577,7 @@ function ImportQueueSection() {
             <tr key={item.id} className="hover:bg-gray-50 transition-colors">
               <td className="px-4 py-3">
                 <div className="w-12 h-12 rounded bg-gray-100 border overflow-hidden">
-                  {item.thumbnailUrl && <img src={item.thumbnailUrl} className="w-full h-full object-cover" />}
+                  {item.thumbnailUrl && <img src={item.thumbnailUrl} alt={item.name} className="w-full h-full object-cover" />}
                 </div>
               </td>
               <td className="px-4 py-3 font-medium">{item.name}</td>

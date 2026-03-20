@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Loader2, ArrowLeft, ExternalLink, Save, CheckCircle, AlertCircle, Trash2 } from "lucide-react";
 import Link from "next/link";
@@ -77,11 +77,7 @@ export default function ReviewPage() {
     imageUrls: [],
   });
 
-  useEffect(() => {
-    fetchData();
-  }, [id]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [modelRes, catRes] = await Promise.all([
@@ -121,7 +117,11 @@ export default function ReviewPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleSave = async (isApproval = false) => {
     setSaving(true);

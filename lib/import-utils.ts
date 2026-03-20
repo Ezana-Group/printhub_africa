@@ -72,7 +72,6 @@ export async function parseUrlImport(url: string): Promise<ExtractedModelData | 
         'Pragma': 'no-cache',
       },
       redirect: 'follow',
-      // @ts-ignore - signal: AbortSignal.timeout(15000) is standard in undici/Next.js 15
       signal: AbortSignal.timeout(15000),
     });
 
@@ -97,7 +96,7 @@ export async function parseUrlImport(url: string): Promise<ExtractedModelData | 
       try {
         // Look for application/json scripts (SvelteKit fetched data)
         const scripts = $('script[type="application/json"]');
-        let printData: any = null;
+        let printData: Record<string, any> | null = null;
 
         scripts.each((_, el) => {
           try {
@@ -113,10 +112,11 @@ export async function parseUrlImport(url: string): Promise<ExtractedModelData | 
               printData = foundPrint;
               return false; // break
             }
-          } catch (e) {}
+          } catch {}
         });
 
         if (printData) {
+          const data = printData as Record<string, any>;
           const licenseMap: Record<string, string> = {
             'cc0': 'CC0 — Public Domain',
             'cc-by': 'CC BY — Attribution',
@@ -130,18 +130,18 @@ export async function parseUrlImport(url: string): Promise<ExtractedModelData | 
             'lgpl': 'LGPL',
           };
 
-          const images = (printData.images || []).map((img: any) => img.url || img.filePath).filter(Boolean);
+          const images = (data.images || []).map((img: { url?: string; filePath?: string }) => img.url || img.filePath).filter(Boolean);
           
           return {
-            name: printData.name || "",
-            description: printData.summary || printData.description || "",
+            name: data.name || "",
+            description: data.summary || data.description || "",
             thumbnailUrl: images[0] || "",
             imageUrls: images.slice(0, 20),
-            printInfo: printData.printSettings || "",
-            licenceType: licenseMap[printData.license?.name || printData.licenseId] || printData.license?.name || printData.licenseId || "Unknown",
-            designerName: printData.user?.publicUsername || "Unknown",
-            designerUrl: printData.user?.publicUsername ? `https://www.printables.com/@${printData.user.publicUsername}` : "",
-            tags: (printData.tags || []).map((t: any) => t.name).filter(Boolean),
+            printInfo: data.printSettings || "",
+            licenceType: licenseMap[data.license?.name || data.licenseId] || data.license?.name || data.licenseId || "Unknown",
+            designerName: data.user?.publicUsername || "Unknown",
+            designerUrl: data.user?.publicUsername ? `https://www.printables.com/@${data.user.publicUsername}` : "",
+            tags: (data.tags || []).map((t: { name?: string }) => t.name).filter(Boolean),
             platform,
             sourceUrl: url,
           };
@@ -264,14 +264,12 @@ export async function searchThingiverse(term: string, page: number = 1) {
       name: thing.name,
       description: (detail.description || "").replace(/<[^>]*>?/gm, ""),
       printInfo: (detail.details || "") + "\n" + (detail.instructions || ""),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      imageUrls: images.map((img: any) => img.sizes?.find((s: any) => s.type === "display" && s.size === "large")?.url || img.url),
+      imageUrls: images.map((img: { url: string; sizes?: { type: string; size: string; url: string }[] }) => img.sizes?.find((s: { type: string; size: string; url: string }) => s.type === "display" && s.size === "large")?.url || img.url),
       thumbnailUrl: thing.thumbnail,
       licenceType: license,
       designerName: thing.creator?.name,
       designerUrl: thing.creator?.public_url,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      tags: (detail.tags || []).map((t: any) => t.name),
+      tags: (detail.tags || []).map((t: { name: string }) => t.name),
 
       sourceUrl: thing.public_url,
       platform: "THINGIVERSE" as ImportPlatform,
@@ -306,8 +304,7 @@ export async function searchMyMiniFactory(term: string, page: number = 1) {
       name: item.name,
       description: item.description,
       printInfo: item.print_settings || "",
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      imageUrls: item.images?.map((img: any) => img.original?.url || img.url) || [],
+      imageUrls: item.images?.map((img: { url: string; original?: { url: string } }) => img.original?.url || img.url) || [],
       thumbnailUrl: item.thumbnail?.url,
       licenceType: item.licence?.name || "Commercial",
       designerName: item.designer?.name,

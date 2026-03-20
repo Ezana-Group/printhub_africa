@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     if ("error" in extracted) {
       return NextResponse.json({ 
         error: extracted.error,
-        detail: (extracted as any).detail 
+        detail: (extracted as { detail?: string }).detail 
       }, { status: 400 });
     }
 
@@ -97,7 +97,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       error: 'IMPORT_FAILED',
       detail: error instanceof Error ? error.message : String(error),
-      code: (error as any)?.code ?? null,
+      code: (error as { code?: string })?.code ?? null,
     }, { status: 500 });
   }
 }

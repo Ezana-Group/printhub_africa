@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/admin-api-guard";
 import { downloadAndUploadImage } from "@/lib/import-utils";
+import { PrismaClient } from "@prisma/client";
 
 export async function POST(req: Request) {
   const auth = await requireAdminApi({ permission: "catalogue_import" });
@@ -46,8 +47,7 @@ export async function POST(req: Request) {
 
     const thumbnailUrl = uploadedImageUrls.length > 0 ? uploadedImageUrls[0] : null;
 
-    // @ts-ignore - Prisma might be out of sync in IDE
-    const externalModel = await prisma.externalModel.create({
+    const externalModel = await (prisma as PrismaClient).externalModel.create({
       data: {
         platform: platform || "OTHER",
         sourceUrl: finalUrl,
@@ -65,8 +65,7 @@ export async function POST(req: Request) {
       }
     });
 
-    // @ts-ignore - Prisma might be out of sync in IDE
-    await prisma.importLog.create({
+    await (prisma as PrismaClient).importLog.create({
       data: {
         platform: platform || "OTHER",
         trigger: "manual_url",
