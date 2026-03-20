@@ -34,14 +34,24 @@ export async function POST(req: Request) {
 
     const extracted = await parseUrlImport(url);
     if ("error" in extracted) {
-      return NextResponse.json({ error: extracted.error }, { status: 400 });
+      return NextResponse.json({ 
+        error: extracted.error,
+        detail: (extracted as any).detail 
+      }, { status: 400 });
     }
 
-    // Download and upload images to R2
-    const uploadedImageUrls: string[] = [];
-    for (const imageUrl of extracted.imageUrls) {
-      const r2Url = await downloadAndUploadImage(imageUrl);
-      if (r2Url) uploadedImageUrls.push(r2Url);
+    // Download and upload images to R2 - NON-BLOCKING
+    let uploadedImageUrls: string[] = [];
+    const originalImageUrls: string[] = extracted.imageUrls;
+
+    try {
+      for (const imageUrl of originalImageUrls) {
+        const r2Url = await downloadAndUploadImage(imageUrl);
+        if (r2Url) uploadedImageUrls.push(r2Url);
+      }
+    } catch (imgError) {
+      console.warn('[IMPORT] Image download failed, using original URLs', imgError);
+      uploadedImageUrls = originalImageUrls; // fallback to source URLs
     }
 
     const thumbnailUrl = uploadedImageUrls.length > 0 ? uploadedImageUrls[0] : null;
@@ -77,9 +87,17 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ id: externalModel.id });
   } catch (error: unknown) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const err = error as any;
-    console.error("URL Import Error:", err);
-    return NextResponse.json({ error: "INTERNAL_ERROR", detail: err.message }, { status: 500 });
+    const body = await req.clone().json().catch(() => ({}));
+    console.error('[IMPORT URL ERROR]', {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      url: body?.url,
+    });
+    
+    return NextResponse.json({
+      error: 'IMPORT_FAILED',
+      detail: error instanceof Error ? error.message : String(error),
+      code: (error as any)?.code ?? null,
+    }, { status: 500 });
   }
 }
