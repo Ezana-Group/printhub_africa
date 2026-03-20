@@ -15,8 +15,10 @@ export function EmailVerificationBanner() {
   const [localVerified, setLocalVerified] = useState(false);
 
   const user = session?.user;
-  // If user is verified natively by NextAuth or locally by the demo button
-  const isVerified = localVerified || (user && user.emailVerified === true);
+  const isStaff = user?.role && ["STAFF", "ADMIN", "SUPER_ADMIN"].includes(user.role);
+  
+  // If user is verified natively by NextAuth or locally by the demo button, or is staff
+  const isVerified = localVerified || (user && user.emailVerified === true) || isStaff;
 
   // Default to session email
   useEffect(() => {
