@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 import { CategoryImageField } from "@/components/admin/category-image-field";
 
 export type CategoryForForm = {
@@ -200,13 +201,14 @@ export function CategoryFormSheet({
 
           <div className="space-y-2">
             <Label htmlFor="cat-desc">Description</Label>
-            <Textarea
-              id="cat-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-              placeholder="Short description for the shop card"
-            />
+            <div className="mt-1">
+              <SmartTextEditor
+                value={description}
+                onChange={setDescription}
+                placeholder="Short description for the shop card"
+                minHeight="100px"
+              />
+            </div>
           </div>
 
           <div className="flex gap-4">

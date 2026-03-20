@@ -11,15 +11,6 @@ import {
   History,
   RotateCcw,
   XCircle,
-  Type,
-  Heading2,
-  Heading3,
-  Link2,
-  List,
-  ListOrdered,
-  Bold,
-  Italic,
-  Table2,
   Eye,
 } from "lucide-react";
 import { SmartTextEditor } from "@/components/admin/smart-text-editor";
@@ -55,70 +46,7 @@ export function LegalPageEditorClient({
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<"saved" | "error" | null>(null);
   const [tab, setTab] = useState<"edit" | "preview">("edit");
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const cursorAfterInsertRef = useRef<number | null>(null);
 
-  // Restore cursor after content update (e.g. after toolbar insert)
-  useEffect(() => {
-    const ta = textareaRef.current;
-    const pos = cursorAfterInsertRef.current;
-    if (ta && pos != null) {
-      ta.focus();
-      ta.setSelectionRange(pos, pos);
-      cursorAfterInsertRef.current = null;
-    }
-  }, [content]);
-
-  const insertAtCursor = (openTag: string, closeTag: string = "") => {
-    const ta = textareaRef.current;
-    if (!ta) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const before = content.slice(0, start);
-    const selected = content.slice(start, end);
-    const after = content.slice(end);
-    const insert = closeTag ? `${openTag}${selected}${closeTag}` : openTag;
-    const newContent = before + insert + after;
-    setContent(newContent);
-    cursorAfterInsertRef.current = start + insert.length;
-  };
-
-  const handleInsertHeading = (level: 2 | 3) => {
-    insertAtCursor(`<h${level}>`, `</h${level}>`);
-  };
-
-  const handleInsertParagraph = () => {
-    insertAtCursor("<p>", "</p>");
-  };
-
-  const handleInsertLink = () => {
-    const url = window.prompt("Enter URL (e.g. /privacy-policy or https://...):", "https://");
-    if (url == null || !url.trim()) return;
-    const escaped = url.trim().replace(/"/g, "&quot;");
-    insertAtCursor(`<a href="${escaped}">`, "</a>");
-  };
-
-  const handleInsertList = (ordered: boolean) => {
-    const tag = ordered ? "ol" : "ul";
-    insertAtCursor(`<${tag}>\n  <li>`, `</li>\n</${tag}>`);
-  };
-
-  const handleInsertBold = () => {
-    insertAtCursor("<strong>", "</strong>");
-  };
-
-  const handleInsertItalic = () => {
-    insertAtCursor("<em>", "</em>");
-  };
-
-  const handleInsertTable = () => {
-    const html = `<table>
-  <tr><th>Column 1</th><th>Column 2</th><th>Column 3</th></tr>
-  <tr><td>Cell</td><td>Cell</td><td>Cell</td></tr>
-  <tr><td>Cell</td><td>Cell</td><td>Cell</td></tr>
-</table>`;
-    insertAtCursor(html, "");
-  };
 
   const handleSave = async () => {
     setSaving(true);

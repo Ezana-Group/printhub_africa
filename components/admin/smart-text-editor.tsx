@@ -4,7 +4,7 @@ import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
-import { useEffect, useState } from "react";
+import { useEffect, useState, forwardRef, useImperativeHandle, useRef } from "react";
 import {
   Bold,
   Italic,
@@ -24,6 +24,10 @@ interface RichTextEditorProps {
   onChange: (html: string) => void;
   placeholder?: string;
   minHeight?: string;
+}
+
+export interface SmartTextEditorHandle {
+  insertText: (text: string) => void;
 }
 
 function ToolbarButton({
@@ -161,13 +165,31 @@ function Toolbar({ editor }: { editor: Editor }) {
   );
 }
 
-export function SmartTextEditor({
-  value,
-  onChange,
-  placeholder = "Write your message…",
-  minHeight = "180px",
-}: RichTextEditorProps) {
-  const [mode, setMode] = useState<"rich" | "html">("rich");
+export const SmartTextEditor = forwardRef<SmartTextEditorHandle, RichTextEditorProps>(
+  ({ value, onChange, placeholder = "Write your message…", minHeight = "180px" }, ref) => {
+    const [mode, setMode] = useState<"rich" | "html">("rich");
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    useImperativeHandle(ref, () => ({
+      insertText: (text: string) => {
+        if (mode === "rich" && editor) {
+          editor.chain().focus().insertContent(text).run();
+        } else if (mode === "html" && textareaRef.current) {
+          const el = textareaRef.current;
+          const start = el.selectionStart ?? 0;
+          const end = el.selectionEnd ?? 0;
+          const current = el.value;
+          const next = current.slice(0, start) + text + current.slice(end);
+          onChange(next);
+          // Set cursor position after insertion
+          setTimeout(() => {
+            const pos = start + text.length;
+            el.setSelectionRange(pos, pos);
+            el.focus();
+          }, 0);
+        }
+      },
+    }));
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -254,6 +276,7 @@ export function SmartTextEditor({
         editor ? <EditorContent editor={editor} /> : null
       ) : (
         <textarea
+          ref={textareaRef}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
@@ -264,4 +287,6 @@ export function SmartTextEditor({
       )}
     </div>
   );
-}
+});
+
+SmartTextEditor.displayName = "SmartTextEditor";

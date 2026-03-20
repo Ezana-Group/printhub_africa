@@ -71,9 +71,11 @@ Coursera*.pdf
 # Archived/removed files — not part of the build
 /archive/
 
-# Docs folder — keep locally only; do not push to repo
-/docs/
+# Docs folder
+!/docs/
+!/docs/*.md
 
-# Only root README.md is committed; all other .md files are excluded from this repo
+# Only root README.md is committed; all other .md files are excluded from this repo by default
 *.md
 !/README.md
+!/docs/*.md
