@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 
 interface Category {
   id: string;
@@ -114,13 +115,14 @@ export function CatalogueItemForm({ categories }: CatalogueItemFormProps) {
       </div>
       <div className="space-y-2">
         <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Full description (optional)"
-          rows={4}
-        />
+        <div className="mt-1">
+          <SmartTextEditor
+            value={description}
+            onChange={setDescription}
+            placeholder="Full description (HTML/Rich Text)"
+            minHeight="200px"
+          />
+        </div>
       </div>
       <div className="flex items-center gap-3">
         <Switch

@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { RichTextEditor } from "@/components/admin/email/rich-text-editor";
+import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import {
@@ -462,7 +462,7 @@ export function EmailThreadClient({
             <div className="grid grid-cols-1 md:grid-cols-[1fr_220px] gap-3">
               <div className="space-y-2">
                 <Label>Message</Label>
-                <RichTextEditor
+                <SmartTextEditor
                   value={bodyHtml}
                   onChange={setBodyHtml}
                   placeholder="Write your reply…"

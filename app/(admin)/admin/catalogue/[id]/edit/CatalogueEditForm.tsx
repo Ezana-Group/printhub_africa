@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { FileUploader } from "@/components/upload/FileUploader";
 import { Loader2 } from "lucide-react";
+import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 
 type TabId = "details" | "photos" | "stl";
 
@@ -341,13 +342,14 @@ export function CatalogueEditForm({
           </div>
           <div>
             <Label htmlFor="desc">Description</Label>
-            <Textarea
-              id="desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={5}
-              className="mt-1"
-            />
+            <div className="mt-1">
+              <SmartTextEditor
+                value={description}
+                onChange={setDescription}
+                placeholder="Full description (HTML/Rich Text)"
+                minHeight="200px"
+              />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>

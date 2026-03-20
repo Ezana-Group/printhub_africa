@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RichTextEditor } from "@/components/admin/email/rich-text-editor";
+import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 import {
   Mail,
   PenSquare,
@@ -463,7 +463,7 @@ export function EmailInboxThreePane({
                 </div>
                 <div className="space-y-1.5">
                   <Label>Message</Label>
-                  <RichTextEditor
+                  <SmartTextEditor
                     value={composeBody}
                     onChange={setComposeBody}
                     placeholder="Write your message…"
@@ -889,7 +889,7 @@ export function EmailInboxThreePane({
                     />
                   </div>
                 </div>
-                <RichTextEditor
+                <SmartTextEditor
                   value={replyHtml}
                   onChange={setReplyHtml}
                   placeholder="Write your reply…"

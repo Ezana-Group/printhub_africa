@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RichTextEditor } from "@/components/admin/email/rich-text-editor";
+import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 import { Mail, Settings, PenSquare, Loader2, Send, X } from "lucide-react";
 import {
   Dialog,
@@ -181,7 +181,7 @@ export function EmailInboxClient({
 
                 <div className="space-y-1.5">
                   <Label>Message</Label>
-                  <RichTextEditor
+                  <SmartTextEditor
                     value={bodyHtml}
                     onChange={setBodyHtml}
                     placeholder="Write your message…"

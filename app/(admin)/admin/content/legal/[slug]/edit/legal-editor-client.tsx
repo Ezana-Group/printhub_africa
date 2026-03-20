@@ -23,6 +23,7 @@ import {
   Table2,
   Eye,
 } from "lucide-react";
+import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 
 type HistoryItem = {
   id: string;
@@ -220,34 +221,11 @@ export function LegalPageEditorClient({
           <div className="p-4">
             {tab === "edit" ? (
               <div className="space-y-3">
-                {/* Formatting toolbar */}
-                <div className="flex flex-wrap items-center gap-1 p-2 rounded-lg bg-slate-50 border border-slate-200">
-                  <span className="text-xs font-medium text-slate-500 mr-2 shrink-0">Insert:</span>
-                  {toolbarButtons.map(({ label, icon: Icon, onClick }) => (
-                    <Button
-                      key={label}
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 px-2 text-slate-600 hover:text-slate-900 hover:bg-slate-200/80"
-                      onClick={onClick}
-                      title={label}
-                    >
-                      <Icon className="h-4 w-4" />
-                      <span className="sr-only">{label}</span>
-                    </Button>
-                  ))}
-                </div>
-                <p className="text-xs text-slate-500">
-                  Use the buttons above to insert headings, links, lists, and tables. Place the cursor where you want to insert, or select text to wrap (e.g. bold). You can also type HTML directly.
-                </p>
-                <Textarea
-                  ref={textareaRef}
+                <SmartTextEditor
                   value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  className="min-h-[420px] font-mono text-sm leading-relaxed rounded-lg border-slate-200 bg-slate-50/50 focus:bg-white placeholder:text-slate-400"
-                  placeholder="<h2>Section title</h2>&#10;<p>Paragraph text...</p>"
-                  spellCheck={false}
+                  onChange={setContent}
+                  placeholder="<h2>Section title</h2><p>Paragraph text...</p>"
+                  minHeight="420px"
                 />
               </div>
             ) : (

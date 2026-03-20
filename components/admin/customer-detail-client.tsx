@@ -5,7 +5,7 @@ import Link from "next/link";
 import { AdminBreadcrumbs } from "@/components/admin/admin-breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { RichTextEditor } from "@/components/admin/email/rich-text-editor";
+import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -836,7 +836,7 @@ export function CustomerDetailClient({ data }: { data: CustomerDetailData }) {
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs text-muted-foreground">Message</label>
-                    <RichTextEditor
+                    <SmartTextEditor
                       value={composeBodyHtml}
                       onChange={setComposeBodyHtml}
                       placeholder="Write your message…"

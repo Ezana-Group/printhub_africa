@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 
 const DEPARTMENTS = ["Production", "Design", "Sales", "Operations", "Tech", "Other"];
 const TYPES = [
@@ -234,43 +235,44 @@ export function JobListingForm({
       </div>
       <div className="space-y-2">
         <Label>About this role *</Label>
-        <Textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          required
-          rows={4}
-          placeholder="Rich text / markdown"
-          className="resize-y"
-        />
+        <div className="mt-1">
+          <SmartTextEditor
+            value={description}
+            onChange={setDescription}
+            placeholder="Rich text / markdown"
+            minHeight="150px"
+          />
+        </div>
       </div>
       <div className="space-y-2">
         <Label>Responsibilities *</Label>
-        <Textarea
-          value={responsibilities}
-          onChange={(e) => setResponsibilities(e.target.value)}
-          required
-          rows={4}
-          className="resize-y"
-        />
+        <div className="mt-1">
+          <SmartTextEditor
+            value={responsibilities}
+            onChange={setResponsibilities}
+            minHeight="150px"
+          />
+        </div>
       </div>
       <div className="space-y-2">
         <Label>Requirements *</Label>
-        <Textarea
-          value={requirements}
-          onChange={(e) => setRequirements(e.target.value)}
-          required
-          rows={4}
-          className="resize-y"
-        />
+        <div className="mt-1">
+          <SmartTextEditor
+            value={requirements}
+            onChange={setRequirements}
+            minHeight="150px"
+          />
+        </div>
       </div>
       <div className="space-y-2">
         <Label>Nice to have</Label>
-        <Textarea
-          value={niceToHave}
-          onChange={(e) => setNiceToHave(e.target.value)}
-          rows={2}
-          className="resize-y"
-        />
+        <div className="mt-1">
+          <SmartTextEditor
+            value={niceToHave}
+            onChange={setNiceToHave}
+            minHeight="150px"
+          />
+        </div>
       </div>
       <div className="space-y-2">
         <Label>Benefits</Label>

@@ -13,6 +13,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 
 type Category = {
   id: string;
@@ -175,13 +176,14 @@ export function FaqManagerClient({
               </div>
               <div>
                 <Label>Answer (HTML allowed)</Label>
-                <Textarea
-                  value={answer}
-                  onChange={(e) => setAnswer(e.target.value)}
-                  rows={8}
-                  className="font-mono text-sm"
-                  required
-                />
+                <div className="mt-1">
+                  <SmartTextEditor
+                    value={answer}
+                    onChange={setAnswer}
+                    placeholder="Rich text / markdown"
+                    minHeight="200px"
+                  />
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <input
