@@ -15,7 +15,7 @@ export interface ExtractedModelData {
   platform: ImportPlatform;
   sourceUrl: string;
   externalId?: string;
-  rawData?: any;
+  rawData?: Record<string, unknown>;
 }
 
 export function detectPlatform(url: string): ImportPlatform {
@@ -108,7 +108,8 @@ export async function parseUrlImport(url: string): Promise<ExtractedModelData | 
     });
 
     // JSON-LD
-    let jsonLdData: any = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let jsonLdData: Record<string, any> | null = null;
     $('script[type="application/ld+json"]').each((_index, el) => {
       try {
         const data = JSON.parse($(el).html() || "{}");
@@ -117,7 +118,9 @@ export async function parseUrlImport(url: string): Promise<ExtractedModelData | 
           else imageUrlSet.add(data.image);
         }
         if (!jsonLdData) jsonLdData = data;
-      } catch (e) {}
+      } catch {
+        // Error parsing JSON-LD
+      }
     });
 
     const imageUrls = Array.from(imageUrlSet);
@@ -146,7 +149,8 @@ export async function parseUrlImport(url: string): Promise<ExtractedModelData | 
         return false; // break
       }
     });
-    licenceType = licenceType || $('meta[property="og:licence"]').attr('content') || (jsonLdData?.license) || "Unknown";
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    licenceType = licenceType || $('meta[property="og:licence"]').attr('content') || ((jsonLdData as any)?.license) || "Unknown";
 
     // Designer Info
     const designerName = $('meta[property="og:author"]').attr('content') || 
@@ -160,9 +164,12 @@ export async function parseUrlImport(url: string): Promise<ExtractedModelData | 
     $('[class*="tag"], [class*="category"], [class*="chip"], [class*="label"], [class*="badge"]').each((_index, el) => {
       tags.push($(el).text().trim());
     });
-    if (jsonLdData?.keywords) {
-      if (Array.isArray(jsonLdData.keywords)) tags.push(...jsonLdData.keywords);
-      else tags.push(...jsonLdData.keywords.split(",").map((t: string) => t.trim()));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((jsonLdData as any)?.keywords) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (Array.isArray((jsonLdData as any).keywords)) tags.push(...(jsonLdData as any).keywords);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      else tags.push(...((jsonLdData as any).keywords as string).split(",").map((t: string) => t.trim()));
     }
 
     return {
@@ -178,7 +185,7 @@ export async function parseUrlImport(url: string): Promise<ExtractedModelData | 
       platform,
       sourceUrl: url,
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("URL Import Parsing Error:", error);
     return { error: "UNKNOWN_ERROR" };
   }
@@ -212,12 +219,15 @@ export async function searchThingiverse(term: string, page: number = 1) {
       name: thing.name,
       description: (detail.description || "").replace(/<[^>]*>?/gm, ""),
       printInfo: (detail.details || "") + "\n" + (detail.instructions || ""),
-      imageUrls: images.map((img: any) => img.sizes.find((s: any) => s.type === "display" && s.size === "large")?.url || img.url),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      imageUrls: images.map((img: any) => img.sizes?.find((s: any) => s.type === "display" && s.size === "large")?.url || img.url),
       thumbnailUrl: thing.thumbnail,
       licenceType: license,
       designerName: thing.creator?.name,
       designerUrl: thing.creator?.public_url,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       tags: (detail.tags || []).map((t: any) => t.name),
+
       sourceUrl: thing.public_url,
       platform: "THINGIVERSE" as ImportPlatform,
       rawData: thing,
@@ -245,11 +255,13 @@ export async function searchMyMiniFactory(term: string, page: number = 1) {
     // Only import where allows_commercial_printing is true
     if (item.licence?.allows_commercial_printing !== true) continue;
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     results.push({
       externalId: item.id.toString(),
       name: item.name,
       description: item.description,
       printInfo: item.print_settings || "",
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       imageUrls: item.images?.map((img: any) => img.original?.url || img.url) || [],
       thumbnailUrl: item.thumbnail?.url,
       licenceType: item.licence?.name || "Commercial",

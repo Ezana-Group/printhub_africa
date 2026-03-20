@@ -57,8 +57,10 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ results: finalResults });
-  } catch (error: any) {
-    console.error("API Search Import Error:", error);
-    return NextResponse.json({ error: "INTERNAL_ERROR", detail: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const err = error as any;
+    console.error("API Search Import Error:", err);
+    return NextResponse.json({ error: "INTERNAL_ERROR", detail: err.message }, { status: 500 });
   }
 }

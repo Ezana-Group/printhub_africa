@@ -51,7 +51,8 @@ export default async function ProductPage({ params }: Props) {
   const business = await getBusinessPublic();
   const whatsappDigits = (business.whatsapp ?? "").replace(/\D/g, "") || DEFAULT_WHATSAPP;
   const waHref = (text: string) => `https://wa.me/${whatsappDigits}?text=${encodeURIComponent(text)}`;
-  let product: Awaited<ReturnType<typeof prisma.product.findFirst>> | null = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let product: any = null;
   try {
     product = await prisma.product.findFirst({
       where: { slug, isActive: true },
@@ -67,13 +68,16 @@ export default async function ProductPage({ params }: Props) {
   }
   if (!product) notFound();
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const productWithRelations = product as any;
   const dbImages = productWithRelations.productImages ?? [];
-  const galleryImages =
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const galleryImages: any[] =
     dbImages.length > 0
-      ? dbImages.map((img) => ({ id: img.id, url: img.url, altText: img.altText, isPrimary: img.isPrimary }))
-      : (product.images ?? []).map((url, i) => ({ id: undefined, url, altText: null as string | null, isPrimary: i === 0 }));
-  const primaryImage = product.images?.[0] ?? galleryImages.find((i) => i.isPrimary)?.url ?? galleryImages[0]?.url;
+      ? dbImages.map((img: any) => ({ id: img.id, url: img.url, altText: img.altText, isPrimary: img.isPrimary }))
+      : (product.images ?? []).map((url: string, i: number) => ({ id: undefined, url, altText: null as string | null, isPrimary: i === 0 }));
+  const primaryImage = product.images?.[0] ?? galleryImages.find((i: any) => i.isPrimary)?.url ?? galleryImages[0]?.url;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   const basePrice = Number(product.basePrice);
   const comparePrice = product.comparePrice != null ? Number(product.comparePrice) : null;
 
@@ -121,7 +125,8 @@ export default async function ProductPage({ params }: Props) {
             slug={product.slug}
             image={primaryImage ?? undefined}
             basePrice={basePrice}
-            variants={productWithRelations.variants.map((v) => ({ id: v.id, name: v.name, price: Number(v.price), stock: v.stock }))}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            variants={productWithRelations.variants.map((v: any) => ({ id: v.id, name: v.name, price: Number(v.price), stock: v.stock }))}
             stock={product.stock}
             minOrderQty={product.minOrderQty}
             maxOrderQty={product.maxOrderQty ?? undefined}

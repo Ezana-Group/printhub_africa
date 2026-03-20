@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/admin-api-guard";
 
-export async function GET(req: Request) {
+export async function GET() {
   const auth = await requireAdminApi({ permission: "catalogue_review" });
   if (auth instanceof NextResponse) return auth;
 
@@ -28,7 +28,7 @@ export async function GET(req: Request) {
     });
 
     return NextResponse.json({ items });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "INTERNAL_ERROR" }, { status: 500 });
   }
 }

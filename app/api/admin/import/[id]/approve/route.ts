@@ -5,12 +5,12 @@ import { revalidatePath, revalidateTag } from "next/cache";
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await requireAdminApi({ permission: "catalogue_review" });
   if (auth instanceof NextResponse) return auth;
 
-  const { id } = params;
+  const { id } = await params;
   const data = await req.json();
 
   try {
@@ -71,8 +71,9 @@ export async function POST(
     revalidatePath("/admin/catalogue/import");
 
     return NextResponse.json({ productId: product.id });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Approval failed";
     console.error("Approval Error:", error);
-    return NextResponse.json({ error: "APPROVAL_FAILED", detail: error.message }, { status: 500 });
+    return NextResponse.json({ error: "APPROVAL_FAILED", detail: message }, { status: 500 });
   }
 }

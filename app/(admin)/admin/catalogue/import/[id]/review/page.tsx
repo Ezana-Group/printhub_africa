@@ -2,21 +2,64 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Loader2, ArrowLeft, ExternalLink, X, Save, CheckCircle, AlertCircle, Trash2 } from "lucide-react";
+import { Loader2, ArrowLeft, ExternalLink, Save, CheckCircle, AlertCircle, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { LicenceBadge } from "@/components/catalogue/LicenceBadge";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+
+interface ImportFormData {
+  name: string;
+  shortDescription: string;
+  description: string;
+  printInfo: string;
+  categoryId: string;
+  tags: string[];
+  basePrice: number;
+  comparePrice: number;
+  licenceType: string;
+  licenceVerified: boolean;
+  designerCreditRequired: boolean;
+  creditText: string;
+  internalNotes: string;
+  thumbnailUrl: string;
+  imageUrls: string[];
+}
+
+interface Category {
+  id: string;
+  name: string;
+}
+
+interface ExternalModelData {
+  id: string;
+  platform: string;
+  externalUrl: string;
+  name: string;
+  description?: string;
+  printInfo?: string;
+  categoryId?: string;
+  tags?: string[];
+  licenceType: string;
+  licenceVerified: boolean;
+  designerName?: string;
+  designerUrl?: string;
+  thumbnailUrl?: string;
+  imageUrls: string[];
+  importedAt: string;
+  notes?: string;
+}
 
 export default function ReviewPage() {
   const { id } = useParams();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [model, setModel] = useState<any>(null);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [model, setModel] = useState<ExternalModelData | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
   
   // Form State
-  const [formData, setFormData] = useState<any>({
+  const [formData, setFormData] = useState<ImportFormData>({
     name: "",
     shortDescription: "",
     description: "",
@@ -48,23 +91,24 @@ export default function ReviewPage() {
       
       if (modelRes.ok) {
         const data = await modelRes.json();
-        setModel(data.model);
+        const m = data.model as ExternalModelData;
+        setModel(m);
         setFormData({
-          name: data.model.name || "",
-          shortDescription: data.model.description?.slice(0, 300) || "",
-          description: data.model.description || "",
-          printInfo: data.model.printInfo || "",
-          categoryId: data.model.categoryId || "",
-          tags: data.model.tags || [],
+          name: m.name || "",
+          shortDescription: m.description?.slice(0, 300) || "",
+          description: m.description || "",
+          printInfo: m.printInfo || "",
+          categoryId: m.categoryId || "",
+          tags: m.tags || [],
           basePrice: 0,
           comparePrice: 0,
-          licenceType: data.model.licenceType || "",
-          licenceVerified: data.model.licenceVerified || false,
+          licenceType: m.licenceType || "",
+          licenceVerified: m.licenceVerified || false,
           designerCreditRequired: true,
-          creditText: `Design by ${data.model.designerName || "Unknown"}`,
-          internalNotes: data.model.notes || "",
-          thumbnailUrl: data.model.thumbnailUrl || "",
-          imageUrls: data.model.imageUrls || [],
+          creditText: `Design by ${m.designerName || "Unknown"}`,
+          internalNotes: m.notes || "",
+          thumbnailUrl: m.thumbnailUrl || "",
+          imageUrls: m.imageUrls || [],
         });
       }
       
@@ -100,72 +144,102 @@ export default function ReviewPage() {
     }
   };
 
-  if (loading) return <div className="p-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>;
-  if (!model) return <div className="p-12 text-center text-red-500">Model not found.</div>;
+  if (loading) {
+    return (
+      <div className="flex h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!model) {
+    return (
+      <div className="flex h-[400px] flex-col items-center justify-center gap-4">
+        <AlertCircle className="h-12 w-12 text-red-500" />
+        <p className="text-lg font-medium">Model not found</p>
+        <Link href="/admin/catalogue/import" className="text-primary hover:underline">Back to Import</Link>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/admin/catalogue/import" className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <h1 className="text-2xl font-bold">Review Import: {model.name}</h1>
+    <div className="max-w-6xl mx-auto pb-20">
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link href="/admin/catalogue/import" className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <ArrowLeft className="w-5 h-5" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold">Review Import</h1>
+            <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+              From <span className="font-semibold uppercase">{model.platform}</span> 
+              <span className="text-xs">•</span>
+              Imported {model.importedAt ? format(new Date(model.importedAt), "MMM d, yyyy") : "Unknown date"}
+            </p>
+          </div>
+        </div>
+        <a 
+          href={model.externalUrl} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 text-sm text-primary hover:underline bg-primary/5 px-4 py-2 rounded-lg"
+        >
+          Check Original Source <ExternalLink className="w-4 h-4" />
+        </a>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left Column: Preview */}
-        <div className="space-y-6">
-          <div className="bg-white p-6 rounded-lg border shadow-sm space-y-4">
-            <h3 className="font-semibold text-lg flex items-center justify-between">
-              Image Gallery
-              <span className="text-xs text-muted-foreground font-normal">Click to set primary (thumbnail)</span>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left Column: Visuals & Original Data */}
+        <div className="lg:col-span-1 space-y-6">
+          <div className="bg-white p-4 rounded-lg border shadow-sm">
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              Media Preview
             </h3>
-            <div className="grid grid-cols-3 gap-3">
-              {formData.imageUrls.map((img: string, i: number) => (
+            <div className="aspect-square rounded-md overflow-hidden bg-gray-100 border relative group">
+              <img 
+                src={formData.thumbnailUrl} 
+                className="w-full h-full object-cover transition-transform group-hover:scale-105" 
+                alt="Preview"
+              />
+            </div>
+            <div className="grid grid-cols-4 gap-2 mt-2">
+              {formData.imageUrls.slice(0, 8).map((url, i) => (
                 <div 
                   key={i} 
                   className={cn(
-                    "aspect-square rounded-md border relative group overflow-hidden cursor-pointer",
-                    formData.thumbnailUrl === img ? "ring-2 ring-primary border-primary" : "hover:border-primary/50"
+                    "aspect-square rounded border bg-gray-50 overflow-hidden cursor-pointer hover:border-primary transition-colors",
+                    formData.thumbnailUrl === url && "border-2 border-primary"
                   )}
-                  onClick={() => setFormData({ ...formData, thumbnailUrl: img })}
+                  onClick={() => setFormData({ ...formData, thumbnailUrl: url })}
                 >
-                  <img src={img} className="w-full h-full object-cover" />
-                  <button 
-                    className="absolute top-1 right-1 bg-white/80 p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 hover:text-red-500"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const newImages = formData.imageUrls.filter((_: any, idx: number) => idx !== i);
-                      setFormData({ 
-                        ...formData, 
-                        imageUrls: newImages,
-                        thumbnailUrl: formData.thumbnailUrl === img ? (newImages[0] || "") : formData.thumbnailUrl
-                      });
-                    }}
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                  {formData.thumbnailUrl === img && (
-                    <div className="absolute bottom-0 left-0 right-0 bg-primary text-white text-[10px] text-center py-0.5">Primary</div>
-                  )}
+                  <img src={url} className="w-full h-full object-cover" alt={`Preview ${i}`} />
                 </div>
               ))}
             </div>
-            
-            <div className="pt-4 border-t space-y-2">
-              <a href={model.sourceUrl} target="_blank" className="text-sm text-blue-600 hover:underline flex items-center gap-1">
-                Open original page <ExternalLink className="w-3 h-3" />
-              </a>
-              <div className="p-3 bg-gray-50 rounded text-xs space-y-2">
-                <p><strong>Extracted Licence:</strong> {model.licenceType}</p>
-                <p><strong>Designer:</strong> {model.designerName} (<a href={model.designerUrl} target="_blank" className="text-blue-600">Profile</a>)</p>
+          </div>
+
+          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4">
+            <h3 className="font-semibold text-sm uppercase tracking-wider text-slate-500">Original Metadata</h3>
+            <div className="space-y-3">
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase">Designer</p>
+                <p className="text-sm font-medium">{model.designerName}</p>
+                {model.designerUrl && (
+                  <a href={model.designerUrl} target="_blank" className="text-[11px] text-blue-600 hover:underline">View Profile</a>
+                )}
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase">Original License</p>
+                <div className="mt-1">
+                  <LicenceBadge licence={model.licenceType} />
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Right Column: Edit */}
-        <div className="space-y-6">
+        {/* Right Column: Form */}
+        <div className="lg:col-span-2 space-y-6">
           <div className="bg-white p-6 rounded-lg border shadow-sm space-y-4">
             <h3 className="font-semibold text-lg">Product Details</h3>
             
@@ -187,7 +261,7 @@ export default function ReviewPage() {
                   value={formData.shortDescription}
                   onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
                 />
-                <p className="text-[10px] text-right text-muted-foreground">{formData.shortDescription.length}/300</p>
+                <p className="text-[10px] text-right text-muted-foreground">{formData.shortDescription?.length || 0}/300</p>
               </div>
 
               <div>

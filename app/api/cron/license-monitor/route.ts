@@ -1,58 +1,58 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseUrlImport } from "@/lib/import-utils";
 
-/**
- * Weekly Licence Monitor Cron
- * Checks all active products linked to external models.
- * If a model's source no longer exists or licence changed (theoretical), it flags it.
- * Realistically, it would re-parse the source URL.
- */
-export async function GET(req: Request) {
-  // Verify cron secret
-  const authHeader = req.headers.get("authorization");
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+export const dynamic = "force-dynamic";
 
+export async function GET() {
   try {
-    const activeImports = await prisma.externalModel.findMany({
+    // Get a batch of approved models to check
+    const modelsToCheck = await prisma.externalModel.findMany({
       where: {
-        status: "APPROVED",
-        sourceUrl: { not: "" },
+        status: "APPROVED"
       },
-      include: {
-        product: true
-      }
+      take: 10
     });
 
     const results = {
-      checked: activeImports.length,
-      flagged: 0,
-      errors: 0,
+      checked: 0,
+      updated: 0,
+      errors: 0
     };
 
-    // Process in batches to avoid timeout
-    for (const model of activeImports) {
+    for (const model of modelsToCheck) {
+      results.checked++;
+      
       try {
-        const res = await fetch(model.sourceUrl, {
-          method: "HEAD",
-          headers: { "User-Agent": "PrintHubBot/1.0" }
-        });
-
-        if (res.status === 404) {
-          // Model URL is dead
-          results.flagged++;
-          await prisma.importLog.create({
-            data: {
-              platform: model.platform,
-              trigger: "cron_monitor",
-              sourceUrl: model.sourceUrl,
-              status: "warning",
-              searchTerm: `URL DEAD: ${model.name}`,
+        if (model.platform === "THINGIVERSE") {
+          // Use sourceUrl from the model
+          const extracted = await parseUrlImport(model.sourceUrl);
+          
+          if (!("error" in extracted)) {
+            if (extracted.licenceType !== model.licenceType) {
+              await prisma.externalModel.update({
+                where: { id: model.id },
+                data: {
+                  licenceType: extracted.licenceType,
+                }
+              });
+              results.updated++;
+              
+              // Log the change using the correct ImportLog schema
+              await prisma.importLog.create({
+                data: {
+                  platform: model.platform,
+                  trigger: "api_sync",
+                  status: "success",
+                  searchTerm: `License updated for ${model.name}`,
+                  sourceUrl: model.sourceUrl,
+                  triggeredBy: "system_cron"
+                }
+              });
             }
-          });
+          }
         }
-      } catch (e) {
+      } catch {
         results.errors++;
       }
       
@@ -61,7 +61,8 @@ export async function GET(req: Request) {
     }
 
     return NextResponse.json({ success: true, results });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Internal error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

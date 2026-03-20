@@ -4,12 +4,12 @@ import { requireAdminApi } from "@/lib/admin-api-guard";
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await requireAdminApi({ permission: "catalogue_review" });
   if (auth instanceof NextResponse) return auth;
 
-  const { id } = params;
+  const { id } = await params;
   const data = await req.json();
 
   try {
@@ -31,7 +31,8 @@ export async function POST(
     });
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: "SAVE_FAILED", detail: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Save failed";
+    return NextResponse.json({ error: "SAVE_FAILED", detail: message }, { status: 500 });
   }
 }

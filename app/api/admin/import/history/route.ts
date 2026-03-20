@@ -28,7 +28,7 @@ export async function GET(req: Request) {
     });
 
     return NextResponse.json({ history });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "INTERNAL_ERROR" }, { status: 500 });
   }
 }

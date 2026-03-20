@@ -4,14 +4,16 @@ import { requireAdminApi } from "@/lib/admin-api-guard";
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await requireAdminApi({ permission: "catalogue_review" });
   if (auth instanceof NextResponse) return auth;
 
+  const { id } = await params;
+
   try {
     const model = await prisma.externalModel.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!model) {
@@ -19,7 +21,7 @@ export async function GET(
     }
 
     return NextResponse.json({ model });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "INTERNAL_ERROR" }, { status: 500 });
   }
 }
