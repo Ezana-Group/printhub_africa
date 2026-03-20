@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { AlertTriangle, Edit3, X, Send, CheckCircle, Zap } from "lucide-react";
 
 export function EmailVerificationBanner() {
   const { data: session, status, update } = useSession();
+  const router = useRouter();
   
   const [showChangeEmail, setShowChangeEmail] = useState(false);
   const [newEmailInput, setNewEmailInput] = useState("");
@@ -57,7 +59,8 @@ export function EmailVerificationBanner() {
       if (res.ok) {
         setShowChangeEmail(false);
         setCooldown(0);
-        await update(); // This forces NextAuth to reload token
+        await update({ emailVerified: false }); // Reset verified status on email change
+        router.refresh();
         handleResend();
       }
     } catch (e) {
@@ -70,7 +73,8 @@ export function EmailVerificationBanner() {
     try {
       const res = await fetch("/api/user/verify-email/demo", { method: "POST" });
       if (res.ok) {
-        await update(); 
+        await update({ emailVerified: true }); 
+        router.refresh();
         setLocalVerified(true);
         setShowToast(true);
         setTimeout(() => setShowToast(false), 5000);

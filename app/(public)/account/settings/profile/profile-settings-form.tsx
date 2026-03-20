@@ -45,9 +45,17 @@ interface ProfileSettingsFormProps {
   name: string;
   email: string;
   isEmailVerified: boolean;
+  displayName?: string;
+  phone?: string;
 }
 
-export function ProfileSettingsForm({ name, email, isEmailVerified }: ProfileSettingsFormProps) {
+export function ProfileSettingsForm({ 
+  name, 
+  email, 
+  isEmailVerified,
+  displayName = "",
+  phone = ""
+}: ProfileSettingsFormProps) {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -135,6 +143,7 @@ export function ProfileSettingsForm({ name, email, isEmailVerified }: ProfileSet
               <Input
                 id="displayName"
                 name="displayName"
+                defaultValue={displayName}
                 placeholder="How we address you in emails"
                 disabled={!isEmailVerified}
               />
@@ -145,6 +154,7 @@ export function ProfileSettingsForm({ name, email, isEmailVerified }: ProfileSet
                 id="phone"
                 name="phone"
                 type="tel"
+                defaultValue={phone}
                 placeholder="+254 XXX XXX XXX"
                 disabled={!isEmailVerified}
               />

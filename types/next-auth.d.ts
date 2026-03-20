@@ -7,6 +7,8 @@ declare module "next-auth" {
     name?: string | null;
     image?: string | null;
     role?: string;
+    displayName?: string | null;
+    phone?: string | null;
     emailVerified?: boolean;
   }
 
@@ -22,6 +24,8 @@ declare module "next-auth" {
       corporateId?: string;
       corporateRole?: string;
       corporateTier?: string;
+      displayName?: string | null;
+      phone?: string | null;
       emailVerified?: boolean;
     };
   }
@@ -36,6 +40,8 @@ declare module "next-auth/jwt" {
     corporateId?: string;
     corporateRole?: string;
     corporateTier?: string;
+    displayName?: string | null;
+    phone?: string | null;
     emailVerified?: boolean;
   }
 }

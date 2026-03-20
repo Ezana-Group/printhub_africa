@@ -70,9 +70,13 @@ export function ProfileCompletionGate() {
       });
 
       if (response.ok) {
-        // If image exists, handle that in a separate request or rewrite the endpoint to accept multipart/form-data.
+        const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
         // For now, we'll just demonstrate the text submission.
-        await update(); // refresh NextAuth session to pull down new name
+        await update({
+          name: fullName,
+          displayName,
+          phone,
+        }); // refresh NextAuth session to pull down new name
         setStep(3); // Success!
       }
     } catch (error) {

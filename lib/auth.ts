@@ -394,14 +394,20 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async jwt({ token, user, trigger, session }) {
-      if (trigger === "update" && session?.emailVerified !== undefined) {
-        token.emailVerified = session.emailVerified;
+      if (trigger === "update" && session) {
+        if (session.emailVerified !== undefined) token.emailVerified = session.emailVerified;
+        if (session.name !== undefined) token.name = session.name;
+        if (session.displayName !== undefined) token.displayName = session.displayName;
+        if (session.phone !== undefined) token.phone = session.phone;
       }
       if (user) {
         token.id = user.id;
-        const role = (user as { role?: string }).role ?? "CUSTOMER";
-        token.role = role;
-        token.emailVerified = (user as { emailVerified?: boolean }).emailVerified === true;
+        const dbU = user as { role?: string; emailVerified?: Date | boolean; displayName?: string; phone?: string; name?: string };
+        token.role = dbU.role ?? "CUSTOMER";
+        token.emailVerified = !!dbU.emailVerified;
+        token.displayName = dbU.displayName;
+        token.phone = dbU.phone;
+        token.name = dbU.name;
       }
       // Corporate: add corporate membership to token for approved accounts (cached, 5 min TTL)
       const userId = token.id as string;
@@ -468,6 +474,9 @@ export const authOptions: NextAuthOptions = {
         (session.user as { corporateRole?: string }).corporateRole = token.corporateRole as string | undefined;
         (session.user as { corporateTier?: string }).corporateTier = token.corporateTier as string | undefined;
         (session.user as { emailVerified?: boolean }).emailVerified = token.emailVerified as boolean | undefined;
+        (session.user as { displayName?: string | null }).displayName = token.displayName as string | null | undefined;
+        (session.user as { phone?: string | null }).phone = token.phone as string | null | undefined;
+        session.user.name = token.name as string | null | undefined;
       }
       return session;
     },
