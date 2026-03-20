@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { BusinessStats } from "@/components/stats/BusinessStats";
 
 const DEFAULT_HERO_IMAGE = "/images/hero/hero-main.webp";
 
@@ -64,24 +65,7 @@ export function Hero({ heroImage }: { heroImage?: string } = {}) {
             Get a Free Quote →
           </Link>
         </div>
-        <div className="mt-16 flex flex-wrap justify-center gap-x-10 gap-y-2 text-sm text-slate-400">
-          <span className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            10,000+ prints delivered
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            500+ happy clients
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            48hr turnaround
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            Nairobi based
-          </span>
-        </div>
+        <BusinessStats variant="compact" />
       </div>
     </section>
   );
