@@ -51,6 +51,8 @@ export const PERMISSION_GROUPS = [
       { key: "products_delete", label: "Delete products" },
       { key: "catalogue_view", label: "View catalogue" },
       { key: "catalogue_edit", label: "Create/edit/import catalogue items" },
+      { key: "catalogue_import", label: "Import 3D models (URL/API)" },
+      { key: "catalogue_review", label: "Review and approve imported models" },
     ],
   },
   {

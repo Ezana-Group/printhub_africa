@@ -7,6 +7,7 @@ import { AddToCartButton } from "./add-to-cart-button";
 import { ProductImageGallery } from "@/components/shop/product-image-gallery";
 import { ProductReviewsSection } from "./reviews-section";
 import { formatPrice } from "@/lib/utils";
+import { LicenceBadge } from "@/components/catalogue/LicenceBadge";
 
 const DEFAULT_WHATSAPP = "254700000000";
 
@@ -54,10 +55,11 @@ export default async function ProductPage({ params }: Props) {
   try {
     product = await prisma.product.findFirst({
       where: { slug, isActive: true },
-      include: {
+        include: {
         category: { select: { name: true, slug: true } },
         productImages: { orderBy: { sortOrder: "asc" } },
         variants: true,
+        externalModel: true,
       },
     });
   } catch {
@@ -65,11 +67,7 @@ export default async function ProductPage({ params }: Props) {
   }
   if (!product) notFound();
 
-  const productWithRelations = product as typeof product & {
-    category?: { name: string; slug: string };
-    productImages?: { id: string; url: string; altText: string | null; isPrimary: boolean; sortOrder: number }[];
-    variants: { id: string; name: string; price: { toNumber?: () => number }; stock: number }[];
-  };
+  const productWithRelations = product as any;
   const dbImages = productWithRelations.productImages ?? [];
   const galleryImages =
     dbImages.length > 0
@@ -146,6 +144,25 @@ export default async function ProductPage({ params }: Props) {
         <div className="mt-12 border-t border-slate-200 pt-12">
           <h2 className="font-display text-xl font-bold text-slate-900">Description</h2>
           <p className="mt-4 text-slate-700 whitespace-pre-wrap">{product.description}</p>
+          
+          {productWithRelations.externalModel && (
+            <div className="mt-8 p-4 bg-slate-50 rounded-lg border border-slate-100 flex flex-wrap items-center justify-between gap-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Original design by {productWithRelations.externalModel.designerName}</p>
+                <div className="flex gap-2">
+                  <LicenceBadge licence={productWithRelations.externalModel.licenceType} size="sm" />
+                </div>
+              </div>
+              <div className="text-xs text-slate-500">
+                {productWithRelations.externalModel.designerUrl && (
+                  <a href={productWithRelations.externalModel.designerUrl} target="_blank" className="text-blue-600 hover:underline block mb-1">
+                    View Designer Profile
+                  </a>
+                )}
+                <span>Printed by PrintHub Africa</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

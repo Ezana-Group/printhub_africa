@@ -143,6 +143,7 @@ model Category {
   parent          Category?  @relation("CategoryTree", fields: [parentId], references: [id])
   children        Category[] @relation("CategoryTree")
   products        Product[]
+  externalModels  ExternalModel[]
 
   @@index([parentId])
 }
@@ -190,6 +191,7 @@ model Product {
   shopStockMovements ShopInventoryMovement[]
   shopPOLines        ShopPurchaseOrderLine[]
   wishlists          Wishlist[]
+  externalModel      ExternalModel?
 
   @@index([categoryId])
   @@index([slug])
@@ -1871,7 +1873,7 @@ model CatalogueItemMaterial {
 
 model CatalogueImportQueue {
   id            String       @id @default(cuid())
-  status        ImportStatus @default(PENDING)
+  status        ImportStatus @default(PENDING_REVIEW)
   sourceUrl     String?
   stlStorageKey String?
   createdAt     DateTime     @default(now())
@@ -2332,11 +2334,23 @@ enum CatalogueLicense {
   ORIGINAL
 }
 
+enum ImportPlatform {
+  THINGIVERSE
+  MYMINIFACTORY
+  CGTRADER
+  PRINTABLES
+  CULTS3D
+  CREAZILLA
+  THANGS
+  OTHER
+}
+
 enum ImportStatus {
-  PENDING
-  PROCESSING
-  DONE
-  FAILED
+  PENDING_REVIEW     // just imported, not yet looked at
+  UNDER_REVIEW       // admin has opened it
+  APPROVED           // approved, product created
+  REJECTED           // rejected with reason
+  NEEDS_INFO         // approved but missing info before publish
 }
 
 enum JobStatus {
@@ -2383,4 +2397,50 @@ enum ProductAvailability {
   ON_ORDER
   PRE_ORDER
   IMPORT_ON_REQUEST
+}
+
+model ExternalModel {
+  id              String              @id @default(cuid())
+  platform        ImportPlatform
+  externalId      String?             // platform's own ID if available
+  sourceUrl       String              // original URL always stored
+  name            String
+  description     String?             @db.Text
+  printInfo       String?             @db.Text  // print settings, materials, notes
+  imageUrls       String[]            // all images found
+  thumbnailUrl    String?             // primary display image
+  licenceType     String              // raw licence string from source
+  licenceVerified Boolean             @default(false) // admin confirmed licence
+  designerName    String?
+  designerUrl     String?
+  tags            String[]
+  category        String?
+  categoryId      String?             // mapped to internal category
+  rawData         Json?               // full raw response stored for reference
+  importedBy      String              // admin user id who triggered import
+  importedAt      DateTime            @default(now())
+  status          ImportStatus        @default(PENDING_REVIEW)
+  reviewedBy      String?             // admin user id who approved/rejected
+  reviewedAt      DateTime?
+  rejectionReason String?
+  notes           String?             // internal admin notes
+  productId       String?             @unique  // set after approval
+  product         Product?            @relation(fields: [productId], references: [id])
+  internalCategory Category?           @relation(fields: [categoryId], references: [id])
+  
+  @@unique([platform, externalId])    // prevent duplicate imports
+  @@unique([platform, sourceUrl])
+}
+
+model ImportLog {
+  id          String    @id @default(cuid())
+  platform    ImportPlatform
+  trigger     String    // 'manual_url' | 'api_search' | 'api_sync'
+  searchTerm  String?
+  sourceUrl   String?
+  resultCount Int       @default(0)
+  status      String    // 'success' | 'failed' | 'partial'
+  error       String?
+  triggeredBy String    // admin user id
+  createdAt   DateTime  @default(now())
 }
