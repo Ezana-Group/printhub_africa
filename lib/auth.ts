@@ -147,6 +147,7 @@ export const authOptions: NextAuthOptions = {
               twoFaMethod: true,
               otpCodeHash: true,
               otpExpiresAt: true,
+              emailVerified: true,
             },
           });
           if (!user) return null;
@@ -175,9 +176,10 @@ export const authOptions: NextAuthOptions = {
             id: user.id,
             email: user.email,
             name: user.name,
-            image: user.profileImage ?? undefined,
-            role: user.role,
-          };
+              image: user.profileImage ?? undefined,
+              role: user.role,
+              emailVerified: !!user.emailVerified,
+            };
         }
 
         if (!credentials?.email || !credentials?.password) return null;
@@ -199,6 +201,7 @@ export const authOptions: NextAuthOptions = {
             twoFaMethod: true,
             otpCodeHash: true,
             otpExpiresAt: true,
+            emailVerified: true,
           },
         });
         if (!user?.passwordHash) return null;
@@ -319,6 +322,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           image: user.profileImage ?? undefined,
           role: user.role,
+          emailVerified: !!user.emailVerified,
         };
       },
     }),
@@ -389,11 +393,15 @@ export const authOptions: NextAuthOptions = {
 
       return true;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      if (trigger === "update" && session?.emailVerified !== undefined) {
+        token.emailVerified = session.emailVerified;
+      }
       if (user) {
         token.id = user.id;
         const role = (user as { role?: string }).role ?? "CUSTOMER";
         token.role = role;
+        token.emailVerified = (user as { emailVerified?: boolean }).emailVerified === true;
       }
       // Corporate: add corporate membership to token for approved accounts (cached, 5 min TTL)
       const userId = token.id as string;
@@ -459,6 +467,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as { corporateId?: string }).corporateId = token.corporateId as string | undefined;
         (session.user as { corporateRole?: string }).corporateRole = token.corporateRole as string | undefined;
         (session.user as { corporateTier?: string }).corporateTier = token.corporateTier as string | undefined;
+        (session.user as { emailVerified?: boolean }).emailVerified = token.emailVerified as boolean | undefined;
       }
       return session;
     },

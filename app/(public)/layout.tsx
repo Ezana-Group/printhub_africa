@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AnnouncementBar } from "@/components/layout/announcement-bar";
 import { Header } from "@/components/layout/header";
+import { EmailVerificationBanner } from "@/components/layout/email-verification-banner";
 import { Footer } from "@/components/layout/footer";
 import { WhatsAppFloat } from "@/components/layout/whatsapp-float";
 import { CookieBanner } from "@/components/CookieBanner";
@@ -66,6 +67,7 @@ export default async function PublicLayout({
       />
       <AnnouncementBar business={business} />
       <Header business={business} />
+      <EmailVerificationBanner />
       <main id="main-content" className="min-h-[calc(100vh-8rem)]">{children}</main>
       <Footer business={business} />
       <WhatsAppFloat whatsapp={business.whatsapp} />

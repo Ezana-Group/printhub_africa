@@ -4,6 +4,7 @@ import { ConsentGatedAnalytics } from "@/components/ConsentGatedAnalytics";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Providers } from "@/components/providers";
 import { getCachedBusinessMetadata } from "@/lib/cache/unstable-cache";
+import { ProfileCompletionGate } from "@/components/layout/profile-completion-gate";
 import "./globals.css";
 
 const syne = Syne({
@@ -129,7 +130,10 @@ export default function RootLayout({
         <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-xl focus:bg-primary focus:px-4 focus:py-2 focus:text-white">
           Skip to main content
         </a>
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <ProfileCompletionGate />
+        </Providers>
         <ConsentGatedAnalytics />
         {shouldEnableSpeedInsights ? <SpeedInsights /> : null}
       </body>

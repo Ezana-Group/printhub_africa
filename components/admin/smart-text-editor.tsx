@@ -204,10 +204,10 @@ export function SmartTextEditor({
         const currentHtml = editor.getHTML();
         if (value !== currentHtml && value !== "<p></p>" && currentHtml !== "<p></p>") {
              let selection;
-             try { selection = editor.state.selection; } catch (e) {}
+             try { selection = editor.state.selection; } catch {}
              editor.commands.setContent(value, { emitUpdate: false });
              if (selection) {
-                try { editor.commands.setTextSelection(selection); } catch(e) {}
+                try { editor.commands.setTextSelection(selection); } catch {}
              }
         }
       }

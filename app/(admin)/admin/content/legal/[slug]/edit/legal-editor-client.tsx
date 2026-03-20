@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   CheckCircle2,
   ExternalLink,
@@ -163,18 +162,6 @@ export function LegalPageEditorClient({
       setSaving(false);
     }
   };
-
-  const toolbarButtons = [
-    { label: "Heading 2", icon: Heading2, onClick: () => handleInsertHeading(2) },
-    { label: "Heading 3", icon: Heading3, onClick: () => handleInsertHeading(3) },
-    { label: "Paragraph", icon: Type, onClick: handleInsertParagraph },
-    { label: "Link", icon: Link2, onClick: handleInsertLink },
-    { label: "Bullet list", icon: List, onClick: () => handleInsertList(false) },
-    { label: "Numbered list", icon: ListOrdered, onClick: () => handleInsertList(true) },
-    { label: "Bold", icon: Bold, onClick: handleInsertBold },
-    { label: "Italic", icon: Italic, onClick: handleInsertItalic },
-    { label: "Table", icon: Table2, onClick: handleInsertTable },
-  ];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

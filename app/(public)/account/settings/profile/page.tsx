@@ -22,6 +22,7 @@ export default async function AccountSettingsProfilePage() {
       <ProfileSettingsForm
         name={session.user.name ?? ""}
         email={session.user.email ?? ""}
+        isEmailVerified={!!session.user.emailVerified}
       />
     </div>
   );

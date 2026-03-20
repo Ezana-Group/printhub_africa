@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 
 const PIPELINE = ["new", "reviewing", "quoted", "accepted", "in_production", "completed"] as const;
