@@ -165,83 +165,139 @@ export const EMAIL_TEMPLATE_SLUGS = Object.keys(
   EMAIL_TEMPLATE_META
 ) as readonly string[];
 
-const BASE_SAMPLE = {
+const BASE_SAMPLE: Record<string, string> = {
   businessName: "PrintHub Africa",
   footer: "PrintHub Africa · Kenya",
   baseUrl: "https://printhub.africa",
+  site: "printhub.africa",
+  currentYear: new Date().getFullYear().toString(),
 };
 
 /** Sample context for preview and send-test. Keys match placeholders used in templates. */
 export function getSampleContextForSlug(slug: string): Record<string, string> {
-  const base = { ...BASE_SAMPLE };
+  const b = BASE_SAMPLE.baseUrl;
+  const base = {
+    ...BASE_SAMPLE,
+    accountUrl: `${b}/account`,
+    preferencesUrl: `${b}/account/preferences`,
+  };
   switch (slug) {
     case "verification":
-      return { ...base, verifyUrl: `${base.baseUrl}/verify-email?token=sample-token` };
+      return { ...base, verifyUrl: `${b}/verify-email?token=sample-token` };
     case "password-reset":
-      return { ...base, resetUrl: `${base.baseUrl}/reset-password?token=sample-token` };
+      return { ...base, resetUrl: `${b}/reset-password?token=sample-token` };
     case "staff-invite":
       return {
         ...base,
-        resetUrl: `${base.baseUrl}/reset-password?token=sample-token`,
+        resetUrl: `${b}/reset-password?token=sample-token`,
         loginEmail: "staff@printhub.africa",
+        staffName: "Grace Muthoni",
+        staffEmail: "grace@printhub.africa",
+        staffDepartment: "Production",
+        staffPosition: "Print Technician",
+        staffRole: "STAFF",
       };
     case "quote-received":
-      return { ...base, quoteNumber: "Q-2025-001", typeLabel: "Bulk print", quotesUrl: `${base.baseUrl}/account/quotes` };
+      return { ...base, quoteNumber: "Q-2025-001", typeLabel: "Bulk print", quotesUrl: `${b}/account/quotes`, projectName: "Event banners", quoteDeadline: "30 Mar 2025", quoteStatus: "New" };
     case "order-confirmation":
-      return { ...base, orderNumber: "ORD-2025-001", orderTotal: "15,000", currency: "KES", orderUrl: `${base.baseUrl}/account/orders` };
+      return {
+        ...base,
+        orderNumber: "ORD-2025-001", orderTotal: "15,000", currency: "KES",
+        orderUrl: `${b}/account/orders`, orderDate: "20 Mar 2025",
+        orderSubtotal: "12,931", orderTax: "2,069", shippingCost: "350", orderDiscount: "0",
+        orderItemsHtml: "<table><tr><td>Business Cards x200</td><td>KES 5,000</td></tr><tr><td>Flyers A5 x500</td><td>KES 10,000</td></tr></table>",
+        paymentMethod: "M-Pesa", estimatedDelivery: "25 Mar 2025", orderStatus: "Confirmed",
+        customerName: "Jane Doe", customerEmail: "jane@example.com", customerPhone: "+254712345678",
+      };
     case "order-status":
-      return { ...base, orderNumber: "ORD-2025-001", title: "Dispatched", description: "Your order is on its way.", trackUrl: `${base.baseUrl}/track?ref=ORD-2025-001` };
+      return {
+        ...base,
+        orderNumber: "ORD-2025-001", title: "Dispatched", description: "Your order is on its way.",
+        trackUrl: `${b}/track?ref=ORD-2025-001`, orderStatus: "Dispatched",
+      };
     case "payment-received":
-      return { ...base, orderNumber: "ORD-2025-001", reference: "ABC123", method: "M-Pesa" };
+      return {
+        ...base,
+        orderNumber: "ORD-2025-001", reference: "ABC123", method: "M-Pesa",
+        paymentDate: "20 Mar 2025", mpesaReceiptNo: "QJE3ABCXYZ", mpesaPhone: "254712345678",
+        vatAmount: "2,069",
+      };
     case "payment-rejected":
       return { ...base, orderNumber: "ORD-2025-001", reference: "ABC123", whatsapp: "https://wa.me/254727410320" };
     case "pickup-confirmation":
       return { ...base, orderNumber: "ORD-2025-001", pickupCode: "PICK-789", totalKes: "12,500" };
     case "quote-sent-to-customer":
-      return { ...base, quoteNumber: "Q-2025-001", quotedAmountKes: "25,000", breakdown: "Item A: 10,000\nItem B: 15,000", validity: "Valid for 14 days.", breakdownHtml: "<p><strong>Breakdown:</strong></p><p>Item A: 10,000</p>", quotesUrl: `${base.baseUrl}/account/quotes` };
+      return {
+        ...base, quoteNumber: "Q-2025-001", quotedAmountKes: "25,000",
+        breakdown: "Item A: 10,000\nItem B: 15,000", validity: "Valid for 14 days.",
+        breakdownHtml: "<p><strong>Breakdown:</strong></p><p>Item A: 10,000</p>",
+        quotesUrl: `${b}/account/quotes`, projectName: "Event banners",
+        quoteDeadline: "30 Mar 2025", quoteStatus: "Quoted", assignedStaff: "Alice Njeri",
+      };
     case "staff-quote-accepted":
-      return { ...base, quoteNumber: "Q-2025-001", customerName: "Jane Doe", quotedAmountKes: "25,000", adminUrl: `${base.baseUrl}/admin/quotes` };
+      return { ...base, quoteNumber: "Q-2025-001", customerName: "Jane Doe", quotedAmountKes: "25,000", adminUrl: `${b}/admin/quotes` };
     case "staff-quote-assigned":
-      return { ...base, quoteNumber: "Q-2025-001", customerName: "Jane Doe", typeLabel: "Bulk print", adminUrl: `${base.baseUrl}/admin/quotes` };
+      return {
+        ...base, quoteNumber: "Q-2025-001", customerName: "Jane Doe", typeLabel: "Bulk print",
+        adminUrl: `${b}/admin/quotes`, assignedStaff: "Alice Njeri",
+        projectName: "Company brochures",
+      };
     case "quote-in-production":
-      return { ...base, quoteNumber: "Q-2025-001", quotesUrl: `${base.baseUrl}/account/quotes` };
+      return { ...base, quoteNumber: "Q-2025-001", quotesUrl: `${b}/account/quotes`, projectName: "Event banners", quoteStatus: "In production" };
     case "career-application-confirmation":
       return { ...base, firstName: "John", jobTitle: "Designer", applicationRef: "APP-001", site: "printhub.africa" };
     case "career-application-admin":
-      return { ...base, jobTitle: "Designer", applicantName: "John Doe", applicantEmail: "john@example.com", applicantPhone: "+254700000000", appliedAt: "16 Mar 2025", viewUrl: `${base.baseUrl}/admin/careers/applications/1`, site: "printhub.africa" };
+      return { ...base, jobTitle: "Designer", applicantName: "John Doe", applicantEmail: "john@example.com", applicantPhone: "+254700000000", appliedAt: "16 Mar 2025", viewUrl: `${b}/admin/careers/applications/1`, site: "printhub.africa" };
     case "career-shortlisted":
     case "career-rejected":
     case "career-offer":
       return { ...base, firstName: "John", jobTitle: "Designer", site: "printhub.africa" };
     case "abandoned-cart-1":
     case "abandoned-cart-2":
-      return { ...base, firstName: "Jane", cartUrl: `${base.baseUrl}/cart`, unsubscribeUrl: `${base.baseUrl}/account/preferences`, unsubscribeLine: "" };
+      return { ...base, firstName: "Jane", cartUrl: `${b}/cart`, unsubscribeUrl: `${b}/account/preferences`, unsubscribeLine: "" };
     case "corporate-received":
       return { ...base, applicantName: "Jane", companyName: "Acme Ltd", applicationRef: "CORP-001" };
     case "corporate-new-admin":
-      return { ...base, companyName: "Acme Ltd", contactPerson: "Jane Doe", adminUrl: `${base.baseUrl}/admin/corporate/applications` };
+      return { ...base, companyName: "Acme Ltd", contactPerson: "Jane Doe", adminUrl: `${b}/admin/corporate/applications` };
     case "corporate-approved":
-      return { ...base, contactPerson: "Jane", companyName: "Acme Ltd", accountNumber: "CORP-1001", dashboardUrl: `${base.baseUrl}/corporate/dashboard` };
+      return {
+        ...base, contactPerson: "Jane", companyName: "Acme Ltd", accountNumber: "CORP-1001",
+        dashboardUrl: `${b}/corporate/dashboard`, creditLimit: "500,000", outstandingBalance: "0",
+      };
     case "corporate-rejected":
-      return { ...base, contactPerson: "Jane", companyName: "Acme Ltd", reason: "Incomplete documentation.", reasonLine: "<p><strong>Reason:</strong> Incomplete documentation.</p>", applyUrl: `${base.baseUrl}/corporate/apply` };
+      return { ...base, contactPerson: "Jane", companyName: "Acme Ltd", reason: "Incomplete documentation.", reasonLine: "<p><strong>Reason:</strong> Incomplete documentation.</p>", applyUrl: `${b}/corporate/apply` };
     case "delivery-dispatched":
-      return { ...base, orderNumber: "ORD-2025-001", trackingNumber: "TRK123", trackingLine: "<p><strong>Tracking:</strong> TRK123</p>", trackUrl: `${base.baseUrl}/track?ref=ORD-2025-001` };
+      return {
+        ...base, orderNumber: "ORD-2025-001", trackingNumber: "TRK123",
+        trackingLine: "<p><strong>Tracking:</strong> TRK123</p>", trackUrl: `${b}/track?ref=ORD-2025-001`,
+        deliveryMethod: "Standard", courierName: "FastCourier Kenya",
+        estimatedDeliveryDate: "25 Mar 2025", deliveryZone: "Nairobi CBD",
+      };
     case "delivery-delivered":
-      return { ...base, orderNumber: "ORD-2025-001", ordersUrl: `${base.baseUrl}/account/orders` };
+      return { ...base, orderNumber: "ORD-2025-001", ordersUrl: `${b}/account/orders`, deliveryMethod: "Standard", courierName: "FastCourier Kenya" };
     case "delivery-failed":
-      return { ...base, orderNumber: "ORD-2025-001", failureReason: "Address not found.", reasonLine: "<p><strong>Reason:</strong> Address not found.</p>", supportUrl: `${base.baseUrl}/contact` };
+      return {
+        ...base, orderNumber: "ORD-2025-001",
+        failureReason: "Address not found.", reasonLine: "<p><strong>Reason:</strong> Address not found.</p>",
+        supportUrl: `${b}/contact`, courierName: "FastCourier Kenya", deliveryMethod: "Standard",
+      };
     case "order-cancelled":
-      return { ...base, orderNumber: "ORD-2025-001", reason: "Customer request.", reasonLine: "<p><strong>Reason:</strong> Customer request.</p>", ordersUrl: `${base.baseUrl}/account/orders` };
+      return { ...base, orderNumber: "ORD-2025-001", reason: "Customer request.", reasonLine: "<p><strong>Reason:</strong> Customer request.</p>", ordersUrl: `${b}/account/orders` };
     case "refund-approved":
-      return { ...base, refundNumber: "REF-001", orderNumber: "ORD-2025-001", amountKes: "5,000", ordersUrl: `${base.baseUrl}/account/orders` };
+      return { ...base, refundNumber: "REF-001", orderNumber: "ORD-2025-001", amountKes: "5,000", ordersUrl: `${b}/account/orders` };
     case "refund-rejected":
-      return { ...base, refundNumber: "REF-001", orderNumber: "ORD-2025-001", rejectionReason: "Outside refund window.", reasonLine: "<p><strong>Reason:</strong> Outside refund window.</p>", supportUrl: `${base.baseUrl}/contact` };
+      return { ...base, refundNumber: "REF-001", orderNumber: "ORD-2025-001", rejectionReason: "Outside refund window.", reasonLine: "<p><strong>Reason:</strong> Outside refund window.</p>", supportUrl: `${b}/contact` };
     case "refund-processed":
       return { ...base, refundNumber: "REF-001", orderNumber: "ORD-2025-001", amountKes: "5,000", mpesaReceiptNo: "ABC123XYZ", receiptLine: "<p><strong>M-Pesa receipt:</strong> ABC123XYZ</p>" };
     case "ticket-created":
     case "ticket-replied":
     case "ticket-resolved":
-      return { ...base, ticketNumber: "TKT-001", ticketSubject: "Order delay", supportUrl: `${base.baseUrl}/account/support`, messagePreview: "We've looked into your order and will dispatch tomorrow." };
+      return {
+        ...base, ticketNumber: "TKT-001", ticketSubject: "Order delay",
+        supportUrl: `${b}/account/support`,
+        messagePreview: "We've looked into your order and will dispatch tomorrow.",
+        ticketStatus: "Open", ticketPriority: "High", ticketCategory: "Order issue",
+      };
     default:
       return base;
   }
