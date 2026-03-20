@@ -225,16 +225,120 @@ function UrlImportSection() {
   );
 }
 
+type ImportPlatform = 'THINGIVERSE' | 'MYMINIFACTORY' | 'CGTRADER' | 'PRINTABLES' | 'CULTS3D' | 'CREAZILLA' | 'THANGS' | 'OTHER';
+
+type PlatformConfig = {
+  value: ImportPlatform;
+  label: string;
+  hasApi: boolean;
+  urlImportSupported: boolean;
+  allCommercial: boolean;
+  apiKeyEnvVar?: string;
+  searchUrl: string;
+  notes: string;
+  reminder: string;
+};
+
+const PLATFORM_CONFIGS: PlatformConfig[] = [
+  {
+    value: 'THINGIVERSE',
+    label: 'Thingiverse',
+    hasApi: true,
+    urlImportSupported: true,
+    allCommercial: false,
+    apiKeyEnvVar: 'THINGIVERSE_APP_TOKEN',
+    searchUrl: 'https://www.thingiverse.com/search',
+    notes: 'Filter by CC licence in search results.',
+    reminder: 'Filter for CC0 or CC BY licences only. Avoid anything with NC in the licence name.',
+  },
+  {
+    value: 'MYMINIFACTORY',
+    label: 'MyMiniFactory',
+    hasApi: true,
+    urlImportSupported: true,
+    allCommercial: false,
+    apiKeyEnvVar: 'MMF_CLIENT_ID',
+    searchUrl: 'https://www.myminifactory.com/search',
+    notes: 'Check commercial printing permission per model.',
+    reminder: 'Only import models with commercial printing explicitly enabled on the model page.',
+  },
+  {
+    value: 'CGTRADER',
+    label: 'CGTrader',
+    hasApi: true,
+    urlImportSupported: true,
+    allCommercial: false,
+    apiKeyEnvVar: 'CGTRADER_CLIENT_ID',
+    searchUrl: 'https://www.cgtrader.com/3d-print-models/commercial-use',
+    notes: 'Requires partner API access request.',
+    reminder: 'Royalty-free licence permits commercial printing of physical objects.',
+  },
+  {
+    value: 'PRINTABLES',
+    label: 'Printables.com',
+    hasApi: false,
+    urlImportSupported: true,
+    allCommercial: false,
+    searchUrl: 'https://www.printables.com/search/models',
+    notes: 'No public API. Use URL import.',
+    reminder: 'Check licence on each model page. Look for CC0 or CC BY. Avoid Non-Commercial models.',
+  },
+  {
+    value: 'CULTS3D',
+    label: 'Cults3D',
+    hasApi: false,
+    urlImportSupported: true,
+    allCommercial: false,
+    searchUrl: 'https://cults3d.com/en/tags/commercial+use',
+    notes: 'No public API. Use URL import.',
+    reminder: 'Use the commercial+use tag filter. Verify each model\'s licence before importing.',
+  },
+  {
+    value: 'CREAZILLA',
+    label: 'Creazilla',
+    hasApi: false,
+    urlImportSupported: true,
+    allCommercial: true,
+    searchUrl: 'https://creazilla.com/section/3d-model',
+    notes: 'All models are free for commercial use.',
+    reminder: 'All models are free for commercial, educational and personal use. No restrictions.',
+  },
+  {
+    value: 'THANGS',
+    label: 'Thangs',
+    hasApi: false,
+    urlImportSupported: true,
+    allCommercial: false,
+    searchUrl: 'https://thangs.com',
+    notes: 'No public API. Use URL import.',
+    reminder: 'Thangs aggregates from multiple platforms. Always verify the licence at the original source.',
+  },
+];
+
 function ApiSearchSection() {
-  const [platform, setPlatform] = useState("THINGIVERSE");
+  const [platform, setPlatform] = useState<ImportPlatform>("THINGIVERSE");
   const [term, setTerm] = useState("");
   const [loading, setLoading] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [results, setResults] = useState<any[]>([]);
   const [page, setPage] = useState(1);
+  const [apiConfig, setApiConfig] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const fetchConfig = async () => {
+      const res = await fetch("/api/admin/import/config");
+      if (res.ok) {
+        const data = await res.json();
+        setApiConfig(data.config || {});
+      }
+    };
+    fetchConfig();
+  }, []);
+
+  const config = PLATFORM_CONFIGS.find(c => c.value === platform) || PLATFORM_CONFIGS[0];
+  const isApiMissing = !!(config.hasApi && config.apiKeyEnvVar && !apiConfig[config.apiKeyEnvVar]);
 
   const handleSearch = async (isNewSearch = true) => {
-    if (!term) return;
+    if (!term || !config.hasApi || isApiMissing) return;
     setLoading(true);
     const nextPage = isNewSearch ? 1 : page + 1;
     
@@ -257,39 +361,110 @@ function ApiSearchSection() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-6 rounded-lg border shadow-sm flex flex-wrap gap-4 items-end">
-        <div className="flex-1 min-w-[200px]">
-          <label className="block text-sm font-medium mb-2">Platform</label>
-          <select 
-            className="w-full border rounded-md px-3 py-2 bg-transparent"
-            value={platform}
-            onChange={(e) => setPlatform(e.target.value)}
-          >
-            <option value="THINGIVERSE">Thingiverse</option>
-            <option value="MYMINIFACTORY">MyMiniFactory</option>
-            <option value="CGTRADER">CGTrader</option>
-          </select>
-        </div>
-        <div className="flex-[2] min-w-[300px]">
-          <label className="block text-sm font-medium mb-2">Search Term</label>
-          <div className="flex gap-2">
-            <input 
-              className="flex-1 border rounded-md px-3 py-2"
-              placeholder="Search for models..."
-              value={term}
-              onChange={(e) => setTerm(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch(true)}
-            />
-            <button 
-              className="bg-primary text-white px-6 py-2 rounded-md disabled:opacity-50 flex items-center gap-2"
-              onClick={() => handleSearch(true)}
-              disabled={loading}
+      <div className="bg-white p-6 rounded-lg border shadow-sm">
+        <div className="flex flex-wrap gap-6 items-end">
+          <div className="flex-1 min-w-[240px]">
+            <label className="block text-sm font-medium mb-2">Platform</label>
+            <select 
+              className="w-full border rounded-md px-3 py-2 bg-transparent"
+              value={platform}
+              onChange={(e) => {
+                setPlatform(e.target.value as ImportPlatform);
+                setResults([]);
+                setPage(1);
+              }}
             >
-              {loading && page === 1 ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-              Search
-            </button>
+              <optgroup label="── API Search Available ──">
+                {PLATFORM_CONFIGS.filter(c => c.hasApi).map(c => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </optgroup>
+              <optgroup label="── URL Import Only ──">
+                {PLATFORM_CONFIGS.filter(c => !c.hasApi).map(c => (
+                  <option key={c.value} value={c.value}>
+                    {c.label} {c.allCommercial ? "🟢 All commercial" : ""}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
           </div>
+
+          {config.hasApi ? (
+            <div className="flex-[2] min-w-[300px]">
+              <label className="block text-sm font-medium mb-2">Search Term</label>
+              <div className="flex gap-2">
+                <input 
+                  className={cn(
+                    "flex-1 border rounded-md px-3 py-2",
+                    isApiMissing && "bg-gray-50 opacity-50 cursor-not-allowed"
+                  )}
+                  placeholder={isApiMissing ? "Search disabled (missing API key)" : "Search for models..."}
+                  value={term}
+                  onChange={(e) => setTerm(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch(true)}
+                  disabled={isApiMissing}
+                />
+                <button 
+                  className="bg-primary text-white px-6 py-2 rounded-md disabled:opacity-50 flex items-center gap-2"
+                  onClick={() => handleSearch(true)}
+                  disabled={loading || isApiMissing}
+                >
+                  {loading && page === 1 ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  Search
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex-[2] min-w-[300px]">
+              <div className="bg-blue-50 border border-blue-100 p-3 rounded-md flex items-start gap-3">
+                <div className="p-1 bg-blue-100 rounded text-blue-600">
+                  <ExternalLink className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-blue-800">{config.label} does not have a public API.</p>
+                  <p className="text-xs text-blue-600 mt-0.5">
+                    To import: Browse models on their site, copy the URL, and use the <strong>Import by URL</strong> tab.
+                  </p>
+                  <a 
+                    href={config.searchUrl} 
+                    target="_blank" 
+                    className="inline-flex items-center gap-1.5 mt-2 bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold hover:bg-blue-700"
+                  >
+                    Browse {config.label} <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Licence Reminder Banner */}
+        <div className="mt-4 pt-4 border-t flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground italic">
+            <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+            <span className="font-semibold text-gray-600">{config.label} Reminder:</span>
+            <span>{config.reminder}</span>
+          </div>
+          {config.allCommercial && (
+            <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-[10px] font-bold uppercase flex items-center gap-1">
+              <CheckCircle className="w-3 h-3" />
+              Commercially Usable
+            </div>
+          )}
+        </div>
+
+        {isApiMissing && (
+          <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-md flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5" />
+            <div className="text-sm">
+              <p className="font-bold text-amber-800">API Key not configured</p>
+              <p className="text-amber-700">
+                Set <code>{config.apiKeyEnvVar}</code> in your environment variables to enable search for {config.label}.
+                You can still use <strong>URL import</strong> for this platform.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
