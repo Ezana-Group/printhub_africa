@@ -51,7 +51,9 @@ const metadataBase = (() => {
 const shouldEnableSpeedInsights = process.env.VERCEL === "1";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const meta = await getCachedBusinessMetadata();
+    const meta = await getCachedBusinessMetadata().catch(() => ({ 
+      favicon: null, updatedAt: null, businessName: "PrintHub", tagline: null, logo: null, seo: null 
+    }));
   const businessName = meta.seo?.siteName || meta.businessName || "PrintHub";
   const defaultTitle = meta.seo?.defaultTitle || `${businessName} | Large Format & 3D Printing | Nairobi, Kenya`;
   const description =
@@ -59,10 +61,11 @@ export async function generateMetadata(): Promise<Metadata> {
     meta.tagline ||
     "Large format printing and 3D printing for Nairobi and all of Kenya. Banners, signage, vehicle wraps, canvas, custom 3D prints. An Ezana Group Company.";
   
+  const updatedAtTime = meta.updatedAt ? new Date(meta.updatedAt).getTime() : 0;
   const faviconUrl =
-    meta.favicon && meta.updatedAt
-      ? `${meta.favicon}?v=${new Date(meta.updatedAt).getTime()}`
-      : meta.favicon ?? null;
+    meta.favicon
+      ? `${meta.favicon}?v=${updatedAtTime}`
+      : null;
 
   const ogImage = meta.seo?.ogImageUrl || meta.logo || "/images/og/default-og.webp";
 

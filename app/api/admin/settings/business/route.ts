@@ -61,6 +61,11 @@ const patchSchema = z.object({
   foundingDate: z.string().nullable().optional().transform(v => v ? new Date(v) : null),
   statsOrdersThreshold: optionalNumber.optional(),
   statsClientsThreshold: optionalNumber.optional(),
+  showStatsOrders: optionalBoolean.optional(),
+  showStatsClients: optionalBoolean.optional(),
+  showStatsExperience: optionalBoolean.optional(),
+  showStatsMachines: optionalBoolean.optional(),
+  showStatsStaff: optionalBoolean.optional(),
 });
 
 export async function GET(req: Request) {

@@ -14,10 +14,11 @@ export const revalidate = 300;
 
 export async function generateMetadata(): Promise<Metadata> {
   const meta = await getCachedBusinessMetadata();
+  const updatedAtTime = meta.updatedAt ? new Date(meta.updatedAt).getTime() : 0;
   const faviconUrl =
-    meta.favicon && meta.updatedAt
-      ? `${meta.favicon}?v=${new Date(meta.updatedAt).getTime()}`
-      : meta.favicon ?? null;
+    meta.favicon
+      ? `${meta.favicon}?v=${updatedAtTime}`
+      : null;
   return {
     icons: faviconUrl
       ? {

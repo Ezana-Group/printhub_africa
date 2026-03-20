@@ -1645,6 +1645,11 @@ model BusinessSettings {
   foundingDate       DateTime?
   statsOrdersThreshold Int?    @default(1000)
   statsClientsThreshold Int?   @default(500)
+  showStatsOrders      Boolean  @default(false)
+  showStatsClients     Boolean  @default(false)
+  showStatsExperience  Boolean  @default(false)
+  showStatsMachines    Boolean  @default(false)
+  showStatsStaff       Boolean  @default(false)
   hoursHolidays      String?
   hoursSaturday      String?
   hoursSunday        String?

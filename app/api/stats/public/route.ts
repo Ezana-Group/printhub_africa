@@ -47,11 +47,21 @@ export async function GET() {
           foundingDate: true,
           statsOrdersThreshold: true,
           statsClientsThreshold: true,
+          showStatsOrders: true,
+          showStatsClients: true,
+          showStatsExperience: true,
+          showStatsMachines: true,
+          showStatsStaff: true,
         },
       }) as unknown as {
         foundingDate: Date | null;
         statsOrdersThreshold: number | null;
         statsClientsThreshold: number | null;
+        showStatsOrders: boolean;
+        showStatsClients: boolean;
+        showStatsExperience: boolean;
+        showStatsMachines: boolean;
+        showStatsStaff: boolean;
       } | null,
     ]);
 
@@ -64,11 +74,11 @@ export async function GET() {
     const clientThreshold = settings?.statsClientsThreshold ?? 500;
 
     const stats = {
-      totalOrders: orderCount >= orderThreshold ? orderCount : null,
-      totalClients: clientCount >= clientThreshold ? clientCount : null,
-      yearsInBusiness,
-      totalMachines: machineCount,
-      staffCount,
+      totalOrders: (settings?.showStatsOrders && orderCount >= orderThreshold) ? orderCount : null,
+      totalClients: (settings?.showStatsClients && clientCount >= clientThreshold) ? clientCount : null,
+      yearsInBusiness: settings?.showStatsExperience ? yearsInBusiness : null,
+      totalMachines: settings?.showStatsMachines ? machineCount : null,
+      staffCount: settings?.showStatsStaff ? staffCount : null,
     };
 
     return NextResponse.json(stats, {

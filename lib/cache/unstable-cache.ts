@@ -31,6 +31,11 @@ const DEFAULTS: BusinessPublic = {
   socialLinkedIn: null,
   socialTikTok: null,
   socialYouTube: null,
+  showStatsOrders: false,
+  showStatsClients: false,
+  showStatsExperience: false,
+  showStatsMachines: false,
+  showStatsStaff: false,
 };
 
 /** Metadata-only cache for root layout (favicon, title, OG). Revalidate with tag 'business'. */
@@ -86,9 +91,15 @@ export const getCachedBusinessMetadata = unstable_cache(
 /** Cross-request cache for business settings. Call revalidateTag('homepage') when business settings change. */
 export const getCachedBusinessPublic = unstable_cache(
   async (): Promise<BusinessPublic> => {
-    const row = await prisma.businessSettings.findUnique({
-      where: { id: "default" },
-    }).catch(() => null);
+    let row;
+    try {
+      row = await prisma.businessSettings.findUnique({
+        where: { id: "default" },
+      });
+    } catch (e) {
+      console.error("getCachedBusinessPublic error:", e);
+      return DEFAULTS;
+    }
     if (!row) return DEFAULTS;
     return {
       businessName: row.businessName ?? DEFAULTS.businessName,
@@ -119,6 +130,11 @@ export const getCachedBusinessPublic = unstable_cache(
       socialLinkedIn: row.socialLinkedIn ?? null,
       socialTikTok: row.socialTikTok ?? null,
       socialYouTube: row.socialYouTube ?? null,
+      showStatsOrders: row.showStatsOrders ?? false,
+      showStatsClients: row.showStatsClients ?? false,
+      showStatsExperience: row.showStatsExperience ?? false,
+      showStatsMachines: row.showStatsMachines ?? false,
+      showStatsStaff: row.showStatsStaff ?? false,
     };
   },
   ["business-public"],

@@ -6,9 +6,9 @@ import { cn } from "@/lib/utils";
 interface StatsData {
   totalOrders: number | null;
   totalClients: number | null;
-  yearsInBusiness: number;
-  totalMachines: number;
-  staffCount: number;
+  yearsInBusiness: number | null;
+  totalMachines: number | null;
+  staffCount: number | null;
 }
 
 interface BusinessStatsProps {
@@ -78,7 +78,9 @@ export function BusinessStats({ variant = "full", className }: BusinessStatsProp
     { value: stats.totalClients, suffix: "+", label: "Clients Served" },
     { value: stats.totalMachines, suffix: "+", label: "Machines Operated" },
     { value: stats.staffCount, suffix: "+", label: "Expert Staff" },
-  ].filter((item) => item.value !== null);
+  ].filter((item) => item.value !== null && item.value !== undefined);
+
+  if (items.length === 0) return null;
 
   if (variant === "compact") {
     // Show only 3 key stats for compact variant

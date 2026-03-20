@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { EditableSection } from "@/components/admin/editable-section";
 import { FileUploader } from "@/components/upload/FileUploader";
+import { Switch } from "@/components/ui/switch";
 
 const EMPTY: Record<string, string> = {};
 const getStr = (obj: Record<string, string>, key: string) => obj[key] ?? "";
@@ -484,6 +485,11 @@ export function SettingsBusinessClient({
               { label: "Founding Date", value: getStr(data, "foundingDate") ? new Date(getStr(data, "foundingDate")).toLocaleDateString() : "—" },
               { label: "Order Threshold", value: getStr(data, "statsOrdersThreshold") || "1000" },
               { label: "Client Threshold", value: getStr(data, "statsClientsThreshold") || "500" },
+              { label: "Display Orders", value: data.showStatsOrders === "true" ? "On" : "Off" },
+              { label: "Display Clients", value: data.showStatsClients === "true" ? "On" : "Off" },
+              { label: "Display Experience", value: data.showStatsExperience === "true" ? "On" : "Off" },
+              { label: "Display Machines", value: data.showStatsMachines === "true" ? "On" : "Off" },
+              { label: "Display Expert Staff", value: data.showStatsStaff === "true" ? "On" : "Off" },
             ].map((row, i) => (
               <div
                 key={i}
@@ -528,6 +534,31 @@ export function SettingsBusinessClient({
                 />
                 <p className="text-xs text-muted-foreground">Hide client count until this count is reached.</p>
               </div>
+            </div>
+
+            <div className="pt-4 border-t border-border/50 space-y-4">
+              <h4 className="text-sm font-semibold text-slate-900">Visibility Toggles</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[
+                  { label: "Show Orders Fulfilled", name: "showStatsOrders" },
+                  { label: "Show Clients Served", name: "showStatsClients" },
+                  { label: "Show Experience (Years)", name: "showStatsExperience" },
+                  { label: "Show Machines Operated", name: "showStatsMachines" },
+                  { label: "Show Expert Staff", name: "showStatsStaff" },
+                ].map((stat) => (
+                  <div key={stat.name} className="flex items-center justify-between p-3 rounded-xl border border-border/50 bg-slate-50/50">
+                    <Label className="cursor-pointer" htmlFor={stat.name}>{stat.label}</Label>
+                     <Switch
+                       id={stat.name}
+                       checked={data[stat.name] === "true"}
+                       onCheckedChange={(checked) => update(stat.name, checked ? "true" : "false")}
+                     />
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded-lg">
+                Note: Statistics will only be shown if their individual toggle is ON and they meet any applicable thresholds above.
+              </p>
             </div>
           </div>
         )}
