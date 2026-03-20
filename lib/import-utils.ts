@@ -18,6 +18,18 @@ export interface ExtractedModelData {
   rawData?: Record<string, unknown>;
 }
 
+interface PrintablesData {
+  name?: string;
+  summary?: string;
+  description?: string;
+  printSettings?: string;
+  license?: { name: string };
+  licenseId?: string;
+  user?: { publicUsername: string };
+  images?: { url?: string; filePath?: string }[];
+  tags?: { name: string }[];
+}
+
 export function detectPlatform(url: string): ImportPlatform {
   const domain = new URL(url).hostname.toLocaleLowerCase();
   if (domain.includes("printables.com")) return "PRINTABLES";
@@ -96,7 +108,7 @@ export async function parseUrlImport(url: string): Promise<ExtractedModelData | 
       try {
         // Look for application/json scripts (SvelteKit fetched data)
         const scripts = $('script[type="application/json"]');
-        let printData: Record<string, any> | null = null;
+        let printData: Record<string, unknown> | null = null;
 
         scripts.each((_, el) => {
           try {
@@ -116,7 +128,7 @@ export async function parseUrlImport(url: string): Promise<ExtractedModelData | 
         });
 
         if (printData) {
-          const data = printData as Record<string, any>;
+          const data = printData as PrintablesData;
           const licenseMap: Record<string, string> = {
             'cc0': 'CC0 — Public Domain',
             'cc-by': 'CC BY — Attribution',
@@ -130,7 +142,8 @@ export async function parseUrlImport(url: string): Promise<ExtractedModelData | 
             'lgpl': 'LGPL',
           };
 
-          const images = (data.images || []).map((img: { url?: string; filePath?: string }) => img.url || img.filePath).filter(Boolean);
+          const images = (data.images || []).map(img => img.url || img.filePath).filter((url): url is string => !!url);
+          const licenseName = data.license?.name || data.licenseId;
           
           return {
             name: data.name || "",
@@ -138,10 +151,10 @@ export async function parseUrlImport(url: string): Promise<ExtractedModelData | 
             thumbnailUrl: images[0] || "",
             imageUrls: images.slice(0, 20),
             printInfo: data.printSettings || "",
-            licenceType: licenseMap[data.license?.name || data.licenseId] || data.license?.name || data.licenseId || "Unknown",
+            licenceType: licenseMap[licenseName || ""] || licenseName || "Unknown",
             designerName: data.user?.publicUsername || "Unknown",
             designerUrl: data.user?.publicUsername ? `https://www.printables.com/@${data.user.publicUsername}` : "",
-            tags: (data.tags || []).map((t: { name?: string }) => t.name).filter(Boolean),
+            tags: (data.tags || []).map(t => t.name).filter(Boolean),
             platform,
             sourceUrl: url,
           };
