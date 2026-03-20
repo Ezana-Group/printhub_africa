@@ -5,12 +5,6 @@ import { OrderStatus } from "@prisma/client";
 export const dynamic = "force-dynamic";
 export const revalidate = 60;
 
-const DISPLAY_THRESHOLDS = {
-  totalOrders: 1000,
-  totalClients: 500,
-};
-
-const FOUNDING_DATE = "2020-01-01";
 
 /**
  * GET /api/stats/public
@@ -21,7 +15,7 @@ export async function GET() {
   try {
     const COMPLETED_STATUSES: OrderStatus[] = ["DELIVERED", "CONFIRMED"];
 
-    const [orderCount, clientCount, machineCount, staffCount] = await Promise.all([
+    const [orderCount, clientCount, machineCount, staffCount, settings] = await Promise.all([
       // totalOrders: count of all orders where status is DELIVERED or CONFIRMED
       prisma.order.count({
         where: { status: { in: COMPLETED_STATUSES } },
@@ -46,16 +40,32 @@ export async function GET() {
           status: "ACTIVE",
         },
       }),
+      // fetch settings for dynamic thresholds and founding date
+      prisma.businessSettings.findUnique({
+        where: { id: "default" },
+        select: {
+          foundingDate: true,
+          statsOrdersThreshold: true,
+          statsClientsThreshold: true,
+        },
+      }) as unknown as {
+        foundingDate: Date | null;
+        statsOrdersThreshold: number | null;
+        statsClientsThreshold: number | null;
+      } | null,
     ]);
 
     // yearsInBusiness: computed from founding date to today
-    const foundingDate = new Date(FOUNDING_DATE);
+    const foundingDate = settings?.foundingDate ? new Date(settings.foundingDate) : new Date("2020-01-01");
     const today = new Date();
     const yearsInBusiness = Math.max(0, today.getFullYear() - foundingDate.getFullYear());
 
+    const orderThreshold = settings?.statsOrdersThreshold ?? 1000;
+    const clientThreshold = settings?.statsClientsThreshold ?? 500;
+
     const stats = {
-      totalOrders: orderCount >= DISPLAY_THRESHOLDS.totalOrders ? orderCount : null,
-      totalClients: clientCount >= DISPLAY_THRESHOLDS.totalClients ? clientCount : null,
+      totalOrders: orderCount >= orderThreshold ? orderCount : null,
+      totalClients: clientCount >= clientThreshold ? clientCount : null,
       yearsInBusiness,
       totalMachines: machineCount,
       staffCount,

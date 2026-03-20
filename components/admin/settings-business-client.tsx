@@ -40,6 +40,9 @@ const FORM_DEFAULTS: Record<string, string> = {
   socialLinkedIn: "",
   socialTikTok: "",
   socialYouTube: "",
+  foundingDate: "",
+  statsOrdersThreshold: "1000",
+  statsClientsThreshold: "500",
 };
 
 /** Merge server/fetch data with defaults: use saved value if non-empty, else default. Ensures edit form is pre-filled like view. */
@@ -465,6 +468,67 @@ export function SettingsBusinessClient({
                 />
               </div>
             ))}
+          </div>
+        )}
+        onSave={saveFull}
+      />
+
+      <EditableSection
+        id="business-impact"
+        title="Impact & Statistics"
+        description="Configure how your business achievements appear to the public."
+        canEdit={canEdit}
+        viewContent={
+          <div className="space-y-0">
+            {[
+              { label: "Founding Date", value: getStr(data, "foundingDate") ? new Date(getStr(data, "foundingDate")).toLocaleDateString() : "—" },
+              { label: "Order Threshold", value: getStr(data, "statsOrdersThreshold") || "1000" },
+              { label: "Client Threshold", value: getStr(data, "statsClientsThreshold") || "500" },
+            ].map((row, i) => (
+              <div
+                key={i}
+                className="flex flex-wrap items-baseline justify-between gap-2 py-2 border-b border-border/50 last:border-0 hover:bg-muted/30 rounded px-1 -mx-1"
+              >
+                <span className="text-sm text-muted-foreground">{row.label}</span>
+                <span className="text-sm font-medium text-foreground">{row.value}</span>
+              </div>
+            ))}
+          </div>
+        }
+        editContent={({ setHasChanges }) => (
+          <div className="space-y-4" onChange={() => setHasChanges(true)} onInput={() => setHasChanges(true)}>
+            <div className="space-y-1.5">
+              <Label>Founding Date</Label>
+              <Input 
+                type="date"
+                value={getStr(data, "foundingDate") ? getStr(data, "foundingDate").split('T')[0] : ""} 
+                onChange={(e) => update("foundingDate", e.target.value)} 
+                className="focus-visible:ring-orange-500" 
+              />
+              <p className="text-xs text-muted-foreground">Used to calculate &quot;Years in business&quot; on the homepage.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Order Threshold</Label>
+                <Input 
+                  type="number"
+                  value={getStr(data, "statsOrdersThreshold")} 
+                  onChange={(e) => update("statsOrdersThreshold", e.target.value)} 
+                  className="focus-visible:ring-orange-500" 
+                />
+                <p className="text-xs text-muted-foreground">Hide total orders until this count is reached.</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Client Threshold</Label>
+                <Input 
+                  type="number"
+                  value={getStr(data, "statsClientsThreshold")} 
+                  onChange={(e) => update("statsClientsThreshold", e.target.value)} 
+                  className="focus-visible:ring-orange-500" 
+                />
+                <p className="text-xs text-muted-foreground">Hide client count until this count is reached.</p>
+              </div>
+            </div>
           </div>
         )}
         onSave={saveFull}

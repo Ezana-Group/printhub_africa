@@ -10,7 +10,7 @@ export async function GET() {
     const items = await prisma.externalModel.findMany({
       where: {
         status: {
-          in: ["PENDING_REVIEW", "UNDER_REVIEW", "NEEDS_INFO"]
+          in: ["PENDING", "PENDING_REVIEW"]
         }
       },
       orderBy: {

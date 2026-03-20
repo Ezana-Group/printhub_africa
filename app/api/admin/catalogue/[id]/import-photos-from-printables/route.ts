@@ -26,10 +26,15 @@ type ModelShape = {
 
 async function fetchPrintablesPageFallback(url: string): Promise<ModelShape | null> {
   try {
+    // [Printables] API — updated to use header auth + error handling
     const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; PrintHub/1.0; +https://printhub.africa)" },
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" },
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const error = await res.text();
+      console.error(`[Printables] Page fetch error ${res.status}:`, error);
+      return null;
+    }
     const html = await res.text();
     const ogImage = html.match(/<meta\s+property="og:image"\s+content="([^"]*)"/i)?.[1];
     const images: ModelShape["images"] = ogImage
@@ -102,11 +107,17 @@ export async function POST(
 
   try {
     for (const idVar of [modelId, urlSlug]) {
+      // [Printables] API — updated to use header auth + error handling
       const gqlRes = await fetch(PRINTABLES_GRAPHQL, {
         method: "POST",
         headers: graphqlHeaders,
         body: JSON.stringify({ query: PRINTABLES_MODEL_QUERY, variables: { id: idVar } }),
       });
+      if (!gqlRes.ok) {
+        const error = await gqlRes.text();
+        console.error(`[Printables] GraphQL error ${gqlRes.status}:`, error);
+        continue;
+      }
       const gqlData = (await gqlRes.json()) as { data?: { model?: ModelShape }; errors?: Array<{ message?: string }> };
       model = gqlData?.data?.model ?? undefined;
       if (model?.images?.length) break;
@@ -157,10 +168,14 @@ export async function POST(
     const imageUrl = resolveImageUrl(rawPath);
 
     try {
+      // [Printables] API — updated to use header auth + error handling
       const imgRes = await fetch(imageUrl, {
-        headers: { "User-Agent": "Mozilla/5.0 (compatible; PrintHub/1.0; +https://printhub.africa)" },
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" },
       });
-      if (!imgRes.ok) continue;
+      if (!imgRes.ok) {
+        console.error(`[Printables] Image fetch error ${imgRes.status} for ${imageUrl}`);
+        continue;
+      }
       const imageBuffer = await imgRes.arrayBuffer();
       const imageBytes = Buffer.from(imageBuffer);
       const contentType = imgRes.headers.get("content-type") ?? "image/jpeg";

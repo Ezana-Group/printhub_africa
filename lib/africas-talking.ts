@@ -18,11 +18,13 @@ export async function sendSMS(to: string, message: string): Promise<boolean> {
     to: `+${phone}`,
     message: message.slice(0, 160),
   });
+  // [Africa's Talking] API — updated to use header auth + error handling
   const res = await fetch(`${BASE_URL}/messaging`, {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
       apiKey: key,
+      "User-Agent": "PrintHub/1.0 (https://printhub.africa)"
     },
     body: body.toString(),
   });

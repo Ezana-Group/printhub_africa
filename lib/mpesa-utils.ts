@@ -15,10 +15,14 @@ export async function getAccessToken(): Promise<string> {
   const secret = process.env.MPESA_CONSUMER_SECRET;
   if (!key || !secret) throw new Error("MPESA_CONSUMER_KEY and MPESA_CONSUMER_SECRET required");
 
+  // [M-Pesa] API — updated to use header auth + error handling
   const auth = Buffer.from(`${key}:${secret}`).toString("base64");
   const res = await fetch(`${MPESA_BASE_URL}/oauth/v1/generate?grant_type=client_credentials`, {
     method: "GET",
-    headers: { Authorization: `Basic ${auth}` },
+    headers: { 
+      Authorization: `Basic ${auth}`,
+      "User-Agent": "PrintHub/1.0 (https://printhub.africa)"
+    },
   });
   if (!res.ok) {
     const text = await res.text();

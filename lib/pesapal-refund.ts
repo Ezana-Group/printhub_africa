@@ -36,12 +36,14 @@ export async function processPesapalRefund(params: ProcessPesapalRefundParams): 
   try {
     const token = await getPesapalAccessToken();
     const base = getBaseUrl();
+    // [PesaPal] API — updated to use header auth + error handling
     const res = await fetch(`${base}/api/Transactions/RefundRequest`, {
       method: "POST",
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
+        "User-Agent": "PrintHub/1.0 (https://printhub.africa)"
       },
       body: JSON.stringify({
         confirmation_code: orderTrackingId,

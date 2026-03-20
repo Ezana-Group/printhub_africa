@@ -40,22 +40,43 @@ export type BusinessMetadata = {
   businessName: string;
   tagline: string | null;
   logo: string | null;
+  seo?: {
+    siteName: string | null;
+    titleTemplate: string | null;
+    defaultTitle: string | null;
+    defaultDescription: string | null;
+    ogImageUrl: string | null;
+  } | null;
 };
 
 export const getCachedBusinessMetadata = unstable_cache(
-  async (): Promise<BusinessMetadata> => {
-    const row = await prisma.businessSettings.findUnique({
-      where: { id: "default" },
-      select: { favicon: true, updatedAt: true, businessName: true, tagline: true, logo: true },
-    }).catch(() => null);
+  async () => {
+    const [row, seo] = await Promise.all([
+      prisma.businessSettings.findUnique({
+        where: { id: "default" },
+        select: { favicon: true, updatedAt: true, businessName: true, tagline: true, logo: true },
+      }),
+      prisma.seoSettings.findUnique({
+        where: { id: "default" },
+      }),
+    ]).catch(() => [null, null]);
+
     if (!row)
-      return { favicon: null, updatedAt: null, businessName: "PrintHub", tagline: null, logo: null };
+      return { favicon: null, updatedAt: null, businessName: "PrintHub", tagline: null, logo: null, seo: null };
+
     return {
       favicon: row.favicon ?? null,
       updatedAt: row.updatedAt,
       businessName: row.businessName ?? "PrintHub",
       tagline: row.tagline ?? null,
       logo: row.logo ?? null,
+      seo: seo ? {
+        siteName: seo.siteName,
+        titleTemplate: seo.titleTemplate,
+        defaultTitle: seo.defaultTitle,
+        defaultDescription: seo.defaultDescription,
+        ogImageUrl: seo.ogImageUrl,
+      } : null,
     };
   },
   ["business-metadata"],

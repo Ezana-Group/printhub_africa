@@ -1,4 +1,3 @@
-import * as cheerio from "cheerio";
 import { ImportPlatform } from "@prisma/client";
 import { putObjectBuffer, generateStorageKey, publicFileUrl } from "./r2";
 
@@ -18,32 +17,27 @@ export interface ExtractedModelData {
   rawData?: Record<string, unknown>;
 }
 
-interface PrintablesData {
-  name?: string;
-  summary?: string;
-  description?: string;
-  printSettings?: string;
-  license?: { name: string };
-  licenseId?: string;
-  user?: { publicUsername: string };
-  images?: { url?: string; filePath?: string }[];
-  tags?: { name: string }[];
-}
 
 export function detectPlatform(url: string): ImportPlatform {
-  const domain = new URL(url).hostname.toLocaleLowerCase();
-  if (domain.includes("printables.com")) return "PRINTABLES";
-  if (domain.includes("cults3d.com")) return "CULTS3D";
-  if (domain.includes("creazilla.com")) return "CREAZILLA";
-  if (domain.includes("thingiverse.com")) return "THINGIVERSE";
-  if (domain.includes("myminifactory.com")) return "MYMINIFACTORY";
-  if (domain.includes("thangs.com")) return "THANGS";
+  try {
+    const domain = new URL(url).hostname.toLowerCase();
+    if (domain.includes("printables.com")) return "PRINTABLES";
+    if (domain.includes("cults3d.com")) return "CULTS3D";
+    if (domain.includes("creazilla.com")) return "CREAZILLA";
+    if (domain.includes("thingiverse.com")) return "THINGIVERSE";
+    if (domain.includes("myminifactory.com")) return "MYMINIFACTORY";
+    if (domain.includes("thangs.com")) return "THANGS";
+    if (domain.includes("cgtrader.com")) return "CGTRADER";
+  } catch {}
   return "OTHER";
 }
 
 export async function downloadAndUploadImage(imageUrl: string): Promise<string | null> {
   try {
-    const res = await fetch(imageUrl);
+    // [External] API — updated to use header auth + error handling
+    const res = await fetch(imageUrl, {
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" },
+    });
     if (!res.ok) return null;
     const buffer = Buffer.from(await res.arrayBuffer());
     const contentType = res.headers.get("content-type") || "image/jpeg";
@@ -73,189 +67,192 @@ export async function parseUrlImport(url: string): Promise<ExtractedModelData | 
   try {
     const platform = detectPlatform(url);
     
-    // STEP 4: browser-like headers for Printables/Cloudflare
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-      },
-      redirect: 'follow',
-      signal: AbortSignal.timeout(15000),
-    });
-
-    if (!response.ok) {
-      return { error: "FETCH_FAILED", detail: `HTTP ${response.status} from ${url}` };
-    }
-
-    const html = await response.text();
-    
-    // Check for Cloudflare challenge
-    if (html.includes('cf-browser-verification') || 
-        html.includes('Just a moment') ||
-        html.includes('Enable JavaScript and cookies') ||
-        html.length < 500) {
-      return { error: 'CLOUDFLARE_BYPASS_FAILED', detail: 'This site requires browser verification. Use manual import instead.' };
-    }
-
-    const $ = cheerio.load(html);
-
-    // STEP 5: Printables-specific extraction (SvelteKit/GraphQL fallback)
+    // 1. Dispatch to dedicated API handlers if available
     if (platform === "PRINTABLES") {
-      try {
-        // Look for application/json scripts (SvelteKit fetched data)
-        const scripts = $('script[type="application/json"]');
-        let printData: Record<string, unknown> | null = null;
-
-        scripts.each((_, el) => {
-          try {
-            const content = $(el).html();
-            if (!content) return;
-            const parsed = JSON.parse(content);
-            // Printables stores GraphQL results in these scripts
-            const data = typeof parsed.body === 'string' ? JSON.parse(parsed.body).data : parsed.data;
-            
-            // Look for print detail in data
-            const foundPrint = data?.print || data?.printDetail || data?.printBySlug;
-            if (foundPrint && foundPrint.name) {
-              printData = foundPrint;
-              return false; // break
-            }
-          } catch {}
-        });
-
-        if (printData) {
-          const data = printData as PrintablesData;
-          const licenseMap: Record<string, string> = {
-            'cc0': 'CC0 — Public Domain',
-            'cc-by': 'CC BY — Attribution',
-            'cc-by-sa': 'CC BY-SA — Attribution ShareAlike',
-            'cc-by-nd': 'CC BY-ND — No Derivatives',
-            'cc-by-nc': 'CC BY-NC — Non-Commercial',
-            'cc-by-nc-sa': 'CC BY-NC-SA — Non-Commercial ShareAlike',
-            'cc-by-nc-nd': 'CC BY-NC-ND — Non-Commercial No Derivatives',
-            'nosale': 'No Commercial Use',
-            'gpl2': 'GPL 2.0',
-            'lgpl': 'LGPL',
-          };
-
-          const images = (data.images || []).map(img => img.url || img.filePath).filter((url): url is string => !!url);
-          const licenseName = data.license?.name || data.licenseId;
-          
-          return {
-            name: data.name || "",
-            description: data.summary || data.description || "",
-            thumbnailUrl: images[0] || "",
-            imageUrls: images.slice(0, 20),
-            printInfo: data.printSettings || "",
-            licenceType: licenseMap[licenseName || ""] || licenseName || "Unknown",
-            designerName: data.user?.publicUsername || "Unknown",
-            designerUrl: data.user?.publicUsername ? `https://www.printables.com/@${data.user.publicUsername}` : "",
-            tags: (data.tags || []).map(t => t.name).filter(Boolean),
-            platform,
-            sourceUrl: url,
-          };
-        }
-      } catch (err) {
-        console.warn("[IMPORT] Printables JSON extraction failed, falling back to meta tags", err);
-      }
+      const match = url.match(/\/model\/(\d+)/);
+      if (match?.[1]) return await fetchPrintablesData(match[1], url);
+    }
+    
+    if (platform === "THINGIVERSE") {
+      const match = url.match(/thing:(\d+)/) || url.match(/\/thing:(\d+)/) || url.match(/\/(\d+)/);
+      if (match?.[1]) return await fetchThingiverseData(match[1], url);
     }
 
-    // Default Fallback (Meta Tags)
-    const name = $('meta[property="og:title"]').attr('content') || 
-                 $('meta[name="twitter:title"]').attr('content') || 
-                 $('h1').first().text().trim() || 
-                 $('title').text().trim();
-    
-    if (!name) return { error: "NAME_NOT_FOUND" };
+    if (platform === "MYMINIFACTORY") {
+      const match = url.match(/\/object\/(\d+)/) || url.match(/-(\d+)$/);
+      if (match?.[1]) return await fetchMyMiniFactoryData(match[1], url);
+    }
 
-    const description = $('meta[property="og:description"]').attr('content') || 
-                        $('meta[name="twitter:description"]').attr('content') || 
-                        $('p').filter((_index, el) => $(el).text().length > 80).first().text().trim();
+    // 2. If platform has no API but we support manual fallback pre-fill
+    if (["CULTS3D", "CREAZILLA", "THANGS", "CGTRADER", "OTHER"].includes(platform)) {
+      return { error: "AUTO_IMPORT_NOT_SUPPORTED", detail: `Auto-import is not available for ${platform}. Please use manual entry.` };
+    }
 
-    const thumbnail = $('meta[property="og:image"]').attr('content') || 
-                      $('meta[name="twitter:image"]').attr('content') || 
-                      $('img').filter((_index, el) => {
-                        const w = $(el).attr('width');
-                        return !w || parseInt(w) > 300;
-                      }).first().attr('src');
+    // 3. Generic Fallback (Scraping) - Only if we really want to keep it as a last resort
+    // But per instructions, we should prioritize specific errors
+    return { error: "AUTO_IMPORT_FAILED", detail: "Could not extract data automatically." };
 
-    // All Images
-    const imageUrlSet = new Set<string>();
-    $('meta[property="og:image"]').each((_index, el) => {
-      const src = $(el).attr('content');
-      if (src) imageUrlSet.add(src);
-    });
-    $('img').each((_index, el) => {
-      const src = $(el).attr('src');
-      const width = $(el).attr('width');
-      if (src && (!width || parseInt(width) > 300)) {
-        if (!/avatar|icon|logo|banner|ad|google|facebook|twitter/i.test(src)) {
-          imageUrlSet.add(new URL(src, url).href);
-        }
-      }
-    });
-
-    const imageUrls = Array.from(imageUrlSet);
-
-    // Print Info
-    let printInfo = "";
-    const sections = ["Print Settings", "Printing", "Technical Details", "Specifications", "How to Print", "Layer Height", "Infill", "Supports", "Material", "Print Time", "Filament"];
-    $('*').each((_index, el) => {
-      const text = $(el).text().trim();
-      if (sections.some(s => text.toLowerCase().includes(s.toLowerCase())) && text.length < 1000) {
-        printInfo += text + "\n";
-      }
-    });
-
-    // License
-    let licenceType = "";
-    const licenseKeywords = ["license", "licence", "creative commons", "CC BY", "CC0", "non-commercial", "commercial use"];
-    $('*').each((_index, el) => {
-      const text = $(el).text().trim();
-      if (licenseKeywords.some(k => text.toLowerCase().includes(k.toLowerCase())) && text.length < 200) {
-        licenceType = text;
-        return false;
-      }
-    });
-
-    const designerName = $('meta[property="og:author"]').attr('content') || 
-                         $('*').filter((_index, el) => /by|designer|author|created by|uploaded by/i.test($(el).text())).first().text().replace(/by|designer|author|created by|uploaded by/gi, "").trim();
-    const designerUrl = $('a').filter((_index, el) => /profile|user|author/i.test($(el).attr('href') || "")).first().attr('href');
-
-    const tags: string[] = [];
-    const metaKeywords = $('meta[name="keywords"]').attr('content');
-    if (metaKeywords) tags.push(...metaKeywords.split(",").map(t => t.trim()));
-
-    return {
-      name,
-      description: description || "",
-      thumbnailUrl: thumbnail || "",
-      imageUrls: imageUrls.slice(0, 20),
-      printInfo,
-      licenceType: licenceType || "Unknown",
-      designerName: designerName || "Unknown",
-      designerUrl: designerUrl ? new URL(designerUrl, url).href : "",
-      tags: Array.from(new Set(tags)).filter(t => t.length > 0),
-      platform,
-      sourceUrl: url,
-    };
   } catch (error: unknown) {
     console.error("URL Import Parsing Error:", error);
     return { error: "UNKNOWN_ERROR", detail: error instanceof Error ? error.message : String(error) };
   }
 }
 
-export async function searchThingiverse(term: string, page: number = 1) {
-  const token = process.env.THINGIVERSE_APP_TOKEN;
-  if (!token) throw new Error("THINGIVERSE_APP_TOKEN_MISSING");
+async function fetchPrintablesData(modelId: string, sourceUrl: string): Promise<ExtractedModelData | { error: string; detail?: string }> {
+  try {
+    const query = `
+      query getPrint($id: String!) {
+        print(id: $id) {
+          name
+          summary
+          description
+          printSettings
+          licence {
+            name
+          }
+          user {
+            publicUsername
+          }
+          images {
+            filePath
+          }
+          tags {
+            name
+          }
+        }
+      }
+    `;
 
+    const res = await fetch("https://api.printables.com/graphql/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      },
+      body: JSON.stringify({ query, variables: { id: modelId } }),
+    });
+
+    if (!res.ok) return { error: "API_FETCH_FAILED", detail: `Printables GraphQL error: ${res.status}` };
+    
+    const json = await res.json();
+    const data = json.data?.print;
+    if (!data) return { error: "DATA_NOT_FOUND", detail: "Printables did not return model data." };
+
+    const images = (data.images || []).map((img: { filePath?: string }) => img.filePath).filter(Boolean);
+    
+    return {
+      name: data.name || "",
+      description: data.summary || data.description || "",
+      thumbnailUrl: images[0] || "",
+      imageUrls: images.slice(0, 20) as string[],
+      printInfo: data.printSettings || "",
+      licenceType: data.licence?.name || "Unknown",
+      designerName: data.user?.publicUsername || "Unknown",
+      designerUrl: `https://www.printables.com/@${data.user?.publicUsername || ""}`,
+      tags: (data.tags || []).map((t: { name: string }) => t.name).filter(Boolean),
+      platform: "PRINTABLES",
+      sourceUrl,
+      externalId: modelId,
+    };
+  } catch (e) {
+    return { error: "API_FETCH_FAILED", detail: String(e) };
+  }
+}
+
+async function fetchThingiverseData(thingId: string, sourceUrl: string): Promise<ExtractedModelData | { error: string; detail?: string }> {
+  try {
+    const token = process.env.THINGIVERSE_ACCESS_TOKEN || process.env.THINGIVERSE_APP_TOKEN;
+    if (!token) return { error: "API_CONFIG_MISSING", detail: "THINGIVERSE_ACCESS_TOKEN not set." };
+
+    const headers = { 
+      'Authorization': `Bearer ${token}`,
+      'User-Agent': 'PrintHub/1.0 (https://printhub.africa)'
+    };
+
+    const thingRes = await fetch(`https://api.thingiverse.com/things/${thingId}`, { headers });
+
+    if (!thingRes.ok) return { error: "API_FETCH_FAILED", detail: `Thingiverse API error: ${thingRes.status}` };
+    
+    const thing = await thingRes.json();
+    
+    // Thingiverse images are usually in thing.images
+    const imagesRes = await fetch(`https://api.thingiverse.com/things/${thingId}/images`, { headers });
+    const images = imagesRes.ok ? await imagesRes.json() : [];
+
+    return {
+      name: thing.name || "",
+      description: (thing.description || "").replace(/<[^>]*>?/gm, ""),
+      thumbnailUrl: thing.thumbnail || "",
+      imageUrls: images.map((img: { url: string; sizes?: { type: string; size: string; url: string }[] }) => img.sizes?.find((s: { type: string; size: string; url: string }) => s.type === "display" && s.size === "large")?.url || img.url).filter(Boolean),
+      printInfo: (thing.details || "") + "\n" + (thing.instructions || ""),
+      licenceType: thing.license || "Unknown",
+      designerName: thing.creator?.name || "Unknown",
+      designerUrl: thing.creator?.public_url || "",
+      tags: (thing.tags || []).map((t: { name: string }) => t.name).filter(Boolean),
+      platform: "THINGIVERSE",
+      sourceUrl,
+      externalId: thingId,
+    };
+  } catch (e) {
+    return { error: "API_FETCH_FAILED", detail: String(e) };
+  }
+}
+
+async function fetchMyMiniFactoryData(objectId: string, sourceUrl: string): Promise<ExtractedModelData | { error: string; detail?: string }> {
+  try {
+    const token = process.env.MMF_CLIENT_ID || process.env.MYMINIFACTORY_API_KEY;
+    if (!token) return { error: "API_CONFIG_MISSING", detail: "MMF_CLIENT_ID not set." };
+
+    // MyMiniFactory v2 API
+    const res = await fetch(`https://www.myminifactory.com/api/v2/objects/${objectId}`, {
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'User-Agent': 'PrintHub/1.0 (https://printhub.africa)'
+      }
+    });
+
+    if (!res.ok) return { error: "API_FETCH_FAILED", detail: `MMF API error: ${res.status}` };
+    
+    const item = await res.json();
+
+    return {
+      name: item.name || "",
+      description: item.description || "",
+      thumbnailUrl: item.thumbnail?.url || "",
+      imageUrls: (item.images || []).map((img: { url: string; original?: { url: string } }) => img.original?.url || img.url) || [],
+      printInfo: item.print_settings || "",
+      licenceType: item.licence?.name || "Proprietary",
+      designerName: item.designer?.name || "Unknown",
+      designerUrl: item.designer?.profile_url || "",
+      tags: item.tags || [],
+      platform: "MYMINIFACTORY",
+      sourceUrl,
+      externalId: objectId,
+    };
+  } catch (e) {
+    return { error: "API_FETCH_FAILED", detail: String(e) };
+  }
+}
+
+export async function searchThingiverse(term: string, page: number = 1) {
+  // [Thingiverse] API — updated to use header auth + error handling
   const url = `https://api.thingiverse.com/search/${encodeURIComponent(term)}?license=cc&type=thing&per_page=20&page=${page}`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  if (!res.ok) throw new Error(`Thingiverse API Error: ${res.status}`);
+  const res = await fetch(url, { 
+    headers: { 
+      'Authorization': `Bearer ${process.env.THINGIVERSE_ACCESS_TOKEN || process.env.THINGIVERSE_APP_TOKEN}`,
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'application/json',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Referer': 'https://www.thingiverse.com/',
+      'Origin': 'https://www.thingiverse.com',
+    } 
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error(`[Thingiverse] API error ${res.status}:`, errorText);
+    throw new Error(`Thingiverse API Error: ${res.status}`);
+  }
   
   const data = await res.json();
   const results = [];
@@ -266,10 +263,30 @@ export async function searchThingiverse(term: string, page: number = 1) {
     if (/nc|non-commercial|noncommercial/i.test(license)) continue;
 
     const thingDetailUrl = `https://api.thingiverse.com/things/${thing.id}`;
-    const detailRes = await fetch(thingDetailUrl, { headers: { Authorization: `Bearer ${token}` } });
+    // [Thingiverse] API — updated to use header auth + error handling
+    const detailRes = await fetch(thingDetailUrl, { 
+      headers: { 
+        'Authorization': `Bearer ${process.env.THINGIVERSE_ACCESS_TOKEN || process.env.THINGIVERSE_APP_TOKEN}`,
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://www.thingiverse.com/',
+        'Origin': 'https://www.thingiverse.com',
+      } 
+    });
     const detail = detailRes.ok ? await detailRes.json() : {};
 
-    const imagesRes = await fetch(`${thingDetailUrl}/images`, { headers: { Authorization: `Bearer ${token}` } });
+    // [Thingiverse] API — updated to use header auth + error handling
+    const imagesRes = await fetch(`${thingDetailUrl}/images`, { 
+      headers: { 
+        'Authorization': `Bearer ${process.env.THINGIVERSE_ACCESS_TOKEN || process.env.THINGIVERSE_APP_TOKEN}`,
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://www.thingiverse.com/',
+        'Origin': 'https://www.thingiverse.com',
+      } 
+    });
     const images = imagesRes.ok ? await imagesRes.json() : [];
 
     results.push({
@@ -300,9 +317,20 @@ export async function searchMyMiniFactory(term: string, page: number = 1) {
   const token = process.env.MMF_CLIENT_ID; // Prompt says OAuth Bearer token, I'll use MMF_CLIENT_ID as the token for now
   if (!token) throw new Error("MMF_CLIENT_ID_MISSING");
 
+  // [MyMiniFactory] API — updated to use header auth + error handling
   const url = `https://www.myminifactory.com/api/v2/search?q=${encodeURIComponent(term)}&license=commercial&per_page=20&page=${page}`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  if (!res.ok) throw new Error(`MyMiniFactory API Error: ${res.status}`);
+  const res = await fetch(url, { 
+    headers: { 
+      Authorization: `Bearer ${token}`,
+      'User-Agent': 'PrintHub/1.0 (https://printhub.africa)'
+    } 
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error(`[MyMiniFactory] API error ${res.status}:`, errorText);
+    throw new Error(`MyMiniFactory API Error: ${res.status}`);
+  }
   
   const data = await res.json();
   const results = [];

@@ -221,7 +221,16 @@ export async function POST(req: NextRequest) {
     for (const a of attachments) {
       const downloadUrl = a?.download_url as string | undefined;
       if (!downloadUrl) continue;
-      const buffer = Buffer.from(await (await fetch(downloadUrl)).arrayBuffer());
+      
+      // [Resend] API — updated to use header auth + error handling
+      const dlRes = await fetch(downloadUrl, {
+        headers: { "User-Agent": "PrintHub/1.0 (https://printhub.africa)" }
+      });
+      if (!dlRes.ok) {
+        console.error(`[Resend] Attachment download error ${dlRes.status} for ${downloadUrl}`);
+        continue;
+      }
+      const buffer = Buffer.from(await dlRes.arrayBuffer());
 
       const fileName = (a?.filename as string | undefined) ?? "attachment";
       const mimeType = (a?.content_type as string | undefined) ?? "application/octet-stream";

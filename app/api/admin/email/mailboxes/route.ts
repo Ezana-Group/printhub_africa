@@ -91,6 +91,7 @@ export async function POST(req: NextRequest) {
   // 1) Call Cloudflare Email Routing API to add a forwarding rule.
   const zoneId = process.env.CLOUDFLARE_ZONE_ID;
   const cfToken = process.env.CLOUDFLARE_API_TOKEN;
+  // [Cloudflare] API — updated to use header auth + error handling
   const cfResp = await fetch(
     `https://api.cloudflare.com/client/v4/zones/${zoneId}/email/routing/rules`,
     {
@@ -98,6 +99,7 @@ export async function POST(req: NextRequest) {
       headers: {
         Authorization: `Bearer ${cfToken}`,
         "Content-Type": "application/json",
+        "User-Agent": "PrintHub/1.0 (https://printhub.africa)"
       },
       body: JSON.stringify({
         actions: [{ type: "forward", value: [resendInboundAddress] }],
@@ -110,6 +112,7 @@ export async function POST(req: NextRequest) {
 
   if (!cfResp.ok) {
     const text = await cfResp.text().catch(() => "");
+    console.error(`[Cloudflare] API error ${cfResp.status}:`, text);
     return NextResponse.json(
       { error: "Failed to create Cloudflare forwarding rule", details: text || undefined },
       { status: 502 }

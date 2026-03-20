@@ -127,14 +127,18 @@ function UrlImportSection() {
               <div className="text-sm space-y-1">
                 {error.error === "ALREADY_IMPORTED" ? (
                   <p>This model was already imported. <Link href={`/admin/catalogue/import/${error.existingId}/review`} className="underline">View existing record</Link></p>
-                ) : error.error === "FETCH_FAILED" ? (
-                  <p>Could not reach this URL. Check the link and try again.</p>
+                ) : error.error === "FETCH_FAILED" || error.error === "API_FETCH_FAILED" ? (
+                  <p>Could not connect to the platform API. Please check your API credentials in Settings or try manual entry below.</p>
+                ) : error.error === "API_CONFIG_MISSING" ? (
+                  <p>API configuration is missing for this platform. Please set up the required API keys in your environment.</p>
+                ) : error.error === "AUTO_IMPORT_NOT_SUPPORTED" ? (
+                  <p>Automatic import is not yet supported for this platform. Please fill in the details below manually.</p>
                 ) : error.error === "CLOUDFLARE_BYPASS_FAILED" ? (
-                  <p>This site blocks automated imports. Please use the manual entry form below.</p>
+                  <p>This site blocks automated imports via Cloudflare. Please use the manual entry form below.</p>
                 ) : error.error === "NAME_NOT_FOUND" ? (
                   <p>Could not extract product name automatically. Please fill it in manually below.</p>
                 ) : (
-                  <p>An unexpected error occurred.</p>
+                  <p>Could not auto-import from this URL. Please use the manual form below.</p>
                 )}
                 
                 {error.detail && (
@@ -618,14 +622,36 @@ function ManualFallbackForm({ initialUrl, onSuccess }: { initialUrl: string; onS
   });
 
   React.useEffect(() => {
-    // Auto-detect platform from URL
+    // Auto-detect platform and pre-fill name from URL
     try {
-      const hostname = new URL(initialUrl).hostname.toLowerCase();
-      if (hostname.includes("printables.com")) setFormData(prev => ({ ...prev, platform: "PRINTABLES" }));
-      else if (hostname.includes("thingiverse.com")) setFormData(prev => ({ ...prev, platform: "THINGIVERSE" }));
-      else if (hostname.includes("cults3d.com")) setFormData(prev => ({ ...prev, platform: "CULTS3D" }));
-      else if (hostname.includes("creazilla.com")) setFormData(prev => ({ ...prev, platform: "CREAZILLA" }));
-      else if (hostname.includes("myminifactory.com")) setFormData(prev => ({ ...prev, platform: "MYMINIFACTORY" }));
+      const urlObj = new URL(initialUrl);
+      const hostname = urlObj.hostname.toLowerCase();
+      const pathname = urlObj.pathname;
+      
+      let detectedPlatform = "OTHER";
+      if (hostname.includes("printables.com")) detectedPlatform = "PRINTABLES";
+      else if (hostname.includes("thingiverse.com")) detectedPlatform = "THINGIVERSE";
+      else if (hostname.includes("cults3d.com")) detectedPlatform = "CULTS3D";
+      else if (hostname.includes("creazilla.com")) detectedPlatform = "CREAZILLA";
+      else if (hostname.includes("myminifactory.com")) detectedPlatform = "MYMINIFACTORY";
+      else if (hostname.includes("cgtrader.com")) detectedPlatform = "CGTRADER";
+      else if (hostname.includes("thangs.com")) detectedPlatform = "THANGS";
+
+      // Attempt to extract name from slug
+      // e.g. /model/123-cool-object -> cool-object -> Cool Object
+      const slug = pathname.split('/').filter(Boolean).pop() || "";
+      // Remove common prefix/suffix like IDs or "thing:123"
+      const cleanSlug = slug.replace(/^thing:\d+-?/, "").replace(/^\d+-?/, "").replace(/-?\d+$/, "");
+      const name = cleanSlug
+        .split(/[-_]+/)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+
+      setFormData(prev => ({ 
+        ...prev, 
+        platform: detectedPlatform as any,
+        name: name || prev.name 
+      }));
     } catch {}
   }, [initialUrl]);
 

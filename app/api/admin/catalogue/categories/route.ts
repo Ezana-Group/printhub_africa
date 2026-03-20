@@ -1,59 +1,87 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/admin-api-guard";
-import { z } from "zod";
+import { revalidateTag } from "next/cache";
 
-function slugify(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-}
+const categorySchema = z.object({
+  name: z.string().min(1),
+  slug: z.string().min(1).regex(/^[a-z0-9-]+$/, "Slug: lowercase letters, numbers, hyphens only"),
+  description: z.string().optional().nullable(),
+  isActive: z.boolean().optional(),
+  sortOrder: z.number().int().optional(),
+});
 
 export async function GET() {
   const auth = await requireAdminApi({ permission: "products_view" });
   if (auth instanceof NextResponse) return auth;
-  const categories = await prisma.catalogueCategory.findMany({
-    orderBy: { sortOrder: "asc" },
-    include: { _count: { select: { items: true } } },
-  });
-  return NextResponse.json(categories.map((c) => ({ ...c, itemCount: c._count.items })));
-}
 
-const createSchema = z.object({
-  name: z.string().min(1).max(200),
-  slug: z.string().max(200).optional(),
-  description: z.string().optional(),
-  imageUrl: z.string().url().optional().nullable(),
-  icon: z.string().max(50).optional().nullable(),
-  sortOrder: z.number().int().optional(),
-  isActive: z.boolean().optional(),
-});
+  try {
+    const categories = await prisma.catalogueCategory.findMany({
+      orderBy: { sortOrder: "asc" },
+      include: {
+        _count: { select: { items: true } }
+      }
+    });
+    return NextResponse.json(categories);
+  } catch (e) {
+    console.error("Fetch catalogue categories error:", e);
+    return NextResponse.json({ error: "Failed to fetch categories" }, { status: 500 });
+  }
+}
 
 export async function POST(req: Request) {
   const auth = await requireAdminApi({ permission: "products_edit" });
   if (auth instanceof NextResponse) return auth;
-  const body = await req.json();
-  const parsed = createSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+
+  try {
+    const body = await req.json();
+    const parsed = categorySchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 });
+    }
+
+    const { name, slug, description, isActive, sortOrder } = parsed.data;
+
+    const existing = await prisma.catalogueCategory.findUnique({ where: { slug } });
+    if (existing) {
+      return NextResponse.json({ error: "A category with this slug already exists." }, { status: 400 });
+    }
+
+    const category = await prisma.catalogueCategory.create({
+      data: {
+        name,
+        slug,
+        description,
+        isActive: isActive ?? true,
+        sortOrder: sortOrder ?? 0,
+      },
+    });
+
+    return NextResponse.json(category);
+  } catch (e) {
+    console.error("Create catalogue category error:", e);
+    return NextResponse.json({ error: "Failed to create category" }, { status: 500 });
   }
-  const data = parsed.data;
-  const slug = (data.slug?.trim() || slugify(data.name)) as string;
-  const existing = await prisma.catalogueCategory.findUnique({ where: { slug } });
-  let finalSlug = slug;
-  if (existing) {
-    let n = 1;
-    while (await prisma.catalogueCategory.findUnique({ where: { slug: `${slug}-${n}` } })) n++;
-    finalSlug = `${slug}-${n}`;
+}
+
+export async function PATCH(req: Request) {
+  const auth = await requireAdminApi({ permission: "products_edit" });
+  if (auth instanceof NextResponse) return auth;
+
+  try {
+    const body = await req.json();
+    const { id, ...data } = body;
+    if (!id) return NextResponse.json({ error: "ID is required" }, { status: 400 });
+
+    const category = await prisma.catalogueCategory.update({
+      where: { id },
+      data,
+    });
+
+    return NextResponse.json(category);
+  } catch (e) {
+    console.error("Update catalogue category error:", e);
+    return NextResponse.json({ error: "Failed to update category" }, { status: 500 });
   }
-  const cat = await prisma.catalogueCategory.create({
-    data: {
-      name: data.name,
-      slug: finalSlug,
-      description: data.description ?? null,
-      imageUrl: data.imageUrl ?? null,
-      icon: data.icon ?? null,
-      sortOrder: data.sortOrder ?? 0,
-      isActive: data.isActive ?? true,
-    },
-  });
-  return NextResponse.json(cat);
 }

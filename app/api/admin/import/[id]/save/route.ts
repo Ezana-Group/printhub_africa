@@ -26,7 +26,7 @@ export async function POST(
         notes: data.internalNotes,
         imageUrls: data.imageUrls,
         thumbnailUrl: data.thumbnailUrl,
-        status: "UNDER_REVIEW", // Mark as under review once saved
+        status: "PENDING_REVIEW", // Mark as under review once saved
       }
     });
 

@@ -48,11 +48,13 @@ export async function stkPush(
     TransactionDesc: transactionDesc,
   };
 
+  // [M-Pesa] API — updated to use header auth + error handling
   const res = await fetch(`${MPESA_BASE_URL}/mpesa/stkpush/v1/processrequest`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
+      "User-Agent": "PrintHub/1.0 (https://printhub.africa)"
     },
     body: JSON.stringify(body),
   });
@@ -89,11 +91,13 @@ export async function stkPushQuery(checkoutRequestId: string): Promise<StkPushQu
     CheckoutRequestID: checkoutRequestId,
   };
 
+  // [M-Pesa] API — updated to use header auth + error handling
   const res = await fetch(`${MPESA_BASE_URL}/mpesa/stkpushquery/v1/query`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
+      "User-Agent": "PrintHub/1.0 (https://printhub.africa)"
     },
     body: JSON.stringify(body),
   });

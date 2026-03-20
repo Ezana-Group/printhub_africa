@@ -52,18 +52,24 @@ const shouldEnableSpeedInsights = process.env.VERCEL === "1";
 
 export async function generateMetadata(): Promise<Metadata> {
   const meta = await getCachedBusinessMetadata();
-  const businessName = meta.businessName ?? "PrintHub";
+  const businessName = meta.seo?.siteName || meta.businessName || "PrintHub";
+  const defaultTitle = meta.seo?.defaultTitle || `${businessName} | Large Format & 3D Printing | Nairobi, Kenya`;
   const description =
-    meta.tagline ?? "Large format printing and 3D printing for Nairobi and all of Kenya. Banners, signage, vehicle wraps, canvas, custom 3D prints. An Ezana Group Company.";
+    meta.seo?.defaultDescription ||
+    meta.tagline ||
+    "Large format printing and 3D printing for Nairobi and all of Kenya. Banners, signage, vehicle wraps, canvas, custom 3D prints. An Ezana Group Company.";
+  
   const faviconUrl =
     meta.favicon && meta.updatedAt
       ? `${meta.favicon}?v=${new Date(meta.updatedAt).getTime()}`
       : meta.favicon ?? null;
 
+  const ogImage = meta.seo?.ogImageUrl || meta.logo || "/images/og/default-og.webp";
+
   return {
     title: {
-      default: `${businessName} | Large Format & 3D Printing | Nairobi, Kenya`,
-      template: `%s | ${businessName}`,
+      default: defaultTitle,
+      template: meta.seo?.titleTemplate || `%s | ${businessName}`,
     },
     description,
     metadataBase,
@@ -85,24 +91,22 @@ export async function generateMetadata(): Promise<Metadata> {
         },
     openGraph: {
       title: `${businessName} | Printing the Future, Made in Kenya`,
-      description: meta.tagline ?? "Large format & 3D printing. Shop online or upload your design.",
+      description: description,
       locale: "en_KE",
       siteName: businessName,
       type: "website",
-      images: meta.logo
-        ? [{ url: meta.logo, width: 1200, height: 630, alt: `${businessName} — Large Format & 3D Printing Kenya` }]
-        : [
-            {
-              url: "/images/og/default-og.webp",
-              width: 1200,
-              height: 630,
-              alt: "PrintHub — Large Format & 3D Printing Kenya",
-            },
-          ],
+      images: [
+        {
+          url: ogImage,
+          width: 1200,
+          height: 630,
+          alt: `${businessName} — Large Format & 3D Printing Kenya`,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
-      images: meta.logo ? [meta.logo] : ["/images/og/default-og.webp"],
+      images: [ogImage],
     },
   };
 }

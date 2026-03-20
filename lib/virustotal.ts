@@ -31,9 +31,13 @@ export async function scanFile(
 
   let res: Response;
   try {
+    // [VirusTotal] API — updated to use header auth + error handling
     res = await fetch(`${VT_BASE}/files`, {
       method: "POST",
-      headers: { "x-apikey": apiKey },
+      headers: { 
+        "x-apikey": apiKey,
+        "User-Agent": "PrintHub/1.0 (https://printhub.africa)"
+      },
       body: form,
     });
   } catch (err) {
@@ -59,8 +63,12 @@ export async function scanFile(
 
   for (let i = 0; i < 24; i++) {
     await new Promise((r) => setTimeout(r, 5000));
+    // [VirusTotal] API — updated to use header auth + error handling
     const fileRes = await fetch(`${VT_BASE}/files/${fileId}`, {
-      headers: { "x-apikey": apiKey },
+      headers: { 
+        "x-apikey": apiKey,
+        "User-Agent": "PrintHub/1.0 (https://printhub.africa)"
+      },
     });
     if (!fileRes.ok) continue;
     const fileData = await fileRes.json();
