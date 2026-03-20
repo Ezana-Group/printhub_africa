@@ -903,10 +903,10 @@ async function main() {
     { name: "Kenya Collection", slug: "kenya-collection", icon: "map-pin", sortOrder: 10 },
   ];
   for (const cat of catalogueCategories) {
-    await prisma.catalogueCategory.upsert({
+    await prisma.category.upsert({
       where: { slug: cat.slug },
-      update: { name: cat.name, icon: cat.icon, sortOrder: cat.sortOrder },
-      create: { ...cat, isActive: true },
+      update: { name: cat.name, sortOrder: cat.sortOrder },
+      create: { name: cat.name, slug: cat.slug, sortOrder: cat.sortOrder, isActive: true },
     });
   }
   console.log("Catalogue categories seeded");

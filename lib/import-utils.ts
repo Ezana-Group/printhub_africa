@@ -258,56 +258,24 @@ export async function searchThingiverse(term: string, page: number = 1) {
   const results = [];
 
   for (const thing of data.hits || []) {
-    // Check license for NC
+    // Check license for NC - Thingiverse search hits usually have a licence string
     const license = thing.license || "";
     if (/nc|non-commercial|noncommercial/i.test(license)) continue;
 
-    const thingDetailUrl = `https://api.thingiverse.com/things/${thing.id}`;
-    // [Thingiverse] API — updated to use header auth + error handling
-    const detailRes = await fetch(thingDetailUrl, { 
-      headers: { 
-        'Authorization': `Bearer ${process.env.THINGIVERSE_ACCESS_TOKEN || process.env.THINGIVERSE_APP_TOKEN}`,
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/json',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Referer': 'https://www.thingiverse.com/',
-        'Origin': 'https://www.thingiverse.com',
-      } 
-    });
-    const detail = detailRes.ok ? await detailRes.json() : {};
-
-    // [Thingiverse] API — updated to use header auth + error handling
-    const imagesRes = await fetch(`${thingDetailUrl}/images`, { 
-      headers: { 
-        'Authorization': `Bearer ${process.env.THINGIVERSE_ACCESS_TOKEN || process.env.THINGIVERSE_APP_TOKEN}`,
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/json',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Referer': 'https://www.thingiverse.com/',
-        'Origin': 'https://www.thingiverse.com',
-      } 
-    });
-    const images = imagesRes.ok ? await imagesRes.json() : [];
-
+    // Use hit data directly to avoid serial fetching (prevents 500 timeouts)
     results.push({
       externalId: thing.id.toString(),
       name: thing.name,
-      description: (detail.description || "").replace(/<[^>]*>?/gm, ""),
-      printInfo: (detail.details || "") + "\n" + (detail.instructions || ""),
-      imageUrls: images.map((img: { url: string; sizes?: { type: string; size: string; url: string }[] }) => img.sizes?.find((s: { type: string; size: string; url: string }) => s.type === "display" && s.size === "large")?.url || img.url),
+      description: thing.description || "", // Hits might have a short description
       thumbnailUrl: thing.thumbnail,
       licenceType: license,
-      designerName: thing.creator?.name,
-      designerUrl: thing.creator?.public_url,
-      tags: (detail.tags || []).map((t: { name: string }) => t.name),
-
-      sourceUrl: thing.public_url,
+      designerName: thing.creator?.name || "Unknown",
+      designerUrl: thing.creator?.public_url || "",
+      sourceUrl: thing.public_url || `https://www.thingiverse.com/thing:${thing.id}`,
       platform: "THINGIVERSE" as ImportPlatform,
       rawData: thing,
+      alreadyImported: false, // Calculated in the caller API route
     });
-    
-    // Rate limit delay
-    await new Promise(r => setTimeout(r, 500));
   }
 
   return results;

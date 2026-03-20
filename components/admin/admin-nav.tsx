@@ -52,7 +52,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/products", label: "Products", icon: Package },
       { href: "/admin/categories", label: "Categories", icon: FolderTree },
       { href: "/admin/catalogue", label: "Catalogue", icon: Layers },
-      { href: "/admin/catalogue/categories", label: "Catalogue Categories", icon: FolderTree },
+      { href: "/admin/catalogue/import?tab=queue", label: "Approval Queue", icon: ListTodo },
     ],
   },
   {
@@ -97,6 +97,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/content/faq", label: "FAQ Manager", icon: HelpCircle },
       { href: "/admin/content/site-images", label: "Site Images", icon: ImageIcon },
       { href: "/admin/content/auth-panel", label: "Login panel", icon: PanelLeft },
+      { href: "/admin/content/navigation", label: "Navigation", icon: FolderTree },
     ],
   },
   {

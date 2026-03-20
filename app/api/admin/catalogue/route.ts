@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     where.status = status as CatalogueStatus;
   }
   if (category) {
-    const cat = await prisma.catalogueCategory.findFirst({ where: { slug: category } });
+    const cat = await prisma.category.findFirst({ where: { slug: category } });
     if (cat) where.categoryId = cat.id;
   }
   if (q) {

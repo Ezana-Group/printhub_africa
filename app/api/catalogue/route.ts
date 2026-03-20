@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
     } = { status: CatalogueStatus.LIVE };
 
     if (category) {
-      const cat = await prisma.catalogueCategory.findFirst({
+      const cat = await prisma.category.findFirst({
         where: { slug: category, isActive: true },
       });
       if (cat) where.categoryId = cat.id;

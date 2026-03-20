@@ -54,9 +54,22 @@ export function Header({ business }: { business?: BusinessPublic }) {
   const { data: session, status } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [navLinks, setNavLinks] = useState(NAV_LINKS);
   const cartCount = useCartStore((s) => s.itemCount());
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    setMounted(true);
+    fetch("/api/navigation")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setNavLinks(data);
+        }
+      })
+      .catch(() => {
+        // Fallback to hardcoded NAV_LINKS already set in state
+      });
+  }, []);
 
   const navDropdownClass =
     "w-56 bg-white text-slate-800 border border-slate-200/80 shadow-xl shadow-slate-200/50 rounded-2xl py-1.5 [&_a]:text-slate-800 [&_a:hover]:bg-slate-50";
@@ -119,7 +132,7 @@ export function Header({ business }: { business?: BusinessPublic }) {
             {/* Scrollable nav links */}
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
               <nav className="flex flex-col gap-1 p-6">
-                {NAV_LINKS.map((item) =>
+                {navLinks.map((item) =>
                   item.children ? (
                     <div key={item.href}>
                       <Link
@@ -242,7 +255,7 @@ export function Header({ business }: { business?: BusinessPublic }) {
         </Link>
 
         <nav className="hidden md:flex items-center gap-1">
-          {NAV_LINKS.map((item) =>
+          {navLinks.map((item) =>
             item.children ? (
               <DropdownMenu key={item.href}>
                 <DropdownMenuTrigger asChild>

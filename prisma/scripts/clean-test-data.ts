@@ -116,7 +116,7 @@ async function clean() {
   await prisma.catalogueItemMaterial.deleteMany();
   await prisma.catalogueItem.deleteMany();
   await prisma.catalogueDesigner.deleteMany();
-  await prisma.catalogueCategory.deleteMany();
+  await prisma.category.deleteMany();
   await prisma.uploadedFile.deleteMany();
 
   // Notifications, loyalty, referral, addresses (for non-admin we delete all then re-create nothing)

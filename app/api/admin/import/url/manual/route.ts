@@ -20,7 +20,8 @@ export async function POST(req: Request) {
       designerName, 
       designerUrl, 
       platform,
-      sourceUrl 
+      sourceUrl,
+      categoryId
     } = body;
 
     if (!name || (!url && !sourceUrl)) {
@@ -60,6 +61,7 @@ export async function POST(req: Request) {
         designerName: designerName || "Unknown",
         designerUrl: designerUrl || "",
         tags: [],
+        categoryId: categoryId || null,
         importedBy: auth.session.user.id,
         status: "PENDING_REVIEW",
       }

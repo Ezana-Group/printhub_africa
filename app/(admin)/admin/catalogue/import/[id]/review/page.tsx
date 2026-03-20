@@ -110,7 +110,8 @@ export default function ReviewPage() {
       
       if (catRes.ok) {
         const data = await catRes.json();
-        setCategories(data.categories || []);
+        // The API returns the array directly
+        setCategories(Array.isArray(data) ? data : (data.categories || []));
       }
     } catch (e) {
       console.error(e);

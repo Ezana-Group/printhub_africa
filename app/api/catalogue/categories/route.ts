@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const [categories, counts, siteImages] = await Promise.all([
-      prisma.catalogueCategory.findMany({
+      prisma.category.findMany({
         where: { isActive: true },
         orderBy: { sortOrder: "asc" },
       }),
@@ -55,8 +55,8 @@ export async function GET() {
         name: c.name,
         slug,
         description: c.description,
-        imageUrl: c.imageUrl || slotImage || null,
-        icon: c.icon,
+        imageUrl: c.image || slotImage || null,
+        icon: null,
         sortOrder: c.sortOrder,
         itemCount: countByCategory[c.id] ?? 0,
       };

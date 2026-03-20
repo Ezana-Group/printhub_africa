@@ -8,7 +8,7 @@ export default async function NewCatalogueItemPage() {
   await requireAdminSection("/admin/catalogue/new");
   let categories: { id: string; name: string; slug: string }[] = [];
   try {
-    const list = await prisma.catalogueCategory.findMany({
+    const list = await prisma.category.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
       select: { id: true, name: true, slug: true },

@@ -4,10 +4,12 @@
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { LicenceBadge } from "@/components/catalogue/LicenceBadge";
-import { Loader2, Search, ExternalLink, CheckCircle, AlertCircle, Eye } from "lucide-react";
+import { Loader2, Search, ExternalLink, CheckCircle, AlertCircle, Eye, Layers } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { FileUploader, UploadedFileResult } from "@/components/upload/FileUploader";
+import { Label } from "@/components/ui/label";
 
 export default function ImportDashboard() {
   return (
@@ -619,7 +621,28 @@ function ManualFallbackForm({ initialUrl, onSuccess }: { initialUrl: string; onS
     designerName: "",
     designerUrl: "",
     platform: "OTHER" as any,
+    categoryId: "",
+    uploadedImages: [] as string[],
+    printSettings: {
+      layerHeight: "",
+      infill: "",
+      material: "",
+      supports: "No",
+    },
   });
+  const [categories, setCategories] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    // Fetch main shop categories
+    const fetchCats = async () => {
+      const res = await fetch("/api/admin/categories");
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(data);
+      }
+    };
+    fetchCats();
+  }, []);
 
   React.useEffect(() => {
     // Auto-detect platform and pre-fill name from URL
@@ -665,7 +688,12 @@ function ManualFallbackForm({ initialUrl, onSuccess }: { initialUrl: string; onS
         body: JSON.stringify({
           ...formData,
           sourceUrl: initialUrl,
-          imageUrls: formData.imageUrls.split("\n").filter(Boolean).map(url => url.trim()),
+          imageUrls: [
+            ...(formData.imageUrls.split("\n").filter(Boolean).map(url => url.trim())),
+            ...formData.uploadedImages
+          ],
+          categoryId: formData.categoryId,
+          printInfo: `Layer Height: ${formData.printSettings.layerHeight}\nInfill: ${formData.printSettings.infill}\nMaterial: ${formData.printSettings.material}\nSupports: ${formData.printSettings.supports}\n\n${formData.printInfo}`,
         }),
       });
       
@@ -731,29 +759,108 @@ function ManualFallbackForm({ initialUrl, onSuccess }: { initialUrl: string; onS
         />
       </div>
 
-      <div className="md:col-span-2">
-        <label className="block text-sm font-medium mb-1">Print Info (Layer height, material, etc.)</label>
-        <textarea 
-          rows={2}
-          className="w-full border rounded-md px-3 py-2"
-          value={formData.printInfo}
-          onChange={(e) => setFormData(p => ({ ...p, printInfo: e.target.value }))}
-        />
+      <div className="md:col-span-2 p-4 bg-slate-50 border rounded-xl space-y-4">
+        <Label className="text-sm font-bold flex items-center gap-2">
+          <Layers className="h-4 w-4" /> Print Settings (Table-like info)
+        </Label>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <label className="text-[10px] uppercase font-bold text-slate-500">Layer Height</label>
+            <input 
+              placeholder="0.2mm"
+              className="w-full border rounded px-2 py-1.5 text-sm bg-white"
+              value={formData.printSettings.layerHeight}
+              onChange={(e) => setFormData(p => ({ ...p, printSettings: { ...p.printSettings, layerHeight: e.target.value } }))}
+            />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase font-bold text-slate-500">Infill</label>
+            <input 
+              placeholder="15%"
+              className="w-full border rounded px-2 py-1.5 text-sm bg-white"
+              value={formData.printSettings.infill}
+              onChange={(e) => setFormData(p => ({ ...p, printSettings: { ...p.printSettings, infill: e.target.value } }))}
+            />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase font-bold text-slate-500">Material</label>
+            <input 
+              placeholder="PLA/PETG"
+              className="w-full border rounded px-2 py-1.5 text-sm bg-white"
+              value={formData.printSettings.material}
+              onChange={(e) => setFormData(p => ({ ...p, printSettings: { ...p.printSettings, material: e.target.value } }))}
+            />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase font-bold text-slate-500">Supports</label>
+            <select 
+              className="w-full border rounded px-2 py-1.5 text-sm bg-white"
+              value={formData.printSettings.supports}
+              onChange={(e) => setFormData(p => ({ ...p, printSettings: { ...p.printSettings, supports: e.target.value } }))}
+            >
+              <option value="No">No</option>
+              <option value="Yes">Yes</option>
+              <option value="Only on bed">Only on bed</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label className="text-[10px] uppercase font-bold text-slate-500">Other Print Notes</label>
+          <textarea 
+            rows={2}
+            className="w-full border rounded px-3 py-2 text-sm bg-white"
+            placeholder="Additional instructions..."
+            value={formData.printInfo}
+            onChange={(e) => setFormData(p => ({ ...p, printInfo: e.target.value }))}
+          />
+        </div>
       </div>
 
-      <div className="md:col-span-2">
-        <label className="block text-sm font-medium mb-1">Image URLs (one per line)</label>
-        <textarea 
-          rows={4}
-          className="w-full border rounded-md px-3 py-2 font-mono text-xs"
-          placeholder="Paste direct image URLs here..."
-          value={formData.imageUrls}
-          onChange={(e) => setFormData(p => ({ ...p, imageUrls: e.target.value }))}
-        />
-        <p className="text-[10px] text-muted-foreground mt-1">Right-click image on source site → Copy image address.</p>
+      <div className="md:col-span-1">
+        <label className="block text-sm font-medium mb-1">Internal Category *</label>
+        <select 
+          required
+          className="w-full border rounded-md px-3 py-2 bg-transparent"
+          value={formData.categoryId}
+          onChange={(e) => setFormData(p => ({ ...p, categoryId: e.target.value }))}
+        >
+          <option value="">Select Category...</option>
+          {categories.map(c => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
       </div>
 
-      <div>
+      <div className="md:col-span-2 space-y-4">
+        <Label className="text-base font-bold">Model Images</Label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground uppercase">Option A: Upload Files (Recommended)</Label>
+            <FileUploader 
+              context="catalogue_import"
+              accept={["image/png", "image/jpeg", "image/webp"]}
+              maxFiles={10}
+              onUploadComplete={(files: UploadedFileResult[]) => {
+                const urls = files.map(f => f.publicUrl).filter(Boolean) as string[];
+                setFormData(p => ({ ...p, uploadedImages: [...p.uploadedImages, ...urls] }));
+              }}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground uppercase">Option B: External URLs (One per line)</Label>
+            <textarea 
+              rows={5}
+              className="w-full border rounded-md px-3 py-2 font-mono text-[10px]"
+              placeholder="Paste direct image URLs here..."
+              value={formData.imageUrls}
+              onChange={(e) => setFormData(p => ({ ...p, imageUrls: e.target.value }))}
+            />
+            <p className="text-[10px] text-muted-foreground">Right-click image on source site → Copy image address.</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="md:col-span-1">
         <label className="block text-sm font-medium mb-1">Licence</label>
         <select 
           className="w-full border rounded-md px-3 py-2 bg-transparent"
@@ -773,8 +880,8 @@ function ManualFallbackForm({ initialUrl, onSuccess }: { initialUrl: string; onS
         </select>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
+      <div className="md:col-span-1 flex gap-4">
+        <div className="flex-1">
           <label className="block text-sm font-medium mb-1">Designer Name</label>
           <input 
             className="w-full border rounded-md px-3 py-2"
@@ -782,7 +889,7 @@ function ManualFallbackForm({ initialUrl, onSuccess }: { initialUrl: string; onS
             onChange={(e) => setFormData(p => ({ ...p, designerName: e.target.value }))}
           />
         </div>
-        <div>
+        <div className="flex-1">
           <label className="block text-sm font-medium mb-1">Designer URL</label>
           <input 
             className="w-full border rounded-md px-3 py-2"

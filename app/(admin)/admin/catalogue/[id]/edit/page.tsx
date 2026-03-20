@@ -27,7 +27,7 @@ export default async function CatalogueEditPage({
 
   if (!item) notFound();
 
-  const categories = await prisma.catalogueCategory.findMany({
+  const categories = await prisma.category.findMany({
     where: { isActive: true },
     orderBy: { sortOrder: "asc" },
     select: { id: true, name: true, slug: true },

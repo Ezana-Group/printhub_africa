@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const category = await prisma.catalogueCategory.findUnique({
+  const category = await prisma.category.findUnique({
     where: { id: body.categoryId },
   });
   if (!category) {

@@ -144,6 +144,7 @@ model Category {
   children        Category[] @relation("CategoryTree")
   products        Product[]
   externalModels  ExternalModel[]
+  catalogueItems  CatalogueItem[]
 
   @@index([parentId])
 }
@@ -1784,19 +1785,7 @@ model DatabaseGuard {
   updatedAt DateTime @updatedAt
 }
 
-model CatalogueCategory {
-  id          String          @id @default(cuid())
-  name        String
-  slug        String          @unique
-  icon        String?
-  sortOrder   Int             @default(0)
-  isActive    Boolean         @default(true)
-  description String?
-  imageUrl    String?
-  items       CatalogueItem[]
-
-  @@index([slug])
-}
+// model CatalogueCategory is being removed to unify with Category
 
 model CatalogueDesigner {
   id         String          @id @default(cuid())
@@ -1843,7 +1832,7 @@ model CatalogueItem {
   rejectionReason    String?
   modelUrl           String?
   modelStorageKey    String?
-  category           CatalogueCategory       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  category           Category            @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   designer           CatalogueDesigner?      @relation(fields: [designerId], references: [id])
   availableMaterials CatalogueItemMaterial[]
   photos             CatalogueItemPhoto[]
@@ -2454,4 +2443,18 @@ model ImportLog {
   status      String    // 'success' | 'failed' | 'partial'
   triggeredBy String    // admin user id
   createdAt   DateTime  @default(now())
+}
+
+model NavigationItem {
+  id          String   @id @default(cuid())
+  label       String
+  href        String
+  parentId    String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  
+  parent      NavigationItem?  @relation("NavigationTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children    NavigationItem[] @relation("NavigationTree")
+
+  @@index([parentId])
 }
