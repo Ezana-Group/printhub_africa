@@ -227,10 +227,12 @@ export async function listAllObjects(bucket: "private" | "public", prefix?: stri
   if (!client) throw new Error("R2 not configured");
   const b = bucket === "private" ? PRIVATE_BUCKET : PUBLIC_BUCKET;
   let isTruncated = true;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let contents: any[] = [];
   let continuationToken: string | undefined;
 
   while (isTruncated) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const command: any = new ListObjectsV2Command({
       Bucket: b,
       Prefix: prefix,

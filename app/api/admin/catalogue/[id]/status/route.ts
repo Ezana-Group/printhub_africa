@@ -31,6 +31,7 @@ export async function PATCH(
     const item = await prisma.catalogueItem.findUnique({ where: { id } });
     if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const data: any = {
       status: status as CatalogueStatus,
     };

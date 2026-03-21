@@ -38,6 +38,7 @@ export async function POST(
     );
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data: any = {
     status: CatalogueStatus.DRAFT,
     rejectedById: userId,

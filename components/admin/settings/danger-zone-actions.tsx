@@ -125,6 +125,7 @@ export function DangerZoneActions() {
     setError(null);
     setLoading(true);
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const body: any = {
         confirmPhrase: action.confirmPhrase,
         password,
@@ -258,6 +259,7 @@ export function DangerZoneActions() {
 }
 
 function BackupSystem() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [backups, setBackups] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -447,6 +449,7 @@ function RestoreSystem() {
       }
       toast.success("System restored successfully. Refreshing...");
       setTimeout(() => window.location.reload(), 2000);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       toast.error(e.message || "Restore failed");
       setProgress(prev => [...prev, { step: "Restoration failed", status: "failed" }]);

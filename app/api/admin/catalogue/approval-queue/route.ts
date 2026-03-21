@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
   const limit = 20;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = {};
 
   // Tab Status Filter
@@ -29,6 +30,7 @@ export async function GET(req: NextRequest) {
   if (search) {
     where.OR = [
       { name: { contains: search, mode: "insensitive" } },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       { sourceType: { equals: search.toUpperCase() as any } }, // Best effort for platform search
     ];
   }

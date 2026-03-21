@@ -4,12 +4,6 @@ import { validateDanger } from "@/lib/danger";
 import { writeAudit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 
-const DEFAULT_PRICING_CONFIG = [
-  { key: "vatRate", valueJson: "0.16" },
-  { key: "minOrderLargeFormat", valueJson: "500" },
-  { key: "minOrder3D", valueJson: "800" },
-  { key: "minAreaSqmLargeFormat", valueJson: "0.5" },
-] as const;
 
 export async function POST(req: Request) {
   const auth = await requireRole(req, "SUPER_ADMIN");
@@ -49,6 +43,7 @@ export async function POST(req: Request) {
           { slug: "ABS", name: "ABS", type: "ABS", pricePerGram: 0.18, density: 1.05, minChargeGrams: 10, colorOptions: ["Black", "White", "Grey", "Orange", "Blue", "Red"] },
           { slug: "TPU", name: "TPU (Flexible)", type: "TPU", pricePerGram: 0.35, density: 1.2, minChargeGrams: 10, colorOptions: ["Black", "White", "Grey", "Orange", "Blue", "Red"] },
           { slug: "RESIN_STD", name: "Resin (Standard)", type: "RESIN", pricePerGram: 0.45, density: 1.1, minChargeGrams: 5, colorOptions: ["Black", "White", "Grey", "Orange", "Blue", "Red"] },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ] as any,
       }),
       // Printing Mediums (Large Format)
