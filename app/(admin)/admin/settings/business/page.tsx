@@ -15,20 +15,25 @@ function toStrMap(row: Record<string, unknown> | null): Record<string, string> {
 }
 
 export default async function AdminSettingsBusinessPage() {
-  await requireAdminSettings();
-  const session = await getServerSession(authOptions);
-  const role = (session?.user as { role?: string })?.role ?? "STAFF";
-  const canEdit = role === "ADMIN" || role === "SUPER_ADMIN";
+  try {
+    await requireAdminSettings();
+    const session = await getServerSession(authOptions);
+    const role = (session?.user as { role?: string })?.role ?? "STAFF";
+    const canEdit = role === "ADMIN" || role === "SUPER_ADMIN";
 
-  const row = await prisma.businessSettings.findUnique({
-    where: { id: "default" },
-  });
-  const saved = toStrMap(row as unknown as Record<string, unknown>);
+    const row = await prisma.businessSettings.findUnique({
+      where: { id: "default" },
+    });
+    const saved = toStrMap(row as unknown as Record<string, unknown>);
 
-  return (
-    <div className="space-y-6">
-      <h1 className="font-display text-2xl font-bold">Business Profile</h1>
-      <SettingsBusinessClient initialData={saved} canEdit={canEdit} />
-    </div>
-  );
+    return (
+      <div className="space-y-6">
+        <h1 className="font-display text-2xl font-bold">Business Profile</h1>
+        <SettingsBusinessClient initialData={saved} canEdit={canEdit} />
+      </div>
+    );
+  } catch (e) {
+    console.error('[BusinessSettings] Server render error:', e);
+    throw e;
+  }
 }

@@ -21,6 +21,7 @@ export default async function AdminLayout({
   if (!role || !ADMIN_ROLES.includes(role)) redirect("/login");
 
   const newQuotesCount = await prisma.quote.count({ where: { status: "new" } }).catch(() => 0);
+  const pendingApprovalCount = await prisma.catalogueItem.count({ where: { status: "PENDING_REVIEW" } }).catch(() => 0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -29,7 +30,12 @@ export default async function AdminLayout({
           PrintHub Admin
         </Link>
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <AdminNav role={role} permissions={permissions} newQuotesCount={newQuotesCount} />
+          <AdminNav 
+            role={role} 
+            permissions={permissions} 
+            newQuotesCount={newQuotesCount} 
+            pendingApprovalCount={pendingApprovalCount}
+          />
         </div>
       </aside>
       <AdminHeaderClient

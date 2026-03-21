@@ -72,6 +72,11 @@ model User {
   userNotificationPrefs    UserNotificationPrefs?
   userPermissions          UserPermission[]
   wishlists                Wishlist[]
+  backupRecords            BackupRecord[]
+  catalogueImported        CatalogueItem[]            @relation("CatalogueImportedBy")
+  catalogueArchived        CatalogueItem[]            @relation("CatalogueArchivedBy")
+  catalogueApproved        CatalogueItem[]            @relation("CatalogueApprovedBy")
+  catalogueRejected        CatalogueItem[]            @relation("CatalogueRejectedBy")
 }
 
 model Address {
@@ -1826,16 +1831,23 @@ model CatalogueItem {
   priceOverrideKes   Float?
   printTimeHours     Float?
   weightGrams        Float?
-  approvedBy         String?
+  approvedById       String?
   approvedAt         DateTime?
-  rejectedBy         String?
+  rejectedById       String?
   rejectionReason    String?
+  importedById       String?
+  archivedById       String?
+  archivedAt         DateTime?
   modelUrl           String?
   modelStorageKey    String?
-  category           Category            @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  category           Category                @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   designer           CatalogueDesigner?      @relation(fields: [designerId], references: [id])
   availableMaterials CatalogueItemMaterial[]
   photos             CatalogueItemPhoto[]
+  approvedBy         User?                   @relation("CatalogueApprovedBy", fields: [approvedById], references: [id])
+  rejectedBy         User?                   @relation("CatalogueRejectedBy", fields: [rejectedById], references: [id])
+  importedBy         User?                   @relation("CatalogueImportedBy", fields: [importedById], references: [id])
+  archivedBy         User?                   @relation("CatalogueArchivedBy", fields: [archivedById], references: [id])
 
   @@index([categoryId])
   @@index([status])
@@ -2315,6 +2327,8 @@ enum CatalogueStatus {
   LIVE
   PAUSED
   RETIRED
+  REJECTED
+  ARCHIVED
 }
 
 enum CatalogueSourceType {
@@ -2457,4 +2471,15 @@ model NavigationItem {
   children    NavigationItem[] @relation("NavigationTree")
 
   @@index([parentId])
+}
+model BackupRecord {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  sizeBytes   BigInt?
+  status      String   // PENDING | IN_PROGRESS | COMPLETE | FAILED
+  r2Key       String?
+  filename    String
+  errorMsg    String?
 }

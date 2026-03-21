@@ -14,8 +14,9 @@ export default async function NewCatalogueItemPage() {
       select: { id: true, name: true, slug: true },
     });
     categories = list;
-  } catch {
-    // DB unavailable
+  } catch (e) {
+    console.error('[NewCatalogueItem] Server render error:', e);
+    throw e;
   }
 
   return (

@@ -14,6 +14,8 @@ import {
   GetObjectCommand,
   DeleteObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
+  ListObjectsV2CommandOutput,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
@@ -205,4 +207,39 @@ export async function putObjectBuffer(params: {
       ContentType: params.contentType,
     })
   );
+}
+
+/** List objects in a bucket with optional prefix. */
+export async function listObjects(bucket: "private" | "public", prefix?: string) {
+  const client = getClient();
+  if (!client) throw new Error("R2 not configured");
+  const b = bucket === "private" ? PRIVATE_BUCKET : PUBLIC_BUCKET;
+  const command = new ListObjectsV2Command({
+    Bucket: b,
+    Prefix: prefix,
+  });
+  return await client.send(command);
+}
+
+/** List ALL objects in a bucket (handles pagination). */
+export async function listAllObjects(bucket: "private" | "public", prefix?: string) {
+  const client = getClient();
+  if (!client) throw new Error("R2 not configured");
+  const b = bucket === "private" ? PRIVATE_BUCKET : PUBLIC_BUCKET;
+  let isTruncated = true;
+  let contents: any[] = [];
+  let continuationToken: string | undefined;
+
+  while (isTruncated) {
+    const command: any = new ListObjectsV2Command({
+      Bucket: b,
+      Prefix: prefix,
+      ContinuationToken: continuationToken,
+    });
+    const response = (await client.send(command)) as ListObjectsV2CommandOutput;
+    contents = contents.concat(response.Contents || []);
+    isTruncated = !!response.IsTruncated;
+    continuationToken = response.NextContinuationToken;
+  }
+  return contents;
 }

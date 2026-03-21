@@ -38,15 +38,18 @@ export async function POST(
     );
   }
 
+  const data: any = {
+    status: CatalogueStatus.DRAFT,
+    rejectedById: userId,
+    rejectedAt: new Date(),
+    rejectionReason: reason || null,
+    approvedById: null,
+    approvedAt: null,
+  };
+
   await prisma.catalogueItem.update({
     where: { id },
-    data: {
-      status: CatalogueStatus.DRAFT,
-      rejectedBy: userId,
-      rejectionReason: reason || null,
-      approvedBy: null,
-      approvedAt: null,
-    },
+    data,
   });
   return NextResponse.json({ success: true, status: "DRAFT" });
 }

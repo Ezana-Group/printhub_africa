@@ -35,7 +35,7 @@ type NavItem = {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  badge?: "quotes";
+  badge?: "quotes" | "approval";
 };
 
 type NavGroup = {
@@ -52,7 +52,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/products", label: "Products", icon: Package },
       { href: "/admin/categories", label: "Categories", icon: FolderTree },
       { href: "/admin/catalogue", label: "Catalogue", icon: Layers },
-      { href: "/admin/catalogue/import?tab=queue", label: "Approval Queue", icon: ListTodo },
+      { href: "/admin/catalogue/approval-queue", label: "Approval Queue", icon: ListTodo, badge: "approval" },
     ],
   },
   {
@@ -115,9 +115,15 @@ interface AdminNavProps {
   role: string;
   permissions?: string[] | null;
   newQuotesCount?: number;
+  pendingApprovalCount?: number;
 }
 
-export function AdminNav({ role, permissions, newQuotesCount = 0 }: AdminNavProps) {
+export function AdminNav({ 
+  role, 
+  permissions, 
+  newQuotesCount = 0,
+  pendingApprovalCount = 0 
+}: AdminNavProps) {
   const pathname = usePathname();
 
   return (
@@ -151,7 +157,8 @@ export function AdminNav({ role, permissions, newQuotesCount = 0 }: AdminNavProp
                 const isActive =
                   pathname === basePath ||
                   (basePath !== "/admin/dashboard" && pathname.startsWith(basePath + "/"));
-                const showBadge = item.badge === "quotes" && newQuotesCount > 0;
+                const showQuotesBadge = item.badge === "quotes" && newQuotesCount > 0;
+                const showApprovalBadge = item.badge === "approval" && pendingApprovalCount > 0;
                 return (
                   <Link
                     key={item.href}
@@ -165,9 +172,14 @@ export function AdminNav({ role, permissions, newQuotesCount = 0 }: AdminNavProp
                   >
                     <item.icon className="h-4 w-4 shrink-0" />
                     <span>{item.label}</span>
-                    {showBadge && (
+                    {showQuotesBadge && (
                       <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-medium text-white">
                         {newQuotesCount > 99 ? "99+" : newQuotesCount}
+                      </span>
+                    )}
+                    {showApprovalBadge && (
+                      <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-amber-500 px-1.5 text-xs font-medium text-white">
+                        {pendingApprovalCount > 99 ? "99+" : pendingApprovalCount}
                       </span>
                     )}
                   </Link>

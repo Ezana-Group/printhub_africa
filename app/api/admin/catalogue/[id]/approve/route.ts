@@ -25,15 +25,17 @@ export async function POST(
     );
   }
 
+  const data: any = {
+    status: CatalogueStatus.LIVE,
+    approvedById: userId,
+    approvedAt: new Date(),
+    rejectedById: null,
+    rejectionReason: null,
+  };
+
   const itemAfter = await prisma.catalogueItem.update({
     where: { id },
-    data: {
-      status: CatalogueStatus.LIVE,
-      approvedBy: userId,
-      approvedAt: new Date(),
-      rejectedBy: null,
-      rejectionReason: null,
-    },
+    data,
     select: { slug: true },
   });
   revalidateTag("catalogue");

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "prisma generate && next build",
+    "build": "prisma generate && prisma migrate deploy && next build",
     "build:with-migrate": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
@@ -60,6 +60,7 @@
     "@upstash/redis": "^1.37.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
+    "adm-zip": "^0.5.16",
     "algoliasearch": "^5.49.2",
     "bcryptjs": "^3.0.3",
     "cheerio": "^1.2.0",
@@ -92,6 +93,7 @@
     "glob": "10.5.0"
   },
   "devDependencies": {
+    "@types/adm-zip": "^0.5.8",
     "@types/bcryptjs": "^2.4.6",
     "@types/cheerio": "^0.22.35",
     "@types/node": "^20",
