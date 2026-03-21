@@ -33,11 +33,11 @@ export async function GET(req: NextRequest) {
     searchConditions.push({ name: { contains: search, mode: "insensitive" } });
     
     // Check if the search term matches any for platform
-    const platformMatch = Object.values(CatalogueSourceType).find(
-      v => v.toString().toUpperCase() === search.toUpperCase()
+    const platformMatch = (Object.values(CatalogueSourceType) as string[]).find(
+      (v) => v.toUpperCase() === search.toUpperCase()
     );
     if (platformMatch) {
-      searchConditions.push({ sourceType: platformMatch });
+      searchConditions.push({ sourceType: platformMatch as CatalogueSourceType });
     }
   }
 
