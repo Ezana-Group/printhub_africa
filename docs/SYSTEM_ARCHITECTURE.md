@@ -3,7 +3,7 @@
 **Product:** PrintHub — Large-format printing & 3D printing for Nairobi and Kenya  
 **Company:** Ezana Group  
 **Repository:** Printhub_Africa_ProdV1  
-**Last updated:** March 21, 2026
+**Last updated:** March 21, 2026 (Auth & Security Architecture Update)
 
 ---
 
@@ -52,7 +52,8 @@ flowchart TB
   end
 
   subgraph "Core Libraries (lib/)"
-    Auth[NextAuth]
+    AuthCust[Auth Customer]
+    AuthAdmin[Auth Admin]
     PrismaLib[Prisma Client]
     Email[Resend Email]
     S3R2[R2 / S3]
@@ -73,7 +74,8 @@ flowchart TB
   Browser --> Middleware --> AppRouter
   Browser --> Middleware --> APIRoutes
   AppRouter --> PrismaLib
-  APIRoutes --> Auth
+  APIRoutes --> AuthCust
+  APIRoutes --> AuthAdmin
   APIRoutes --> PrismaLib
   APIRoutes --> Email
   APIRoutes --> S3R2
@@ -86,7 +88,8 @@ flowchart TB
   Mpesa --> Daraja
   Pesapal --> PaymentGW
   Stripe --> PaymentGW
-  Auth --> DB
+  AuthCust --> DB
+  AuthAdmin --> DB
 ```
 
 ---
@@ -166,7 +169,9 @@ Printhub_Africa_ProdV1/
 │   └── ...
 ├── lib/                    # Core services and utilities
 │   ├── prisma.ts
-│   ├── auth.ts             # NextAuth config
+│   ├── auth-customer.ts    # NextAuth config (Customer)
+│   ├── auth-admin.ts       # NextAuth config (Admin/Staff)
+│   ├── admin-device-check.ts # Device tracking & fingerprinting
 │   ├── email.ts, sms.ts
 │   ├── s3.ts, r2.ts
 │   ├── mpesa.ts, pesapal.ts, stripe/
@@ -432,17 +437,31 @@ All API routes live under `app/api/`. Protection is enforced by **middleware** a
 
 ## 6. Authentication & Authorization
 
-### 6.1 Authentication
+### 6.1 Authentication (Separated Flow)
 
-- **NextAuth.js 4** with **JWT** strategy; **Prisma adapter** for Account, Session, User.
-- **Providers:** Credentials (email/password), Google, Facebook, Apple, **Email (Magic Link via Resend)**.
-- **Onboarding & Completion:**
-  - **Profile Completion Gate:** Mandatory interceptor modal for users missing `name` or `phone` (common for social sign-ins).
-  - **Email Verification System:** Mandatory for `CUSTOMER` role. Enforced via a persistent warning banner and profile field locking until `emailVerified` is set.
-  - **Verification Bypass:** Users with `STAFF`, `ADMIN`, or `SUPER_ADMIN` roles bypass verification requirements for immediate platform access.
-- **Credentials:** bcrypt password check; optional 2FA (TOTP via otplib, or email/SMS one-time code). Lockout after 5 failed attempts (15 min). Staff invite status (INVITE_PENDING/DEACTIVATED) respected.
-- **Session:** 30-day maxAge; JWT includes id, role, permissions (STAFF), isCorporate, corporateId, corporateRole, corporateTier, **emailVerified**, **displayName**, **phone**.
-- **Staff permissions:** Cached in memory (5 min TTL); invalidated when admin changes staff.
+Printhub uses a **separated authentication architecture** to isolate customer sessions from administrative sessions:
+
+- **Subdomain Isolation**: 
+  - `www.printhub.africa` handles customer authentication via `lib/auth-customer.ts`.
+  - `admin.printhub.africa` handles staff/admin authentication via `lib/auth-admin.ts`.
+- **Dynamic NextAuth Handler**: `/api/auth/[...nextauth]` dynamically selects the configuration based on the `Host` header.
+- **Independent Cookies**: Customers use `next-auth.session-token` while Admins use `admin-auth.session-token`, preventing cross-site session leakage.
+- **Providers**:
+  - **Customer**: Credentials, Google, Facebook, Apple, Email (Magic Link).
+  - **Admin**: Credentials (Email/Password) only.
+- **Multi-Step Admin Login**:
+  - Mandatory **Two-Factor Authentication (TOTP)** for all staff/admin accounts.
+  - Includes a 7-day grace period for new staff setup.
+  - Backed by `otplib` and standard TOTP apps.
+- **Admin Session Security**:
+  - **Concurrent Session Control**: Only one active session is allowed per admin account. New logins invalidate previous session IDs stored in the database (`adminActiveSessionId`).
+  - **Device Tracking**: Fingerprints IP, User-Agent, and Location for every admin login.
+  - **Session Timeout Guard**: Client-side monitoring (`SessionTimeoutGuard.tsx`) automatically signs out inactive admin users after a predefined interval.
+- **Onboarding & Completion**:
+  - **Profile Completion Gate**: Mandatory interceptor for users missing `name` or `phone`.
+  - **Email Verification**: Mandatory for `CUSTOMER` role.
+- **Credentials Security**: bcrypt hashing; account lockout after 5 failed attempts (15 min).
+- **Session Claims**: JWT includes id, role, permissions, isCorporate, `emailVerified`, and admin-specific security flags.
 
 ### 6.2 Authorization (Roles & Permissions)
 
