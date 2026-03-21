@@ -10,7 +10,7 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    url: process.env.DATABASE_URL,
-    shadowDatabaseUrl: process.env.DATABASE_URL_UNPOOLED,
+    url: env("DATABASE_URL"),
+    shadowDatabaseUrl: env("DATABASE_URL_UNPOOLED"),
   },
 });
