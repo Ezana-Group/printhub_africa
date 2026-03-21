@@ -59,11 +59,34 @@ export function Header({ business }: { business?: BusinessPublic }) {
 
   useEffect(() => {
     setMounted(true);
-    fetch("/api/navigation")
+    fetch("/api/navigation/shop-categories")
       .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
-          setNavLinks(data);
+      .then(categories => {
+        if (Array.isArray(categories)) {
+          const shopChildren: {label: string, href: string}[] = [];
+          if (categories.length === 0) {
+            shopChildren.push({ label: "All Products", href: "/shop" });
+          } else {
+            const parents = categories.filter((c) => !c.parentId);
+            const children = categories.filter((c) => c.parentId);
+            parents.forEach((p) => {
+              shopChildren.push({ label: p.name, href: `/shop?category=${p.slug}` });
+              const pChildren = children.filter((c) => c.parentId === p.id);
+              pChildren.forEach((c) => {
+                shopChildren.push({ label: `\u00A0\u00A0— ${c.name}`, href: `/shop?category=${c.slug}` });
+              });
+            });
+            const orphans = children.filter((c) => !parents.some((p) => p.id === c.parentId));
+            orphans.forEach((c) => {
+              shopChildren.push({ label: c.name, href: `/shop?category=${c.slug}` });
+            });
+          }
+          
+          setNavLinks(prev => prev.map(link => 
+            link.label === "Shop" 
+              ? { ...link, children: shopChildren }
+              : link
+          ));
         }
       })
       .catch(() => {

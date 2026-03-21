@@ -143,6 +143,7 @@ model Category {
   parentId        String?
   sortOrder       Int        @default(0)
   isActive        Boolean    @default(true)
+  showInNav       Boolean    @default(false)
   metaTitle       String?
   metaDescription String?
   parent          Category?  @relation("CategoryTree", fields: [parentId], references: [id])
@@ -2459,19 +2460,7 @@ model ImportLog {
   createdAt   DateTime  @default(now())
 }
 
-model NavigationItem {
-  id          String   @id @default(cuid())
-  label       String
-  href        String
-  parentId    String?
-  sortOrder   Int      @default(0)
-  isActive    Boolean  @default(true)
-  
-  parent      NavigationItem?  @relation("NavigationTree", fields: [parentId], references: [id], onDelete: Cascade)
-  children    NavigationItem[] @relation("NavigationTree")
 
-  @@index([parentId])
-}
 model BackupRecord {
   id          String   @id @default(cuid())
   createdAt   DateTime @default(now())

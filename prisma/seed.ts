@@ -150,6 +150,7 @@ async function main() {
       name: "Large Format Printing",
       slug: "large-format",
       description: "Banners, signage, vehicle wraps, canvas, and more",
+      showInNav: true,
       sortOrder: 1,
     },
   });
@@ -160,6 +161,7 @@ async function main() {
       name: "3D Printing",
       slug: "3d-printing",
       description: "Custom and ready-made 3D printed products",
+      showInNav: true,
       sortOrder: 2,
     },
   });
@@ -171,10 +173,29 @@ async function main() {
       slug: "merchandise",
       description: "Ready-made 3D printed items",
       parentId: cat3D.id,
+      showInNav: true,
       sortOrder: 1,
     },
   });
-  console.log("Categories created");
+  
+  // Set showInNav = true on these slugs by default (safe to re-run on existing categories)
+  await prisma.category.updateMany({
+    where: {
+      slug: {
+        in: [
+          "large-format-printing",
+          "3d-printing",
+          "stationery-marketing",
+          "branded-merchandise",
+          "print-on-demand",
+          "corporate-b2b"
+        ]
+      }
+    },
+    data: { showInNav: true }
+  });
+
+  console.log("Categories created & navigation defaults set");
 
   // Sample products
   await prisma.product.upsert({
