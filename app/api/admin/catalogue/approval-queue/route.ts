@@ -26,16 +26,25 @@ export async function GET(req: NextRequest) {
     where.status = { in: [CatalogueStatus.ARCHIVED, CatalogueStatus.RETIRED] };
   }
 
-  // Search Filter (Name or Platform)
+  // Search & Platform Filters
+  const searchConditions: any[] = [];
+  
   if (search) {
-    where.OR = [
-      { name: { contains: search, mode: "insensitive" } },
-      // Check if the search term matches any of the enum values for platform
-      { sourceType: { equals: Object.values(CatalogueSourceType).includes(search.toUpperCase() as any) ? search.toUpperCase() as any : undefined } },
-    ];
+    searchConditions.push({ name: { contains: search, mode: "insensitive" } });
+    
+    // Check if the search term matches any for platform
+    const platformMatch = Object.values(CatalogueSourceType).find(
+      v => v.toString().toUpperCase() === search.toUpperCase()
+    );
+    if (platformMatch) {
+      searchConditions.push({ sourceType: platformMatch });
+    }
   }
 
-  // Platform Filter
+  if (searchConditions.length > 0) {
+    where.OR = searchConditions;
+  }
+
   if (platform !== "All") {
     where.sourceType = platform.toUpperCase() as CatalogueSourceType;
   }
