@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { CategoryCascadingSelect } from "@/components/admin/CategoryCascadingSelect";
 import { Switch } from "@/components/ui/switch";
 import type { ProductRow } from "@/components/admin/products-admin-client";
 import { ProductImagesTab } from "@/components/admin/product-images-tab";
@@ -219,18 +220,12 @@ export function ProductFormSheet({
                   </select>
                 </div>
                 <div>
-                  <Label htmlFor="categoryId">Category *</Label>
-                  <select
-                    id="categoryId"
+                  <Label>Category *</Label>
+                  <CategoryCascadingSelect
+                    categories={categories}
                     value={categoryId}
-                    onChange={(e) => setCategoryId(e.target.value)}
-                    required
-                    className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setCategoryId(val || "")}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="stock">Quantity (stock)</Label>

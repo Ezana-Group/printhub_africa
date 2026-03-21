@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import {
   Sheet,
@@ -146,7 +146,39 @@ export function CategoryFormSheet({
     }
   };
 
-  const topLevelParents = parentOptions.filter((p) => !p.parentId && (!category || p.id !== category.id));
+  const isDescendant = (id: string, potentialParentId: string): boolean => {
+    let current = parentOptions.find(p => p.id === potentialParentId);
+    while (current) {
+      if (current.parentId === id) return true;
+      current = parentOptions.find(p => p.id === current?.parentId);
+    }
+    return false;
+  };
+
+  const getAvailableParents = () => {
+    return parentOptions.filter(p => {
+      if (!category) return true;
+      if (p.id === category.id) return false;
+      if (isDescendant(category.id, p.id)) return false;
+      return true;
+    });
+  };
+
+  const renderParentOptions = (parentId: string | null = null, depth = 0) => {
+    const available = getAvailableParents();
+    return available
+      .filter((p) => (p.parentId || null) === parentId)
+      .map((p) => (
+        <Fragment key={p.id}>
+          <option value={p.id}>
+            {"\u00A0".repeat(depth * 4)}
+            {depth > 0 ? "— " : ""}
+            {p.name}
+          </option>
+          {renderParentOptions(p.id, depth + 1)}
+        </Fragment>
+      ));
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -196,11 +228,7 @@ export function CategoryFormSheet({
               className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
             >
               <option value="">None (top level)</option>
-              {topLevelParents.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
+              {renderParentOptions(null)}
             </select>
           </div>
 

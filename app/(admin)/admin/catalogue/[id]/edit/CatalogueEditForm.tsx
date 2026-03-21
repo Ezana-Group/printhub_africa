@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { FileUploader } from "@/components/upload/FileUploader";
 import { Loader2, Box } from "lucide-react";
 import { SmartTextEditor } from "@/components/admin/smart-text-editor";
+import { CategoryCascadingSelect } from "@/components/admin/CategoryCascadingSelect";
 
 type TabId = "details" | "photos" | "stl";
 
@@ -355,32 +356,12 @@ export function CatalogueEditForm({
             />
           </div>
           <div>
-            <Label htmlFor="category">Category *</Label>
-            <select
-              id="category"
+            <Label>Category *</Label>
+            <CategoryCascadingSelect
+              categories={categories}
               value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            >
-              {(() => {
-                const renderOptions = (parentId: string | null = null, depth = 0) => {
-                  return categories
-                    .filter((c) => (c.parentId || null) === parentId)
-                    .map((c) => (
-                      <optgroup key={c.id} label={depth === 0 ? c.name : undefined}>
-                        <option value={c.id}>
-                          {"\u00A0".repeat(depth * 4)}
-                          {depth > 0 ? "— " : ""}
-                          {c.name}
-                        </option>
-                        {renderOptions(c.id, depth + 1)}
-                      </optgroup>
-                    ));
-                };
-
-                return renderOptions(null);
-              })()}
-            </select>
+              onChange={(val) => setCategoryId(val || "")}
+            />
           </div>
           <div>
             <Label htmlFor="sourceUrl">Printables link</Label>

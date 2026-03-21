@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { FileUploader } from "@/components/upload/FileUploader";
 import { ProductImagesTab } from "@/components/admin/product-images-tab";
 import { SmartTextEditor } from "@/components/admin/smart-text-editor";
+import { CategoryCascadingSelect } from "@/components/admin/CategoryCascadingSelect";
 
 type ProductType = "READYMADE_3D" | "LARGE_FORMAT" | "CUSTOM" | "PRINT_ON_DEMAND" | "SERVICE";
 
@@ -221,40 +222,12 @@ export function ProductForm({ categories, product }: ProductFormProps) {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="categoryId">Category *</Label>
-              <select
-                id="categoryId"
+              <Label>Category *</Label>
+              <CategoryCascadingSelect
+                categories={categories}
                 value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                required
-                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2"
-              >
-                {(() => {
-                  const renderOptions = (parentId: string | null = null, depth = 0) => {
-                    return categories
-                      .filter((c) => (c.parentId || null) === parentId)
-                      .map((c) => (
-                        <optgroup key={c.id} label={depth === 0 ? c.name : undefined}>
-                          <option value={c.id}>
-                            {"\u00A0".repeat(depth * 4)}
-                            {depth > 0 ? "— " : ""}
-                            {c.name}
-                          </option>
-                          {renderOptions(c.id, depth + 1)}
-                        </optgroup>
-                      ));
-                  };
-
-                  // Simple flat fallback if parentId logic is not available in the prop
-                  if (!categories.some(c => c.parentId)) {
-                    return categories.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ));
-                  }
-
-                  return renderOptions(null);
-                })()}
-              </select>
+                onChange={(val) => setCategoryId(val || "")}
+              />
             </div>
             <div>
               <Label htmlFor="productType">Product type</Label>

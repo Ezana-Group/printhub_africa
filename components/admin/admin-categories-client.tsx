@@ -417,62 +417,12 @@ export function AdminCategoriesClient({
           </div>
         ) : (
           <div className="rounded-lg border p-4">
-            <ul className="space-y-1">
-              {topLevel.map((cat) => (
-                <li key={cat.id}>
-                  <div className="flex items-center gap-2 rounded py-1.5 px-2 hover:bg-muted/50">
-                    <span className="font-medium">{cat.name}</span>
-                    <span className="text-xs text-muted-foreground">({cat._count.products} products)</span>
-                    <div className="ml-auto flex gap-1 items-center">
-                      <div className="flex items-center gap-2 mr-3" title="Show in site navigation dropdown">
-                        <Label htmlFor={`nav-${cat.id}`} className="text-xs text-muted-foreground cursor-pointer">In Nav</Label>
-                        <Switch id={`nav-${cat.id}`} checked={cat.showInNav} onCheckedChange={(checked) => handleNavToggle(cat, checked)} className="scale-75" />
-                      </div>
-                      <Button variant="ghost" size="sm" className="h-7" onClick={() => handleEdit(cat)}>
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 text-destructive"
-                        onClick={() => setDeleteTarget(cat)}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                  {childrenByParent[cat.id]?.length ? (
-                    <ul className="ml-6 border-l border-muted pl-3">
-                      {childrenByParent[cat.id].map((child) => (
-                        <li key={child.id} className="py-1">
-                          <div className="flex items-center gap-2 rounded py-1 px-2 hover:bg-muted/50">
-                            <span className="text-sm">{child.name}</span>
-                            <span className="text-xs text-muted-foreground">({child._count.products})</span>
-                            <div className="ml-auto flex gap-1 items-center">
-                              <div className="flex items-center gap-2 mr-3" title="Show in site navigation dropdown">
-                                <Label htmlFor={`nav-${child.id}`} className="text-xs text-muted-foreground cursor-pointer">In Nav</Label>
-                                <Switch id={`nav-${child.id}`} checked={child.showInNav} onCheckedChange={(checked) => handleNavToggle(child, checked)} className="scale-75" />
-                              </div>
-                              <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => handleEdit(child)}>
-                                Edit
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 text-xs text-destructive"
-                                onClick={() => setDeleteTarget(child)}
-                              >
-                                Delete
-                              </Button>
-                            </div>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+            <CategoryTree
+              categories={categories}
+              onEdit={handleEdit}
+              onDelete={setDeleteTarget}
+              onNavToggle={handleNavToggle}
+            />
             {categories.length === 0 && (
               <p className="py-8 text-center text-muted-foreground">No categories.</p>
             )}
@@ -515,5 +465,94 @@ export function AdminCategoriesClient({
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+function CategoryTree({
+  categories,
+  onEdit,
+  onDelete,
+  onNavToggle,
+  parentId = null,
+  depth = 0,
+}: {
+  categories: CategoryRow[];
+  onEdit: (cat: CategoryRow) => void;
+  onDelete: (cat: CategoryRow) => void;
+  onNavToggle: (cat: CategoryRow, checked: boolean) => void;
+  parentId?: string | null;
+  depth?: number;
+}) {
+  const children = categories.filter((c) => (c.parentId || null) === parentId);
+  if (children.length === 0) return null;
+
+  return (
+    <ul className={depth > 0 ? "ml-6 border-l border-muted pl-3 space-y-1 mt-1" : "space-y-1"}>
+      {children.map((cat) => (
+        <CategoryNode
+          key={cat.id}
+          cat={cat}
+          categories={categories}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onNavToggle={onNavToggle}
+          depth={depth}
+        />
+      ))}
+    </ul>
+  );
+}
+
+function CategoryNode({
+  cat,
+  categories,
+  onEdit,
+  onDelete,
+  onNavToggle,
+  depth,
+}: {
+  cat: CategoryRow;
+  categories: CategoryRow[];
+  onEdit: (cat: CategoryRow) => void;
+  onDelete: (cat: CategoryRow) => void;
+  onNavToggle: (cat: CategoryRow, checked: boolean) => void;
+  depth: number;
+}) {
+  return (
+    <li>
+      <div className="flex items-center gap-2 rounded py-1.5 px-2 hover:bg-muted/50 transition-colors group">
+        <span className={depth === 0 ? "font-semibold" : "text-sm"}>{cat.name}</span>
+        <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded uppercase font-mono">
+          {cat.slug}
+        </span>
+        <span className="text-xs text-muted-foreground">({cat._count.products} products)</span>
+        
+        <div className="ml-auto flex gap-1 items-center opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-2 mr-3" title="Show in site navigation dropdown">
+            <Label htmlFor={`nav-${cat.id}`} className="text-[10px] text-muted-foreground cursor-pointer uppercase font-semibold">In Nav</Label>
+            <Switch id={`nav-${cat.id}`} checked={cat.showInNav} onCheckedChange={(checked) => onNavToggle(cat, checked)} className="scale-75" />
+          </div>
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => onEdit(cat)}>
+            Edit
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={() => onDelete(cat)}
+          >
+            Delete
+          </Button>
+        </div>
+      </div>
+      <CategoryTree
+        categories={categories}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onNavToggle={onNavToggle}
+        parentId={cat.id}
+        depth={depth + 1}
+      />
+    </li>
   );
 }
