@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -11,6 +12,8 @@ export default async function PrinterAssetDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ tab?: string }>;
 }) {
+  try {
+
   const { id } = await params;
   const { tab: tabParam } = await searchParams;
   const [business, asset, maintenanceLogs, linkedItems] = await Promise.all([
@@ -105,4 +108,16 @@ export default async function PrinterAssetDetailPage({
       />
     </div>
   );
+
+  } catch (error) {
+    console.error("Data load failed in page.tsx:", error);
+    return (
+      <div className="p-6">
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 text-destructive">
+          <h2 className="font-bold text-lg mb-2">Service Temporarily Unavailable</h2>
+          <p className="text-sm">We are experiencing issues connecting to our database. Please try refreshing the page in a few moments.</p>
+        </div>
+      </div>
+    );
+  }
 }

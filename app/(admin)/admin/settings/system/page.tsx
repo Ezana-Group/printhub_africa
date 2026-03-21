@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { requireAdminSettings } from "@/lib/auth-guard";
 import { OrderNumberPrefixesSection } from "@/components/settings/order-number-prefixes-section";
 import { SkuPrefixesSection } from "@/components/settings/sku-prefixes-section";

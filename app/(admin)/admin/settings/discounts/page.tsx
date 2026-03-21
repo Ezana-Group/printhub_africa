@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { requireAdminSettings } from "@/lib/auth-guard";
 import { SectionCard } from "@/components/settings/section-card";
 import { Input } from "@/components/ui/input";

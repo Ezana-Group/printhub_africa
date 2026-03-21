@@ -1,9 +1,12 @@
+export const dynamic = 'force-dynamic'
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { InventoryTabs } from "@/components/admin/inventory-tabs";
 import { requireAdminSection } from "@/lib/admin-route-guard";
 
 export default async function AdminInventoryPage() {
+  try {
+
   await requireAdminSection("/admin/inventory");
   type LFStockRow = { id: string; code: string; name: string; category: string; unitType: string; rollWidthM: number | null; quantityOnHand: number; lowStockThreshold: number; costPerUnit: number; lastPurchasePriceKes: number | null; averageCostKes: number; lastReceivedAt: Date | null };
   type HardwareRow = { id: string; name: string; category: string; priceKes: number; location: string | null; linkedPrinterId: string | null; timeHours: number | null; hardwareType: string | null; printerSubType: string | null; model: string | null; maxPrintWidthM: number | null; printSpeedSqmPerHour: number | null; setupTimeHours: number | null; lifespanHours: number | null; annualMaintenanceKes: number | null; powerWatts: number | null; electricityRateKesKwh: number | null; maintenancePerYearKes: number | null; postProcessingTimeHours: number | null; isActive: boolean; sortOrder: number };
@@ -197,4 +200,16 @@ export default async function AdminInventoryPage() {
       />
     </div>
   );
+
+  } catch (error) {
+    console.error("Data load failed in page.tsx:", error);
+    return (
+      <div className="p-6">
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 text-destructive">
+          <h2 className="font-bold text-lg mb-2">Service Temporarily Unavailable</h2>
+          <p className="text-sm">We are experiencing issues connecting to our database. Please try refreshing the page in a few moments.</p>
+        </div>
+      </div>
+    );
+  }
 }

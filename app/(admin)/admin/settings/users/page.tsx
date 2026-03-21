@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import Link from "next/link";
 import { requireSuperAdmin } from "@/lib/auth-guard";
 import { SectionCard } from "@/components/settings/section-card";

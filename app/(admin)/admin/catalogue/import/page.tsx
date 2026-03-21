@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 

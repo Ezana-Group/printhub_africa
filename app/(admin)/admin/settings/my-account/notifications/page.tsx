@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { MyNotificationsClient } from "@/components/admin/my-notifications-client";
 
 export default function AdminMyAccountNotificationsPage() {

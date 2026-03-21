@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { prisma } from "@/lib/prisma";
 import { CustomersAdminClient } from "@/components/admin/customers-admin-client";
 import { requireAdminSection } from "@/lib/admin-route-guard";

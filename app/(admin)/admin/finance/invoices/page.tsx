@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSection } from "@/lib/admin-route-guard";
@@ -5,6 +6,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { SendInvoiceButton } from "@/components/admin/SendInvoiceButton";
 
 export default async function AdminFinanceInvoicesPage() {
+  try {
+
   await requireAdminSection("/admin/finance");
   const invoices = await prisma.invoice.findMany({
     orderBy: { issuedAt: "desc" },
@@ -67,4 +70,16 @@ export default async function AdminFinanceInvoicesPage() {
       </Card>
     </div>
   );
+
+  } catch (error) {
+    console.error("Data load failed in page.tsx:", error);
+    return (
+      <div className="p-6">
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 text-destructive">
+          <h2 className="font-bold text-lg mb-2">Service Temporarily Unavailable</h2>
+          <p className="text-sm">We are experiencing issues connecting to our database. Please try refreshing the page in a few moments.</p>
+        </div>
+      </div>
+    );
+  }
 }

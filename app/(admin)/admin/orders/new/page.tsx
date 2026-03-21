@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { AdminCreateOrderForm } from "@/components/admin/orders/AdminCreateOrderForm";
 import { AdminBreadcrumbs } from "@/components/admin/admin-breadcrumbs";
 

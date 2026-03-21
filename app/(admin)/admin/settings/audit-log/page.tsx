@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { requireSuperAdmin } from "@/lib/auth-guard";
 import { SectionCard } from "@/components/settings/section-card";
 import { AuditLogClient } from "@/components/admin/audit-log-client";

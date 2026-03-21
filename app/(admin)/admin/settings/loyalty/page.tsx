@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { requireAdminSettings } from "@/lib/auth-guard";
 import { LoyaltySettingsForm } from "@/components/admin/settings/loyalty-settings-form";
 

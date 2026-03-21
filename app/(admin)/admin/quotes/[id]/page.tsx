@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { notFound } from "next/navigation";
 import { Lock, XCircle } from "lucide-react";
 import { prisma } from "@/lib/prisma";

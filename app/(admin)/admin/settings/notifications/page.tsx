@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { requireAdminSettings } from "@/lib/auth-guard";
 import { NotificationsSettingsForm } from "@/components/admin/settings/notifications-settings-form";
 
