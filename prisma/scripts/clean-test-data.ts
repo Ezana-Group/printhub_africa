@@ -4,6 +4,11 @@
  * Uses DATABASE_URL from .env or .env.local.
  */
 
+if (process.env.PRINTHUB_SEED_ALLOW !== "1") {
+  console.error("❌ Seeding blocked. PRINTHUB_SEED_ALLOW is not set to 1.");
+  process.exit(1);
+}
+
 import path from "node:path";
 import { config } from "dotenv";
 import { execSync } from "node:child_process";

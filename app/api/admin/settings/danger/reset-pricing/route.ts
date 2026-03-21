@@ -8,6 +8,15 @@ import { prisma } from "@/lib/prisma";
 export async function POST(req: Request) {
   const auth = await requireRole(req, "SUPER_ADMIN");
   if (auth instanceof NextResponse) return auth;
+
+  // Extra safety guard for production
+  if (process.env.PRINTHUB_SEED_ALLOW !== "1") {
+    return NextResponse.json(
+      { error: "Seeding/Reset is disabled on this environment. Set PRINTHUB_SEED_ALLOW=1 to enable." },
+      { status: 403 }
+    );
+  }
+
   try {
     await validateDanger(req, "RESET PRICING");
   } catch (e) {

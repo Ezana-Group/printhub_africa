@@ -1,3 +1,9 @@
+if (process.env.PRINTHUB_SEED_ALLOW !== "1") {
+  console.error("❌ Seeding blocked. PRINTHUB_SEED_ALLOW is not set to 1.");
+  console.error("This is a safety guard to prevent seeding production data.");
+  process.exit(1);
+}
+
 import path from "node:path";
 import { config } from "dotenv";
 

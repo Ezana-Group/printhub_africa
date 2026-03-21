@@ -17,7 +17,7 @@ const ENV_ALLOW = "PRINTHUB_SEED_ALLOW";
  */
 export async function assertPrinthubDatabase(prisma: PrismaClient): Promise<void> {
   const allow = process.env[ENV_ALLOW];
-  if (allow !== "1" && allow !== "true") {
+  if (allow !== "1") {
     throw new Error(
       `Database protection: set ${ENV_ALLOW}=1 in your .env or .env.local to confirm this is the PrintHub database and you want to run seed/clean. This prevents accidentally seeding another project's DB.`
     );
