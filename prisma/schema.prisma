@@ -77,6 +77,64 @@ model User {
   userNotificationPrefs    UserNotificationPrefs?
   userPermissions          UserPermission[]
   wishlists                Wishlist[]
+
+  // Admin 2FA
+  adminTwoFactorSecret      String?
+  adminTwoFactorEnabled     Boolean   @default(false)
+  adminTwoFactorVerifiedAt  DateTime?
+  adminTwoFactorBackupCodes String[]
+  adminTwoFactorGraceEndsAt DateTime?
+  
+  // Admin account security
+  adminLastLoginAt          DateTime?
+  adminLastLoginIP          String?
+  adminFailedLoginCount     Int       @default(0)
+  adminLockedUntil          DateTime?
+  adminForceLogoutAt        DateTime?
+  adminActiveSessionId      String?
+
+  adminPreAuthTokens  AdminPreAuthToken[]
+  adminTrustedDevices AdminTrustedDevice[]
+  adminLoginEvents    AdminLoginEvent[]
+}
+
+model AdminPreAuthToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model AdminTrustedDevice {
+  id           String   @id @default(cuid())
+  userId       String
+  deviceToken  String   @unique
+  deviceName   String?
+  ipAddress    String?
+  country      String?
+  city         String?
+  lastSeenAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id])
+}
+
+model AdminLoginEvent {
+  id          String   @id @default(cuid())
+  userId      String
+  ipAddress   String
+  userAgent   String?
+  country     String?
+  city        String?
+  success     Boolean
+  failReason  String?
+  deviceToken String?
+  isNewDevice Boolean  @default(false)
+  isNewLocation Boolean @default(false)
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id])
 }
 
 model Address {

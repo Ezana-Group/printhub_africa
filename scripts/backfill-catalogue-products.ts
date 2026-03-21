@@ -4,7 +4,7 @@ async function main() {
   console.log("Starting backfill for Catalogue Items...");
 
   // Find all LIVE catalogue items without a linked Product
-  const items = await (prisma.catalogueItem as any).findMany({
+  const items = await (prisma.catalogueItem as unknown as { findMany: (args?: unknown) => Promise<unknown[]> }).findMany({
     where: {
       status: "LIVE",
       productId: null,
@@ -19,8 +19,22 @@ async function main() {
 
   console.log(`Found ${items.length} LIVE catalogue items to process.`);
 
+  type ItemType = {
+    id: string;
+    name: string;
+    slug: string;
+    description: string;
+    shortDescription: string;
+    categoryId: string;
+    priceOverrideKes: number | null;
+    basePriceKes: number | null;
+    tags: string[];
+    photos: { url: string }[];
+  };
+
   let createdCount = 0;
-  for (const item of items) {
+  for (const rawItem of items) {
+    const item = rawItem as ItemType;
     try {
       // Create Product
       const product = await prisma.product.create({
@@ -31,7 +45,7 @@ async function main() {
           shortDescription: item.shortDescription,
           categoryId: item.categoryId,
           productType: "READYMADE_3D",
-          images: (item as any).photos.length > 0 ? (item as any).photos.map((p: any) => p.url) : [],
+          images: item.photos.length > 0 ? item.photos.map((p) => p.url) : [],
           basePrice: item.priceOverrideKes ?? item.basePriceKes ?? 0,
           comparePrice: item.priceOverrideKes && item.basePriceKes ? item.basePriceKes : null,
           stock: 0, // Print on demand has theoretically unlimited stock, but maybe managed differently
@@ -41,7 +55,7 @@ async function main() {
       });
 
       // Link it back
-      await (prisma.catalogueItem as any).update({
+      await (prisma.catalogueItem as unknown as { update: (args?: unknown) => Promise<unknown> }).update({
         where: { id: item.id },
         data: { productId: product.id },
       });

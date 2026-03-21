@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { AdminHeaderClient } from "@/components/admin/admin-header-client";
 import { EditableSectionProvider } from "@/components/admin/editable-section-context";
+import { SessionTimeoutGuard } from "@/components/admin/auth/SessionTimeoutGuard";
 
 const ADMIN_ROLES = ["STAFF", "ADMIN", "SUPER_ADMIN"];
 
@@ -44,7 +45,9 @@ export default async function AdminLayout({
       />
       <EditableSectionProvider>
         <main className="fixed left-56 top-14 right-0 bottom-0 overflow-y-auto overflow-x-hidden bg-[#F9FAFB]">
-          {children}
+          <SessionTimeoutGuard>
+            {children}
+          </SessionTimeoutGuard>
         </main>
       </EditableSectionProvider>
     </div>
