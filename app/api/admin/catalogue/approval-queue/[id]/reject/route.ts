@@ -24,7 +24,7 @@ export async function PATCH(
     const updated = await prisma.catalogueItem.update({
       where: { id },
       data: {
-        status: CatalogueStatus.REJECTED,
+        status: CatalogueStatus.DRAFT,
         rejectedById: userId,
         rejectionReason: reason || "No reason provided",
         approvedById: null,

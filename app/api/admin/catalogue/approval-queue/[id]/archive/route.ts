@@ -23,7 +23,7 @@ export async function PATCH(
     const updated = await prisma.catalogueItem.update({
       where: { id },
       data: {
-        status: CatalogueStatus.ARCHIVED,
+        status: CatalogueStatus.RETIRED,
         archivedById: userId,
         archivedAt: new Date(),
       },

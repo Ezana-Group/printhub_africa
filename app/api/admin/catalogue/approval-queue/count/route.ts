@@ -20,14 +20,16 @@ export async function GET() {
         },
       }),
       prisma.catalogueItem.count({
-        where: { status: CatalogueStatus.ARCHIVED },
+        where: { status: CatalogueStatus.RETIRED },
       }),
     ]);
 
     return NextResponse.json({
-      pending,
-      approved,
-      archived,
+      counts: {
+        PENDING_REVIEW: pending,
+        LIVE: approved,
+        ARCHIVED: archived,
+      }
     });
   } catch (error) {
     console.error("[APPROVAL_QUEUE_COUNT]", error);

@@ -35,7 +35,7 @@ export async function POST(req: Request) {
         break;
       case "reject":
         updateData = {
-          status: CatalogueStatus.REJECTED,
+          status: CatalogueStatus.DRAFT,
           rejectedById: userId,
           rejectionReason: reason || "Bulk rejection",
           approvedById: null,
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
         break;
       case "archive":
         updateData = {
-          status: CatalogueStatus.ARCHIVED,
+          status: CatalogueStatus.RETIRED,
           archivedById: userId,
           archivedAt: new Date(),
         };

@@ -18,12 +18,12 @@ export async function GET(req: NextRequest) {
   const where: any = {};
 
   // Tab Status Filter
-  if (tab === "pending") {
+  if (tab === "pending" || tab === "PENDING_REVIEW") {
     where.status = CatalogueStatus.PENDING_REVIEW;
-  } else if (tab === "approved") {
-    where.status = { in: [CatalogueStatus.LIVE, CatalogueStatus.PAUSED, CatalogueStatus.RETIRED] };
-  } else if (tab === "archived") {
-    where.status = CatalogueStatus.ARCHIVED;
+  } else if (tab === "approved" || tab === "LIVE") {
+    where.status = { in: [CatalogueStatus.LIVE, CatalogueStatus.PAUSED] };
+  } else if (tab === "archived" || tab === "ARCHIVED") {
+    where.status = CatalogueStatus.RETIRED;
   }
 
   // Search Filter (Name or Platform)
@@ -61,10 +61,12 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       items,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
+      pagination: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit),
+      }
     });
   } catch (error) {
     console.error("[APPROVAL_QUEUE_LIST]", error);
