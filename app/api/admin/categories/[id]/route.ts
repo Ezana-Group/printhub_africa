@@ -14,6 +14,7 @@ const updateSchema = z.object({
   metaTitle: z.string().max(60).optional().nullable(),
   metaDescription: z.string().max(160).optional().nullable(),
   parentId: z.string().nullable().optional(),
+  showInNav: z.boolean().optional(),
 });
 
 export async function PATCH(
@@ -44,6 +45,17 @@ export async function PATCH(
         );
       }
     }
+    
+    if (data.showInNav === true) {
+      const navCount = await prisma.category.count({ where: { showInNav: true, id: { not: id } } });
+      if (navCount >= 8) {
+        return NextResponse.json(
+          { error: "Navigation limit reached. Disable another category first (max 8 in nav)." },
+          { status: 400 }
+        );
+      }
+    }
+
     const category = await prisma.category.update({
       where: { id },
       data: {
@@ -56,10 +68,12 @@ export async function PATCH(
         ...(data.metaTitle !== undefined && { metaTitle: data.metaTitle }),
         ...(data.metaDescription !== undefined && { metaDescription: data.metaDescription }),
         ...(data.parentId !== undefined && { parentId: data.parentId }),
+        ...(data.showInNav !== undefined && { showInNav: data.showInNav }),
       },
     });
     revalidateTag("categories");
     revalidateTag("homepage");
+    revalidateTag("shop-nav");
     revalidatePath("/shop");
     return NextResponse.json(category);
   } catch (e) {

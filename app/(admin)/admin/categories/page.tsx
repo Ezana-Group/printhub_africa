@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { Suspense } from "react";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
@@ -9,6 +10,8 @@ export default async function AdminCategoriesPage({
 }: {
   searchParams: Promise<{ edit?: string }>;
 }) {
+  try {
+
   await requireAdminSection("/admin/categories");
   const { edit: editId } = await searchParams;
   const categories = await prisma.category.findMany({
@@ -49,4 +52,16 @@ export default async function AdminCategoriesPage({
       </Suspense>
     </div>
   );
+
+  } catch (error) {
+    console.error("Data load failed in page.tsx:", error);
+    return (
+      <div className="p-6">
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 text-destructive">
+          <h2 className="font-bold text-lg mb-2">Service Temporarily Unavailable</h2>
+          <p className="text-sm">We are experiencing issues connecting to our database. Please try refreshing the page in a few moments.</p>
+        </div>
+      </div>
+    );
+  }
 }

@@ -4,6 +4,7 @@ import { ConsentGatedAnalytics } from "@/components/ConsentGatedAnalytics";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Providers } from "@/components/providers";
 import { getCachedBusinessMetadata } from "@/lib/cache/unstable-cache";
+import { ProfileCompletionGate } from "@/components/layout/profile-completion-gate";
 import "./globals.css";
 
 const syne = Syne({
@@ -50,19 +51,28 @@ const metadataBase = (() => {
 const shouldEnableSpeedInsights = process.env.VERCEL === "1";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const meta = await getCachedBusinessMetadata();
-  const businessName = meta.businessName ?? "PrintHub";
+    const meta = await getCachedBusinessMetadata().catch(() => ({ 
+      favicon: null, updatedAt: null, businessName: "PrintHub", tagline: null, logo: null, seo: null 
+    }));
+  const businessName = meta.seo?.siteName || meta.businessName || "PrintHub";
+  const defaultTitle = meta.seo?.defaultTitle || `${businessName} | Large Format & 3D Printing | Nairobi, Kenya`;
   const description =
-    meta.tagline ?? "Large format printing and 3D printing for Nairobi and all of Kenya. Banners, signage, vehicle wraps, canvas, custom 3D prints. An Ezana Group Company.";
+    meta.seo?.defaultDescription ||
+    meta.tagline ||
+    "Large format printing and 3D printing for Nairobi and all of Kenya. Banners, signage, vehicle wraps, canvas, custom 3D prints. An Ezana Group Company.";
+  
+  const updatedAtTime = meta.updatedAt ? new Date(meta.updatedAt).getTime() : 0;
   const faviconUrl =
-    meta.favicon && meta.updatedAt
-      ? `${meta.favicon}?v=${new Date(meta.updatedAt).getTime()}`
-      : meta.favicon ?? null;
+    meta.favicon
+      ? `${meta.favicon}?v=${updatedAtTime}`
+      : null;
+
+  const ogImage = meta.seo?.ogImageUrl || meta.logo || "/images/og/default-og.webp";
 
   return {
     title: {
-      default: `${businessName} | Large Format & 3D Printing | Nairobi, Kenya`,
-      template: `%s | ${businessName}`,
+      default: defaultTitle,
+      template: meta.seo?.titleTemplate || `%s | ${businessName}`,
     },
     description,
     metadataBase,
@@ -84,24 +94,22 @@ export async function generateMetadata(): Promise<Metadata> {
         },
     openGraph: {
       title: `${businessName} | Printing the Future, Made in Kenya`,
-      description: meta.tagline ?? "Large format & 3D printing. Shop online or upload your design.",
+      description: description,
       locale: "en_KE",
       siteName: businessName,
       type: "website",
-      images: meta.logo
-        ? [{ url: meta.logo, width: 1200, height: 630, alt: `${businessName} — Large Format & 3D Printing Kenya` }]
-        : [
-            {
-              url: "/images/og/default-og.webp",
-              width: 1200,
-              height: 630,
-              alt: "PrintHub — Large Format & 3D Printing Kenya",
-            },
-          ],
+      images: [
+        {
+          url: ogImage,
+          width: 1200,
+          height: 630,
+          alt: `${businessName} — Large Format & 3D Printing Kenya`,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
-      images: meta.logo ? [meta.logo] : ["/images/og/default-og.webp"],
+      images: [ogImage],
     },
   };
 }
@@ -116,12 +124,6 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          rel="preload"
-          as="image"
-          href="/images/hero/hero-main.webp"
-          imageSizes="100vw"
-        />
       </head>
       <body
         className={`${syne.variable} ${dmSans.variable} ${jetbrainsMono.variable} ${playfairDisplay.variable} font-body antialiased`}
@@ -129,7 +131,10 @@ export default function RootLayout({
         <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-xl focus:bg-primary focus:px-4 focus:py-2 focus:text-white">
           Skip to main content
         </a>
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <ProfileCompletionGate />
+        </Providers>
         <ConsentGatedAnalytics />
         {shouldEnableSpeedInsights ? <SpeedInsights /> : null}
       </body>

@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { FileUploader } from "@/components/upload/FileUploader";
 import { ProductImagesTab } from "@/components/admin/product-images-tab";
+import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 
 type ProductType = "READYMADE_3D" | "LARGE_FORMAT" | "CUSTOM";
 
@@ -201,13 +202,14 @@ export function ProductForm({ categories, product }: ProductFormProps) {
           </div>
           <div>
             <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={4}
-              className="mt-1"
-            />
+            <div className="mt-1">
+              <SmartTextEditor
+                value={description}
+                onChange={setDescription}
+                placeholder="Detailed product description (HTML/Rich Text)"
+                minHeight="200px"
+              />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>

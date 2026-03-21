@@ -58,6 +58,14 @@ const patchSchema = z.object({
   pesapalEnabled: optionalBoolean.optional(),
   flutterwaveEnabled: optionalBoolean.optional(),
   stripeEnabled: optionalBoolean.optional(),
+  foundingDate: z.string().nullable().optional().transform(v => v ? new Date(v) : null),
+  statsOrdersThreshold: optionalNumber.optional(),
+  statsClientsThreshold: optionalNumber.optional(),
+  showStatsOrders: optionalBoolean.optional(),
+  showStatsClients: optionalBoolean.optional(),
+  showStatsExperience: optionalBoolean.optional(),
+  showStatsMachines: optionalBoolean.optional(),
+  showStatsStaff: optionalBoolean.optional(),
 });
 
 export async function GET(req: Request) {

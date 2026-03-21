@@ -40,9 +40,15 @@ model User {
   otpExpiresAt             DateTime?
   /// Where invite / password-setup emails are sent (optional). Login email remains `email`.
   personalEmail            String?
+  displayName              String?
   accounts                 Account[]
   addresses                Address[]
   auditLogs                AuditLog[]
+  backupRecords            BackupRecord[]
+  catalogueApproved        CatalogueItem[]            @relation("CatalogueApprovedBy")
+  catalogueArchived        CatalogueItem[]            @relation("CatalogueArchivedBy")
+  catalogueImported        CatalogueItem[]            @relation("CatalogueImportedBy")
+  catalogueRejected        CatalogueItem[]            @relation("CatalogueRejectedBy")
   primaryCorporateAccount  CorporateAccount?          @relation("CorporatePrimaryContact")
   corporateApplications    CorporateApplication[]
   corporateTeamMemberships CorporateTeamMember[]
@@ -129,18 +135,21 @@ model VerificationToken {
 }
 
 model Category {
-  id              String     @id @default(cuid())
+  id              String          @id @default(cuid())
   name            String
-  slug            String     @unique
+  slug            String          @unique
   description     String?
   image           String?
   parentId        String?
-  sortOrder       Int        @default(0)
-  isActive        Boolean    @default(true)
+  sortOrder       Int             @default(0)
+  isActive        Boolean         @default(true)
   metaTitle       String?
   metaDescription String?
-  parent          Category?  @relation("CategoryTree", fields: [parentId], references: [id])
-  children        Category[] @relation("CategoryTree")
+  showInNav       Boolean         @default(false)
+  catalogueItems  CatalogueItem[]
+  parent          Category?       @relation("CategoryTree", fields: [parentId], references: [id])
+  children        Category[]      @relation("CategoryTree")
+  externalModels  ExternalModel[]
   products        Product[]
 
   @@index([parentId])
@@ -180,6 +189,8 @@ model Product {
   compatibility      String?
   materialType       String?
   availability       ProductAvailability     @default(IN_STOCK)
+  externalModel      ExternalModel?
+  catalogueItem      CatalogueItem?
   inventory          Inventory[]
   orderItems         OrderItem[]
   category           Category                @relation(fields: [categoryId], references: [id])
@@ -457,6 +468,8 @@ model Order {
   corporateInvoiceId   String?
   placedBy             String?
   isNetTerms           Boolean              @default(false)
+  isDepositPaid        Boolean              @default(false)
+  outstandingBalance   Decimal?             @db.Decimal(12, 2)
   cancellation         Cancellation?
   delivery             Delivery?
   invoices             Invoice[]
@@ -466,7 +479,7 @@ model Order {
   courier              Courier?             @relation(fields: [courierId], references: [id])
   deliveryZone         DeliveryZone?        @relation(fields: [deliveryZoneId], references: [id])
   pickupLocation       PickupLocation?      @relation(fields: [pickupLocationId], references: [id])
-  user                 User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user                 User?                @relation(fields: [userId], references: [id])
   items                OrderItem[]
   timeline             OrderTimeline[]
   trackingEvents       OrderTrackingEvent[]
@@ -482,21 +495,28 @@ model Order {
 }
 
 model OrderItem {
-  id               String            @id @default(cuid())
-  orderId          String
-  productId        String?
-  quantity         Int
-  unitPrice        Decimal           @db.Decimal(12, 2)
-  customizations   Json?
-  uploadedFileId   String?
-  instructions     String?
-  createdAt        DateTime          @default(now())
-  productVariantId String?
-  variantId        String?
-  order            Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product          Product?          @relation(fields: [productId], references: [id])
-  productVariant   ProductVariant?   @relation(fields: [productVariantId], references: [id])
-  productionQueue  ProductionQueue[]
+  id                String            @id @default(cuid())
+  orderId           String
+  productId         String?
+  quantity          Int
+  unitPrice         Decimal           @db.Decimal(12, 2)
+  customizations    Json?
+  uploadedFileId    String?
+  instructions      String?
+  createdAt         DateTime          @default(now())
+  productVariantId  String?
+  variantId         String?
+  addInstallation   Boolean           @default(false)
+  depositAmount     Decimal?          @db.Decimal(10, 2)
+  hardwareProductId String?
+  hardwareVariantId String?
+  isDeposit         Boolean           @default(false)
+  itemType          CartItemType      @default(PRINT_SERVICE)
+  HardwareProduct   HardwareProduct?  @relation(fields: [hardwareProductId], references: [id])
+  order             Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product           Product?          @relation(fields: [productId], references: [id])
+  productVariant    ProductVariant?   @relation(fields: [productVariantId], references: [id])
+  productionQueue   ProductionQueue[]
 
   @@index([orderId])
 }
@@ -546,22 +566,22 @@ model ShippingAddress {
 }
 
 model Refund {
-  id                  String    @id @default(cuid())
-  orderId             String
-  amount              Decimal   @db.Decimal(12, 2)
-  reason              String?
-  status              String
-  processedBy         String?
-  processedAt         DateTime?
-  createdAt           DateTime  @default(now())
-  refundNumber        String?   @unique(where: raw("(\"refundNumber\" IS NOT NULL)"))
-  reviewedBy          String?
-  rejectionReason     String?
-  mpesaPhone          String?
-  mpesaReceiptNo      String?
-  mpesaConversationId String?
+  id                   String    @id @default(cuid())
+  orderId              String
+  amount               Decimal   @db.Decimal(12, 2)
+  reason               String?
+  status               String
+  processedBy          String?
+  processedAt          DateTime?
+  createdAt            DateTime  @default(now())
+  refundNumber         String?   @unique(where: raw("(\"refundNumber\" IS NOT NULL)"))
+  reviewedBy           String?
+  rejectionReason      String?
+  mpesaPhone           String?
+  mpesaReceiptNo       String?
+  mpesaConversationId  String?
   providerRefReference String?
-  order               Order     @relation(fields: [orderId], references: [id])
+  order                Order     @relation(fields: [orderId], references: [id])
 
   @@index([orderId])
   @@index([status])
@@ -743,7 +763,7 @@ model UploadedFile {
   virusScanStatus String?
   printQuotes     PrintQuote[]
   quote           Quote?             @relation(fields: [quoteId], references: [id])
-  user            User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user            User?              @relation(fields: [userId], references: [id])
 }
 
 model PrintQuote {
@@ -807,8 +827,8 @@ model Quote {
   cancellationNotes  String?
   cancelledByAdminId String?
   assignedStaff      Staff?              @relation(fields: [assignedStaffId], references: [id])
-  cancelledByAdmin   User?               @relation("QuoteCancelledByAdmin", fields: [cancelledByAdminId], references: [id], onDelete: SetNull)
-  customer           User?               @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  cancelledByAdmin   User?               @relation("QuoteCancelledByAdmin", fields: [cancelledByAdminId], references: [id])
+  customer           User?               @relation(fields: [customerId], references: [id])
   quoteCancellations QuoteCancellation[]
   quotePdfs          QuotePdf[]
   uploadedFiles      UploadedFile[]
@@ -829,7 +849,7 @@ model QuoteCancellation {
   notes             String?
   notificationSent  Boolean  @default(false)
   createdAt         DateTime @default(now())
-  cancelledByUser   User?    @relation(fields: [cancelledByUserId], references: [id], onDelete: SetNull)
+  cancelledByUser   User?    @relation(fields: [cancelledByUserId], references: [id])
   quote             Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
 
   @@index([quoteId])
@@ -1062,7 +1082,7 @@ model CorporateInvoice {
   notes          String?
   createdAt      DateTime               @default(now())
   updatedAt      DateTime               @updatedAt
-  corporate      CorporateAccount       @relation(fields: [corporateId], references: [id])
+  corporate      CorporateAccount @relation(fields: [corporateId], references: [id])
   orders         Order[]
 
   @@index([corporateId])
@@ -1150,9 +1170,9 @@ model Inventory {
   lowStockThreshold Int             @default(5)
   location          String?
   unitCostKes       Float?
-  reservedQuantity  Int             @default(0)
   productVariantId  String?
   variantId         String?
+  reservedQuantity  Int             @default(0)
   product           Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   productVariant    ProductVariant? @relation(fields: [productVariantId], references: [id])
 }
@@ -1394,7 +1414,7 @@ model AuditLog {
   after     Json?
   ipAddress String?
   timestamp DateTime @default(now())
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user      User?    @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([entity, entityId])
@@ -1416,7 +1436,7 @@ model SupportTicket {
   assignedTo   String?
   resolvedAt   DateTime?
   closedAt     DateTime?
-  user         User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user         User?           @relation(fields: [userId], references: [id])
   messages     TicketMessage[]
 }
 
@@ -1526,21 +1546,22 @@ model Courier {
 }
 
 model DeliveryZone {
-  id          String     @id @default(cuid())
-  name        String
-  county      String?
-  counties    String?
-  postcodes   String?
-  feeKes      Float?
-  minOrderKes Float?
-  minDays     Int?
-  maxDays     Int?
-  sortOrder   Int        @default(0)
-  isActive    Boolean    @default(true)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  deliveries  Delivery[]
-  orders      Order[]
+  id                String     @id @default(cuid())
+  name              String
+  county            String?
+  counties          String?
+  postcodes         String?
+  feeKes            Float?
+  minOrderKes       Float?
+  minDays           Int?
+  maxDays           Int?
+  sortOrder         Int        @default(0)
+  isActive          Boolean    @default(true)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  hardwareRatePerKg Float?     @default(50)
+  deliveries        Delivery[]
+  orders            Order[]
 }
 
 model PickupLocation {
@@ -1604,45 +1625,53 @@ model AuthPanelSlide {
 }
 
 model BusinessSettings {
-  id                 String   @id
-  businessName       String?
-  tradingName        String?
-  tagline            String?
-  website            String?
-  favicon            String?
-  primaryPhone       String?
-  whatsapp           String?
-  primaryEmail       String?
-  supportEmail       String?
-  financeEmail       String?
-  address1           String?
-  address2           String?
-  city               String?
-  county             String?
-  country            String?
-  googleMapsUrl      String?
-  businessHours      String?
-  socialFacebook     String?
-  socialInstagram    String?
-  socialTwitter      String?
-  socialLinkedIn     String?
-  socialTikTok       String?
-  socialYouTube      String?
-  invoicePrefix      String?
-  invoiceNotes       String?
-  invoiceFooter      String?
-  vatOnInvoices      Boolean?
-  paymentTermsDays   Int?
-  mpesaEnabled       Boolean?
-  pesapalEnabled     Boolean?
-  flutterwaveEnabled Boolean?
-  stripeEnabled      Boolean?
-  updatedAt          DateTime @updatedAt
-  logo               String?
-  hoursHolidays      String?
-  hoursSaturday      String?
-  hoursSunday        String?
-  hoursWeekdays      String?
+  id                    String    @id
+  businessName          String?
+  tradingName           String?
+  tagline               String?
+  website               String?
+  favicon               String?
+  primaryPhone          String?
+  whatsapp              String?
+  primaryEmail          String?
+  supportEmail          String?
+  financeEmail          String?
+  address1              String?
+  address2              String?
+  city                  String?
+  county                String?
+  country               String?
+  googleMapsUrl         String?
+  businessHours         String?
+  socialFacebook        String?
+  socialInstagram       String?
+  socialTwitter         String?
+  socialLinkedIn        String?
+  socialTikTok          String?
+  socialYouTube         String?
+  invoicePrefix         String?
+  invoiceNotes          String?
+  invoiceFooter         String?
+  vatOnInvoices         Boolean?
+  paymentTermsDays      Int?
+  mpesaEnabled          Boolean?
+  pesapalEnabled        Boolean?
+  flutterwaveEnabled    Boolean?
+  stripeEnabled         Boolean?
+  updatedAt             DateTime  @updatedAt
+  logo                  String?
+  hoursHolidays         String?
+  hoursSaturday         String?
+  hoursSunday           String?
+  hoursWeekdays         String?
+  foundingDate          DateTime?
+  statsClientsThreshold Int?      @default(500)
+  statsOrdersThreshold  Int?      @default(1000)
+  showStatsClients      Boolean   @default(false)
+  showStatsExperience   Boolean   @default(false)
+  showStatsMachines     Boolean   @default(false)
+  showStatsOrders       Boolean   @default(false)
+  showStatsStaff        Boolean   @default(false)
 }
 
 model SeoSettings {
@@ -1669,6 +1698,8 @@ model ShippingSettings {
   expressEnabled           Boolean? @default(false)
   clickCollectEnabled      Boolean? @default(false)
   updatedAt                DateTime @updatedAt
+  hardwareBaseFee          Int?     @default(500)
+  hardwareFreeThreshold    Int?     @default(500000)
 }
 
 model LoyaltySettings {
@@ -1773,20 +1804,6 @@ model DatabaseGuard {
   updatedAt DateTime @updatedAt
 }
 
-model CatalogueCategory {
-  id          String          @id @default(cuid())
-  name        String
-  slug        String          @unique
-  icon        String?
-  sortOrder   Int             @default(0)
-  isActive    Boolean         @default(true)
-  description String?
-  imageUrl    String?
-  items       CatalogueItem[]
-
-  @@index([slug])
-}
-
 model CatalogueDesigner {
   id         String          @id @default(cuid())
   name       String
@@ -1826,12 +1843,23 @@ model CatalogueItem {
   priceOverrideKes   Float?
   printTimeHours     Float?
   weightGrams        Float?
-  approvedBy         String?
   approvedAt         DateTime?
-  rejectedBy         String?
   rejectionReason    String?
-  category           CatalogueCategory       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  approvedById       String?
+  archivedAt         DateTime?
+  archivedById       String?
+  importedById       String?
+  rejectedById       String?
+  modelStorageKey    String?
+  modelUrl           String?
+  productId          String?                 @unique
+  product            Product?                @relation(fields: [productId], references: [id])
+  approvedBy         User?                   @relation("CatalogueApprovedBy", fields: [approvedById], references: [id])
+  archivedBy         User?                   @relation("CatalogueArchivedBy", fields: [archivedById], references: [id])
+  category           Category                @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   designer           CatalogueDesigner?      @relation(fields: [designerId], references: [id])
+  importedBy         User?                   @relation("CatalogueImportedBy", fields: [importedById], references: [id])
+  rejectedBy         User?                   @relation("CatalogueRejectedBy", fields: [rejectedById], references: [id])
   availableMaterials CatalogueItemMaterial[]
   photos             CatalogueItemPhoto[]
 
@@ -1968,8 +1996,8 @@ model EmailThread {
   hasUnread     Boolean      @default(true)
   status        ThreadStatus @default(OPEN)
   emails        Email[]
-  assignedTo    User?        @relation("AssignedThreads", fields: [assignedToId], references: [id], onDelete: SetNull)
-  createdBy     User?        @relation("EmailThreadCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  assignedTo    User?        @relation("AssignedThreads", fields: [assignedToId], references: [id])
+  createdBy     User?        @relation("EmailThreadCreatedBy", fields: [createdById], references: [id])
   mailbox       EmailAddress @relation(fields: [mailboxId], references: [id])
 
   @@index([mailboxId])
@@ -2016,6 +2044,275 @@ model PrinterMaterialType {
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime
+}
+
+model ExternalModel {
+  id               String         @id @default(cuid())
+  platform         ImportPlatform
+  externalId       String?
+  sourceUrl        String
+  name             String
+  description      String?
+  printInfo        String?
+  imageUrls        String[]
+  thumbnailUrl     String?
+  licenceType      String
+  licenceVerified  Boolean        @default(false)
+  designerName     String?
+  designerUrl      String?
+  tags             String[]
+  category         String?
+  categoryId       String?
+  rawData          Json?
+  importedBy       String
+  importedAt       DateTime       @default(now())
+  status           ImportStatus   @default(PENDING_REVIEW)
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  rejectionReason  String?
+  notes            String?
+  productId        String?        @unique
+  internalCategory Category?      @relation(fields: [categoryId], references: [id])
+  product          Product?       @relation(fields: [productId], references: [id])
+
+  @@unique([platform, externalId])
+  @@unique([platform, sourceUrl])
+}
+
+model ImportLog {
+  id          String         @id @default(cuid())
+  platform    ImportPlatform
+  trigger     String
+  searchTerm  String?
+  sourceUrl   String?
+  resultCount Int            @default(0)
+  status      String
+  createdAt   DateTime       @default(now())
+  triggeredBy String
+}
+
+model BackupRecord {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  createdById String
+  sizeBytes   BigInt?
+  status      String
+  r2Key       String?
+  filename    String
+  errorMsg    String?
+  createdBy   User     @relation(fields: [createdById], references: [id])
+}
+
+model DemoBooking {
+  id            String     @id
+  productId     String
+  customerId    String?
+  name          String
+  email         String
+  phone         String
+  company       String?
+  preferredDate DateTime
+  notes         String?
+  status        DemoStatus @default(PENDING)
+  assignedTo    String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime
+}
+
+model HardwareBundle {
+  id                 String               @id
+  name               String
+  slug               String               @unique
+  description        String?
+  imageUrl           String?
+  retailPrice        Decimal              @db.Decimal(12, 2)
+  isActive           Boolean              @default(true)
+  createdAt          DateTime             @default(now())
+  HardwareBundleItem HardwareBundleItem[]
+}
+
+model HardwareBundleItem {
+  id              String          @id
+  bundleId        String
+  productId       String
+  qty             Int             @default(1)
+  HardwareBundle  HardwareBundle  @relation(fields: [bundleId], references: [id])
+  HardwareProduct HardwareProduct @relation(fields: [productId], references: [id])
+}
+
+model HardwareCategory {
+  id                     String             @id
+  name                   String
+  slug                   String             @unique
+  description            String?
+  imageUrl               String?
+  parentId               String?
+  sortOrder              Int                @default(0)
+  isActive               Boolean            @default(true)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime
+  HardwareCategory       HardwareCategory?  @relation("HardwareCategoryToHardwareCategory", fields: [parentId], references: [id])
+  other_HardwareCategory HardwareCategory[] @relation("HardwareCategoryToHardwareCategory")
+  HardwareProduct        HardwareProduct[]
+}
+
+model HardwareProduct {
+  id                    String                @id
+  categoryId            String
+  supplierId            String?
+  name                  String
+  slug                  String                @unique
+  sku                   String?               @unique
+  barcode               String?
+  mpn                   String?
+  brand                 String?
+  model                 String?
+  shortDescription      String?
+  description           String?
+  specifications        Json?
+  imageUrls             String[]
+  thumbnailUrl          String?
+  videoUrl              String?
+  brochureUrl           String?
+  costPrice             Decimal?              @db.Decimal(12, 2)
+  retailPrice           Decimal               @db.Decimal(12, 2)
+  salePrice             Decimal?              @db.Decimal(12, 2)
+  vatIncluded           Boolean               @default(true)
+  currency              String                @default("KES")
+  stockQty              Int                   @default(0)
+  reservedQty           Int                   @default(0)
+  reorderPoint          Int                   @default(1)
+  reorderQty            Int                   @default(1)
+  warehouseLocation     String?
+  weightKg              Decimal?              @db.Decimal(8, 2)
+  dimensionsCm          Json?
+  requiresFreight       Boolean               @default(false)
+  installationAvailable Boolean               @default(false)
+  installationPriceKES  Decimal?              @db.Decimal(10, 2)
+  warrantyMonths        Int?
+  warrantyProvider      String?
+  warrantyNotes         String?
+  allowDeposit          Boolean               @default(false)
+  depositPercent        Decimal?              @db.Decimal(5, 2)
+  allowInstalment       Boolean               @default(false)
+  instalmentNote        String?
+  allowBookDemo         Boolean               @default(false)
+  demoNote              String?
+  tags                  String[]
+  isFeatured            Boolean               @default(false)
+  isActive              Boolean               @default(true)
+  publishedAt           DateTime?
+  status                HardwareProductStatus @default(DRAFT)
+  importLogId           String?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime
+  HardwareBundleItem    HardwareBundleItem[]
+  HardwareCategory      HardwareCategory      @relation(fields: [categoryId], references: [id])
+  SupplierImportLog     SupplierImportLog?    @relation(fields: [importLogId], references: [id])
+  Supplier              Supplier?             @relation(fields: [supplierId], references: [id])
+  HardwareVariant       HardwareVariant[]
+  OrderItem             OrderItem[]
+  StockMovement         StockMovement[]
+  WarrantyRecord        WarrantyRecord[]
+}
+
+model HardwareVariant {
+  id              String          @id
+  productId       String
+  name            String
+  sku             String?         @unique
+  priceDiff       Decimal         @default(0) @db.Decimal(10, 2)
+  stockQty        Int             @default(0)
+  attributes      Json
+  isActive        Boolean         @default(true)
+  reservedQty     Int             @default(0)
+  HardwareProduct HardwareProduct @relation(fields: [productId], references: [id])
+}
+
+model NavigationItem {
+  id                   String           @id
+  label                String
+  href                 String
+  parentId             String?
+  sortOrder            Int              @default(0)
+  isActive             Boolean          @default(true)
+  NavigationItem       NavigationItem?  @relation("NavigationItemToNavigationItem", fields: [parentId], references: [id], onDelete: Cascade)
+  other_NavigationItem NavigationItem[] @relation("NavigationItemToNavigationItem")
+
+  @@index([parentId])
+}
+
+model StockMovement {
+  id              String            @id
+  productId       String
+  type            StockMovementType
+  qty             Int
+  reason          String?
+  reference       String?
+  performedBy     String
+  notes           String?
+  createdAt       DateTime          @default(now())
+  HardwareProduct HardwareProduct   @relation(fields: [productId], references: [id])
+}
+
+model Supplier {
+  id                 String              @id
+  name               String
+  slug               String              @unique
+  type               SupplierType
+  country            String?
+  contactName        String?
+  contactEmail       String?
+  contactPhone       String?
+  website            String?
+  apiType            SupplierApiType?
+  apiEndpoint        String?
+  apiKeyEncrypted    String?
+  apiNotes           String?
+  importTemplate     Json?
+  leadTimeDays       Int?
+  paymentTerms       String?
+  notes              String?
+  isActive           Boolean             @default(true)
+  isAuthorised       Boolean             @default(false)
+  dealerAgreementUrl String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime
+  HardwareProduct    HardwareProduct[]
+  SupplierImportLog  SupplierImportLog[]
+}
+
+model SupplierImportLog {
+  id              String            @id
+  supplierId      String
+  method          ImportMethod
+  fileName        String?
+  totalRows       Int               @default(0)
+  imported        Int               @default(0)
+  updated         Int               @default(0)
+  skipped         Int               @default(0)
+  errors          Json?
+  columnMapping   Json?
+  triggeredBy     String
+  createdAt       DateTime          @default(now())
+  HardwareProduct HardwareProduct[]
+  Supplier        Supplier          @relation(fields: [supplierId], references: [id])
+}
+
+model WarrantyRecord {
+  id              String          @id
+  productId       String
+  orderId         String?
+  customerId      String
+  serialNumber    String?
+  purchaseDate    DateTime
+  warrantyEndsAt  DateTime
+  status          WarrantyStatus  @default(ACTIVE)
+  claimHistory    Json?
+  notes           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime
+  HardwareProduct HardwareProduct @relation(fields: [productId], references: [id])
 }
 
 enum UserRole {
@@ -2313,6 +2610,8 @@ enum CatalogueStatus {
   LIVE
   PAUSED
   RETIRED
+  REJECTED
+  ARCHIVED
 }
 
 enum CatalogueSourceType {
@@ -2321,6 +2620,12 @@ enum CatalogueSourceType {
   THINGIVERSE
   PARTNER
   ORIGINAL
+  MYMINIFACTORY
+  CGTRADER
+  CULTS3D
+  CREAZILLA
+  THANGS
+  OTHER
 }
 
 enum CatalogueLicense {
@@ -2331,11 +2636,25 @@ enum CatalogueLicense {
   ORIGINAL
 }
 
+enum ImportPlatform {
+  THINGIVERSE
+  MYMINIFACTORY
+  CGTRADER
+  PRINTABLES
+  CULTS3D
+  CREAZILLA
+  THANGS
+  OTHER
+}
+
 enum ImportStatus {
   PENDING
   PROCESSING
   DONE
   FAILED
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
 }
 
 enum JobStatus {
@@ -2382,4 +2701,66 @@ enum ProductAvailability {
   ON_ORDER
   PRE_ORDER
   IMPORT_ON_REQUEST
+}
+
+enum CartItemType {
+  PRINT_SERVICE
+  HARDWARE
+  HARDWARE_DEPOSIT
+  BUNDLE
+}
+
+enum DemoStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum HardwareProductStatus {
+  DRAFT
+  ACTIVE
+  OUT_OF_STOCK
+  DISCONTINUED
+  COMING_SOON
+}
+
+enum ImportMethod {
+  EXCEL
+  CSV
+  API
+  MANUAL
+}
+
+enum StockMovementType {
+  IN
+  OUT
+  RESERVED
+  UNRESERVED
+  ADJUSTMENT
+  RETURN
+  DAMAGED
+  SOLD
+}
+
+enum SupplierApiType {
+  REST
+  EDI
+  FTP_CSV
+  FTP_XML
+  NONE
+}
+
+enum SupplierType {
+  MANUFACTURER
+  DISTRIBUTOR
+  IMPORTER
+  DEALER
+}
+
+enum WarrantyStatus {
+  ACTIVE
+  EXPIRED
+  CLAIMED
+  VOID
 }

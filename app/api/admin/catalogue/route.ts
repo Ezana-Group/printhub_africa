@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     where.status = status as CatalogueStatus;
   }
   if (category) {
-    const cat = await prisma.catalogueCategory.findFirst({ where: { slug: category } });
+    const cat = await prisma.category.findFirst({ where: { slug: category } });
     if (cat) where.categoryId = cat.id;
   }
   if (q) {
@@ -86,6 +86,9 @@ const createSchema = z.object({
   isNewArrival: z.boolean().optional(),
   isStaffPick: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
+  photos: z.array(z.string()).optional(),
+  modelUrl: z.string().optional(),
+  materials: z.array(z.string()).optional(),
 });
 
 export async function POST(req: Request) {
@@ -128,6 +131,28 @@ export async function POST(req: Request) {
         isNewArrival: data.isNewArrival ?? false,
         isStaffPick: data.isStaffPick ?? false,
         sortOrder: data.sortOrder ?? 0,
+        modelUrl: data.modelUrl ?? null,
+        photos: data.photos && data.photos.length > 0 ? {
+          create: data.photos.map((url, i) => ({
+            url,
+            isPrimary: i === 0,
+            sortOrder: i,
+          })),
+        } : undefined,
+        availableMaterials: data.materials && data.materials.length > 0 ? {
+          create: data.materials.map((m) => {
+            const code = m.toUpperCase().replace(/\s+/g, "_");
+            return {
+              materialCode: code,
+              materialName: m,
+              isAvailable: true,
+            };
+          }),
+        } : undefined,
+      },
+      include: {
+        photos: true,
+        availableMaterials: true,
       },
     });
     return NextResponse.json(item);

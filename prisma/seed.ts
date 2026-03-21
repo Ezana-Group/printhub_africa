@@ -1,3 +1,8 @@
+if (process.env.PRINTHUB_SEED_ALLOW !== '1') {
+  console.error('❌ Dev seed blocked in production.')
+  process.exit(1)
+}
+
 import path from "node:path";
 import { config } from "dotenv";
 
@@ -150,6 +155,7 @@ async function main() {
       name: "Large Format Printing",
       slug: "large-format",
       description: "Banners, signage, vehicle wraps, canvas, and more",
+      showInNav: true,
       sortOrder: 1,
     },
   });
@@ -160,6 +166,7 @@ async function main() {
       name: "3D Printing",
       slug: "3d-printing",
       description: "Custom and ready-made 3D printed products",
+      showInNav: true,
       sortOrder: 2,
     },
   });
@@ -171,10 +178,29 @@ async function main() {
       slug: "merchandise",
       description: "Ready-made 3D printed items",
       parentId: cat3D.id,
+      showInNav: true,
       sortOrder: 1,
     },
   });
-  console.log("Categories created");
+  
+  // Set showInNav = true on these slugs by default (safe to re-run on existing categories)
+  await prisma.category.updateMany({
+    where: {
+      slug: {
+        in: [
+          "large-format-printing",
+          "3d-printing",
+          "stationery-marketing",
+          "branded-merchandise",
+          "print-on-demand",
+          "corporate-b2b"
+        ]
+      }
+    },
+    data: { showInNav: true }
+  });
+
+  console.log("Categories created & navigation defaults set");
 
   // Sample products
   await prisma.product.upsert({
@@ -903,10 +929,10 @@ async function main() {
     { name: "Kenya Collection", slug: "kenya-collection", icon: "map-pin", sortOrder: 10 },
   ];
   for (const cat of catalogueCategories) {
-    await prisma.catalogueCategory.upsert({
+    await prisma.category.upsert({
       where: { slug: cat.slug },
-      update: { name: cat.name, icon: cat.icon, sortOrder: cat.sortOrder },
-      create: { ...cat, isActive: true },
+      update: { name: cat.name, sortOrder: cat.sortOrder },
+      create: { name: cat.name, slug: cat.slug, sortOrder: cat.sortOrder, isActive: true },
     });
   }
   console.log("Catalogue categories seeded");

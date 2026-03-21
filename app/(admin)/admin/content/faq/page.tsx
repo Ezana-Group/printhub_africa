@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { requireAdminSettings } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
 import { AdminBreadcrumbs } from "@/components/admin/admin-breadcrumbs";

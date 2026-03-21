@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -22,6 +23,9 @@ export default async function AccountSettingsProfilePage() {
       <ProfileSettingsForm
         name={session.user.name ?? ""}
         email={session.user.email ?? ""}
+        displayName={session.user.displayName ?? ""}
+        phone={session.user.phone ?? ""}
+        isEmailVerified={!!session.user.emailVerified || ["STAFF", "ADMIN", "SUPER_ADMIN"].includes(session.user.role ?? "")}
       />
     </div>
   );

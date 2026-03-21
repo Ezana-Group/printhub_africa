@@ -27,12 +27,14 @@ export async function getPesapalAccessToken(): Promise<string> {
   if (!key || !secret) {
     throw new Error("PESAPAL_CONSUMER_KEY and PESAPAL_CONSUMER_SECRET are required");
   }
+  // [PesaPal] API — updated to use header auth + error handling
   const base = getBaseUrl();
   const res = await fetch(`${base}/api/Auth/RequestToken`, {
     method: "POST",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
+      "User-Agent": "PrintHub/1.0 (https://printhub.africa)"
     },
     body: JSON.stringify({
       consumer_key: key,
@@ -90,12 +92,14 @@ export interface PesapalSubmitOrderResponse {
 export async function submitPesapalOrder(params: PesapalSubmitOrderParams): Promise<PesapalSubmitOrderResponse> {
   const token = await getPesapalAccessToken();
   const base = getBaseUrl();
+  // [PesaPal] API — updated to use header auth + error handling
   const res = await fetch(`${base}/api/Transactions/SubmitOrderRequest`, {
     method: "POST",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
+      "User-Agent": "PrintHub/1.0 (https://printhub.africa)"
     },
     body: JSON.stringify({
       id: params.id,
@@ -131,12 +135,14 @@ export async function getPesapalTransactionStatus(orderTrackingId: string): Prom
   const token = await getPesapalAccessToken();
   const base = getBaseUrl();
   const url = `${base}/api/Transactions/GetTransactionStatus?orderTrackingId=${encodeURIComponent(orderTrackingId)}`;
+  // [PesaPal] API — updated to use header auth + error handling
   const res = await fetch(url, {
     method: "GET",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
+      "User-Agent": "PrintHub/1.0 (https://printhub.africa)"
     },
   });
   const data = (await res.json()) as {

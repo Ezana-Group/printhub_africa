@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { MyActivityClient } from "@/components/admin/my-activity-client";
 
 export default function AdminMyAccountActivityPage() {

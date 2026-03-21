@@ -13,8 +13,12 @@ export async function POST(req: Request) {
       process.env.MPESA_ENV === "production"
         ? "https://api.safaricom.co.ke"
         : "https://sandbox.safaricom.co.ke";
+    // [M-Pesa] API — updated to use header auth + error handling
     const res = await fetch(`${base}/oauth/v1/generate?grant_type=client_credentials`, {
-      headers: { Authorization: `Basic ${authHeader}` },
+      headers: { 
+        Authorization: `Basic ${authHeader}`,
+        "User-Agent": "PrintHub/1.0 (https://printhub.africa)"
+      },
     });
     if (!res.ok) throw new Error(`Safaricom returned ${res.status}`);
     return NextResponse.json({ success: true, environment: process.env.MPESA_ENV ?? "sandbox" });

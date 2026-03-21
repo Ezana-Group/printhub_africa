@@ -6,8 +6,11 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { SmartTextEditor } from "@/components/admin/smart-text-editor";
+import { FileUploader } from "@/components/upload/FileUploader";
+import { X } from "lucide-react";
+import Image from "next/image";
 
 interface Category {
   id: string;
@@ -28,6 +31,12 @@ export function CatalogueItemForm({ categories }: CatalogueItemFormProps) {
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
   const [isFeatured, setIsFeatured] = useState(false);
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [modelUrl, setModelUrl] = useState("");
+  const [designerCredit, setDesignerCredit] = useState("");
+  const [sourceUrl, setSourceUrl] = useState("");
+  const [tags, setTags] = useState("");
+  const [materials, setMaterials] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -52,6 +61,12 @@ export function CatalogueItemForm({ categories }: CatalogueItemFormProps) {
           description: description.trim() || undefined,
           sourceType: "MANUAL",
           isFeatured,
+          photos,
+          modelUrl: modelUrl || undefined,
+          designerCredit: designerCredit.trim() || undefined,
+          sourceUrl: sourceUrl.trim() || undefined,
+          tags: tags.split(",").map(t => t.trim()).filter(Boolean),
+          materials: materials.split(",").map(m => m.trim()).filter(Boolean),
         }),
       });
       const data = await res.json();
@@ -114,13 +129,14 @@ export function CatalogueItemForm({ categories }: CatalogueItemFormProps) {
       </div>
       <div className="space-y-2">
         <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Full description (optional)"
-          rows={4}
-        />
+        <div className="mt-1">
+          <SmartTextEditor
+            value={description}
+            onChange={setDescription}
+            placeholder="Full description (HTML/Rich Text)"
+            minHeight="200px"
+          />
+        </div>
       </div>
       <div className="flex items-center gap-3">
         <Switch
@@ -131,6 +147,101 @@ export function CatalogueItemForm({ categories }: CatalogueItemFormProps) {
         <Label htmlFor="isFeatured" className="cursor-pointer text-sm font-medium">
           Featured on homepage (show in Print on Demand section)
         </Label>
+      </div>
+
+      <div className="space-y-4 border-t pt-6">
+        <h3 className="text-lg font-medium">Media & Files</h3>
+        
+        <div className="space-y-2">
+          <Label>Photos</Label>
+          <div className="grid grid-cols-2 gap-4 mb-4 sm:grid-cols-4">
+            {photos.map((url, i) => (
+              <div key={i} className="group relative aspect-square rounded-lg border bg-muted overflow-hidden">
+                <Image src={url} alt={`Upload ${i}`} fill className="object-cover" unoptimized />
+                <button
+                  type="button"
+                  onClick={() => setPhotos(prev => prev.filter((_, idx) => idx !== i))}
+                  className="absolute top-1 right-1 p-1 bg-white/80 rounded-full shadow-sm text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+          <FileUploader
+            context="CATALOGUE_ITEM"
+            accept={["image/png", "image/jpeg", "image/webp"]}
+            maxFiles={10}
+            onUploadComplete={(files) => {
+              const urls = files.map(f => f.publicUrl).filter((url): url is string => !!url);
+              setPhotos(prev => [...prev, ...urls]);
+            }}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>3D Model File (.stl, .3mf, .obj)</Label>
+          {modelUrl && (
+            <div className="flex items-center gap-2 p-2 rounded-md bg-green-50 border border-green-200 text-sm text-green-700 mb-2">
+              <span className="truncate flex-1">{modelUrl.split('/').pop()}</span>
+              <button type="button" onClick={() => setModelUrl("")} className="text-red-500 hover:text-red-700">Remove</button>
+            </div>
+          )}
+          <FileUploader
+            context="CATALOGUE_ITEM"
+            accept={["application/octet-stream", ".stl", ".3mf", ".obj"]}
+            maxFiles={1}
+            onUploadComplete={(files) => {
+              const url = files[0]?.publicUrl;
+              if (url) setModelUrl(url);
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-4 border-t pt-6">
+        <h3 className="text-lg font-medium">Metadata & Attributions</h3>
+        
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="designerCredit">Designer Credit</Label>
+            <Input
+              id="designerCredit"
+              value={designerCredit}
+              onChange={(e) => setDesignerCredit(e.target.value)}
+              placeholder="e.g. MakerName"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="sourceUrl">Source URL (Thingiverse/Printables)</Label>
+            <Input
+              id="sourceUrl"
+              value={sourceUrl}
+              onChange={(e) => setSourceUrl(e.target.value)}
+              placeholder="https://..."
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="tags">Tags (comma separated)</Label>
+          <Input
+            id="tags"
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
+            placeholder="gadget, office, gift..."
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="materials">Recommended Materials (comma separated)</Label>
+          <Input
+            id="materials"
+            value={materials}
+            onChange={(e) => setMaterials(e.target.value)}
+            placeholder="PLA, PETG, Resin..."
+          />
+        </div>
       </div>
       <div className="flex gap-3">
         <Button type="submit" disabled={loading}>

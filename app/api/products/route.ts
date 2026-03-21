@@ -128,8 +128,15 @@ export async function GET(req: NextRequest) {
     } = { isActive: true };
 
     if (category) {
-      const cat = await prisma.category.findFirst({ where: { slug: category } });
-      if (cat) where.categoryId = cat.id;
+      const cat = await prisma.category.findFirst({
+        where: { slug: category },
+        include: { children: { select: { id: true } } }
+      });
+      if (cat) {
+        const categoryIds = [cat.id, ...cat.children.map(c => c.id)];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        where.categoryId = { in: categoryIds } as any;
+      }
     }
     if (productType) {
       const typeMap: Record<string, "READYMADE_3D" | "LARGE_FORMAT" | "CUSTOM"> = {

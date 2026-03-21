@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -11,6 +12,8 @@ export default async function PayOrderPage({
   params: Promise<{ orderId: string }>;
   searchParams: Promise<{ token?: string }>;
 }) {
+  try {
+
   const { orderId } = await params;
   const { token } = await searchParams;
 
@@ -75,4 +78,16 @@ export default async function PayOrderPage({
       totalKes={Number(order.total)}
     />
   );
+
+  } catch (error) {
+    console.error("Data load failed in page.tsx:", error);
+    return (
+      <div className="container mx-auto px-4 py-12">
+        <div className="max-w-2xl mx-auto bg-destructive/5 border border-destructive/20 rounded-2xl p-8 text-center">
+          <h2 className="text-2xl font-bold text-destructive mb-4">Service Temporarily Unavailable</h2>
+          <p className="text-slate-600 mb-6">We are experiencing issues connecting to our services. Please try refreshing the page in a few moments.</p>
+        </div>
+      </div>
+    );
+  }
 }

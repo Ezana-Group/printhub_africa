@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { Suspense } from 'react'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'

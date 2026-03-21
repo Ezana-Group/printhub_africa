@@ -37,17 +37,19 @@ export async function POST(req: Request) {
   }
 
   try {
-    const [users, orders, products] = await Promise.all([
+    const [users, orders, products, settings] = await Promise.all([
       prisma.user.findMany({ take: EXPORT_ROW_LIMIT, orderBy: { createdAt: "desc" } }),
       prisma.order.findMany({ take: EXPORT_ROW_LIMIT, orderBy: { createdAt: "desc" }, include: { items: true } }),
       prisma.product.findMany({ take: EXPORT_ROW_LIMIT, orderBy: { createdAt: "desc" } }),
+      prisma.systemSettings.findMany(),
     ]);
     const payload = JSON.stringify({
       exportedAt: new Date().toISOString(),
-      users: users.length,
-      orders: orders.length,
-      products: products.length,
-      data: { users, orders, products },
+      usersCount: users.length,
+      ordersCount: orders.length,
+      productsCount: products.length,
+      settingsCount: settings.length,
+      data: { users, orders, products, settings },
     });
     const key = `exports/${Date.now()}-export.json.gz`;
     const gzipped = gzipSync(Buffer.from(payload, "utf-8"));
@@ -64,6 +66,7 @@ export async function POST(req: Request) {
     await writeAudit({ userId: auth.userId, action: "EXPORT_ALL_DATA_REQUESTED", category: "DANGER", request: req });
     return NextResponse.json({
       message: `Export prepared. Download link sent to ${email ?? "your email"}. Expires in 1 hour.`,
+      downloadUrl,
     });
   } catch (e) {
     console.error("Export error:", e);

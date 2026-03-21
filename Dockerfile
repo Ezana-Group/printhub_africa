@@ -16,6 +16,7 @@ COPY . .
 
 # Prisma generate (needs schema; use dummy URL for build only — real URL at runtime)
 ENV DATABASE_URL="postgresql://build:build@localhost:5432/build?schema=public"
+ENV DATABASE_URL_UNPOOLED="postgresql://build:build@localhost:5432/build?schema=public"
 RUN npx prisma generate
 
 # Build Next.js (disable telemetry)
@@ -33,11 +34,23 @@ RUN adduser --system --uid 1001 nextjs
 
 # Copy built app (standalone includes server.js and traced deps)
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
+COPY --from=builder /app/start.sh ./start.sh
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Install prisma CLI + tsx + bcryptjs for migrations & seeding at runtime
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+RUN npm install --no-save prisma@7.5.0 @prisma/client@7.5.0 tsx bcryptjs
+
+# Make start script executable
+USER root
+RUN chmod +x ./start.sh
 USER nextjs
+
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-CMD ["node", "server.js"]
+CMD ["./start.sh"]
+

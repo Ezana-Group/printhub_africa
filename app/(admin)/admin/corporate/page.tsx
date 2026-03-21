@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSection } from "@/lib/admin-route-guard";

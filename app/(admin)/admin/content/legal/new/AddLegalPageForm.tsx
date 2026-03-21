@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 
 export function AddLegalPageForm() {
   const router = useRouter();
@@ -75,16 +75,16 @@ export function AddLegalPageForm() {
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="content">Content (HTML, optional)</Label>
-        <Textarea
-          id="content"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder={'<div class="legal-document">...</div>'}
-          rows={8}
-          className="font-mono text-sm"
-        />
-        <p className="text-xs text-slate-500">
+        <Label htmlFor="content">Content (HTML/Rich Text, optional)</Label>
+        <div className="mt-1">
+          <SmartTextEditor
+            value={content}
+            onChange={setContent}
+            placeholder="Document content..."
+            minHeight="250px"
+          />
+        </div>
+        <p className="text-xs text-slate-500 mt-1">
           You can leave this empty and add content in the editor after creating the page.
         </p>
       </div>

@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -8,6 +9,8 @@ import Link from "next/link";
 import { AdminCatalogueQueueClient } from "./admin-catalogue-queue-client";
 
 export default async function AdminCatalogueQueuePage() {
+  try {
+
   const session = await getServerSession(authOptions);
   const role = (session?.user as { role?: string })?.role ?? "";
   const permissions = (session?.user as { permissions?: string[] })?.permissions ?? [];
@@ -61,4 +64,16 @@ export default async function AdminCatalogueQueuePage() {
       )}
     </div>
   );
+
+  } catch (error) {
+    console.error("Data load failed in page.tsx:", error);
+    return (
+      <div className="p-6">
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 text-destructive">
+          <h2 className="font-bold text-lg mb-2">Service Temporarily Unavailable</h2>
+          <p className="text-sm">We are experiencing issues connecting to our database. Please try refreshing the page in a few moments.</p>
+        </div>
+      </div>
+    );
+  }
 }

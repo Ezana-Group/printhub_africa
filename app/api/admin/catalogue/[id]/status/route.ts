@@ -31,16 +31,17 @@ export async function PATCH(
     const item = await prisma.catalogueItem.findUnique({ where: { id } });
     if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    const data: { status: CatalogueStatus; approvedBy?: string | null; approvedAt?: Date | null; rejectedBy?: string | null; rejectionReason?: string | null } = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data: any = {
       status: status as CatalogueStatus,
     };
     if (status === "LIVE") {
-      data.approvedBy = userId;
+      data.approvedBy = userId ? { connect: { id: userId } } : undefined;
       data.approvedAt = new Date();
-      data.rejectedBy = null;
+      data.rejectedBy = { disconnect: true };
       data.rejectionReason = null;
     } else if ((status === "RETIRED" || status === "DRAFT") && rejectionReason) {
-      data.rejectedBy = userId;
+      data.rejectedBy = userId ? { connect: { id: userId } } : undefined;
       data.rejectionReason = rejectionReason;
     }
 

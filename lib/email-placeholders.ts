@@ -12,13 +12,16 @@ export type PlaceholderCategory =
   | "orders"
   | "quotes"
   | "payments"
+  | "invoices"
   | "delivery"
   | "refunds"
   | "support"
   | "careers"
   | "corporate"
   | "cart"
-  | "admin";
+  | "staff"
+  | "admin"
+  | "utility";
 
 export const EMAIL_PLACEHOLDER_CATEGORIES: Record<
   PlaceholderCategory,
@@ -46,6 +49,9 @@ export const EMAIL_PLACEHOLDER_CATEGORIES: Record<
     placeholders: [
       { key: "firstName", label: "firstName", description: "Customer first name" },
       { key: "customerName", label: "customerName", description: "Customer full name" },
+      { key: "customerEmail", label: "customerEmail", description: "Customer email address" },
+      { key: "customerPhone", label: "customerPhone", description: "Customer phone number" },
+      { key: "loyaltyPoints", label: "loyaltyPoints", description: "Current loyalty points balance" },
     ],
   },
   orders: {
@@ -59,6 +65,15 @@ export const EMAIL_PLACEHOLDER_CATEGORIES: Record<
       { key: "title", label: "title", description: "Order status title (e.g. Dispatched)" },
       { key: "description", label: "description", description: "Order status description" },
       { key: "trackUrl", label: "trackUrl", description: "Order tracking URL" },
+      { key: "orderDate", label: "orderDate", description: "Date the order was placed" },
+      { key: "orderSubtotal", label: "orderSubtotal", description: "Subtotal before tax & shipping" },
+      { key: "orderTax", label: "orderTax", description: "Tax amount" },
+      { key: "shippingCost", label: "shippingCost", description: "Shipping cost" },
+      { key: "orderDiscount", label: "orderDiscount", description: "Discount applied" },
+      { key: "orderItemsHtml", label: "orderItemsHtml", description: "Order items list (HTML table)" },
+      { key: "paymentMethod", label: "paymentMethod", description: "Payment method (e.g. M-Pesa, Card)" },
+      { key: "estimatedDelivery", label: "estimatedDelivery", description: "Estimated delivery date" },
+      { key: "orderStatus", label: "orderStatus", description: "Current order status" },
     ],
   },
   quotes: {
@@ -71,6 +86,10 @@ export const EMAIL_PLACEHOLDER_CATEGORIES: Record<
       { key: "validity", label: "validity", description: "Quote validity text" },
       { key: "breakdown", label: "breakdown", description: "Quote breakdown (plain text)" },
       { key: "breakdownHtml", label: "breakdownHtml", description: "Quote breakdown (HTML)" },
+      { key: "projectName", label: "projectName", description: "Quote project name" },
+      { key: "quoteDeadline", label: "quoteDeadline", description: "Requested deadline" },
+      { key: "quoteStatus", label: "quoteStatus", description: "Current quote status" },
+      { key: "assignedStaff", label: "assignedStaff", description: "Staff member assigned to quote" },
     ],
   },
   payments: {
@@ -81,6 +100,22 @@ export const EMAIL_PLACEHOLDER_CATEGORIES: Record<
       { key: "whatsapp", label: "whatsapp", description: "WhatsApp support link" },
       { key: "pickupCode", label: "pickupCode", description: "Pay-on-pickup code" },
       { key: "totalKes", label: "totalKes", description: "Amount to pay at pickup (KES)" },
+      { key: "paymentDate", label: "paymentDate", description: "Date payment was made" },
+      { key: "mpesaReceiptNo", label: "mpesaReceiptNo", description: "M-Pesa receipt number" },
+      { key: "mpesaPhone", label: "mpesaPhone", description: "M-Pesa phone number used" },
+      { key: "vatAmount", label: "vatAmount", description: "VAT amount" },
+    ],
+  },
+  invoices: {
+    label: "Invoices",
+    placeholders: [
+      { key: "invoiceNumber", label: "invoiceNumber", description: "Invoice number" },
+      { key: "invoiceDate", label: "invoiceDate", description: "Invoice issue date" },
+      { key: "invoiceDueDate", label: "invoiceDueDate", description: "Invoice due date" },
+      { key: "invoiceSubtotal", label: "invoiceSubtotal", description: "Invoice subtotal" },
+      { key: "invoiceVat", label: "invoiceVat", description: "Invoice VAT amount" },
+      { key: "invoiceTotal", label: "invoiceTotal", description: "Invoice total" },
+      { key: "invoiceUrl", label: "invoiceUrl", description: "Link to download invoice PDF" },
     ],
   },
   delivery: {
@@ -88,6 +123,12 @@ export const EMAIL_PLACEHOLDER_CATEGORIES: Record<
     placeholders: [
       { key: "trackingNumber", label: "trackingNumber", description: "Shipment tracking number" },
       { key: "trackingLine", label: "trackingLine", description: "Pre-formatted tracking line (HTML)" },
+      { key: "deliveryMethod", label: "deliveryMethod", description: "Delivery method (pickup, standard, express)" },
+      { key: "courierName", label: "courierName", description: "Assigned courier name" },
+      { key: "estimatedDeliveryDate", label: "estimatedDeliveryDate", description: "Estimated delivery date" },
+      { key: "pickupLocationName", label: "pickupLocationName", description: "Pickup location name / address" },
+      { key: "deliveryZone", label: "deliveryZone", description: "Delivery zone name" },
+      { key: "failureReason", label: "failureReason", description: "Delivery failure reason" },
     ],
   },
   refunds: {
@@ -108,6 +149,9 @@ export const EMAIL_PLACEHOLDER_CATEGORIES: Record<
       { key: "ticketSubject", label: "ticketSubject", description: "Ticket subject" },
       { key: "messagePreview", label: "messagePreview", description: "Preview of reply message" },
       { key: "supportUrl", label: "supportUrl", description: "Link to support / tickets" },
+      { key: "ticketStatus", label: "ticketStatus", description: "Ticket status (e.g. Open, Resolved)" },
+      { key: "ticketPriority", label: "ticketPriority", description: "Ticket priority (e.g. High, Normal)" },
+      { key: "ticketCategory", label: "ticketCategory", description: "Ticket category" },
     ],
   },
   careers: {
@@ -131,6 +175,9 @@ export const EMAIL_PLACEHOLDER_CATEGORIES: Record<
       { key: "dashboardUrl", label: "dashboardUrl", description: "Corporate dashboard URL" },
       { key: "applyUrl", label: "applyUrl", description: "Corporate apply page URL" },
       { key: "reason", label: "reason", description: "Reason (e.g. rejection reason)" },
+      { key: "creditLimit", label: "creditLimit", description: "Corporate credit limit (KES)" },
+      { key: "outstandingBalance", label: "outstandingBalance", description: "Outstanding balance (KES)" },
+      { key: "poReference", label: "poReference", description: "Purchase order reference" },
     ],
   },
   cart: {
@@ -141,10 +188,28 @@ export const EMAIL_PLACEHOLDER_CATEGORIES: Record<
       { key: "unsubscribeLine", label: "unsubscribeLine", description: "Pre-formatted unsubscribe line (HTML)" },
     ],
   },
+  staff: {
+    label: "Staff",
+    placeholders: [
+      { key: "staffName", label: "staffName", description: "Staff member full name" },
+      { key: "staffEmail", label: "staffEmail", description: "Staff member email address" },
+      { key: "staffDepartment", label: "staffDepartment", description: "Staff department name" },
+      { key: "staffPosition", label: "staffPosition", description: "Staff position / job title" },
+      { key: "staffRole", label: "staffRole", description: "Staff system role (e.g. Admin, Manager)" },
+    ],
+  },
   admin: {
     label: "Admin",
     placeholders: [
       { key: "adminUrl", label: "adminUrl", description: "Admin panel URL (e.g. quotes, corporate)" },
+    ],
+  },
+  utility: {
+    label: "Utility",
+    placeholders: [
+      { key: "currentYear", label: "currentYear", description: "Current year (e.g. 2026)" },
+      { key: "preferencesUrl", label: "preferencesUrl", description: "Link to email / notification preferences" },
+      { key: "accountUrl", label: "accountUrl", description: "Link to customer account page" },
     ],
   },
 };

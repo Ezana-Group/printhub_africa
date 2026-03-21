@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -11,45 +12,50 @@ export default async function CatalogueEditPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ tab?: string }>;
 }) {
-  await requireAdminSection("/admin/catalogue");
-  const { id } = await params;
-  const { tab } = await searchParams;
+  try {
+    await requireAdminSection("/admin/catalogue");
+    const { id } = await params;
+    const { tab } = await searchParams;
 
-  const item = await prisma.catalogueItem.findUnique({
-    where: { id },
-    include: {
-      photos: { orderBy: { sortOrder: "asc" } },
-      availableMaterials: true,
-      category: true,
-      designer: true,
-    },
-  });
+    const item = await prisma.catalogueItem.findUnique({
+      where: { id },
+      include: {
+        photos: { orderBy: { sortOrder: "asc" } },
+        availableMaterials: true,
+        category: true,
+        designer: true,
+      },
+    });
 
-  if (!item) notFound();
+    if (!item) notFound();
 
-  const categories = await prisma.catalogueCategory.findMany({
-    where: { isActive: true },
-    orderBy: { sortOrder: "asc" },
-    select: { id: true, name: true, slug: true },
-  });
+    const categories = await prisma.category.findMany({
+      where: { isActive: true },
+      orderBy: [{ parentId: "asc" }, { sortOrder: "asc" }],
+      select: { id: true, name: true, slug: true, parentId: true },
+    });
 
-  return (
-    <div className="max-w-5xl mx-auto px-6 py-8">
-      <div className="flex items-center gap-3 mb-6">
-        <Link
-          href="/admin/catalogue"
-          className="text-sm text-slate-500 hover:text-slate-700"
-        >
-          ← Catalogue
-        </Link>
-        <span className="text-slate-300">/</span>
-        <span className="text-sm text-slate-700 font-medium">{item.name}</span>
+    return (
+      <div className="max-w-5xl mx-auto px-6 py-8">
+        <div className="flex items-center gap-3 mb-6">
+          <Link
+            href="/admin/catalogue"
+            className="text-sm text-slate-500 hover:text-slate-700"
+          >
+            ← Catalogue
+          </Link>
+          <span className="text-slate-300">/</span>
+          <span className="text-sm text-slate-700 font-medium">{item.name}</span>
+        </div>
+        <CatalogueEditForm
+          item={JSON.parse(JSON.stringify(item))}
+          categories={categories}
+          defaultTab={tab ?? "details"}
+        />
       </div>
-      <CatalogueEditForm
-        item={JSON.parse(JSON.stringify(item))}
-        categories={categories}
-        defaultTab={tab ?? "details"}
-      />
-    </div>
-  );
+    );
+  } catch (e) {
+    console.error('[CatalogueEdit] Server render error:', e);
+    throw e;
+  }
 }

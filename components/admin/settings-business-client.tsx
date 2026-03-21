@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { EditableSection } from "@/components/admin/editable-section";
 import { FileUploader } from "@/components/upload/FileUploader";
+import { Switch } from "@/components/ui/switch";
 
 const EMPTY: Record<string, string> = {};
 const getStr = (obj: Record<string, string>, key: string) => obj[key] ?? "";
@@ -40,6 +41,9 @@ const FORM_DEFAULTS: Record<string, string> = {
   socialLinkedIn: "",
   socialTikTok: "",
   socialYouTube: "",
+  foundingDate: "",
+  statsOrdersThreshold: "1000",
+  statsClientsThreshold: "500",
 };
 
 /** Merge server/fetch data with defaults: use saved value if non-empty, else default. Ensures edit form is pre-filled like view. */
@@ -465,6 +469,97 @@ export function SettingsBusinessClient({
                 />
               </div>
             ))}
+          </div>
+        )}
+        onSave={saveFull}
+      />
+
+      <EditableSection
+        id="business-impact"
+        title="Impact & Statistics"
+        description="Configure how your business achievements appear to the public."
+        canEdit={canEdit}
+        viewContent={
+          <div className="space-y-0">
+            {[
+              { label: "Founding Date", value: getStr(data, "foundingDate") ? new Date(getStr(data, "foundingDate")).toLocaleDateString() : "—" },
+              { label: "Order Threshold", value: getStr(data, "statsOrdersThreshold") || "1000" },
+              { label: "Client Threshold", value: getStr(data, "statsClientsThreshold") || "500" },
+              { label: "Display Orders", value: data.showStatsOrders === "true" ? "On" : "Off" },
+              { label: "Display Clients", value: data.showStatsClients === "true" ? "On" : "Off" },
+              { label: "Display Experience", value: data.showStatsExperience === "true" ? "On" : "Off" },
+              { label: "Display Machines", value: data.showStatsMachines === "true" ? "On" : "Off" },
+              { label: "Display Expert Staff", value: data.showStatsStaff === "true" ? "On" : "Off" },
+            ].map((row, i) => (
+              <div
+                key={i}
+                className="flex flex-wrap items-baseline justify-between gap-2 py-2 border-b border-border/50 last:border-0 hover:bg-muted/30 rounded px-1 -mx-1"
+              >
+                <span className="text-sm text-muted-foreground">{row.label}</span>
+                <span className="text-sm font-medium text-foreground">{row.value}</span>
+              </div>
+            ))}
+          </div>
+        }
+        editContent={({ setHasChanges }) => (
+          <div className="space-y-4" onChange={() => setHasChanges(true)} onInput={() => setHasChanges(true)}>
+            <div className="space-y-1.5">
+              <Label>Founding Date</Label>
+              <Input 
+                type="date"
+                value={getStr(data, "foundingDate") ? getStr(data, "foundingDate").split('T')[0] : ""} 
+                onChange={(e) => update("foundingDate", e.target.value)} 
+                className="focus-visible:ring-orange-500" 
+              />
+              <p className="text-xs text-muted-foreground">Used to calculate &quot;Years in business&quot; on the homepage.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Order Threshold</Label>
+                <Input 
+                  type="number"
+                  value={getStr(data, "statsOrdersThreshold")} 
+                  onChange={(e) => update("statsOrdersThreshold", e.target.value)} 
+                  className="focus-visible:ring-orange-500" 
+                />
+                <p className="text-xs text-muted-foreground">Hide total orders until this count is reached.</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Client Threshold</Label>
+                <Input 
+                  type="number"
+                  value={getStr(data, "statsClientsThreshold")} 
+                  onChange={(e) => update("statsClientsThreshold", e.target.value)} 
+                  className="focus-visible:ring-orange-500" 
+                />
+                <p className="text-xs text-muted-foreground">Hide client count until this count is reached.</p>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-border/50 space-y-4">
+              <h4 className="text-sm font-semibold text-slate-900">Visibility Toggles</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[
+                  { label: "Show Orders Fulfilled", name: "showStatsOrders" },
+                  { label: "Show Clients Served", name: "showStatsClients" },
+                  { label: "Show Experience (Years)", name: "showStatsExperience" },
+                  { label: "Show Machines Operated", name: "showStatsMachines" },
+                  { label: "Show Expert Staff", name: "showStatsStaff" },
+                ].map((stat) => (
+                  <div key={stat.name} className="flex items-center justify-between p-3 rounded-xl border border-border/50 bg-slate-50/50">
+                    <Label className="cursor-pointer" htmlFor={stat.name}>{stat.label}</Label>
+                     <Switch
+                       id={stat.name}
+                       checked={data[stat.name] === "true"}
+                       onCheckedChange={(checked) => update(stat.name, checked ? "true" : "false")}
+                     />
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded-lg">
+                Note: Statistics will only be shown if their individual toggle is ON and they meet any applicable thresholds above.
+              </p>
+            </div>
           </div>
         )}
         onSave={saveFull}

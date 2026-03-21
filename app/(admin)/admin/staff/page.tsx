@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -6,7 +7,14 @@ import { requireAdminSection } from "@/lib/admin-route-guard";
 
 const CAN_ADD_STAFF = ["ADMIN", "SUPER_ADMIN"];
 
+interface SessionUser {
+  id: string;
+  role: string;
+}
+
 export default async function AdminStaffPage() {
+  try {
+
   await requireAdminSection("/admin/staff");
   const session = await getServerSession(authOptions);
   const role = (session?.user as { role?: string })?.role;
@@ -42,5 +50,25 @@ export default async function AdminStaffPage() {
     lastActiveAt: null as Date | null,
   }));
 
-  return <StaffAdminClient staff={rows} canInvite={!!canInvite} />;
+  const userId = session?.user ? (session.user as SessionUser).id : undefined;
+
+  return (
+    <StaffAdminClient
+      staff={rows}
+      canInvite={!!canInvite}
+      currentUserId={userId}
+    />
+  );
+
+  } catch (error) {
+    console.error("Data load failed in page.tsx:", error);
+    return (
+      <div className="p-6">
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 text-destructive">
+          <h2 className="font-bold text-lg mb-2">Service Temporarily Unavailable</h2>
+          <p className="text-sm">We are experiencing issues connecting to our database. Please try refreshing the page in a few moments.</p>
+        </div>
+      </div>
+    );
+  }
 }

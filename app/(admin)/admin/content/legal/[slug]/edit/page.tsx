@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { requireAdminSettings } from "@/lib/auth-guard";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
@@ -43,12 +44,12 @@ export default async function LegalPageEditPage({
         title={page.title ?? page.slug}
         content={page.content}
         version={page.version}
-        lastUpdated={page.lastUpdated ?? ""}
+        lastUpdated={page.lastUpdated?.toISOString() ?? ""}
         isPublished={page.isPublished}
         history={history.map((h) => ({
           id: h.id,
           version: h.version,
-          savedAt: h.createdAt,
+          savedAt: h.createdAt.toISOString(),
           savedBy: h.savedBy,
           changeNote: h.changeNote,
         }))}

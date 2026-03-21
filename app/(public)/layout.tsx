@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AnnouncementBar } from "@/components/layout/announcement-bar";
 import { Header } from "@/components/layout/header";
+import { EmailVerificationBanner } from "@/components/layout/email-verification-banner";
 import { Footer } from "@/components/layout/footer";
 import { WhatsAppFloat } from "@/components/layout/whatsapp-float";
 import { CookieBanner } from "@/components/CookieBanner";
@@ -13,10 +14,11 @@ export const revalidate = 300;
 
 export async function generateMetadata(): Promise<Metadata> {
   const meta = await getCachedBusinessMetadata();
+  const updatedAtTime = meta.updatedAt ? new Date(meta.updatedAt).getTime() : 0;
   const faviconUrl =
-    meta.favicon && meta.updatedAt
-      ? `${meta.favicon}?v=${new Date(meta.updatedAt).getTime()}`
-      : meta.favicon ?? null;
+    meta.favicon
+      ? `${meta.favicon}?v=${updatedAtTime}`
+      : null;
   return {
     icons: faviconUrl
       ? {
@@ -66,6 +68,7 @@ export default async function PublicLayout({
       />
       <AnnouncementBar business={business} />
       <Header business={business} />
+      <EmailVerificationBanner />
       <main id="main-content" className="min-h-[calc(100vh-8rem)]">{children}</main>
       <Footer business={business} />
       <WhatsAppFloat whatsapp={business.whatsapp} />

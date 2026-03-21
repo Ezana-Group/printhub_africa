@@ -4,7 +4,7 @@ import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
-import { useEffect } from "react";
+import { useEffect, useState, forwardRef, useImperativeHandle, useRef } from "react";
 import {
   Bold,
   Italic,
@@ -24,6 +24,10 @@ interface RichTextEditorProps {
   onChange: (html: string) => void;
   placeholder?: string;
   minHeight?: string;
+}
+
+export interface SmartTextEditorHandle {
+  insertText: (text: string) => void;
 }
 
 function ToolbarButton({
@@ -161,12 +165,32 @@ function Toolbar({ editor }: { editor: Editor }) {
   );
 }
 
-export function RichTextEditor({
-  value,
-  onChange,
-  placeholder = "Write your message…",
-  minHeight = "180px",
-}: RichTextEditorProps) {
+export const SmartTextEditor = forwardRef<SmartTextEditorHandle, RichTextEditorProps>(
+  ({ value, onChange, placeholder = "Write your message…", minHeight = "180px" }, ref) => {
+    const [mode, setMode] = useState<"rich" | "html">("rich");
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    useImperativeHandle(ref, () => ({
+      insertText: (text: string) => {
+        if (mode === "rich" && editor) {
+          editor.chain().focus().insertContent(text).run();
+        } else if (mode === "html" && textareaRef.current) {
+          const el = textareaRef.current;
+          const start = el.selectionStart ?? 0;
+          const end = el.selectionEnd ?? 0;
+          const current = el.value;
+          const next = current.slice(0, start) + text + current.slice(end);
+          onChange(next);
+          // Set cursor position after insertion
+          setTimeout(() => {
+            const pos = start + text.length;
+            el.setSelectionRange(pos, pos);
+            el.focus();
+          }, 0);
+        }
+      },
+    }));
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -194,17 +218,75 @@ export function RichTextEditor({
 
   // Sync external value changes (e.g. after send clears the field)
   useEffect(() => {
-    if (editor && !value && editor.getHTML() !== "<p></p>") {
-      editor.commands.clearContent();
+    if (editor && value !== editor.getHTML()) {
+      if (!value) {
+        editor.commands.clearContent();
+      } else {
+        // Only update if it's actually different to avoid cursor jumps
+        const currentHtml = editor.getHTML();
+        if (value !== currentHtml && value !== "<p></p>" && currentHtml !== "<p></p>") {
+             let selection;
+             try { selection = editor.state.selection; } catch {}
+             editor.commands.setContent(value, { emitUpdate: false });
+             if (selection) {
+                try { editor.commands.setTextSelection(selection); } catch {}
+             }
+        }
+      }
     }
   }, [value, editor]);
 
-  if (!editor) return null;
-
   return (
-    <div className="rounded-md border bg-background overflow-hidden">
-      <Toolbar editor={editor} />
-      <EditorContent editor={editor} />
+    <div className="rounded-md border bg-background overflow-hidden flex flex-col">
+      <div className="flex items-center justify-between border-b bg-muted/10 px-2 pr-4">
+        {mode === "rich" && editor ? (
+          <Toolbar editor={editor} />
+        ) : (
+          <div className="py-2.5 px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Raw HTML Editor
+          </div>
+        )}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setMode("rich")}
+            className={`text-xs px-2.5 py-1 rounded-full transition-colors font-medium border ${
+              mode === "rich"
+                ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                : "bg-background text-muted-foreground border-border hover:bg-muted"
+            }`}
+          >
+            Visual
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("html")}
+            className={`text-xs px-2.5 py-1 rounded-full transition-colors font-medium border ${
+              mode === "html"
+                ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                : "bg-background text-muted-foreground border-border hover:bg-muted"
+            }`}
+          >
+            HTML
+          </button>
+        </div>
+      </div>
+      
+      {mode === "rich" ? (
+        editor ? <EditorContent editor={editor} /> : null
+      ) : (
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="w-full resize-y p-3 outline-none font-mono text-sm"
+          style={{ minHeight }}
+          spellCheck={false}
+        />
+      )}
     </div>
   );
-}
+});
+
+SmartTextEditor.displayName = "SmartTextEditor";

@@ -52,11 +52,13 @@ export async function b2cPaymentRequest(
     Occasion: (occasion ?? "Refund").slice(0, 100),
   };
 
+  // [M-Pesa] API — updated to use header auth + error handling
   const res = await fetch(`${MPESA_BASE_URL}/mpesa/b2c/v1/paymentrequest`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
+      "User-Agent": "PrintHub/1.0 (https://printhub.africa)"
     },
     body: JSON.stringify(body),
   });

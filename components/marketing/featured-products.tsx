@@ -34,7 +34,7 @@ export async function FeaturedProducts() {
     comparePrice: p.comparePrice != null ? Number(p.comparePrice) : null,
     materials: p.materials ?? [],
     tags: p.tags ?? [],
-    createdAt: p.createdAt.toISOString(),
+    createdAt: new Date(p.createdAt).toISOString(),
     imageUrl: getProductImageUrl(p),
   }));
 

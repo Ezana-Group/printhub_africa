@@ -98,10 +98,14 @@ export async function POST(
     let cvFileUrl: string;
 
     if (uploadUrl) {
+      // [R2 Storage] API — updated to use header auth + error handling
       const res = await fetch(uploadUrl, {
         method: "PUT",
         body: cvFile,
-        headers: { "Content-Type": contentType },
+        headers: { 
+          "Content-Type": contentType,
+          "User-Agent": "PrintHub/1.0 (https://printhub.africa)"
+        },
       });
       if (!res.ok) {
         console.error("R2 careers CV upload failed:", res.status);

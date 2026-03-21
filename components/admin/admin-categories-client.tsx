@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { CategoryFormSheet } from "@/components/admin/category-form-sheet";
 import type { CategoryForForm } from "@/components/admin/category-form-sheet";
 import { TableToolbar, type FilterConfig } from "@/components/admin/ui/TableToolbar";
@@ -29,6 +30,7 @@ type CategoryRow = {
   parentId: string | null;
   sortOrder: number;
   isActive: boolean;
+  showInNav: boolean;
   metaTitle: string | null;
   metaDescription: string | null;
   _count: { products: number };
@@ -65,6 +67,7 @@ export function AdminCategoriesClient({
         parentId: cat.parentId,
         sortOrder: cat.sortOrder,
         isActive: cat.isActive,
+        showInNav: cat.showInNav,
         metaTitle: cat.metaTitle,
         metaDescription: cat.metaDescription,
         parent: cat.parent,
@@ -94,6 +97,7 @@ export function AdminCategoriesClient({
       parentId: cat.parentId,
       sortOrder: cat.sortOrder,
       isActive: cat.isActive,
+      showInNav: cat.showInNav,
       metaTitle: cat.metaTitle,
       metaDescription: cat.metaDescription,
       parent: cat.parent,
@@ -119,6 +123,27 @@ export function AdminCategoriesClient({
       body: JSON.stringify({ isActive: checked }),
     });
     if (res.ok) refreshCategories();
+  };
+
+  const handleNavToggle = async (cat: CategoryRow, checked: boolean) => {
+    if (checked) {
+      const currentNavCount = categories.filter((c) => c.showInNav && c.id !== cat.id).length;
+      if (currentNavCount >= 8) {
+        alert("Navigation limit reached. Disable another category first (max 8 in nav).");
+        return;
+      }
+    }
+    const res = await fetch(`/api/admin/categories/${cat.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ showInNav: checked }),
+    });
+    if (res.ok) {
+      refreshCategories();
+    } else {
+      const data = await res.json();
+      alert(data.error || "Failed to toggle navigation status");
+    }
   };
 
   const handleDeleteConfirm = async () => {
@@ -283,6 +308,7 @@ export function AdminCategoriesClient({
                   <th className="text-left p-3 font-medium">Slug</th>
                   <th className="text-left p-3 font-medium w-20">Products</th>
                   <th className="text-left p-3 font-medium w-24">Status</th>
+                  <th className="text-left p-3 font-medium w-24">In Nav</th>
                   <th className="text-left p-3 font-medium w-16">Sort</th>
                   <th className="text-left p-3 font-medium w-28">Actions</th>
                 </tr>
@@ -346,6 +372,14 @@ export function AdminCategoriesClient({
                         aria-label={`Toggle ${cat.name} active`}
                       />
                     </td>
+                    <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                      <Switch
+                        checked={cat.showInNav}
+                        onCheckedChange={(checked) => handleNavToggle(cat, checked)}
+                        aria-label={`Toggle ${cat.name} navigation`}
+                        title="Show this category in the site navigation dropdown"
+                      />
+                    </td>
                     <td className="p-3 text-muted-foreground">{cat.sortOrder}</td>
                     <td className="p-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-2">
@@ -389,7 +423,11 @@ export function AdminCategoriesClient({
                   <div className="flex items-center gap-2 rounded py-1.5 px-2 hover:bg-muted/50">
                     <span className="font-medium">{cat.name}</span>
                     <span className="text-xs text-muted-foreground">({cat._count.products} products)</span>
-                    <div className="ml-auto flex gap-1">
+                    <div className="ml-auto flex gap-1 items-center">
+                      <div className="flex items-center gap-2 mr-3" title="Show in site navigation dropdown">
+                        <Label htmlFor={`nav-${cat.id}`} className="text-xs text-muted-foreground cursor-pointer">In Nav</Label>
+                        <Switch id={`nav-${cat.id}`} checked={cat.showInNav} onCheckedChange={(checked) => handleNavToggle(cat, checked)} className="scale-75" />
+                      </div>
                       <Button variant="ghost" size="sm" className="h-7" onClick={() => handleEdit(cat)}>
                         Edit
                       </Button>
@@ -410,7 +448,11 @@ export function AdminCategoriesClient({
                           <div className="flex items-center gap-2 rounded py-1 px-2 hover:bg-muted/50">
                             <span className="text-sm">{child.name}</span>
                             <span className="text-xs text-muted-foreground">({child._count.products})</span>
-                            <div className="ml-auto flex gap-1">
+                            <div className="ml-auto flex gap-1 items-center">
+                              <div className="flex items-center gap-2 mr-3" title="Show in site navigation dropdown">
+                                <Label htmlFor={`nav-${child.id}`} className="text-xs text-muted-foreground cursor-pointer">In Nav</Label>
+                                <Switch id={`nav-${child.id}`} checked={child.showInNav} onCheckedChange={(checked) => handleNavToggle(child, checked)} className="scale-75" />
+                              </div>
                               <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => handleEdit(child)}>
                                 Edit
                               </Button>

@@ -10,8 +10,10 @@ type DepartmentOption = { id: string; name: string };
 
 export function InviteStaffPageClient({
   departments,
+  currentUserRole,
 }: {
   departments: DepartmentOption[];
+  currentUserRole: "ADMIN" | "SUPER_ADMIN";
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -19,7 +21,7 @@ export function InviteStaffPageClient({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [personalEmail, setPersonalEmail] = useState("");
-  const [role, setRole] = useState<"STAFF" | "ADMIN">("STAFF");
+  const [role, setRole] = useState<"STAFF" | "ADMIN" | "SUPER_ADMIN">("STAFF");
   const [departmentId, setDepartmentId] = useState("");
   const [position, setPosition] = useState("");
   const [phone, setPhone] = useState("");
@@ -109,11 +111,14 @@ export function InviteStaffPageClient({
           <select
             id="invite-role"
             value={role}
-            onChange={(e) => setRole(e.target.value as "STAFF" | "ADMIN")}
+            onChange={(e) => setRole(e.target.value as "STAFF" | "ADMIN" | "SUPER_ADMIN")}
             className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           >
             <option value="STAFF">Staff</option>
             <option value="ADMIN">Admin</option>
+            {currentUserRole === "SUPER_ADMIN" && (
+              <option value="SUPER_ADMIN">Super Admin</option>
+            )}
           </select>
         </div>
         <div>

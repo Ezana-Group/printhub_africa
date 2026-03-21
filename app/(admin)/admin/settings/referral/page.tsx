@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { requireAdminSettings } from "@/lib/auth-guard";
 import { ReferralSettingsForm } from "@/components/admin/settings/referral-settings-form";
 

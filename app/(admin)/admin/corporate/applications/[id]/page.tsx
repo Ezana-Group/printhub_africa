@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { prisma } from "@/lib/prisma";
 import { requireAdminSection } from "@/lib/admin-route-guard";
 import { notFound } from "next/navigation";

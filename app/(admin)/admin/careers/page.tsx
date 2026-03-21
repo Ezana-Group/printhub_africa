@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { requireAdminSection } from "@/lib/admin-route-guard";
 import { prisma } from "@/lib/prisma";
 import { AdminBreadcrumbs } from "@/components/admin/admin-breadcrumbs";
@@ -8,6 +9,8 @@ export default async function AdminCareersPage({
 }: {
   searchParams: Promise<{ tab?: string; jobId?: string }>;
 }) {
+  try {
+
   await requireAdminSection("/admin/careers");
   const { tab, jobId } = await searchParams;
 
@@ -38,4 +41,16 @@ export default async function AdminCareersPage({
       />
     </div>
   );
+
+  } catch (error) {
+    console.error("Data load failed in page.tsx:", error);
+    return (
+      <div className="p-6">
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 text-destructive">
+          <h2 className="font-bold text-lg mb-2">Service Temporarily Unavailable</h2>
+          <p className="text-sm">We are experiencing issues connecting to our database. Please try refreshing the page in a few moments.</p>
+        </div>
+      </div>
+    );
+  }
 }

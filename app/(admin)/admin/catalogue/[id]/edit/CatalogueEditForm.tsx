@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { FileUploader } from "@/components/upload/FileUploader";
-import { Loader2 } from "lucide-react";
+import { Loader2, Box } from "lucide-react";
+import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 
 type TabId = "details" | "photos" | "stl";
 
@@ -83,6 +84,7 @@ interface Category {
   id: string;
   name: string;
   slug: string;
+  parentId?: string | null;
 }
 
 interface Photo {
@@ -115,6 +117,8 @@ interface Item {
   status?: string;
   category?: { id: string; name: string; slug: string };
   photos: Photo[];
+  modelUrl?: string | null;
+  modelStorageKey?: string | null;
 }
 
 interface CatalogueEditFormProps {
@@ -252,8 +256,26 @@ export function CatalogueEditForm({
   const tabs: { id: TabId; label: string }[] = [
     { id: "details", label: "Details" },
     { id: "photos", label: "Photos" },
-    { id: "stl", label: "STL file" },
+    { id: "stl", label: "3D Model (STL)" },
   ];
+
+  const handleDeleteStl = async () => {
+    if (!confirm("Remove the 3D model file from this item?")) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/catalogue/${initialItem.id}/stl`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        await refetchItem();
+        router.refresh();
+      }
+    } catch (err) {
+      console.error("Delete STL error:", err);
+    } finally {
+      setLoading(true);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -308,11 +330,28 @@ export function CatalogueEditForm({
               onChange={(e) => setCategoryId(e.target.value)}
               className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
+              {categories
+                .filter((c) => !c.parentId)
+                .map((parent) => (
+                  <optgroup key={parent.id} label={parent.name}>
+                    <option value={parent.id}>{parent.name}</option>
+                    {categories
+                      .filter((child) => child.parentId === parent.id)
+                      .map((child) => (
+                        <option key={child.id} value={child.id}>
+                          &nbsp;&nbsp;— {child.name}
+                        </option>
+                      ))}
+                  </optgroup>
+                ))}
+              {/* Fallback for categories without parents that are not parents themselves (just in case) */}
+              {categories
+                .filter((c) => c.parentId && !categories.some(p => p.id === c.parentId))
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
             </select>
           </div>
           <div>
@@ -341,13 +380,14 @@ export function CatalogueEditForm({
           </div>
           <div>
             <Label htmlFor="desc">Description</Label>
-            <Textarea
-              id="desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={5}
-              className="mt-1"
-            />
+            <div className="mt-1">
+              <SmartTextEditor
+                value={description}
+                onChange={setDescription}
+                placeholder="Full description (HTML/Rich Text)"
+                minHeight="200px"
+              />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -520,11 +560,77 @@ export function CatalogueEditForm({
       )}
 
       {tab === "stl" && (
-        <div className="rounded-xl border-2 border-dashed border-slate-200 p-8 text-center text-slate-500">
-          <p className="font-medium">STL file upload</p>
-          <p className="text-sm mt-1">
-            Upload and attach an STL file for this catalogue item. (Coming soon — AUDIT-FIX: wire FileUploader ADMIN_CATALOGUE_STL or use import from Printables.)
-          </p>
+        <div className="space-y-6">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-6">
+            <h3 className="text-sm font-semibold text-slate-900 mb-1">3D Model File</h3>
+            <p className="text-xs text-slate-500 mb-4">
+              Attach an STL, OBJ, or 3MF file. This file is used for volume/weight calculations and can be provided to customers.
+            </p>
+
+            {item.modelUrl || item.modelStorageKey ? (
+              <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
+                    <Box className="w-5 h-5 text-[#FF4D00]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">
+                      3D Model Attached
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {item.modelStorageKey?.split("/").pop() || "Attached file"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {item.modelUrl && (
+                    <Button variant="ghost" size="sm" asChild>
+                      <a href={item.modelUrl} target="_blank" rel="noopener noreferrer">
+                        Download
+                      </a>
+                    </Button>
+                  )}
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={handleDeleteStl}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <FileUploader
+                context="ADMIN_CATALOGUE_STL"
+                accept={[".stl", ".obj", ".3mf", ".step", ".stp", "application/octet-stream"]}
+                maxSizeMB={100}
+                maxFiles={1}
+                hint="STL, OBJ, 3MF, STEP · Max 100MB"
+                onUploadComplete={async (files) => {
+                  const fileId = files[0]?.uploadId;
+                  if (!fileId) return;
+                  
+                  setLoading(true);
+                  try {
+                    const res = await fetch(`/api/admin/catalogue/${initialItem.id}/stl`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ fileId }),
+                    });
+                    if (res.ok) {
+                      await refetchItem();
+                      router.refresh();
+                    }
+                  } catch (err) {
+                    console.error("Upload STL error:", err);
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+              />
+            )}
+          </div>
         </div>
       )}
     </div>

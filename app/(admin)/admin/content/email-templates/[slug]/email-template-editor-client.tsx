@@ -4,7 +4,6 @@ import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Eye, Send, Loader2, Search, GripVertical } from "lucide-react";
 import {
   EMAIL_PLACEHOLDER_CATEGORIES,
@@ -12,6 +11,7 @@ import {
   type PlaceholderCategory,
   type PlaceholderItem,
 } from "@/lib/email-placeholders";
+import { SmartTextEditor, type SmartTextEditorHandle } from "@/components/admin/smart-text-editor";
 
 function insertAtCursor(
   el: HTMLInputElement | HTMLTextAreaElement | null,
@@ -55,14 +55,14 @@ export function EmailTemplateEditorClient({
   const [placeholderCategory, setPlaceholderCategory] = useState<PlaceholderCategory | "all">("all");
 
   const subjectRef = useRef<HTMLInputElement>(null);
-  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const bodyRef = useRef<SmartTextEditorHandle>(null);
 
   const insertIntoSubject = useCallback(
     (text: string) => insertAtCursor(subjectRef.current, text, setSubject),
     []
   );
   const insertIntoBody = useCallback(
-    (text: string) => insertAtCursor(bodyRef.current, text, setBodyHtml),
+    (text: string) => bodyRef.current?.insertText(text),
     []
   );
 
@@ -162,21 +162,13 @@ export function EmailTemplateEditorClient({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="bodyHtml">Body (HTML)</Label>
-            <Textarea
+            <Label htmlFor="bodyHtml">Body (Visual & HTML)</Label>
+            <SmartTextEditor
               ref={bodyRef}
-              id="bodyHtml"
               value={bodyHtml}
-              onChange={(e) => setBodyHtml(e.target.value)}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => {
-                e.preventDefault();
-                const text = e.dataTransfer.getData("text/plain");
-                if (text && /^\{\{\w+\}\}$/.test(text)) insertIntoBody(text);
-              }}
-              placeholder="<div>...</div>"
-              rows={18}
-              className="font-mono text-sm resize-y"
+              onChange={setBodyHtml}
+              placeholder="Write your email content here. Use {{placeholders}} for dynamic data."
+              minHeight="400px"
             />
           </div>
           <div className="flex flex-wrap items-center gap-3">

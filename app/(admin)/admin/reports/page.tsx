@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { Card, CardContent } from "@/components/ui/card";
 import { LFProfitabilityCard } from "@/components/admin/lf-profitability-card";
 import { requireAdminSection } from "@/lib/admin-route-guard";

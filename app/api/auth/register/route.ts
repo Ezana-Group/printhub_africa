@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       return NextResponse.json(
-        { error: "An account with this email already exists." },
+        { error: "You already have an account" },
         { status: 400 }
       );
     }

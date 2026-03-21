@@ -29,6 +29,11 @@ export type BusinessPublic = {
   socialLinkedIn: string | null;
   socialTikTok: string | null;
   socialYouTube: string | null;
+  showStatsOrders: boolean;
+  showStatsClients: boolean;
+  showStatsExperience: boolean;
+  showStatsMachines: boolean;
+  showStatsStaff: boolean;
 };
 
 const DEFAULTS: BusinessPublic = {
@@ -60,6 +65,11 @@ const DEFAULTS: BusinessPublic = {
   socialLinkedIn: null,
   socialTikTok: null,
   socialYouTube: null,
+  showStatsOrders: false,
+  showStatsClients: false,
+  showStatsExperience: false,
+  showStatsMachines: false,
+  showStatsStaff: false,
 };
 
 export async function getBusinessPublic(): Promise<BusinessPublic> {
@@ -96,5 +106,10 @@ export async function getBusinessPublic(): Promise<BusinessPublic> {
     socialLinkedIn: row.socialLinkedIn ?? null,
     socialTikTok: row.socialTikTok ?? null,
     socialYouTube: row.socialYouTube ?? null,
+    showStatsOrders: row.showStatsOrders ?? false,
+    showStatsClients: row.showStatsClients ?? false,
+    showStatsExperience: row.showStatsExperience ?? false,
+    showStatsMachines: row.showStatsMachines ?? false,
+    showStatsStaff: row.showStatsStaff ?? false,
   };
 }

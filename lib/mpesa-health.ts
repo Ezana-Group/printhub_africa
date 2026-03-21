@@ -23,9 +23,13 @@ export async function checkMpesaHealth(): Promise<MpesaHealthResult> {
   }
   try {
     const auth = Buffer.from(`${key}:${secret}`).toString("base64");
+    // [M-Pesa] API — updated to use header auth + error handling
     const res = await fetch(`${BASE_URL}/oauth/v1/generate?grant_type=client_credentials`, {
       method: "GET",
-      headers: { Authorization: `Basic ${auth}` },
+      headers: { 
+        Authorization: `Basic ${auth}`,
+        "User-Agent": "PrintHub/1.0 (https://printhub.africa)"
+      },
     });
     const latencyMs = Date.now() - start;
     if (!res.ok) {

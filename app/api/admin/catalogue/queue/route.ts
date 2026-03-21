@@ -18,7 +18,7 @@ export async function GET() {
       },
     }),
     prisma.catalogueImportQueue.findMany({
-      where: { status: "PENDING" },
+      where: { status: "PENDING_REVIEW" },
       orderBy: { createdAt: "desc" },
       take: 50,
     }),

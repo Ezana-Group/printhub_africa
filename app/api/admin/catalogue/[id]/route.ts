@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/admin-api-guard";
 import { z } from "zod";
 import { CatalogueLicense } from "@prisma/client";
+import { revalidateTag } from "next/cache";
 
 export async function GET(
   _req: NextRequest,
@@ -81,7 +82,57 @@ export async function PATCH(
     const item = await prisma.catalogueItem.update({
       where: { id },
       data: update as Parameters<typeof prisma.catalogueItem.update>[0]["data"],
+      include: { photos: { where: { isPrimary: true }, take: 1 } }
     });
+
+    // Sync to Product if LIVE
+    if (item.status === "LIVE") {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let productId = (item as any).productId;
+      if (!productId) {
+        // Create product if it doesn't exist but is LIVE
+        const product = await prisma.product.create({
+          data: {
+            name: item.name,
+            slug: item.slug,
+            description: item.description,
+            shortDescription: item.shortDescription,
+            categoryId: item.categoryId,
+            productType: "READYMADE_3D",
+            images: item.photos.length > 0 ? item.photos.map(p => p.url) : [],
+            basePrice: item.priceOverrideKes ?? item.basePriceKes ?? 0,
+            comparePrice: item.priceOverrideKes && item.basePriceKes ? item.basePriceKes : null,
+            stock: 0,
+            isActive: true,
+            tags: item.tags,
+          }
+        });
+        productId = product.id;
+        await prisma.catalogueItem.update({
+          where: { id: item.id },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          data: { productId: productId } as any
+        });
+      }
+
+      // Update product details
+      await prisma.product.update({
+        where: { id: productId },
+        data: {
+          name: item.name,
+          description: item.description,
+          shortDescription: item.shortDescription,
+          categoryId: item.categoryId,
+          basePrice: item.priceOverrideKes ?? item.basePriceKes ?? 0,
+          comparePrice: item.priceOverrideKes && item.basePriceKes ? item.basePriceKes : null,
+          isActive: true,
+          images: item.photos.map(p => p.url),
+          tags: item.tags,
+        }
+      });
+      revalidateTag("products");
+    }
+
     return NextResponse.json(item);
   } catch (e) {
     if ((e as { code?: string })?.code === "P2025") return NextResponse.json({ error: "Not found" }, { status: 404 });

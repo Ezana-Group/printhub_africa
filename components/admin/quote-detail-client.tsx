@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 
 const PIPELINE = ["new", "reviewing", "quoted", "accepted", "in_production", "completed"] as const;
 const PIPELINE_LABELS: Record<string, string> = {
@@ -421,12 +421,14 @@ export function QuoteDetailClient({
           </div>
           <div>
             <Label>Price breakdown (optional)</Label>
-            <Textarea
-              className="mt-1 min-h-[80px]"
-              value={breakdown}
-              onChange={(e) => setBreakdown(e.target.value)}
-              placeholder="Itemised breakdown for customer"
-            />
+            <div className="mt-1">
+              <SmartTextEditor
+                value={breakdown}
+                onChange={setBreakdown}
+                placeholder="Itemised breakdown for customer"
+                minHeight="150px"
+              />
+            </div>
           </div>
           <div>
             <Label>Validity period (days)</Label>
@@ -470,12 +472,14 @@ export function QuoteDetailClient({
           <p className="text-xs text-muted-foreground">Private, staff only. Not visible to customer.</p>
         </CardHeader>
         <CardContent className="space-y-2">
-          <Textarea
-            className="min-h-[100px]"
-            value={internalNote}
-            onChange={(e) => setInternalNote(e.target.value)}
-            placeholder="Private notes (staff only)"
-          />
+          <div className="mt-1">
+            <SmartTextEditor
+              value={internalNote}
+              onChange={setInternalNote}
+              placeholder="Private notes (staff only)"
+              minHeight="150px"
+            />
+          </div>
           <Button size="sm" variant="outline" onClick={handleSaveNote} disabled={noteSaving}>
             {noteSaving ? "Saving…" : "Save note"}
           </Button>

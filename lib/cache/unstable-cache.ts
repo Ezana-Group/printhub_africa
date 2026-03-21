@@ -31,6 +31,11 @@ const DEFAULTS: BusinessPublic = {
   socialLinkedIn: null,
   socialTikTok: null,
   socialYouTube: null,
+  showStatsOrders: false,
+  showStatsClients: false,
+  showStatsExperience: false,
+  showStatsMachines: false,
+  showStatsStaff: false,
 };
 
 /** Metadata-only cache for root layout (favicon, title, OG). Revalidate with tag 'business'. */
@@ -40,22 +45,43 @@ export type BusinessMetadata = {
   businessName: string;
   tagline: string | null;
   logo: string | null;
+  seo?: {
+    siteName: string | null;
+    titleTemplate: string | null;
+    defaultTitle: string | null;
+    defaultDescription: string | null;
+    ogImageUrl: string | null;
+  } | null;
 };
 
 export const getCachedBusinessMetadata = unstable_cache(
-  async (): Promise<BusinessMetadata> => {
-    const row = await prisma.businessSettings.findUnique({
-      where: { id: "default" },
-      select: { favicon: true, updatedAt: true, businessName: true, tagline: true, logo: true },
-    }).catch(() => null);
+  async () => {
+    const [row, seo] = await Promise.all([
+      prisma.businessSettings.findUnique({
+        where: { id: "default" },
+        select: { favicon: true, updatedAt: true, businessName: true, tagline: true, logo: true },
+      }),
+      prisma.seoSettings.findUnique({
+        where: { id: "default" },
+      }),
+    ]).catch(() => [null, null]);
+
     if (!row)
-      return { favicon: null, updatedAt: null, businessName: "PrintHub", tagline: null, logo: null };
+      return { favicon: null, updatedAt: null, businessName: "PrintHub", tagline: null, logo: null, seo: null };
+
     return {
       favicon: row.favicon ?? null,
       updatedAt: row.updatedAt,
       businessName: row.businessName ?? "PrintHub",
       tagline: row.tagline ?? null,
       logo: row.logo ?? null,
+      seo: seo ? {
+        siteName: seo.siteName,
+        titleTemplate: seo.titleTemplate,
+        defaultTitle: seo.defaultTitle,
+        defaultDescription: seo.defaultDescription,
+        ogImageUrl: seo.ogImageUrl,
+      } : null,
     };
   },
   ["business-metadata"],
@@ -65,9 +91,15 @@ export const getCachedBusinessMetadata = unstable_cache(
 /** Cross-request cache for business settings. Call revalidateTag('homepage') when business settings change. */
 export const getCachedBusinessPublic = unstable_cache(
   async (): Promise<BusinessPublic> => {
-    const row = await prisma.businessSettings.findUnique({
-      where: { id: "default" },
-    }).catch(() => null);
+    let row;
+    try {
+      row = await prisma.businessSettings.findUnique({
+        where: { id: "default" },
+      });
+    } catch (e) {
+      console.error("getCachedBusinessPublic error:", e);
+      return DEFAULTS;
+    }
     if (!row) return DEFAULTS;
     return {
       businessName: row.businessName ?? DEFAULTS.businessName,
@@ -98,6 +130,11 @@ export const getCachedBusinessPublic = unstable_cache(
       socialLinkedIn: row.socialLinkedIn ?? null,
       socialTikTok: row.socialTikTok ?? null,
       socialYouTube: row.socialYouTube ?? null,
+      showStatsOrders: row.showStatsOrders ?? false,
+      showStatsClients: row.showStatsClients ?? false,
+      showStatsExperience: row.showStatsExperience ?? false,
+      showStatsMachines: row.showStatsMachines ?? false,
+      showStatsStaff: row.showStatsStaff ?? false,
     };
   },
   ["business-public"],

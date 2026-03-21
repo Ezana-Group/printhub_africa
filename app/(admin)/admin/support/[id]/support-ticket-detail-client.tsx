@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 
 type Message = {
   id: string;
@@ -98,13 +98,14 @@ export function SupportTicketDetailClient({ ticket: initial }: { ticket: Ticket 
         <div className="mt-6 rounded-xl border p-6 bg-muted/30">
           <h3 className="font-semibold mb-3">Reply</h3>
           {error && <p className="text-sm text-red-600 mb-2">{error}</p>}
-          <Textarea
-            value={reply}
-            onChange={(e) => setReply(e.target.value)}
-            placeholder="Type your reply..."
-            rows={4}
-            className="mb-3"
-          />
+          <div className="mt-1">
+            <SmartTextEditor
+              value={reply}
+              onChange={setReply}
+              placeholder="Type your reply here..."
+              minHeight="150px"
+            />
+          </div>
           <div className="flex flex-wrap items-center gap-4 mb-3">
             <label className="flex items-center gap-2 text-sm">
               <input

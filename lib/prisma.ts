@@ -1,3 +1,4 @@
+import { Pool } from "pg";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
@@ -8,7 +9,16 @@ function createPrismaClient() {
   if (!connectionString) {
     throw new Error("DATABASE_URL is not set. Add it to .env or .env.local.");
   }
-  const adapter = new PrismaPg({ connectionString });
+  
+  const pool = new Pool({ 
+    connectionString,
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
+  });
+
+  const adapter = new PrismaPg(pool);
+  
   return new PrismaClient({
     adapter,
     log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
@@ -17,6 +27,5 @@ function createPrismaClient() {
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-}
+// Always use global for singleton to avoid connection exhaustion during HMR or in production re-renders
+globalForPrisma.prisma = prisma;

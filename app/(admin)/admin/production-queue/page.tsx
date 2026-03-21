@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import Link from "next/link";
 import { requireAdminSection } from "@/lib/admin-route-guard";
 import { ProductionKanbanClient } from "./production-kanban-client";

@@ -7,6 +7,7 @@ import { AddToCartButton } from "./add-to-cart-button";
 import { ProductImageGallery } from "@/components/shop/product-image-gallery";
 import { ProductReviewsSection } from "./reviews-section";
 import { formatPrice } from "@/lib/utils";
+import { LicenceBadge } from "@/components/catalogue/LicenceBadge";
 
 const DEFAULT_WHATSAPP = "254700000000";
 
@@ -50,14 +51,16 @@ export default async function ProductPage({ params }: Props) {
   const business = await getBusinessPublic();
   const whatsappDigits = (business.whatsapp ?? "").replace(/\D/g, "") || DEFAULT_WHATSAPP;
   const waHref = (text: string) => `https://wa.me/${whatsappDigits}?text=${encodeURIComponent(text)}`;
-  let product: Awaited<ReturnType<typeof prisma.product.findFirst>> | null = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let product: any = null;
   try {
     product = await prisma.product.findFirst({
       where: { slug, isActive: true },
-      include: {
+        include: {
         category: { select: { name: true, slug: true } },
         productImages: { orderBy: { sortOrder: "asc" } },
         variants: true,
+        externalModel: true,
       },
     });
   } catch {
@@ -65,17 +68,16 @@ export default async function ProductPage({ params }: Props) {
   }
   if (!product) notFound();
 
-  const productWithRelations = product as typeof product & {
-    category?: { name: string; slug: string };
-    productImages?: { id: string; url: string; altText: string | null; isPrimary: boolean; sortOrder: number }[];
-    variants: { id: string; name: string; price: { toNumber?: () => number }; stock: number }[];
-  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const productWithRelations = product as any;
   const dbImages = productWithRelations.productImages ?? [];
-  const galleryImages =
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const galleryImages: any[] =
     dbImages.length > 0
-      ? dbImages.map((img) => ({ id: img.id, url: img.url, altText: img.altText, isPrimary: img.isPrimary }))
-      : (product.images ?? []).map((url, i) => ({ id: undefined, url, altText: null as string | null, isPrimary: i === 0 }));
-  const primaryImage = product.images?.[0] ?? galleryImages.find((i) => i.isPrimary)?.url ?? galleryImages[0]?.url;
+      ? dbImages.map((img: any) => ({ id: img.id, url: img.url, altText: img.altText, isPrimary: img.isPrimary }))
+      : (product.images ?? []).map((url: string, i: number) => ({ id: undefined, url, altText: null as string | null, isPrimary: i === 0 }));
+  const primaryImage = product.images?.[0] ?? galleryImages.find((i: any) => i.isPrimary)?.url ?? galleryImages[0]?.url;
+  /* eslint-enable @typescript-eslint/no-explicit-any */
   const basePrice = Number(product.basePrice);
   const comparePrice = product.comparePrice != null ? Number(product.comparePrice) : null;
 
@@ -123,7 +125,8 @@ export default async function ProductPage({ params }: Props) {
             slug={product.slug}
             image={primaryImage ?? undefined}
             basePrice={basePrice}
-            variants={productWithRelations.variants.map((v) => ({ id: v.id, name: v.name, price: Number(v.price), stock: v.stock }))}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            variants={productWithRelations.variants.map((v: any) => ({ id: v.id, name: v.name, price: Number(v.price), stock: v.stock }))}
             stock={product.stock}
             minOrderQty={product.minOrderQty}
             maxOrderQty={product.maxOrderQty ?? undefined}
@@ -146,6 +149,25 @@ export default async function ProductPage({ params }: Props) {
         <div className="mt-12 border-t border-slate-200 pt-12">
           <h2 className="font-display text-xl font-bold text-slate-900">Description</h2>
           <p className="mt-4 text-slate-700 whitespace-pre-wrap">{product.description}</p>
+          
+          {productWithRelations.externalModel && (
+            <div className="mt-8 p-4 bg-slate-50 rounded-lg border border-slate-100 flex flex-wrap items-center justify-between gap-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Original design by {productWithRelations.externalModel.designerName}</p>
+                <div className="flex gap-2">
+                  <LicenceBadge licence={productWithRelations.externalModel.licenceType} size="sm" />
+                </div>
+              </div>
+              <div className="text-xs text-slate-500">
+                {productWithRelations.externalModel.designerUrl && (
+                  <a href={productWithRelations.externalModel.designerUrl} target="_blank" className="text-blue-600 hover:underline block mb-1">
+                    View Designer Profile
+                  </a>
+                )}
+                <span>Printed by PrintHub Africa</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

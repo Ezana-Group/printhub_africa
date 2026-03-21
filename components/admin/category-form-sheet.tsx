@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 import { CategoryImageField } from "@/components/admin/category-image-field";
 
 export type CategoryForForm = {
@@ -25,6 +26,7 @@ export type CategoryForForm = {
   parentId: string | null;
   sortOrder: number;
   isActive: boolean;
+  showInNav: boolean;
   metaTitle: string | null;
   metaDescription: string | null;
   parent?: { id: string; name: string; slug: string } | null;
@@ -62,6 +64,7 @@ export function CategoryFormSheet({
   const [parentId, setParentId] = useState<string | "">("");
   const [sortOrder, setSortOrder] = useState(0);
   const [isActive, setIsActive] = useState(true);
+  const [showInNav, setShowInNav] = useState(false);
   const [image, setImage] = useState("");
   const [metaTitle, setMetaTitle] = useState("");
   const [metaDescription, setMetaDescription] = useState("");
@@ -74,6 +77,7 @@ export function CategoryFormSheet({
       setParentId(category.parentId ?? "");
       setSortOrder(category.sortOrder);
       setIsActive(category.isActive);
+      setShowInNav(category.showInNav);
       setImage(category.image ?? "");
       setMetaTitle(category.metaTitle ?? "");
       setMetaDescription(category.metaDescription ?? "");
@@ -84,6 +88,7 @@ export function CategoryFormSheet({
       setParentId("");
       setSortOrder(0);
       setIsActive(true);
+      setShowInNav(false);
       setImage("");
       setMetaTitle("");
       setMetaDescription("");
@@ -107,6 +112,7 @@ export function CategoryFormSheet({
         image: image || null,
         sortOrder,
         isActive,
+        showInNav,
         metaTitle: metaTitle || null,
         metaDescription: metaDescription || null,
       };
@@ -200,13 +206,14 @@ export function CategoryFormSheet({
 
           <div className="space-y-2">
             <Label htmlFor="cat-desc">Description</Label>
-            <Textarea
-              id="cat-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-              placeholder="Short description for the shop card"
-            />
+            <div className="mt-1">
+              <SmartTextEditor
+                value={description}
+                onChange={setDescription}
+                placeholder="Short description for the shop card"
+                minHeight="100px"
+              />
+            </div>
           </div>
 
           <div className="flex gap-4">
@@ -231,6 +238,22 @@ export function CategoryFormSheet({
                 Active (visible on shop)
               </Label>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="cat-nav"
+                checked={showInNav}
+                onCheckedChange={setShowInNav}
+              />
+              <Label htmlFor="cat-nav" className="cursor-pointer font-medium">
+                Show in Navigation
+              </Label>
+            </div>
+            <p className="text-xs text-muted-foreground ml-[52px]">
+              When enabled, this category appears in the Shop dropdown menu in the main navigation. (Max 8)
+            </p>
           </div>
 
           <div className="space-y-2">
