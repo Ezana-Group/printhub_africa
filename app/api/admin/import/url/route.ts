@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { CatalogueSourceType, CatalogueLicense } from "@prisma/client";
 import { requireAdminApi } from "@/lib/admin-api-guard";
-import { parseUrlImport, downloadAndUploadImage, detectPlatform } from "@/lib/import-utils";
+import { parseUrlImport, downloadAndUploadImage } from "@/lib/import-utils";
 
 export async function POST(req: Request) {
   const auth = await requireAdminApi({ permission: "catalogue_import" });

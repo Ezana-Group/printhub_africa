@@ -16,7 +16,10 @@ export async function POST(
   const userId = session?.user?.id ?? null;
   const { id } = await ctx.params;
 
-  const item = await prisma.catalogueItem.findUnique({ where: { id } });
+  const item = await prisma.catalogueItem.findUnique({
+    where: { id },
+    include: { photos: { where: { isPrimary: true }, take: 1 } }
+  });
   if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (item.status !== CatalogueStatus.PENDING_REVIEW) {
     return NextResponse.json(
@@ -34,13 +37,46 @@ export async function POST(
     rejectionReason: null,
   };
 
+  // 1. Create or Find Product
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let productId = (item as any).productId;
+  if (!productId) {
+    const slug = item.slug;
+    const product = await prisma.product.create({
+      data: {
+        name: item.name,
+        slug: slug,
+        description: item.description,
+        shortDescription: item.shortDescription,
+        categoryId: item.categoryId,
+        productType: "READYMADE_3D",
+        images: item.photos.length > 0 ? item.photos.map(p => p.url) : [],
+        basePrice: item.priceOverrideKes ?? item.basePriceKes ?? 0,
+        comparePrice: item.priceOverrideKes && item.basePriceKes ? item.basePriceKes : null,
+        stock: 0,
+        isActive: true,
+        tags: item.tags,
+      }
+    });
+    productId = product.id;
+    data.productId = productId;
+  } else {
+    // Ensure product is active
+    await prisma.product.update({
+      where: { id: productId },
+      data: { isActive: true }
+    });
+  }
+
   const itemAfter = await prisma.catalogueItem.update({
     where: { id },
     data,
     select: { slug: true },
   });
   revalidateTag("catalogue");
+  revalidateTag("products"); // Revalidate products for the shop
   revalidatePath("/catalogue");
+  revalidatePath("/shop"); // Revalidate shop
   if (itemAfter.slug) revalidatePath(`/catalogue/${itemAfter.slug}`);
-  return NextResponse.json({ success: true, status: "LIVE" });
+  return NextResponse.json({ success: true, status: "LIVE", productId });
 }

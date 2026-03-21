@@ -84,6 +84,7 @@ interface Category {
   id: string;
   name: string;
   slug: string;
+  parentId?: string | null;
 }
 
 interface Photo {
@@ -329,11 +330,28 @@ export function CatalogueEditForm({
               onChange={(e) => setCategoryId(e.target.value)}
               className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
+              {categories
+                .filter((c) => !c.parentId)
+                .map((parent) => (
+                  <optgroup key={parent.id} label={parent.name}>
+                    <option value={parent.id}>{parent.name}</option>
+                    {categories
+                      .filter((child) => child.parentId === parent.id)
+                      .map((child) => (
+                        <option key={child.id} value={child.id}>
+                          &nbsp;&nbsp;— {child.name}
+                        </option>
+                      ))}
+                  </optgroup>
+                ))}
+              {/* Fallback for categories without parents that are not parents themselves (just in case) */}
+              {categories
+                .filter((c) => c.parentId && !categories.some(p => p.id === c.parentId))
+                .map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
             </select>
           </div>
           <div>

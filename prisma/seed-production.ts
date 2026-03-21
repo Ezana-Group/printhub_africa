@@ -51,6 +51,7 @@ async function main() {
 
     if (!existingPage) {
       console.log(`Creating legal page: ${page.slug}`)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const content = getLegalContent(page.slug as any)
       await prisma.legalPage.create({
         data: {

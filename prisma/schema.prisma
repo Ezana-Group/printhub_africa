@@ -190,6 +190,7 @@ model Product {
   materialType       String?
   availability       ProductAvailability     @default(IN_STOCK)
   externalModel      ExternalModel?
+  catalogueItem      CatalogueItem?
   inventory          Inventory[]
   orderItems         OrderItem[]
   category           Category                @relation(fields: [categoryId], references: [id])
@@ -1081,7 +1082,7 @@ model CorporateInvoice {
   notes          String?
   createdAt      DateTime               @default(now())
   updatedAt      DateTime               @updatedAt
-  corporate      CorporateAccount       @relation(fields: [corporateId], references: [id])
+  corporate      CorporateAccount @relation(fields: [corporateId], references: [id])
   orders         Order[]
 
   @@index([corporateId])
@@ -1851,6 +1852,8 @@ model CatalogueItem {
   rejectedById       String?
   modelStorageKey    String?
   modelUrl           String?
+  productId          String?                 @unique
+  product            Product?                @relation(fields: [productId], references: [id])
   approvedBy         User?                   @relation("CatalogueApprovedBy", fields: [approvedById], references: [id])
   archivedBy         User?                   @relation("CatalogueArchivedBy", fields: [archivedById], references: [id])
   category           Category                @relation(fields: [categoryId], references: [id], onDelete: Cascade)

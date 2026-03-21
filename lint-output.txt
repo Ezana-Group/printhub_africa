@@ -1,0 +1,36 @@
+
+> printhub@0.1.0 lint
+> eslint . --ext .js,.jsx,.ts,.tsx
+
+
+/Users/mose/Printhub_Africa_ProdV1.3/app/(admin)/admin/catalogue/[id]/edit/page.tsx
+  34:9  warning  'productId' is assigned a value but never used        @typescript-eslint/no-unused-vars
+  34:9  error    'productId' is never reassigned. Use 'const' instead  prefer-const
+
+/Users/mose/Printhub_Africa_ProdV1.3/app/(admin)/admin/catalogue/approval-queue/admin-catalogue-approval-queue-client.tsx
+    9:3   warning  'Filter' is defined but never used       @typescript-eslint/no-unused-vars
+   19:3   warning  'Loader2' is defined but never used      @typescript-eslint/no-unused-vars
+   20:3   warning  'AlertCircle' is defined but never used  @typescript-eslint/no-unused-vars
+   22:3   warning  'Calendar' is defined but never used     @typescript-eslint/no-unused-vars
+   24:3   warning  'Download' is defined but never used     @typescript-eslint/no-unused-vars
+  137:14  warning  'err' is defined but never used          @typescript-eslint/no-unused-vars
+  158:14  warning  'err' is defined but never used          @typescript-eslint/no-unused-vars
+  192:14  warning  'err' is defined but never used          @typescript-eslint/no-unused-vars
+
+/Users/mose/Printhub_Africa_ProdV1.3/app/(admin)/admin/catalogue/import/[id]/review/page.tsx
+  201:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  217:19  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/mose/Printhub_Africa_ProdV1.3/app/(admin)/admin/catalogue/import/page.tsx
+  482:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  587:41  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/mose/Printhub_Africa_ProdV1.3/prisma/seed-production.ts
+  54:52  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/mose/Printhub_Africa_ProdV1.3/scripts/backfill-catalogue-products.ts
+  46:9  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+
+✖ 16 problems (3 errors, 13 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+
