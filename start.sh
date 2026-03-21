@@ -1,9 +1,8 @@
 #!/bin/sh
-
-# PrintHub Startup Script
-# Run migrations before starting the application
+set -e
 echo "Running database migrations..."
-npx prisma migrate deploy --schema prisma/schema.prisma
-
+npx prisma migrate deploy
+echo "Running production seed..."
+npx tsx prisma/seed-production.ts
 echo "Starting Next.js server..."
 node server.js
