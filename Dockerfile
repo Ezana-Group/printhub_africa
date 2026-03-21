@@ -33,11 +33,17 @@ RUN adduser --system --uid 1001 nextjs
 
 # Copy built app (standalone includes server.js and traced deps)
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/start.sh ./start.sh
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Make start script executable
+USER root
+RUN chmod +x ./start.sh
 USER nextjs
+
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-CMD ["node", "server.js"]
+CMD ["./start.sh"]
