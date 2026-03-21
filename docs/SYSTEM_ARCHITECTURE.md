@@ -3,7 +3,7 @@
 **Product:** PrintHub — Large-format printing & 3D printing for Nairobi and Kenya  
 **Company:** Ezana Group  
 **Repository:** Printhub_Africa_ProdV1  
-**Last updated:** March 2026
+**Last updated:** March 21, 2026
 
 ---
 
@@ -149,7 +149,8 @@ Printhub_Africa_ProdV1/
 │   │       ├── products/, categories/, reviews/
 │   │       ├── customers/
 │   │       ├── finance/, invoices/
-│   │       ├── inventory/, hardware/printers/
+│   │       ├── inventory/         # Stock, substrates, materials, consumables
+│   │       ├── inventory/hardware # Printers assets, maintenance
 │   │       ├── catalogue/, coupons/
 │   │       ├── staff/, departments/, corporate-accounts/, corporate/applications/
 │   │       ├── careers/, support/, uploads/
@@ -168,10 +169,11 @@ Printhub_Africa_ProdV1/
 │   ├── auth.ts             # NextAuth config
 │   ├── email.ts, sms.ts
 │   ├── s3.ts, r2.ts
-│   ├── mpesa.ts, pesapal.ts, stripe
-│   ├── cart-calculations.ts, order-utils.ts, tracking.ts
-│   ├── admin-permissions.ts, admin-api-guard.ts, admin-route-guard.ts
-│   ├── twofa-token.ts, audit.ts, constants.ts
+│   ├── mpesa.ts, pesapal.ts, stripe/
+│   ├── cart-calculations.ts, order-utils.ts, tracking.ts, production-queue.ts
+│   ├── admin-permissions.ts, admin-api-guard.ts, admin-route-guard.ts, admin-utils.ts
+│   ├── twofa-token.ts, audit.ts, constants.ts, db-guard.ts, role-permissions.ts
+│   ├── invoice-pdf.ts, quote-pdf.ts, virustotal.ts, backup-utils.ts
 │   └── business-public.ts
 ├── hooks/                  # e.g. useLFRates
 ├── store/                  # Zustand: checkout-store, cart
@@ -320,7 +322,7 @@ erDiagram
 
 | Model | Description | Key Relations |
 |-------|-------------|---------------|
-| **UploadedFile** | userId?, quoteId?, orderId?, storageKey, bucket, **uploadContext** (CUSTOMER_3D_PRINT, CUSTOMER_QUOTE, ADMIN_PRODUCT_IMAGE, etc.), fileType, status (UPLOADED→APPROVED/REJECTED), virusScanStatus. | → User?, Quote?, Order? (via OrderItem) |
+| **UploadedFile** | userId?, quoteId?, orderId?, storageKey, bucket, **uploadContext** (CUSTOMER_3D_PRINT, CUSTOMER_QUOTE, ADMIN_CATALOGUE_STL, ADMIN_CATALOGUE_PHOTO, ADMIN_PRODUCT_IMAGE, etc.), fileType, status (UPLOADED→APPROVED/REJECTED), virusScanStatus. | → User?, Quote?, Order? (via OrderItem) |
 | **PrintQuote** | Legacy 3D/large-format quote (links to uploads). | → User |
 
 ### 4.9 Corporate (B2B)
@@ -400,6 +402,10 @@ All API routes live under `app/api/`. Protection is enforced by **middleware** a
 | **/api/orders/** | POST create, GET list; [id]: confirmation, invoice, payment-status | Session for list; order access for [id] |
 | **/api/payments/** | mpesa (stkpush, callback, b2c-callback, status), pesapal (initiate, callback), flutterwave (initiate), stripe (create-intent), manual (POST), pickup (confirm) | Mixed (callbacks public with validation) |
 | **/api/admin/** | Full admin: orders, quotes, deliveries, production-queue, refunds, products, categories, reviews, customers, finance, inventory, catalogue, coupons, staff, corporate, careers, support, content, settings, reports | STAFF/ADMIN/SUPER_ADMIN + permission checks |
+| **/api/admin/catalogue/[id]/stl** | POST/DELETE STL files for catalogue items | catalogue_edit |
+| **/api/admin/inventory/hardware** | Assets, maintenance, hardware items for calculator | inventory_edit |
+| **/api/admin/3d-consumables** | Filament, resin, and other 3D printer supplies | inventory_edit |
+| **/api/admin/machines** | Machine types and hourly rates for 3D printing | settings_manage |
 | **/api/quotes/** | GET/POST quotes, upload, [id] GET/PATCH, [id]/pdf | Session for create/list; access by resource |
 | **/api/quote/** | submit (contact-style), materials | Public / session |
 | **/api/upload/** | presign (POST), confirm (POST), [id]/download | Session / context |
@@ -484,15 +490,19 @@ All API routes live under `app/api/`. Protection is enforced by **middleware** a
 4. **Recovery:** Payment link (admin) or `/pay/[orderId]` for retry (e.g. resend STK).
 5. **Fulfilment:** Order status → PROCESSING, PRINTING, READY_FOR_COLLECTION, SHIPPED, DELIVERED; ProductionQueue for items; Delivery for shipping; OrderTrackingEvent and optional email (lib/tracking).
 
-### 7.2 Quote Flow (Unified)
+### 7.3 Quote Flow (Unified)
 
 1. **Submit:** POST `/api/quotes` (type, customer info, specifications, reference files) or POST `/api/quote/submit` (contact-style).
 2. **Uploads:** POST `/api/quotes/upload` (R2 presign/upload); files linked to quote.
 3. **Admin:** Assign staff, set quotedAmount, quoteBreakdown, quotePdfUrl; send PDF; status quoted → accepted/rejected.
-4. **Accept:** Customer accepts → order creation/link; status in_production → completed.
-5. **Cancel:** QuoteCancellation; closedBy (CUSTOMER/STAFF/SYSTEM).
 
-### 7.3 Production
+### 7.4 Catalogue & POD
+1. **Import:** Models can be imported via URL or API (Printables/Thingiverse style) into the `CatalogueImportQueue` via `/api/admin/catalogue/import`.
+2. **Review:** Admin reviews imported items in the queue, sets categories, and adjusts pricing/metadata.
+3. **Approval:** `/api/admin/import/[id]/approve` creates a `Product` with `isActive: true` (visible in storefront) and updates the source `ExternalModel` with the `productId`.
+4. **STL Management:** `/api/admin/catalogue/[id]/stl` handles manual upload/replacement and removal of 3D model files (STL, OBJ, 3MF, STEP) for approved catalogue items.
+
+### 7.5 Production
 
 - **ProductionQueue:** Order items queued; status (Queued, In Progress, Printing, Quality Check, Done); assignedTo, machineId.
 - **PrinterAsset:** Maintenance logs, parts (MaintenancePartUsed), lifecycle.
