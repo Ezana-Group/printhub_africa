@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Search & Platform Filters
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const searchConditions: any[] = [];
   
   if (search) {
