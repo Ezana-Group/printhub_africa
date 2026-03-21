@@ -15,12 +15,16 @@ export async function GET() {
       prisma.catalogueItem.count({
         where: {
           status: {
-            in: [CatalogueStatus.LIVE, CatalogueStatus.PAUSED, CatalogueStatus.RETIRED],
+            in: [CatalogueStatus.LIVE, CatalogueStatus.PAUSED],
           },
         },
       }),
       prisma.catalogueItem.count({
-        where: { status: CatalogueStatus.RETIRED },
+        where: {
+          status: {
+            in: [CatalogueStatus.ARCHIVED, CatalogueStatus.RETIRED],
+          },
+        },
       }),
     ]);
 

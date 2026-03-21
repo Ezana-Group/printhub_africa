@@ -23,15 +23,15 @@ export async function GET(req: NextRequest) {
   } else if (tab === "approved" || tab === "LIVE") {
     where.status = { in: [CatalogueStatus.LIVE, CatalogueStatus.PAUSED] };
   } else if (tab === "archived" || tab === "ARCHIVED") {
-    where.status = CatalogueStatus.RETIRED;
+    where.status = { in: [CatalogueStatus.ARCHIVED, CatalogueStatus.RETIRED] };
   }
 
   // Search Filter (Name or Platform)
   if (search) {
     where.OR = [
       { name: { contains: search, mode: "insensitive" } },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      { sourceType: { equals: search.toUpperCase() as any } }, // Best effort for platform search
+      // Check if the search term matches any of the enum values for platform
+      { sourceType: { equals: Object.values(CatalogueSourceType).includes(search.toUpperCase() as any) ? search.toUpperCase() as any : undefined } },
     ];
   }
 
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
           photos: { orderBy: { sortOrder: "asc" }, take: 1 },
           importedBy: { select: { name: true, email: true } },
           approvedBy: { select: { name: true, email: true } },
-          archivedBy: { select: { name: true, email: true } },
+          rejectedBy: { select: { name: true, email: true } },
           category: { select: { name: true, slug: true } },
           availableMaterials: true,
         },
@@ -70,6 +70,28 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error("[APPROVAL_QUEUE_LIST]", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    // If it's a relation error (e.g. archivedBy missing column), fallback to a simpler query
+    try {
+      const [items, total] = await Promise.all([
+        prisma.catalogueItem.findMany({
+          where,
+          orderBy: { updatedAt: "desc" },
+          skip: (page - 1) * limit,
+          take: limit,
+          include: {
+            photos: { orderBy: { sortOrder: "asc" }, take: 1 },
+            category: { select: { name: true, slug: true } },
+          },
+        }),
+        prisma.catalogueItem.count({ where }),
+      ]);
+      return NextResponse.json({
+        items,
+        pagination: { total, page, limit, pages: Math.ceil(total / limit) }
+      });
+    } catch (innerError) {
+      console.error("[APPROVAL_QUEUE_LIST_FALLBACK]", innerError);
+      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
   }
 }
