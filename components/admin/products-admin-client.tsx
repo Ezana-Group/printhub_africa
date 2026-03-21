@@ -47,7 +47,7 @@ import {
   Download,
 } from "lucide-react";
 
-type ProductType = "READYMADE_3D" | "LARGE_FORMAT" | "CUSTOM";
+type ProductType = "READYMADE_3D" | "LARGE_FORMAT" | "CUSTOM" | "PRINT_ON_DEMAND" | "SERVICE";
 
 export type ProductRow = {
   id: string;
@@ -69,9 +69,13 @@ export type ProductRow = {
 };
 
 function StockBadge({ stock, productType }: { stock: number; productType: ProductType }) {
-  const isService = productType === "LARGE_FORMAT" || productType === "CUSTOM";
-  if (isService && stock === 0) {
-    return <Badge variant="secondary" className="font-mono text-xs bg-[#F3F4F6] text-[#6B7280]">Service</Badge>;
+  const isService = productType === "LARGE_FORMAT" || productType === "CUSTOM" || productType === "SERVICE";
+  const isPod = productType === "PRINT_ON_DEMAND";
+  
+  if ((isService || isPod) && stock === 0) {
+    return <Badge variant="secondary" className="font-mono text-xs bg-[#F3F4F6] text-[#6B7280]">
+      {isPod ? "POD" : "Service"}
+    </Badge>;
   }
   if (stock === 0) return <Badge className="bg-[#EF4444] text-white border-0">Out of Stock</Badge>;
   if (stock <= 5) return <Badge className="bg-[#F59E0B] text-white border-0">Low: {stock}</Badge>;
@@ -162,6 +166,8 @@ export function ProductsAdminClient({
           { value: "READYMADE_3D", label: "Ready-made 3D" },
           { value: "LARGE_FORMAT", label: "Large Format" },
           { value: "CUSTOM", label: "3D Service" },
+          { value: "PRINT_ON_DEMAND", label: "Print-On-Demand" },
+          { value: "SERVICE", label: "Other Service" },
         ],
         value: typeFilter,
         onChange: (v) => url.set({ type: v || undefined, page: 1 }),

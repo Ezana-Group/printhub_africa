@@ -160,6 +160,8 @@ export function CatalogueEditForm({
   const [isNewArrival, setIsNewArrival] = useState(initialItem.isNewArrival ?? false);
   const [isStaffPick, setIsStaffPick] = useState(initialItem.isStaffPick ?? false);
   const [isPopular, setIsPopular] = useState(initialItem.isPopular ?? false);
+  const [manualUrls, setManualUrls] = useState("");
+  const [savingPhotos, setSavingPhotos] = useState(false);
 
   useEffect(() => {
     setItem(initialItem);
@@ -223,10 +225,40 @@ export function CatalogueEditForm({
         throw new Error(data?.error?.message ?? "Failed to save");
       }
       router.refresh();
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save");
+      return false;
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddManualPhotos = async () => {
+    if (!manualUrls.trim()) return;
+    setSavingPhotos(true);
+    setError(null);
+    try {
+      const urls = manualUrls
+        .split("\n")
+        .map((u) => u.trim())
+        .filter(Boolean);
+      const res = await fetch(`/api/admin/catalogue/${initialItem.id}/photos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ urls }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "Failed to add photos");
+      }
+      setManualUrls("");
+      await refetchItem();
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add photos");
+    } finally {
+      setSavingPhotos(false);
     }
   };
 
@@ -330,28 +362,24 @@ export function CatalogueEditForm({
               onChange={(e) => setCategoryId(e.target.value)}
               className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
-              {categories
-                .filter((c) => !c.parentId)
-                .map((parent) => (
-                  <optgroup key={parent.id} label={parent.name}>
-                    <option value={parent.id}>{parent.name}</option>
-                    {categories
-                      .filter((child) => child.parentId === parent.id)
-                      .map((child) => (
-                        <option key={child.id} value={child.id}>
-                          &nbsp;&nbsp;— {child.name}
+              {(() => {
+                const renderOptions = (parentId: string | null = null, depth = 0) => {
+                  return categories
+                    .filter((c) => (c.parentId || null) === parentId)
+                    .map((c) => (
+                      <optgroup key={c.id} label={depth === 0 ? c.name : undefined}>
+                        <option value={c.id}>
+                          {"\u00A0".repeat(depth * 4)}
+                          {depth > 0 ? "— " : ""}
+                          {c.name}
                         </option>
-                      ))}
-                  </optgroup>
-                ))}
-              {/* Fallback for categories without parents that are not parents themselves (just in case) */}
-              {categories
-                .filter((c) => c.parentId && !categories.some(p => p.id === c.parentId))
-                .map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
+                        {renderOptions(c.id, depth + 1)}
+                      </optgroup>
+                    ));
+                };
+
+                return renderOptions(null);
+              })()}
             </select>
           </div>
           <div>
@@ -555,6 +583,30 @@ export function CatalogueEditForm({
                 }
               }}
             />
+          </div>
+          <div className="pt-4 border-t border-slate-100">
+            <p className="text-sm font-medium text-slate-700 mb-2">
+              Add photos via URL
+            </p>
+            <Textarea
+              value={manualUrls}
+              onChange={(e) => setManualUrls(e.target.value)}
+              placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg"
+              rows={3}
+              className="mb-3 font-mono text-xs"
+            />
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={handleAddManualPhotos}
+              disabled={savingPhotos || !manualUrls.trim()}
+              className="rounded-xl w-full sm:w-auto"
+            >
+              {savingPhotos ? "Adding..." : "Add URLs"}
+            </Button>
+            <p className="text-[10px] text-slate-500 mt-2">
+              One URL per line. Maximum 8 photos total.
+            </p>
           </div>
         </div>
       )}

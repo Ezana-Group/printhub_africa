@@ -13,7 +13,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Loader2, Plus, Pencil, Trash2, ChevronUp, ChevronDown } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, ChevronUp, ChevronDown, Upload, Image as ImageIcon } from "lucide-react";
+import { toast } from "sonner";
 
 export type AuthPanelConfigState = {
   backgroundColor: string;
@@ -54,6 +55,8 @@ export function AuthPanelClient({
     body: "",
     imagePath: "",
   });
+
+  const [uploading, setUploading] = useState<string | null>(null);
 
   const fetchPanel = useCallback(async () => {
     const res = await fetch("/api/admin/content/auth-panel");
@@ -155,6 +158,33 @@ export function AuthPanelClient({
       setSlides((prev) => prev.filter((s) => s.id !== id));
       setEditingSlide(null);
       router.refresh();
+    }
+  };
+
+  const handleImageUpload = async (file: File, isNew: boolean, slideId?: string) => {
+    if (!file) return;
+    const target = isNew ? "new" : slideId || "edit";
+    setUploading(target);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/admin/content/auth-panel/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      if (isNew) {
+        setNewSlide((s) => ({ ...s, imagePath: data.url }));
+      } else {
+        setEditingSlide((s) => (s ? { ...s, imagePath: data.url } : s));
+      }
+      toast.success("Image uploaded successfully");
+    } catch (e) {
+      toast.error("Failed to upload image");
+      console.error(e);
+    } finally {
+      setUploading(null);
     }
   };
 
@@ -371,13 +401,47 @@ export function AuthPanelClient({
               </div>
               <div className="space-y-2">
                 <Label>Image URL (optional)</Label>
-                <Input
-                  value={editingSlide.imagePath ?? ""}
-                  onChange={(e) =>
-                    setEditingSlide((s) => (s ? { ...s, imagePath: e.target.value } : s))
-                  }
-                  placeholder="https://..."
-                />
+                <div className="flex gap-2">
+                  <Input
+                    value={editingSlide.imagePath ?? ""}
+                    onChange={(e) =>
+                      setEditingSlide((s) => (s ? { ...s, imagePath: e.target.value } : s))
+                    }
+                    placeholder="https://..."
+                    className="flex-1"
+                  />
+                  <div className="relative">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      id="edit-slide-image"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleImageUpload(file, false, editingSlide.id);
+                      }}
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      asChild
+                      disabled={uploading === editingSlide.id}
+                    >
+                      <label htmlFor="edit-slide-image" className="cursor-pointer">
+                        {uploading === editingSlide.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Upload className="h-4 w-4" />
+                        )}
+                      </label>
+                    </Button>
+                  </div>
+                </div>
+                {editingSlide.imagePath && (
+                   <div className="mt-2 relative aspect-video w-full rounded border overflow-hidden bg-slate-100">
+                     <img src={editingSlide.imagePath} alt="Preview" className="object-cover w-full h-full" />
+                   </div>
+                )}
               </div>
             </div>
           )}
@@ -432,11 +496,45 @@ export function AuthPanelClient({
             </div>
             <div className="space-y-2">
               <Label>Image URL (optional)</Label>
-              <Input
-                value={newSlide.imagePath}
-                onChange={(e) => setNewSlide((s) => ({ ...s, imagePath: e.target.value }))}
-                placeholder="https://..."
-              />
+              <div className="flex gap-2">
+                <Input
+                  value={newSlide.imagePath}
+                  onChange={(e) => setNewSlide((s) => ({ ...s, imagePath: e.target.value }))}
+                  placeholder="https://..."
+                  className="flex-1"
+                />
+                <div className="relative">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    id="new-slide-image"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImageUpload(file, true);
+                    }}
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    asChild
+                    disabled={uploading === "new"}
+                  >
+                    <label htmlFor="new-slide-image" className="cursor-pointer">
+                      {uploading === "new" ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Upload className="h-4 w-4" />
+                      )}
+                    </label>
+                  </Button>
+                </div>
+              </div>
+              {newSlide.imagePath && (
+                 <div className="mt-2 relative aspect-video w-full rounded border overflow-hidden bg-slate-100">
+                   <img src={newSlide.imagePath} alt="Preview" className="object-cover w-full h-full" />
+                 </div>
+              )}
             </div>
           </div>
           <DialogFooter>

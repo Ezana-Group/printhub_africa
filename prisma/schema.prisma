@@ -2326,6 +2326,8 @@ enum ProductType {
   READYMADE_3D
   LARGE_FORMAT
   CUSTOM
+  PRINT_ON_DEMAND
+  SERVICE
 }
 
 enum PrintMaterialType {
@@ -2701,6 +2703,7 @@ enum ProductAvailability {
   ON_ORDER
   PRE_ORDER
   IMPORT_ON_REQUEST
+  PRINT_ON_DEMAND
 }
 
 enum CartItemType {

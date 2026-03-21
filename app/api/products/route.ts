@@ -139,13 +139,16 @@ export async function GET(req: NextRequest) {
       }
     }
     if (productType) {
-      const typeMap: Record<string, "READYMADE_3D" | "LARGE_FORMAT" | "CUSTOM"> = {
+      const typeMap: Record<string, string> = {
         "3d": "READYMADE_3D",
         largeformat: "LARGE_FORMAT",
         custom: "CUSTOM",
+        pod: "PRINT_ON_DEMAND",
+        printondemand: "PRINT_ON_DEMAND",
+        service: "SERVICE",
       };
       const t = typeMap[productType.toLowerCase()];
-      if (t) where.productType = t;
+      if (t) where.productType = t as ProductType;
     }
     if (minPrice != null && !Number.isNaN(minPrice) || maxPrice != null && !Number.isNaN(maxPrice)) {
       where.basePrice = {};

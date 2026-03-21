@@ -51,10 +51,10 @@ export async function getSkuPrefixConfig(): Promise<SkuPrefixConfig> {
  * Uses the prefix from settings: default or per-category override.
  * categoryId: optional; when provided, category-specific prefix is used if configured.
  */
-export async function generateNextProductSku(categoryId?: string | null): Promise<string> {
+export async function generateNextProductSku(categoryId?: string | null, overridePrefix?: string): Promise<string> {
   const { defaultPrefix, prefixByCategoryId } = await getSkuPrefixConfig();
   const prefix =
-    (categoryId && prefixByCategoryId[categoryId]) || defaultPrefix;
+    overridePrefix || (categoryId && prefixByCategoryId[categoryId]) || defaultPrefix;
 
   const products = await prisma.product.findMany({
     where: { sku: { not: null } },

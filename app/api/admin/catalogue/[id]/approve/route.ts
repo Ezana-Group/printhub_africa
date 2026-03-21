@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/admin-api-guard";
-import { CatalogueStatus } from "@prisma/client";
+import { CatalogueStatus, ProductType, ProductAvailability } from "@prisma/client";
 
 export async function POST(
   _req: Request,
@@ -41,21 +41,30 @@ export async function POST(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let productId = (item as any).productId;
   if (!productId) {
-    const slug = item.slug;
+    const isPod = item.sourceType !== "MANUAL";
+    const productType = isPod ? "PRINT_ON_DEMAND" : "READYMADE_3D";
+    const availability = isPod ? "PRINT_ON_DEMAND" : "IN_STOCK";
+    
+    // Auto-generate SKU
+    const { generateNextProductSku } = await import("@/lib/product-utils");
+    const sku = await generateNextProductSku(item.categoryId, isPod ? "POD" : undefined);
+    
     const product = await prisma.product.create({
       data: {
         name: item.name,
-        slug: slug,
+        slug: item.slug,
         description: item.description,
         shortDescription: item.shortDescription,
         categoryId: item.categoryId,
-        productType: "READYMADE_3D",
+        productType: productType as ProductType,
+        availability: availability as ProductAvailability,
         images: item.photos.length > 0 ? item.photos.map(p => p.url) : [],
         basePrice: item.priceOverrideKes ?? item.basePriceKes ?? 0,
         comparePrice: item.priceOverrideKes && item.basePriceKes ? item.basePriceKes : null,
         stock: 0,
         isActive: true,
         tags: item.tags,
+        sku: sku,
       }
     });
     productId = product.id;

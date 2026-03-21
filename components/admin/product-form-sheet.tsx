@@ -17,7 +17,7 @@ import type { ProductRow } from "@/components/admin/products-admin-client";
 import { ProductImagesTab } from "@/components/admin/product-images-tab";
 import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 
-type ProductType = "READYMADE_3D" | "LARGE_FORMAT" | "CUSTOM";
+type ProductType = "READYMADE_3D" | "LARGE_FORMAT" | "CUSTOM" | "PRINT_ON_DEMAND" | "SERVICE";
 
 function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -214,6 +214,8 @@ export function ProductFormSheet({
                     <option value="READYMADE_3D">Ready-made 3D</option>
                     <option value="LARGE_FORMAT">Large Format</option>
                     <option value="CUSTOM">3D Service</option>
+                    <option value="PRINT_ON_DEMAND">Print-On-Demand</option>
+                    <option value="SERVICE">Other Service</option>
                   </select>
                 </div>
                 <div>

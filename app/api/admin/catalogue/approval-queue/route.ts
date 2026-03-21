@@ -99,8 +99,7 @@ export async function GET(req: NextRequest) {
         items,
         pagination: { total, page, limit, pages: Math.ceil(total / limit) }
       });
-    } catch (innerError) {
-      console.error("[APPROVAL_QUEUE_LIST_FALLBACK]", innerError);
+    } catch (innerError: unknown) {
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
   }

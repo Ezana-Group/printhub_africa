@@ -12,12 +12,13 @@ import { FileUploader } from "@/components/upload/FileUploader";
 import { ProductImagesTab } from "@/components/admin/product-images-tab";
 import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 
-type ProductType = "READYMADE_3D" | "LARGE_FORMAT" | "CUSTOM";
+type ProductType = "READYMADE_3D" | "LARGE_FORMAT" | "CUSTOM" | "PRINT_ON_DEMAND" | "SERVICE";
 
 interface Category {
   id: string;
   name: string;
   slug: string;
+  parentId?: string | null;
 }
 
 interface ProductFormProps {
@@ -64,6 +65,13 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const [shortDescription, setShortDescription] = useState(product?.shortDescription ?? "");
   const [categoryId, setCategoryId] = useState(product?.categoryId ?? categories[0]?.id ?? "");
   const [productType, setProductType] = useState<ProductType>(product?.productType ?? "READYMADE_3D");
+  
+  const handleTypeChange = (value: ProductType) => {
+    setProductType(value);
+    if (value === "PRINT_ON_DEMAND") {
+      setStock("0");
+    }
+  };
   const [basePrice, setBasePrice] = useState(String(product?.basePrice ?? 0));
   const [comparePrice, setComparePrice] = useState(product?.comparePrice != null ? String(product.comparePrice) : "");
   const [stock, setStock] = useState(String(product?.stock ?? 0));
@@ -221,9 +229,31 @@ export function ProductForm({ categories, product }: ProductFormProps) {
                 required
                 className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2"
               >
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
+                {(() => {
+                  const renderOptions = (parentId: string | null = null, depth = 0) => {
+                    return categories
+                      .filter((c) => (c.parentId || null) === parentId)
+                      .map((c) => (
+                        <optgroup key={c.id} label={depth === 0 ? c.name : undefined}>
+                          <option value={c.id}>
+                            {"\u00A0".repeat(depth * 4)}
+                            {depth > 0 ? "— " : ""}
+                            {c.name}
+                          </option>
+                          {renderOptions(c.id, depth + 1)}
+                        </optgroup>
+                      ));
+                  };
+
+                  // Simple flat fallback if parentId logic is not available in the prop
+                  if (!categories.some(c => c.parentId)) {
+                    return categories.map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ));
+                  }
+
+                  return renderOptions(null);
+                })()}
               </select>
             </div>
             <div>
@@ -231,12 +261,14 @@ export function ProductForm({ categories, product }: ProductFormProps) {
               <select
                 id="productType"
                 value={productType}
-                onChange={(e) => setProductType(e.target.value as ProductType)}
+                onChange={(e) => handleTypeChange(e.target.value as ProductType)}
                 className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2"
               >
                 <option value="READYMADE_3D">Ready-made 3D</option>
                 <option value="LARGE_FORMAT">Large format</option>
-                <option value="CUSTOM">Custom</option>
+                <option value="CUSTOM">3D Service</option>
+                <option value="PRINT_ON_DEMAND">Print-On-Demand</option>
+                <option value="SERVICE">Other Service</option>
               </select>
             </div>
           </div>
