@@ -66,11 +66,26 @@ export async function POST(req: Request) {
     else if (lt.includes("ROYALTY") || lt.includes("COMMERCIAL")) licenceEnum = "PARTNERSHIP";
     else licenceEnum = "ORIGINAL";
 
+    // Find default category
+    let category = await prisma.category.findFirst({
+      where: { slug: { in: ["3d-printing", "three-d-printing", "catalogue", "catalog"] } }
+    });
+    
+    // Fallback if no specific category found
+    if (!category) {
+      category = await prisma.category.findFirst();
+    }
+
+    if (!category) {
+      throw new Error("No categories found in database. Please create a category first.");
+    }
+
     const catalogueItem = await prisma.catalogueItem.create({
       data: {
         name: extracted.name,
         slug: finalSlug,
         description: extracted.description,
+        categoryId: category.id,
         sourceType: extracted.platform as CatalogueSourceType,
         sourceUrl: extracted.sourceUrl,
         licenseType: licenceEnum as CatalogueLicense,
