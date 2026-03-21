@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/admin-api-guard";
 import { CatalogueStatus } from "@prisma/client";
 
-export async function GET(req: Request) {
+export async function GET() {
   const auth = await requireAdminApi({ permission: "catalogue_view" });
   if (auth instanceof NextResponse) return auth;
 

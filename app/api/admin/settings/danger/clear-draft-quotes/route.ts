@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Confirmation failed" }, { status: 400 });
   }
-  const { count } = await prisma.quote.deleteMany({
+  await prisma.quote.deleteMany({
     where: {
       OR: [
         { status: "new", quotedAmount: null },
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     },
   });
   // Re-reading user request: status = 'draft' or status = 'new' with no quotedAmount set
-  const { count: deletedCount } = await prisma.quote.deleteMany({
+  await prisma.quote.deleteMany({
     where: {
       OR: [
         { status: "new", quotedAmount: null },

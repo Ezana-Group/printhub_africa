@@ -5,14 +5,16 @@ import { createPresignedDownloadUrl } from "@/lib/r2";
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  ctx: { params: Promise<{ id: string }> }
 ) {
   const auth = await requireRole(req, "SUPER_ADMIN");
   if (auth instanceof NextResponse) return auth;
 
+  const { id } = await ctx.params;
+
   try {
     const record = await prisma.backupRecord.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!record?.r2Key) {

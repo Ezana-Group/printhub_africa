@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   if (auth instanceof NextResponse) return auth;
 
   try {
-    const { userId, ...dangerParams } = await req.json();
+    const { userId } = await req.json();
     if (!userId) {
       return NextResponse.json({ error: "User ID is required" }, { status: 400 });
     }

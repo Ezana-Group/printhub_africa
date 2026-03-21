@@ -10,6 +10,7 @@ export async function POST(req: Request) {
   if (auth instanceof NextResponse) return auth;
 
   const { ids, action, reason } = await req.json();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userId = (auth.session.user as any).id;
 
   if (!Array.isArray(ids) || ids.length === 0) {
@@ -17,6 +18,7 @@ export async function POST(req: Request) {
   }
 
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let updateData: any = {};
     let auditAction = "";
 

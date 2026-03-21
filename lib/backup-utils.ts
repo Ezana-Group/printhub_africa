@@ -1,7 +1,6 @@
 import { spawn } from "node:child_process";
-import { prisma } from "./prisma";
 import AdmZip from "adm-zip";
-import { listAllObjects, putObjectBuffer, PRIVATE_BUCKET } from "./r2";
+import { listAllObjects, putObjectBuffer } from "./r2";
 import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
@@ -16,7 +15,6 @@ export type BackupManifest = {
 };
 
 export async function createFullBackup(userId: string, email: string) {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const filename = `printhub-backup-${new Date().toISOString().split("T")[0]}-${new Date().getHours()}${new Date().getMinutes()}.zip`;
   const zip = new AdmZip();
 

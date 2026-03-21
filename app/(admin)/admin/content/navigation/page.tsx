@@ -49,7 +49,7 @@ export default function NavigationManager() {
       if (res.ok) {
         setItems(await res.json());
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to load navigation");
     } finally {
       setLoading(false);
@@ -82,7 +82,7 @@ export default function NavigationManager() {
       } else {
         toast.error("Failed to update item");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred");
     }
   };
@@ -97,7 +97,7 @@ export default function NavigationManager() {
         toast.success("Item deleted");
         fetchNavigation();
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to delete item");
     }
   };
@@ -124,7 +124,7 @@ export default function NavigationManager() {
         toast.success("Item created");
         fetchNavigation();
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to create item");
     }
   };
@@ -139,12 +139,12 @@ export default function NavigationManager() {
         body: JSON.stringify({ id, sortOrder: newOrder }),
       });
       if (res.ok) fetchNavigation();
-    } catch (error) {}
+    } catch {}
   };
 
   const renderItem = (item: NavItem, depth = 0) => {
     const isEditing = editingId === item.id;
-    const hasChildren = item.children && item.children.length > 0;
+
     const isExpanded = expandedIds.has(item.id);
 
     return (

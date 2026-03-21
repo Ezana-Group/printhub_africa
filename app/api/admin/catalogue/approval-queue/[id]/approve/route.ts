@@ -13,6 +13,7 @@ export async function PATCH(
   if (auth instanceof NextResponse) return auth;
 
   const { id } = await ctx.params;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const userId = (auth.session.user as any).id;
 
   try {

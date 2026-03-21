@@ -6,14 +6,16 @@ import { writeAudit } from "@/lib/audit";
 
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  ctx: { params: Promise<{ id: string }> }
 ) {
   const auth = await requireRole(req, "SUPER_ADMIN");
   if (auth instanceof NextResponse) return auth;
 
+  const { id } = await ctx.params;
+
   try {
     const record = await prisma.backupRecord.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!record) {
@@ -29,14 +31,14 @@ export async function DELETE(
     }
 
     await prisma.backupRecord.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     await writeAudit({
       userId: auth.userId,
       action: "BACKUP_DELETED",
       entity: "BACKUP",
-      entityId: params.id,
+      entityId: id,
       details: `Backup deleted: ${record.filename}`,
       request: req,
     });
