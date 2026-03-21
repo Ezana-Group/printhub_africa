@@ -447,18 +447,23 @@ export type SiteImageSlotsMap = Record<SiteImageSlotKey, string>;
 export async function getSiteImageSlots(
   prisma: PrismaClient
 ): Promise<SiteImageSlotsMap> {
-  const rows = await prisma.siteImageSlot.findMany({
-    where: { key: { in: [...SITE_IMAGE_SLOT_KEYS] } },
-    select: { key: true, imagePath: true },
-  });
-  const overrides = Object.fromEntries(
-    rows
-      .filter((r) => r.imagePath != null && r.imagePath.trim() !== "")
-      .map((r) => [r.key as SiteImageSlotKey, r.imagePath!])
-  );
-  const result = { ...SITE_IMAGE_DEFAULTS };
-  for (const k of SITE_IMAGE_SLOT_KEYS) {
-    if (overrides[k]) result[k] = overrides[k];
+  try {
+    const rows = await prisma.siteImageSlot.findMany({
+      where: { key: { in: [...SITE_IMAGE_SLOT_KEYS] } },
+      select: { key: true, imagePath: true },
+    });
+    const overrides = Object.fromEntries(
+      rows
+        .filter((r) => r.imagePath != null && r.imagePath.trim() !== "")
+        .map((r) => [r.key as SiteImageSlotKey, r.imagePath!])
+    );
+    const result = { ...SITE_IMAGE_DEFAULTS };
+    for (const k of SITE_IMAGE_SLOT_KEYS) {
+      if (overrides[k]) result[k] = overrides[k];
+    }
+    return result;
+  } catch (err) {
+    console.error("getSiteImageSlots parameter fetch failed, falling back to defaults:", err);
+    return { ...SITE_IMAGE_DEFAULTS };
   }
-  return result;
 }

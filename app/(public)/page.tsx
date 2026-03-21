@@ -6,7 +6,7 @@ import { FeaturedProducts } from "@/components/marketing/featured-products";
 import { FeaturedCatalogueSection } from "@/components/marketing/featured-catalogue";
 import { PriceCalculatorTeaser } from "@/components/marketing/price-calculator-teaser";
 import { getCachedCategories } from "@/lib/cache/unstable-cache";
-import { getSiteImageSlots } from "@/lib/site-images";
+import { getSiteImageSlots, SITE_IMAGE_DEFAULTS } from "@/lib/site-images";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
@@ -15,8 +15,8 @@ export const revalidate = 300;
 
 export default async function HomePage() {
   const [siteImages, categories] = await Promise.all([
-    getSiteImageSlots(prisma),
-    getCachedCategories(),
+    getSiteImageSlots(prisma).catch(() => SITE_IMAGE_DEFAULTS),
+    getCachedCategories().catch(() => []),
   ]);
 
   const homepageCategories = categories.map((category) => ({
