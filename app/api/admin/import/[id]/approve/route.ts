@@ -43,7 +43,7 @@ export async function POST(
         basePrice: data.basePrice,
         comparePrice: data.comparePrice || null,
         stock: 0,
-        isActive: false, // Default to inactive until further review
+        isActive: true, // Show in shop immediately upon approval
         tags: data.tags,
       }
     });
