@@ -16,6 +16,7 @@ COPY . .
 
 # Prisma generate (needs schema; use dummy URL for build only — real URL at runtime)
 ENV DATABASE_URL="postgresql://build:build@localhost:5432/build?schema=public"
+ENV DATABASE_URL_UNPOOLED="postgresql://build:build@localhost:5432/build?schema=public"
 RUN npx prisma generate
 
 # Build Next.js (disable telemetry)
