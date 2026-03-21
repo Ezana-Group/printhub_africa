@@ -40,17 +40,9 @@ COPY --from=builder /app/start.sh ./start.sh
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Install prisma CLI and tsx for migrations & seeding at runtime
-COPY --from=deps /app/node_modules/prisma ./node_modules/prisma
-COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=deps /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=deps /app/node_modules/tsx ./node_modules/tsx
-COPY --from=deps /app/node_modules/bcryptjs ./node_modules/bcryptjs
-COPY --from=deps /app/node_modules/esbuild ./node_modules/esbuild
-COPY --from=deps /app/node_modules/get-tsconfig ./node_modules/get-tsconfig
-COPY --from=deps /app/node_modules/resolve-pkg-maps ./node_modules/resolve-pkg-maps
-COPY --from=deps /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
-COPY --from=deps /app/node_modules/.bin/tsx ./node_modules/.bin/tsx
+# Install prisma CLI + tsx + bcryptjs for migrations & seeding at runtime
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+RUN npm install --no-save prisma@7.5.0 @prisma/client@7.5.0 tsx bcryptjs
 
 # Make start script executable
 USER root
