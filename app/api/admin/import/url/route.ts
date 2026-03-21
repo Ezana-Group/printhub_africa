@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import type { CatalogueSourceType, CatalogueLicense } from "@prisma/client";
 import { requireAdminApi } from "@/lib/admin-api-guard";
 import { parseUrlImport, downloadAndUploadImage, detectPlatform } from "@/lib/import-utils";
 
@@ -13,15 +14,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "URL_REQUIRED" }, { status: 400 });
     }
 
-    const platform = detectPlatform(url);
-
     // Check for duplicates
-    const existing = await prisma.externalModel.findFirst({
+    const existing = await prisma.catalogueItem.findFirst({
       where: {
-        OR: [
-          { platform, sourceUrl: url },
-          { sourceUrl: url }
-        ]
+        sourceUrl: url
       }
     });
 
@@ -54,23 +50,41 @@ export async function POST(req: Request) {
       uploadedImageUrls = originalImageUrls; // fallback to source URLs
     }
 
-    const thumbnailUrl = uploadedImageUrls.length > 0 ? uploadedImageUrls[0] : null;
+    // Generate unique slug
+    const tsSlug = extracted.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    let finalSlug = tsSlug;
+    if (await prisma.catalogueItem.findUnique({ where: { slug: finalSlug } })) {
+      finalSlug = `${tsSlug}-${Math.floor(Math.random() * 10000)}`;
+    }
 
-    const externalModel = await prisma.externalModel.create({
+    // Map licenceType string
+    let licenceEnum = "CC_BY";
+    const lt = extracted.licenceType?.toUpperCase() || "";
+    if (lt.includes("CC0") || lt.includes("PUBLIC DOMAIN")) licenceEnum = "CC0";
+    else if (lt.includes("CC BY-SA")) licenceEnum = "CC_BY_SA";
+    else if (lt.includes("CC BY") || lt.includes("ATTRIBUTION")) licenceEnum = "CC_BY";
+    else if (lt.includes("ROYALTY") || lt.includes("COMMERCIAL")) licenceEnum = "PARTNERSHIP";
+    else licenceEnum = "ORIGINAL";
+
+    const catalogueItem = await prisma.catalogueItem.create({
       data: {
-        platform: extracted.platform,
-        sourceUrl: extracted.sourceUrl,
         name: extracted.name,
+        slug: finalSlug,
         description: extracted.description,
-        printInfo: extracted.printInfo,
-        imageUrls: uploadedImageUrls,
-        thumbnailUrl: thumbnailUrl,
-        licenceType: extracted.licenceType,
-        designerName: extracted.designerName,
-        designerUrl: extracted.designerUrl,
-        tags: extracted.tags,
-        importedBy: auth.session.user.id,
+        sourceType: extracted.platform as CatalogueSourceType,
+        sourceUrl: extracted.sourceUrl,
+        licenseType: licenceEnum as CatalogueLicense,
+        designerCredit: `${extracted.designerName || ""} ${extracted.designerUrl ? `(${extracted.designerUrl})` : ""}`.trim(),
+        tags: extracted.tags || [],
         status: "PENDING_REVIEW",
+        importedById: auth.session.user.id,
+        photos: {
+          create: uploadedImageUrls.map((u, i) => ({
+            url: u,
+            isPrimary: i === 0,
+            sortOrder: i,
+          }))
+        }
       }
     });
 
@@ -85,7 +99,7 @@ export async function POST(req: Request) {
       }
     });
 
-    return NextResponse.json({ id: externalModel.id });
+    return NextResponse.json({ id: catalogueItem.id });
   } catch (error: unknown) {
     const body = await req.clone().json().catch(() => ({}));
     console.error('[IMPORT URL ERROR]', {

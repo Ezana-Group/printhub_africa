@@ -1809,7 +1809,7 @@ model CatalogueItem {
   slug               String                  @unique
   shortDescription   String?
   description        String?
-  categoryId         String
+  categoryId         String?
   designerId         String?
   tags               String[]
   sourceUrl          String?
@@ -1841,7 +1841,7 @@ model CatalogueItem {
   archivedAt         DateTime?
   modelUrl           String?
   modelStorageKey    String?
-  category           Category                @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  category           Category?               @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   designer           CatalogueDesigner?      @relation(fields: [designerId], references: [id])
   availableMaterials CatalogueItemMaterial[]
   photos             CatalogueItemPhoto[]
@@ -2336,6 +2336,12 @@ enum CatalogueSourceType {
   MANUAL
   PRINTABLES
   THINGIVERSE
+  MYMINIFACTORY
+  CGTRADER
+  CULTS3D
+  CREAZILLA
+  THANGS
+  OTHER
   PARTNER
   ORIGINAL
 }

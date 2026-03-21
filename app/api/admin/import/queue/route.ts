@@ -7,25 +7,41 @@ export async function GET() {
   if (auth instanceof NextResponse) return auth;
 
   try {
-    const items = await prisma.externalModel.findMany({
+    const records = await prisma.catalogueItem.findMany({
       where: {
         status: {
-          in: ["PENDING", "PENDING_REVIEW"]
+          in: ["DRAFT", "PENDING_REVIEW"]
+        },
+        sourceType: {
+          not: "MANUAL"
         }
       },
       orderBy: {
-        importedAt: "desc",
+        createdAt: "desc",
       },
       select: {
         id: true,
         name: true,
-        platform: true,
-        licenceType: true,
-        importedAt: true,
+        sourceType: true,
+        licenseType: true,
+        createdAt: true,
         status: true,
-        thumbnailUrl: true,
+        photos: {
+          where: { isPrimary: true },
+          take: 1
+        }
       }
     });
+
+    const items = records.map(r => ({
+      id: r.id,
+      name: r.name,
+      platform: r.sourceType,
+      licenceType: r.licenseType,
+      importedAt: r.createdAt,
+      status: r.status,
+      thumbnailUrl: r.photos.length > 0 ? r.photos[0].url : null
+    }));
 
     return NextResponse.json({ items });
   } catch {

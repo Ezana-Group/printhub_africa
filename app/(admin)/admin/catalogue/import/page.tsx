@@ -128,7 +128,7 @@ function UrlImportSection() {
               <p className="font-semibold">Import Failed</p>
               <div className="text-sm space-y-1">
                 {error.error === "ALREADY_IMPORTED" ? (
-                  <p>This model was already imported. <Link href={`/admin/catalogue/import/${error.existingId}/review`} className="underline">View existing record</Link></p>
+                  <p>This model was already imported. <Link href={`/admin/catalogue/${error.existingId}/edit`} className="underline">View existing record</Link></p>
                 ) : error.error === "FETCH_FAILED" || error.error === "API_FETCH_FAILED" ? (
                   <p>Could not connect to the platform API. Please check your API credentials in Settings or try manual entry below.</p>
                 ) : error.error === "API_CONFIG_MISSING" ? (
@@ -159,7 +159,7 @@ function UrlImportSection() {
               <CheckCircle className="w-5 h-5 text-green-500" />
               <p className="font-medium">Import successful!</p>
             </div>
-            <Link href={`/admin/catalogue/import/${result.id}/review`} className="bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700">
+            <Link href={`/admin/catalogue/${result.id}/edit`} className="bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700">
               Review Now
             </Link>
           </div>
@@ -216,7 +216,7 @@ function UrlImportSection() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <Link href={`/admin/catalogue/import/${item.id}/review`} className="text-primary hover:underline flex items-center gap-1">
+                    <Link href={`/admin/catalogue/${item.id}/edit`} className="text-primary hover:underline flex items-center gap-1">
                       <Eye className="w-4 h-4" /> Review
                     </Link>
                   </td>
@@ -593,7 +593,7 @@ function ImportQueueSection() {
               </td>
               <td className="px-4 py-3 text-muted-foreground">{format(new Date(item.importedAt), "MMM d, yyyy")}</td>
               <td className="px-4 py-3 text-right">
-                <Link href={`/admin/catalogue/import/${item.id}/review`} className="inline-block bg-primary text-white px-3 py-1.5 rounded-md text-xs hover:bg-primary/90">
+                <Link href={`/admin/catalogue/${item.id}/edit`} className="inline-block bg-primary text-white px-3 py-1.5 rounded-md text-xs hover:bg-primary/90">
                   Review
                 </Link>
               </td>

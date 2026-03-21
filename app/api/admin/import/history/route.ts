@@ -10,24 +10,33 @@ export async function GET(req: Request) {
   const limit = parseInt(searchParams.get("limit") || "10");
 
   try {
-    const history = await prisma.externalModel.findMany({
+    const history = await prisma.catalogueItem.findMany({
       where: {
-        importedBy: auth.session.user.id,
+        importedById: auth.session.user.id,
+        sourceType: { not: "MANUAL" }
       },
       orderBy: {
-        importedAt: "desc",
+        createdAt: "desc",
       },
       take: limit,
       select: {
         id: true,
-        platform: true,
+        sourceType: true,
         sourceUrl: true,
-        importedAt: true,
+        createdAt: true,
         status: true,
       }
     });
 
-    return NextResponse.json({ history });
+    const mappedHistory = history.map(item => ({
+      id: item.id,
+      platform: item.sourceType,
+      sourceUrl: item.sourceUrl,
+      importedAt: item.createdAt,
+      status: item.status
+    }));
+
+    return NextResponse.json({ history: mappedHistory });
   } catch {
     return NextResponse.json({ error: "INTERNAL_ERROR" }, { status: 500 });
   }
