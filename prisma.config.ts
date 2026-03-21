@@ -11,6 +11,7 @@ export default defineConfig({
   },
   datasource: {
     url: env("DATABASE_URL"),
-    ...(process.env.DATABASE_URL_UNPOOLED ? { shadowDatabaseUrl: process.env.DATABASE_URL_UNPOOLED } : {}),
+    // @ts-expect-error - directUrl is supported in Prisma 7 but may be missing in current type definitions
+    directUrl: env("DATABASE_URL_UNPOOLED"),
   },
 });
