@@ -36,7 +36,7 @@ export async function downloadAndUploadImage(imageUrl: string): Promise<string |
   try {
     // [External] API — updated to use header auth + error handling
     const res = await fetch(imageUrl, {
-      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" },
+      headers: { "User-Agent": "PrintHub/1.0 (https://printhub.africa)" },
     });
     if (!res.ok) return null;
     const buffer = Buffer.from(await res.arrayBuffer());
@@ -240,11 +240,8 @@ export async function searchThingiverse(term: string, page: number = 1) {
   const res = await fetch(url, { 
     headers: { 
       'Authorization': `Bearer ${process.env.THINGIVERSE_ACCESS_TOKEN || process.env.THINGIVERSE_APP_TOKEN}`,
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'User-Agent': 'PrintHub/1.0 (https://printhub.africa)',
       'Accept': 'application/json',
-      'Accept-Language': 'en-US,en;q=0.9',
-      'Referer': 'https://www.thingiverse.com/',
-      'Origin': 'https://www.thingiverse.com',
     } 
   });
 

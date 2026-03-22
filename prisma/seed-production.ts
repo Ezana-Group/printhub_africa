@@ -1,7 +1,15 @@
 import { PrismaClient } from '@prisma/client'
+import { Pool } from 'pg'
+import { PrismaPg } from '@prisma/adapter-pg'
 import bcrypt from 'bcryptjs'
 
-const prisma = new PrismaClient()
+const connectionString = process.env.DATABASE_URL || process.env.DATABASE_URL_UNPOOLED
+if (!connectionString) {
+  throw new Error("DATABASE_URL is not set.")
+}
+const pool = new Pool({ connectionString })
+const adapter = new PrismaPg(pool)
+const prisma = new PrismaClient({ adapter })
 
 async function main() {
   console.log('🌱 Starting production seed...')
