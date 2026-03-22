@@ -79,7 +79,8 @@ export default async function AdminDashboardPage() {
   // Low stock: stock ≤ lowStockThreshold when set, else stock ≤ 5 or out of stock
   const shopLowStockList = productsWithThreshold.filter((p) => {
     const threshold = p.lowStockThreshold ?? 0;
-    return threshold > 0 ? p.stock <= threshold : p.stock <= 5;
+    const currentStock = p.stock ?? 0;
+    return threshold > 0 ? currentStock <= threshold : currentStock <= 5;
   });
 
   let lfLow: { name: string; quantityOnHand: number }[] = [];

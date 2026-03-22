@@ -28,3 +28,27 @@ export function formatPhoneKenya(phone: string): string {
   if (cleaned.startsWith("0")) return `+254${cleaned.slice(1)}`;
   return `+254${cleaned}`;
 }
+
+export function capitalizeSentence(s: string): string {
+  if (!s) return "";
+  const lowered = s.toLowerCase();
+  return lowered.charAt(0).toUpperCase() + lowered.slice(1);
+}
+
+/**
+ * Fixes ALL CAPS names and descriptions to be more human-friendly.
+ * If more than 50% of the string is uppercase, it converts it to sentence case.
+ */
+export function formatDescription(text: string | null | undefined): string {
+  if (!text) return "";
+  
+  // Simple heuristic: if most chars are uppercase, it's probably an import/legacy data issue
+  const upperCount = (text.match(/[A-Z]/g) || []).length;
+  const alphaCount = (text.match(/[a-z]/i) || []).length;
+  
+  if (alphaCount > 5 && upperCount / alphaCount > 0.6) {
+    return text.toLowerCase().split('. ').map(s => capitalizeSentence(s)).join('. ');
+  }
+  
+  return text;
+}

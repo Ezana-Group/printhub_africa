@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
         link: `${baseUrl}/shop/${p.slug}`,
         imageLink: imageUrl,
         price: `${Number(p.basePrice)} KES`,
-        availability: p.stock > 0 ? "in_stock" : "out_of_stock",
+        availability: (p.stock ?? 0) > 0 ? "in_stock" : "out_of_stock",
         brand: "PrintHub",
         channel: "shop",
       };

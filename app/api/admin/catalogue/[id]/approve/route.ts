@@ -38,16 +38,17 @@ export async function POST(
   };
 
   // 1. Create or Find Product
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let productId = (item as any).productId;
+  let productId = item.productId;
   if (!productId) {
     const isPod = item.sourceType !== "MANUAL";
-    const productType = isPod ? "PRINT_ON_DEMAND" : "READYMADE_3D";
-    const availability = isPod ? "PRINT_ON_DEMAND" : "IN_STOCK";
+    const productType = isPod ? ("POD" as ProductType) : ProductType.READYMADE_3D;
+    const availability = isPod ? ProductAvailability.PRINT_ON_DEMAND : ProductAvailability.IN_STOCK;
     
     // Auto-generate SKU
-    const { generateNextProductSku } = await import("@/lib/product-utils");
-    const sku = await generateNextProductSku(item.categoryId, isPod ? "POD" : undefined);
+    const { generateNextProductSku, generatePODSku } = await import("@/lib/product-utils");
+    const sku = isPod 
+      ? await generatePODSku()
+      : await generateNextProductSku(item.categoryId);
     
     const product = await prisma.product.create({
       data: {
@@ -56,19 +57,26 @@ export async function POST(
         description: item.description,
         shortDescription: item.shortDescription,
         categoryId: item.categoryId,
-        productType: productType as ProductType,
-        availability: availability as ProductAvailability,
+        productType: productType,
+        availability: availability,
         images: item.photos.length > 0 ? item.photos.map(p => p.url) : [],
         basePrice: item.priceOverrideKes ?? item.basePriceKes ?? 0,
         comparePrice: item.priceOverrideKes && item.basePriceKes ? item.basePriceKes : null,
-        stock: 0,
+        stock: isPod ? null : 0,
         isActive: true,
+        isPOD: isPod,
+        catalogueItemId: isPod ? item.id : null,
         tags: item.tags,
         sku: sku,
+        printTimeEstimate: item.printTimeHours ? `${item.printTimeHours}h` : null,
+        filamentWeightGrams: item.weightGrams ?? null,
       }
     });
     productId = product.id;
-    data.productId = productId;
+    // For non-POD, we still update the catalogue item itself with the productId
+    if (!isPod) {
+      data.productId = productId;
+    }
   } else {
     // Ensure product is active
     await prisma.product.update({

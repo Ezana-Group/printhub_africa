@@ -14,7 +14,7 @@ export default async function AdminCategoriesPage({
 
   await requireAdminSection("/admin/categories");
   const { edit: editId } = await searchParams;
-  const categories = await prisma.category.findMany({
+  const allCategories = await prisma.category.findMany({
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     include: {
       _count: { select: { products: true } },
@@ -22,7 +22,20 @@ export default async function AdminCategoriesPage({
     },
   });
 
-  const parentOptions = categories.map((c) => ({
+  // Build tree
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const buildTree = (nodes: any[], parentId: string | null = null): any[] => {
+    return nodes
+      .filter((n) => n.parentId === parentId)
+      .map((n) => ({
+        ...n,
+        children: buildTree(nodes, n.id),
+      }));
+  };
+
+  const categories = buildTree(allCategories);
+
+  const parentOptions = allCategories.map((c) => ({
     id: c.id,
     name: c.name,
     slug: c.slug,

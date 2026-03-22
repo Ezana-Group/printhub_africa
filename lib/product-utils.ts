@@ -78,6 +78,27 @@ export async function generateNextProductSku(categoryId?: string | null, overrid
   return sku;
 }
 
+/**
+ * Generate a POD SKU: POD-[YYYYMM]-[5-digit-sequence].
+ * Uses the Counter model with key "pod_sku" for atomic increment.
+ */
+export async function generatePODSku(): Promise<string> {
+  const now = new Date();
+  const yearMonth = now.toISOString().slice(0, 7).replace("-", ""); // 202603
+
+  const counter = await prisma.$transaction(async (tx) => {
+    const c = await tx.counter.upsert({
+      where: { id: "pod_sku" },
+      update: { value: { increment: 1 } },
+      create: { id: "pod_sku", value: 1 },
+    });
+    return c;
+  });
+
+  const sequence = String(counter.value).padStart(5, "0");
+  return `POD-${yearMonth}-${sequence}`;
+}
+
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

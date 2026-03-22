@@ -156,55 +156,71 @@ model Category {
 }
 
 model Product {
-  id                 String                  @id @default(cuid())
-  name               String
-  slug               String                  @unique
-  description        String?
-  shortDescription   String?
-  categoryId         String
-  productType        ProductType
-  images             String[]
-  basePrice          Decimal                 @db.Decimal(12, 2)
-  comparePrice       Decimal?                @db.Decimal(12, 2)
-  costPrice          Decimal?                @db.Decimal(12, 2)
-  sku                String?                 @unique
-  stock              Int                     @default(0)
-  lowStockThreshold  Int                     @default(0)
-  minOrderQty        Int                     @default(1)
-  maxOrderQty        Int?
-  weight             Decimal?                @db.Decimal(10, 3)
-  dimensions         Json?
-  materials          String[]
-  colors             String[]
-  finishes           String[]
-  isActive           Boolean                 @default(true)
-  isFeatured         Boolean                 @default(false)
-  metaTitle          String?
-  metaDescription    String?
-  tags               String[]
-  createdAt          DateTime                @default(now())
-  updatedAt          DateTime                @updatedAt
-  brand              String?
-  specifications     Json?
-  compatibility      String?
-  materialType       String?
-  availability       ProductAvailability     @default(IN_STOCK)
-  externalModel      ExternalModel?
-  catalogueItem      CatalogueItem?
-  inventory          Inventory[]
-  orderItems         OrderItem[]
-  category           Category                @relation(fields: [categoryId], references: [id])
-  productImages      ProductImage[]
-  reviews            ProductReview[]
-  variants           ProductVariant[]
-  shopStockMovements ShopInventoryMovement[]
-  shopPOLines        ShopPurchaseOrderLine[]
-  wishlists          Wishlist[]
+  id                   String                  @id @default(cuid())
+  name                 String
+  slug                 String                  @unique
+  description          String?
+  shortDescription     String?
+  categoryId           String
+  productType          ProductType
+  images               String[]
+  basePrice            Decimal                 @db.Decimal(12, 2)
+  comparePrice         Decimal?                @db.Decimal(12, 2)
+  costPrice            Decimal?                @db.Decimal(12, 2)
+  sku                  String?                 @unique
+  stock                Int?                    @default(0)
+  lowStockThreshold    Int                     @default(0)
+  minOrderQty          Int                     @default(1)
+  maxOrderQty          Int?
+  weight               Decimal?                @db.Decimal(10, 3)
+  dimensions           Json?
+  materials            String[]
+  colors               String[]
+  finishes             String[]
+  isActive             Boolean                 @default(true)
+  isFeatured           Boolean                 @default(false)
+  metaTitle            String?
+  metaDescription      String?
+  tags                 String[]
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  brand                String?
+  specifications       Json?
+  compatibility        String?
+  materialType         String?
+  availability         ProductAvailability     @default(IN_STOCK)
+  /// True for Print-on-Demand products — no stock tracking
+  isPOD                Boolean                 @default(false)
+  /// Links back to the CatalogueItem this POD product was created from
+  catalogueItemId      String?                 @unique
+  /// Running count of units sold this calendar month (reset by monthly cron)
+  soldThisMonth        Int                     @default(0)
+  /// Human-readable estimated print time, e.g. "4–6 hours"
+  printTimeEstimate    String?
+  /// Approximate filament weight in grams
+  filamentWeightGrams  Float?
+  /// URL to a dimension diagram image shown as a tab in the gallery
+  dimensionDiagramUrl  String?
+  externalModel        ExternalModel?
+  catalogueItem        CatalogueItem?          @relation("CatalogueProductLink")
+  catalogueSourceItem  CatalogueItem?          @relation("CataloguePODSource", fields: [catalogueItemId], references: [id])
+  inventory            Inventory[]
+  orderItems           OrderItem[]
+  category             Category                @relation(fields: [categoryId], references: [id])
+  productImages        ProductImage[]
+  printMaterials       ProductPrintMaterial[]
+  filamentColors       ProductFilamentColor[]
+  reviews              ProductReview[]
+  variants             ProductVariant[]
+  shopStockMovements   ShopInventoryMovement[]
+  shopPOLines          ShopPurchaseOrderLine[]
+  wishlists            Wishlist[]
 
   @@index([categoryId])
   @@index([slug])
   @@index([isFeatured, isActive])
   @@index([isActive])
+  @@index([isPOD])
   @@index([createdAt])
   @@index([basePrice])
 }
@@ -239,6 +255,39 @@ model ProductImage {
   product    Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
+}
+
+/// Join table linking shop products to printable 3D consumables (filament/resin)
+model ProductPrintMaterial {
+  productId    String
+  consumableId String
+  isDefault    Boolean          @default(false)
+  product      Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  consumable   ThreeDConsumable @relation(fields: [consumableId], references: [id])
+
+  @@id([productId, consumableId])
+  @@index([consumableId])
+}
+
+/// A named filament/resin colour option available for 3D products
+model FilamentColor {
+  id       String               @id @default(cuid())
+  name     String
+  hexCode  String
+  isActive Boolean              @default(true)
+  products ProductFilamentColor[]
+}
+
+/// Join table linking products to available filament colour options
+model ProductFilamentColor {
+  productId       String
+  filamentColorId String
+  isAvailable     Boolean       @default(true)
+  product         Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  filamentColor   FilamentColor @relation(fields: [filamentColorId], references: [id])
+
+  @@id([productId, filamentColorId])
+  @@index([filamentColorId])
 }
 
 model ProductReview {
@@ -1367,6 +1416,7 @@ model ThreeDConsumable {
   colourHex         String?
   weightPerSpoolKg  Float?
   movements         ThreeDConsumableMovement[]
+  products          ProductPrintMaterial[]
 }
 
 model Department {
@@ -1853,7 +1903,9 @@ model CatalogueItem {
   modelStorageKey    String?
   modelUrl           String?
   productId          String?                 @unique
-  product            Product?                @relation(fields: [productId], references: [id])
+  product            Product?                @relation("CatalogueProductLink", fields: [productId], references: [id])
+  /// Reverse relation: the POD Product that was created from this catalogue item
+  podProduct         Product?                @relation("CataloguePODSource")
   approvedBy         User?                   @relation("CatalogueApprovedBy", fields: [approvedById], references: [id])
   archivedBy         User?                   @relation("CatalogueArchivedBy", fields: [archivedById], references: [id])
   category           Category                @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -2328,6 +2380,7 @@ enum ProductType {
   CUSTOM
   PRINT_ON_DEMAND
   SERVICE
+  POD
 }
 
 enum PrintMaterialType {

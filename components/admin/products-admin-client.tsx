@@ -29,6 +29,7 @@ import {
   getProductTypeLabel,
   getProductTypeDotColor,
 } from "@/lib/admin-utils";
+import type { ProductType } from "@prisma/client";
 import { ProductFormSheet } from "@/components/admin/product-form-sheet";
 import { TableToolbar, type FilterConfig, type SortOption } from "@/components/admin/ui/TableToolbar";
 import { TablePagination } from "@/components/admin/ui/TablePagination";
@@ -47,8 +48,6 @@ import {
   Download,
 } from "lucide-react";
 
-type ProductType = "READYMADE_3D" | "LARGE_FORMAT" | "CUSTOM" | "PRINT_ON_DEMAND" | "SERVICE";
-
 export type ProductRow = {
   id: string;
   name: string;
@@ -60,24 +59,28 @@ export type ProductRow = {
   productType: ProductType;
   basePrice: number;
   comparePrice: number | null;
-  stock: number;
+  stock: number | null;
   isActive: boolean;
-  isFeatured: boolean;
+  isPOD: boolean;
   images: string[];
   createdAt: Date;
   _variantsCount?: number;
 };
 
-function StockBadge({ stock, productType }: { stock: number; productType: ProductType }) {
-  const isService = productType === "LARGE_FORMAT" || productType === "CUSTOM" || productType === "SERVICE";
-  const isPod = productType === "PRINT_ON_DEMAND";
-  
-  if ((isService || isPod) && stock === 0) {
-    return <Badge variant="secondary" className="font-mono text-xs bg-[#F3F4F6] text-[#6B7280]">
-      {isPod ? "POD" : "Service"}
+function StockBadge({ stock, productType, isPOD }: { stock: number | null; productType: string; isPOD?: boolean }) {
+  if (isPOD || productType === "POD" || productType === "PRINT_ON_DEMAND") {
+    return <Badge variant="secondary" className="font-mono text-xs bg-primary/10 text-primary border-primary/20">
+      POD
     </Badge>;
   }
-  if (stock === 0) return <Badge className="bg-[#EF4444] text-white border-0">Out of Stock</Badge>;
+  const isService = productType === "LARGE_FORMAT" || productType === "CUSTOM" || productType === "SERVICE";
+  
+  if (isService && (stock === 0 || stock === null)) {
+    return <Badge variant="secondary" className="font-mono text-xs bg-[#F3F4F6] text-[#6B7280]">
+      Service
+    </Badge>;
+  }
+  if (stock === null || stock === 0) return <Badge className="bg-[#EF4444] text-white border-0">Out of Stock</Badge>;
   if (stock <= 5) return <Badge className="bg-[#F59E0B] text-white border-0">Low: {stock}</Badge>;
   if (stock < 20) return <Badge variant="secondary" className="bg-[#F3F4F6] text-[#6B7280]">In Stock: {stock}</Badge>;
   return <Badge className="bg-[#10B981] text-white border-0">{stock}</Badge>;
@@ -278,8 +281,13 @@ export function ProductsAdminClient({
                 className="text-left font-semibold text-sm text-[#111] hover:text-primary hover:underline truncate block"
               >
                 {p.name}
+                {p.isPOD && (
+                  <Badge variant="outline" className="ml-2 h-4 px-1 text-[9px] uppercase tracking-tighter bg-primary/5 text-primary border-primary/20 align-middle">
+                    POD
+                  </Badge>
+                )}
               </button>
-              <div className="text-[12px] text-[#6B7280] font-mono">
+              <div className="text-[12px] text-[#6B7280] font-mono mt-0.5">
                 {p.sku ? `SKU: ${p.sku}` : "No SKU"}
               </div>
               {p._variantsCount && p._variantsCount > 0 && (
@@ -325,7 +333,7 @@ export function ProductsAdminClient({
         accessorKey: "stock",
         header: "Stock",
         cell: ({ row }) => (
-          <StockBadge stock={row.original.stock} productType={row.original.productType} />
+          <StockBadge stock={row.original.stock} productType={row.original.productType} isPOD={row.original.isPOD} />
         ),
       },
       {

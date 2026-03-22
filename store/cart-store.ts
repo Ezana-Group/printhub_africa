@@ -28,6 +28,8 @@ function scheduleCartSync() {
 export interface ShopCartItem {
   productId: string;
   variantId?: string;
+  colorName?: string;
+  colorHex?: string;
   quantity: number;
   unitPrice: number;
   name: string;
@@ -69,7 +71,8 @@ function cartItemKey(i: CartItem): string {
   if (isCatalogueCartItem(i)) {
     return `cat:${i.catalogueItemId}:${i.materialCode}:${i.colourHex}`;
   }
-  return `shop:${i.productId}:${i.variantId ?? ""}`;
+  const s = i as ShopCartItem;
+  return `shop:${s.productId}:${s.variantId ?? ""}:${s.colorHex ?? ""}`;
 }
 
 interface CartState {

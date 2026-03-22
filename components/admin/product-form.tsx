@@ -12,8 +12,7 @@ import { FileUploader } from "@/components/upload/FileUploader";
 import { ProductImagesTab } from "@/components/admin/product-images-tab";
 import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 import { CategoryCascadingSelect } from "@/components/admin/CategoryCascadingSelect";
-
-type ProductType = "READYMADE_3D" | "LARGE_FORMAT" | "CUSTOM" | "PRINT_ON_DEMAND" | "SERVICE";
+import type { ProductType } from "@prisma/client";
 
 interface Category {
   id: string;
@@ -35,7 +34,7 @@ interface ProductFormProps {
     basePrice: number;
     comparePrice: number | null;
     sku: string | null;
-    stock: number;
+    stock: number | null;
     minOrderQty: number;
     maxOrderQty: number | null;
     images: string[];
@@ -69,7 +68,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   
   const handleTypeChange = (value: ProductType) => {
     setProductType(value);
-    if (value === "PRINT_ON_DEMAND") {
+    if (value === "POD") {
       setStock("0");
     }
   };
@@ -241,6 +240,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
                 <option value="LARGE_FORMAT">Large format</option>
                 <option value="CUSTOM">3D Service</option>
                 <option value="PRINT_ON_DEMAND">Print-On-Demand</option>
+                <option value="POD">POD</option>
                 <option value="SERVICE">Other Service</option>
               </select>
             </div>

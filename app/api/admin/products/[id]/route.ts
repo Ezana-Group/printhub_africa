@@ -11,11 +11,14 @@ const updateSchema = z.object({
   description: z.string().max(50000).optional(),
   shortDescription: z.string().max(500).optional(),
   categoryId: z.string().min(1).optional(),
-  productType: z.enum(["READYMADE_3D", "LARGE_FORMAT", "CUSTOM"]).optional(),
+  productType: z.enum(["READYMADE_3D", "LARGE_FORMAT", "CUSTOM", "POD", "SERVICE"]).optional(),
+  isPOD: z.boolean().optional(),
+  printTimeEstimate: z.string().nullable().optional(),
+  filamentWeightGrams: z.number().nullable().optional(),
   basePrice: z.number().min(0).optional(),
   comparePrice: z.number().min(0).nullable().optional(),
   sku: z.string().max(100).nullable().optional(),
-  stock: z.number().int().min(0).optional(),
+  stock: z.number().int().min(0).nullable().optional(),
   minOrderQty: z.number().int().min(1).optional(),
   maxOrderQty: z.number().int().min(1).nullable().optional(),
   images: z.array(z.string()).optional(),
@@ -64,30 +67,35 @@ export async function PATCH(
     }
   }
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const updateData: any = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.slug !== undefined) updateData.slug = data.slug;
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.shortDescription !== undefined) updateData.shortDescription = data.shortDescription;
+    if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
+    if (data.productType !== undefined) updateData.productType = data.productType;
+    if (data.isPOD !== undefined) updateData.isPOD = data.isPOD;
+    if (data.printTimeEstimate !== undefined) updateData.printTimeEstimate = data.printTimeEstimate;
+    if (data.filamentWeightGrams !== undefined) updateData.filamentWeightGrams = data.filamentWeightGrams;
+    if (data.basePrice !== undefined) updateData.basePrice = data.basePrice;
+    if (data.comparePrice !== undefined) updateData.comparePrice = data.comparePrice;
+    if (skuUpdate !== undefined) updateData.sku = skuUpdate;
+    if (data.stock !== undefined) updateData.stock = data.stock;
+    if (data.minOrderQty !== undefined) updateData.minOrderQty = data.minOrderQty;
+    if (data.maxOrderQty !== undefined) updateData.maxOrderQty = data.maxOrderQty;
+    if (data.images !== undefined) updateData.images = data.images;
+    if (data.materials !== undefined) updateData.materials = data.materials;
+    if (data.colors !== undefined) updateData.colors = data.colors;
+    if (data.isActive !== undefined) updateData.isActive = data.isActive;
+    if (data.isFeatured !== undefined) updateData.isFeatured = data.isFeatured;
+    if (data.metaTitle !== undefined) updateData.metaTitle = data.metaTitle;
+    if (data.metaDescription !== undefined) updateData.metaDescription = data.metaDescription;
+    if (data.tags !== undefined) updateData.tags = data.tags;
+
     const product = await prisma.product.update({
       where: { id },
-      data: {
-        ...(data.name != null && { name: data.name }),
-        ...(data.slug != null && { slug: data.slug }),
-        ...(data.description !== undefined && { description: data.description }),
-        ...(data.shortDescription !== undefined && { shortDescription: data.shortDescription }),
-        ...(data.categoryId != null && { categoryId: data.categoryId }),
-        ...(data.productType != null && { productType: data.productType }),
-        ...(data.basePrice != null && { basePrice: data.basePrice }),
-        ...(data.comparePrice !== undefined && { comparePrice: data.comparePrice }),
-        ...(skuUpdate !== undefined && { sku: skuUpdate }),
-        ...(data.stock != null && { stock: data.stock }),
-        ...(data.minOrderQty != null && { minOrderQty: data.minOrderQty }),
-        ...(data.maxOrderQty !== undefined && { maxOrderQty: data.maxOrderQty }),
-        ...(data.images != null && { images: data.images }),
-        ...(data.materials != null && { materials: data.materials }),
-        ...(data.colors != null && { colors: data.colors }),
-        ...(data.isActive != null && { isActive: data.isActive }),
-        ...(data.isFeatured != null && { isFeatured: data.isFeatured }),
-        ...(data.metaTitle !== undefined && { metaTitle: data.metaTitle }),
-        ...(data.metaDescription !== undefined && { metaDescription: data.metaDescription }),
-        ...(data.tags != null && { tags: data.tags }),
-      },
+      data: updateData,
     });
     revalidateTag("products");
     revalidateTag("homepage");

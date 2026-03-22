@@ -125,7 +125,7 @@ export async function POST(req: Request) {
       if (!product) {
         return NextResponse.json({ error: "One or more products are no longer available." }, { status: 400 });
       }
-      stock = product.stock;
+      stock = product.stock ?? 0;
     }
     if (item.quantity > stock) {
       return NextResponse.json(
@@ -209,6 +209,17 @@ export async function POST(req: Request) {
         tx
       );
       if (!reserve.ok) throw new Error(reserve.error);
+
+      // Increment soldThisMonth for each product
+      for (const item of items) {
+        if (item.productId) {
+          await tx.product.update({
+            where: { id: item.productId },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            data: { soldThisMonth: { increment: item.quantity } } as any,
+          });
+        }
+      }
 
       return tx.order.create({
         data: {

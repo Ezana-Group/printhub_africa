@@ -23,6 +23,7 @@ interface AddToCartButtonProps {
   stock: number;
   minOrderQty: number;
   maxOrderQty?: number;
+  selectedColor?: { name: string; hex: string };
 }
 
 export function AddToCartButton({
@@ -35,6 +36,7 @@ export function AddToCartButton({
   stock,
   minOrderQty,
   maxOrderQty,
+  selectedColor,
 }: AddToCartButtonProps) {
   const addItem = useCartStore((s) => s.addItem);
   const [quantity, setQuantity] = useState(minOrderQty);
@@ -56,7 +58,10 @@ export function AddToCartButton({
       name,
       slug,
       image,
-    };
+      colorName: selectedColor?.name,
+      colorHex: selectedColor?.hex,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any; // Cast as any because we added colors to ShopCartItem in store
     addItem(item);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);

@@ -167,7 +167,7 @@ export default async function AdminInventoryPage() {
     name: p.name,
     sku: p.sku,
     category: p.category,
-    stock: p.stock,
+    stock: p.stock ?? 0,
     lowStockThreshold: p.lowStockThreshold ?? 0,
     images: p.images,
     isActive: p.isActive,

@@ -31,6 +31,7 @@ export default async function AdminProductsPage() {
     categoryId: p.categoryId,
     category: p.category,
     productType: p.productType,
+    isPOD: p.isPOD,
     basePrice: Number(p.basePrice),
     comparePrice: p.comparePrice != null ? Number(p.comparePrice) : null,
     stock: p.stock,

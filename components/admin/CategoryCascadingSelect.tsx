@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Label } from "@/components/ui/label";
 
 export type CategoryOption = {
@@ -21,7 +21,7 @@ export function CategoryCascadingSelect({
   onChange,
 }: CategoryCascadingSelectProps) {
   // Find the selected category and its lineage
-  const findLineage = (id: string | null): string[] => {
+  const findLineage = useCallback((id: string | null): string[] => {
     if (!id) return [];
     const lineage: string[] = [];
     let currentId: string | null = id;
@@ -31,9 +31,9 @@ export function CategoryCascadingSelect({
       currentId = parent?.parentId || null;
     }
     return lineage;
-  };
+  }, [categories]);
 
-  const initialLineage = useMemo(() => findLineage(value), [value, categories]);
+  const initialLineage = useMemo(() => findLineage(value), [value, findLineage]);
   const [selectedPath, setSelectedPath] = useState<string[]>(initialLineage);
 
   // Sync state if value changes externally
@@ -42,7 +42,7 @@ export function CategoryCascadingSelect({
     if (JSON.stringify(newLineage) !== JSON.stringify(selectedPath)) {
       setSelectedPath(newLineage);
     }
-  }, [value]);
+  }, [value, findLineage, selectedPath]);
 
   const levels = useMemo(() => {
     const result: CategoryOption[][] = [];

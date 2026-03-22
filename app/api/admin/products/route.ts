@@ -18,11 +18,14 @@ const createSchema = z.object({
   description: z.string().max(50000).optional(),
   shortDescription: z.string().max(500).optional(),
   categoryId: z.string().min(1),
-  productType: z.enum(["READYMADE_3D", "LARGE_FORMAT", "CUSTOM"]),
+  productType: z.enum(["READYMADE_3D", "LARGE_FORMAT", "CUSTOM", "POD", "SERVICE"]),
+  isPOD: z.boolean().optional(),
+  printTimeEstimate: z.string().nullable().optional(),
+  filamentWeightGrams: z.number().nullable().optional(),
   basePrice: z.number().min(0),
   comparePrice: z.number().min(0).optional(),
   sku: z.string().max(100).optional(),
-  stock: z.number().int().min(0),
+  stock: z.number().int().min(0).nullable().optional(),
   minOrderQty: z.number().int().min(1).optional(),
   maxOrderQty: z.number().int().min(1).optional(),
   images: z.array(z.string().url()).optional(),
@@ -65,28 +68,34 @@ export async function POST(req: Request) {
     }
   }
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const createData: any = {
+      name: data.name,
+      slug: finalSlug,
+      description: data.description ?? null,
+      shortDescription: data.shortDescription ?? null,
+      categoryId: data.categoryId,
+      productType: data.productType,
+      images: data.images ?? [],
+      basePrice: data.basePrice,
+      comparePrice: data.comparePrice ?? null,
+      sku,
+      stock: data.stock !== undefined ? data.stock : 0,
+      isPOD: data.isPOD ?? (data.productType === "POD"),
+      printTimeEstimate: data.printTimeEstimate ?? null,
+      filamentWeightGrams: data.filamentWeightGrams ?? null,
+      minOrderQty: data.minOrderQty ?? 1,
+      maxOrderQty: data.maxOrderQty ?? null,
+      materials: data.materials ?? [],
+      colors: data.colors ?? [],
+      isActive: data.isActive ?? true,
+      isFeatured: data.isFeatured ?? false,
+      metaTitle: data.metaTitle ?? null,
+      metaDescription: data.metaDescription ?? null,
+    };
+
     const product = await prisma.product.create({
-      data: {
-        name: data.name,
-        slug: finalSlug,
-        description: data.description ?? null,
-        shortDescription: data.shortDescription ?? null,
-        categoryId: data.categoryId,
-        productType: data.productType,
-        images: data.images ?? [],
-        basePrice: data.basePrice,
-        comparePrice: data.comparePrice ?? null,
-        sku,
-        stock: data.stock,
-        minOrderQty: data.minOrderQty ?? 1,
-        maxOrderQty: data.maxOrderQty ?? null,
-        materials: data.materials ?? [],
-        colors: data.colors ?? [],
-        isActive: data.isActive ?? true,
-        isFeatured: data.isFeatured ?? false,
-        metaTitle: data.metaTitle ?? null,
-        metaDescription: data.metaDescription ?? null,
-      },
+      data: createData,
     });
     revalidateTag("products");
     revalidateTag("homepage");

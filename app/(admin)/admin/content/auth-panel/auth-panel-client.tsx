@@ -13,7 +13,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Loader2, Plus, Pencil, Trash2, ChevronUp, ChevronDown, Upload, Image as ImageIcon } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, ChevronUp, ChevronDown, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 export type AuthPanelConfigState = {

@@ -17,8 +17,9 @@ import { Switch } from "@/components/ui/switch";
 import type { ProductRow } from "@/components/admin/products-admin-client";
 import { ProductImagesTab } from "@/components/admin/product-images-tab";
 import { SmartTextEditor } from "@/components/admin/smart-text-editor";
+import { ProductMaterialSelector } from "@/components/admin/ProductMaterialSelector";
 
-type ProductType = "READYMADE_3D" | "LARGE_FORMAT" | "CUSTOM" | "PRINT_ON_DEMAND" | "SERVICE";
+import type { ProductType } from "@prisma/client";
 
 function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -43,7 +44,7 @@ export function ProductFormSheet({
   const isEdit = !!product && product.id !== "new";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"details" | "pricing" | "images" | "seo">("details");
+  const [activeTab, setActiveTab] = useState<"details" | "pricing" | "images" | "materials" | "seo">("details");
 
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -56,6 +57,7 @@ export function ProductFormSheet({
   const [stock, setStock] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [isFeatured, setIsFeatured] = useState(false);
+  const [isPOD, setIsPOD] = useState(false);
   const [imagesStr, setImagesStr] = useState("");
   const [metaTitle, setMetaTitle] = useState("");
   const [metaDescription, setMetaDescription] = useState("");
@@ -70,9 +72,10 @@ export function ProductFormSheet({
       setProductType(product.productType);
       setBasePrice(String(product.basePrice));
       setComparePrice(product.comparePrice != null ? String(product.comparePrice) : "");
-      setStock(String(product.stock));
+      setStock(String(product.stock ?? 0));
       setIsActive(product.isActive);
-      setIsFeatured(product.isFeatured ?? false);
+      setIsFeatured((product as Record<string, unknown>).isFeatured as boolean ?? false);
+      setIsPOD(product.isPOD ?? false);
       setImagesStr(Array.isArray(product.images) ? product.images.join("\n") : "");
       setMetaTitle("");
       setMetaDescription("");
@@ -88,6 +91,7 @@ export function ProductFormSheet({
       setStock("0");
       setIsActive(true);
       setIsFeatured(false);
+      setIsPOD(false);
       setImagesStr("");
       setMetaTitle("");
       setMetaDescription("");
@@ -153,6 +157,7 @@ export function ProductFormSheet({
     { id: "details" as const, label: "Details" },
     { id: "pricing" as const, label: "Pricing" },
     { id: "images" as const, label: "Images" },
+    { id: "materials" as const, label: "Materials" },
     { id: "seo" as const, label: "SEO" },
   ];
 
@@ -205,17 +210,20 @@ export function ProductFormSheet({
                   />
                 </div>
                 <div>
-                  <Label htmlFor="productType">Product Type *</Label>
                   <select
                     id="productType"
                     value={productType}
-                    onChange={(e) => setProductType(e.target.value as ProductType)}
+                    onChange={(e) => {
+                       const val = e.target.value as ProductType;
+                       setProductType(val);
+                       setIsPOD(val === "POD" || val === "PRINT_ON_DEMAND");
+                    }}
                     className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   >
                     <option value="READYMADE_3D">Ready-made 3D</option>
                     <option value="LARGE_FORMAT">Large Format</option>
                     <option value="CUSTOM">3D Service</option>
-                    <option value="PRINT_ON_DEMAND">Print-On-Demand</option>
+                    <option value="POD">Print-On-Demand (POD)</option>
                     <option value="SERVICE">Other Service</option>
                   </select>
                 </div>
@@ -265,8 +273,8 @@ export function ProductFormSheet({
                     <span className="text-sm">Active</span>
                   </label>
                   <label className="flex items-center gap-2">
-                    <Switch checked={isFeatured} onCheckedChange={setIsFeatured} />
-                    <span className="text-sm">Featured</span>
+                    <Switch checked={isPOD} onCheckedChange={setIsPOD} />
+                    <span className="text-sm">Is Print-on-Demand</span>
                   </label>
                 </div>
               </div>
@@ -312,6 +320,12 @@ export function ProductFormSheet({
                   source: "url" as const,
                 }))}
                 onSave={() => {}}
+              />
+            )}
+
+            {activeTab === "materials" && (
+              <ProductMaterialSelector 
+                productId={isEdit && product && product.id !== "new" ? product.id : ""} 
               />
             )}
 
