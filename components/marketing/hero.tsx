@@ -1,35 +1,14 @@
 import Link from "next/link";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { BusinessStats } from "@/components/stats/BusinessStats";
+import { WovenLightHero } from "@/components/ui/woven-light-hero";
 
-const DEFAULT_HERO_IMAGE = "/images/hero/hero-main.webp";
-
-export function Hero({ heroImage }: { heroImage?: string } = {}) {
-  const src = heroImage?.trim() || DEFAULT_HERO_IMAGE;
-  const isExternal = src.startsWith("http");
+export function Hero() {
   return (
     <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-[#0A0A0A]">
-      {isExternal ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={src}
-          alt="Large format and 3D printing services in Nairobi, Kenya"
-          className="absolute inset-0 h-full w-full object-cover object-center opacity-40"
-        />
-      ) : (
-        <Image
-          src={src}
-          alt="Large format and 3D printing services in Nairobi, Kenya"
-          fill
-          priority
-          quality={85}
-          sizes="100vw"
-          className="object-cover object-center opacity-40"
-        />
-      )}
-      <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0A] via-[#0A0A0A]/70 to-transparent" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(255,77,0,0.2),transparent)]" />
+      <div className="absolute inset-0 z-0">
+        <WovenLightHero showText={false} showNav={false} />
+      </div>
 
       <div className="container max-w-7xl mx-auto relative z-10 px-4 md:px-6 lg:px-8 py-24 text-center">
         <p className="text-primary font-semibold text-sm uppercase tracking-widest mb-4">
@@ -47,14 +26,14 @@ export function Hero({ heroImage }: { heroImage?: string } = {}) {
           <Button
             asChild
             size="lg"
-            className="bg-primary hover:bg-primary/90 text-white rounded-2xl px-8 h-12 text-base font-semibold shadow-xl shadow-primary/30"
+            className="rounded-full border-2 border-white/20 bg-white/10 px-8 h-12 text-base font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/20 shadow-xl shadow-primary/20"
           >
             <Link href="/shop">Shop Now</Link>
           </Button>
           <Button
             asChild
             size="lg"
-            className="rounded-2xl px-8 h-12 text-base font-semibold border-2 border-white bg-transparent text-white hover:bg-white hover:text-[#0A0A0A]"
+            className="rounded-full border-2 border-white/20 bg-white/10 px-8 h-12 text-base font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/20"
           >
             <Link href="/services">Explore Services</Link>
           </Button>

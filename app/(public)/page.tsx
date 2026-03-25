@@ -27,7 +27,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <Hero heroImage={siteImages.marketing_hero} />
+      <Hero />
       <CategoryStrip categories={homepageCategories} />
       <FeaturedProducts />
       <FeaturedCatalogueSection />
