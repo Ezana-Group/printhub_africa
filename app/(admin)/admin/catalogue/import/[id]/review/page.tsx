@@ -9,6 +9,12 @@ import { LicenceBadge } from "@/components/catalogue/LicenceBadge";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
+const proxiedImageUrl = (url: string) => {
+  if (!url) return "";
+  if (url.startsWith("/") || url.startsWith("blob:") || url.startsWith("data:")) return url;
+  return `/api/proxy/image?url=${encodeURIComponent(url)}`;
+};
+
 interface ImportFormData {
   name: string;
   shortDescription: string;
@@ -199,7 +205,7 @@ export default function ReviewPage() {
             </h3>
             <div className="aspect-square rounded-md overflow-hidden bg-gray-100 border relative group">
               <img 
-                src={formData.thumbnailUrl} 
+                src={proxiedImageUrl(formData.thumbnailUrl)} 
                 className="w-full h-full object-cover transition-transform group-hover:scale-105" 
                 alt="Preview"
               />
@@ -214,7 +220,7 @@ export default function ReviewPage() {
                   )}
                   onClick={() => setFormData({ ...formData, thumbnailUrl: url })}
                 >
-                  <img src={url} className="w-full h-full object-cover" alt={`Preview ${i}`} />
+                  <img src={proxiedImageUrl(url)} className="w-full h-full object-cover" alt={`Preview ${i}`} />
                 </div>
               ))}
             </div>

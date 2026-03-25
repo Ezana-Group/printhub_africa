@@ -36,7 +36,10 @@ export async function downloadAndUploadImage(imageUrl: string): Promise<string |
   try {
     // [External] API — updated to use header auth + error handling
     const res = await fetch(imageUrl, {
-      headers: { "User-Agent": "PrintHub/1.0 (https://printhub.africa)" },
+      headers: { 
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Referer": "https://www.thingiverse.com/"
+      },
     });
     if (!res.ok) return null;
     const buffer = Buffer.from(await res.arrayBuffer());
@@ -123,6 +126,9 @@ async function fetchPrintablesData(modelId: string, sourceUrl: string): Promise<
       }
     `;
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     const res = await fetch("https://api.printables.com/graphql/", {
       method: "POST",
       headers: {
@@ -130,7 +136,10 @@ async function fetchPrintablesData(modelId: string, sourceUrl: string): Promise<
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
       },
       body: JSON.stringify({ query, variables: { id: modelId } }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!res.ok) return { error: "API_FETCH_FAILED", detail: `Printables GraphQL error: ${res.status}` };
     
@@ -166,17 +175,32 @@ async function fetchThingiverseData(thingId: string, sourceUrl: string): Promise
 
     const headers = { 
       'Authorization': `Bearer ${token}`,
-      'User-Agent': 'PrintHub/1.0 (https://printhub.africa)'
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      'Referer': 'https://www.thingiverse.com/'
     };
 
-    const thingRes = await fetch(`https://api.thingiverse.com/things/${thingId}`, { headers });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-    if (!thingRes.ok) return { error: "API_FETCH_FAILED", detail: `Thingiverse API error: ${thingRes.status}` };
+    const thingRes = await fetch(`https://api.thingiverse.com/things/${thingId}`, { 
+      headers,
+      signal: controller.signal
+    });
+
+    if (!thingRes.ok) {
+      clearTimeout(timeoutId);
+      return { error: "API_FETCH_FAILED", detail: `Thingiverse API error: ${thingRes.status}` };
+    }
     
     const thing = await thingRes.json();
     
     // Thingiverse images are usually in thing.images
-    const imagesRes = await fetch(`https://api.thingiverse.com/things/${thingId}/images`, { headers });
+    const imagesRes = await fetch(`https://api.thingiverse.com/things/${thingId}/images`, { 
+      headers,
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
     const images = imagesRes.ok ? await imagesRes.json() : [];
 
     return {
@@ -207,7 +231,7 @@ async function fetchMyMiniFactoryData(objectId: string, sourceUrl: string): Prom
     const res = await fetch(`https://www.myminifactory.com/api/v2/objects/${objectId}`, {
       headers: { 
         'Authorization': `Bearer ${token}`,
-        'User-Agent': 'PrintHub/1.0 (https://printhub.africa)'
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
       }
     });
 
@@ -235,94 +259,133 @@ async function fetchMyMiniFactoryData(objectId: string, sourceUrl: string): Prom
 }
 
 export async function searchThingiverse(term: string, page: number = 1) {
-  // [Thingiverse] API — updated to use header auth + error handling
   const url = `https://api.thingiverse.com/search/${encodeURIComponent(term)}?license=cc&type=thing&per_page=20&page=${page}`;
-  const res = await fetch(url, { 
-    headers: { 
-      'Authorization': `Bearer ${process.env.THINGIVERSE_ACCESS_TOKEN || process.env.THINGIVERSE_APP_TOKEN}`,
-      'User-Agent': 'PrintHub/1.0 (https://printhub.africa)',
-      'Accept': 'application/json',
-    } 
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
 
-  if (!res.ok) {
-    const errorText = await res.text();
-    console.error(`[Thingiverse] API error ${res.status}:`, errorText);
-    throw new Error(`Thingiverse API Error: ${res.status}`);
-  }
-  
-  const data = await res.json();
-  const results = [];
-
-  for (const thing of data.hits || []) {
-    // Check license for NC - Thingiverse search hits usually have a licence string
-    const license = thing.license || "";
-    if (/nc|non-commercial|noncommercial/i.test(license)) continue;
-
-    // Use hit data directly to avoid serial fetching (prevents 500 timeouts)
-    results.push({
-      externalId: thing.id.toString(),
-      name: thing.name,
-      description: thing.description || "", // Hits might have a short description
-      thumbnailUrl: thing.thumbnail,
-      licenceType: license,
-      designerName: thing.creator?.name || "Unknown",
-      designerUrl: thing.creator?.public_url || "",
-      sourceUrl: thing.public_url || `https://www.thingiverse.com/thing:${thing.id}`,
-      platform: "THINGIVERSE" as ImportPlatform,
-      rawData: thing,
-      alreadyImported: false, // Calculated in the caller API route
+  try {
+    const res = await fetch(url, { 
+      headers: { 
+        'Authorization': `Bearer ${process.env.THINGIVERSE_ACCESS_TOKEN || process.env.THINGIVERSE_APP_TOKEN}`,
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'application/json',
+        'Referer': 'https://www.thingiverse.com/'
+      },
+      signal: controller.signal
     });
-  }
 
-  return results;
+    clearTimeout(timeoutId);
+
+    if (res.status === 403 || res.status === 401) {
+      throw new Error("THINGIVERSE_AUTH_FAILED");
+    }
+
+    if (res.status === 503 || res.status === 504) {
+      throw new Error("THINGIVERSE_SERVICE_UNAVAILABLE");
+    }
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`[Thingiverse] API error ${res.status}:`, errorText);
+      throw new Error(`THINGIVERSE_API_ERROR_${res.status}`);
+    }
+
+    const data = await res.json();
+    const results = [];
+
+    for (const thing of data.hits || []) {
+      const license = thing.license || "";
+      if (/nc|non-commercial|noncommercial/i.test(license)) continue;
+
+      results.push({
+        externalId: thing.id.toString(),
+        name: thing.name,
+        description: thing.description || "",
+        thumbnailUrl: thing.thumbnail,
+        licenceType: license,
+        designerName: thing.creator?.name || "Unknown",
+        designerUrl: thing.creator?.public_url || "",
+        sourceUrl: thing.public_url || `https://www.thingiverse.com/thing:${thing.id}`,
+        platform: "THINGIVERSE" as ImportPlatform,
+        rawData: thing,
+        alreadyImported: false,
+      });
+    }
+
+    return results;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error("THINGIVERSE_TIMEOUT");
+    }
+    throw error;
+  }
 }
 
 export async function searchMyMiniFactory(term: string, page: number = 1) {
   const token = process.env.MMF_CLIENT_ID; // Prompt says OAuth Bearer token, I'll use MMF_CLIENT_ID as the token for now
   if (!token) throw new Error("MMF_CLIENT_ID_MISSING");
 
-  // [MyMiniFactory] API — updated to use header auth + error handling
   const url = `https://www.myminifactory.com/api/v2/search?q=${encodeURIComponent(term)}&license=commercial&per_page=20&page=${page}`;
-  const res = await fetch(url, { 
-    headers: { 
-      Authorization: `Bearer ${token}`,
-      'User-Agent': 'PrintHub/1.0 (https://printhub.africa)'
-    } 
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
 
-  if (!res.ok) {
-    const errorText = await res.text();
-    console.error(`[MyMiniFactory] API error ${res.status}:`, errorText);
-    throw new Error(`MyMiniFactory API Error: ${res.status}`);
-  }
-  
-  const data = await res.json();
-  const results = [];
-
-  for (const item of data.items || []) {
-    // Only import where allows_commercial_printing is true
-    if (item.licence?.allows_commercial_printing !== true) continue;
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    results.push({
-      externalId: item.id.toString(),
-      name: item.name,
-      description: item.description,
-      printInfo: item.print_settings || "",
-      imageUrls: item.images?.map((img: { url: string; original?: { url: string } }) => img.original?.url || img.url) || [],
-      thumbnailUrl: item.thumbnail?.url,
-      licenceType: item.licence?.name || "Commercial",
-      designerName: item.designer?.name,
-      designerUrl: item.designer?.profile_url,
-      tags: item.tags || [],
-      sourceUrl: item.url,
-      platform: "MYMINIFACTORY" as ImportPlatform,
-      rawData: item,
+  try {
+    const res = await fetch(url, { 
+      headers: { 
+        Authorization: `Bearer ${token}`,
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+      },
+      signal: controller.signal
     });
-    
-    await new Promise(r => setTimeout(r, 500));
-  }
 
-  return results;
+    clearTimeout(timeoutId);
+
+    if (res.status === 403 || res.status === 401) {
+      throw new Error("MMF_AUTH_FAILED");
+    }
+
+    if (res.status === 503 || res.status === 504) {
+      throw new Error("MMF_SERVICE_UNAVAILABLE");
+    }
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`[MyMiniFactory] API error ${res.status}:`, errorText);
+      throw new Error(`MMF_API_ERROR_${res.status}`);
+    }
+
+    const data = await res.json();
+    const results = [];
+
+    for (const item of data.items || []) {
+      if (item.licence?.allows_commercial_printing !== true) continue;
+
+      results.push({
+        externalId: item.id.toString(),
+        name: item.name,
+        description: item.description,
+        printInfo: item.print_settings || "",
+        imageUrls: item.images?.map((img: { url: string; original?: { url: string } }) => img.original?.url || img.url) || [],
+        thumbnailUrl: item.thumbnail?.url,
+        licenceType: item.licence?.name || "Commercial",
+        designerName: item.designer?.name,
+        designerUrl: item.designer?.profile_url,
+        tags: item.tags || [],
+        sourceUrl: item.url,
+        platform: "MYMINIFACTORY" as ImportPlatform,
+        rawData: item,
+      });
+      
+      await new Promise(r => setTimeout(r, 500));
+    }
+
+    return results;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error("MMF_TIMEOUT");
+    }
+    throw error;
+  }
 }

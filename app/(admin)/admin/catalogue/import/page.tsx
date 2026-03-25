@@ -12,6 +12,12 @@ import { cn } from "@/lib/utils";
 import { FileUploader, UploadedFileResult } from "@/components/upload/FileUploader";
 import { Label } from "@/components/ui/label";
 
+const proxiedImageUrl = (url: string) => {
+  if (!url) return "";
+  if (url.startsWith("/") || url.startsWith("blob:") || url.startsWith("data:")) return url;
+  return `/api/proxy/image?url=${encodeURIComponent(url)}`;
+};
+
 export default function ImportDashboard() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -329,6 +335,16 @@ function ApiSearchSection() {
   const [results, setResults] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [apiConfig, setApiConfig] = useState<Record<string, boolean>>({});
+  const [loadingImports, setLoadingImports] = useState<Record<string, boolean>>({});
+  const [licenseFilter, setLicenseFilter] = useState("all");
+  const [lastMessage, setLastMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  useEffect(() => {
+    if (lastMessage) {
+      const timer = setTimeout(() => setLastMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [lastMessage]);
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -411,6 +427,16 @@ function ApiSearchSection() {
                   onKeyDown={(e) => e.key === "Enter" && handleSearch(true)}
                   disabled={isApiMissing}
                 />
+                <select 
+                  className="border rounded-md px-3 py-2 bg-transparent text-sm"
+                  value={licenseFilter}
+                  onChange={(e) => setLicenseFilter(e.target.value)}
+                >
+                  <option value="all">All Licences</option>
+                  <option value="cc0">CC0 / Public Domain</option>
+                  <option value="by">Attribution (BY)</option>
+                  <option value="commercial">Commercial Friendly</option>
+                </select>
                 <button 
                   className="bg-primary text-white px-6 py-2 rounded-md disabled:opacity-50 flex items-center gap-2"
                   onClick={() => handleSearch(true)}
@@ -472,14 +498,33 @@ function ApiSearchSection() {
             </div>
           </div>
         )}
+
+        {lastMessage && (
+          <div className={cn(
+            "mt-4 p-4 rounded-md border flex items-center gap-3 animate-in fade-in slide-in-from-top-2",
+            lastMessage.type === 'success' ? "bg-green-50 text-green-700 border-green-100" : "bg-red-50 text-red-700 border-red-100"
+          )}>
+            {lastMessage.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+            <p className="text-sm font-medium">{lastMessage.text}</p>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {results.map((item) => (
+        {results
+          .filter(item => {
+            if (licenseFilter === "all") return true;
+            const l = item.licenceType.toLowerCase();
+            if (licenseFilter === "cc0") return l.includes("cc0") || l.includes("public");
+            if (licenseFilter === "by") return l.includes("by") && !l.includes("nc");
+            if (licenseFilter === "commercial") return !l.includes("nc") && !l.includes("non-commercial");
+            return true;
+          })
+          .map((item) => (
           <div key={item.externalId} className="bg-white rounded-lg border shadow-sm overflow-hidden flex flex-col">
             <div className="aspect-video relative bg-gray-100">
               {item.thumbnailUrl ? (
-                <img src={item.thumbnailUrl} alt={item.name} className="w-full h-full object-cover" />
+                <img src={proxiedImageUrl(item.thumbnailUrl)} alt={item.name} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-muted-foreground italic">No image</div>
               )}
@@ -499,10 +544,12 @@ function ApiSearchSection() {
                   </span>
                 ) : (
                   <button 
-                    className="w-full bg-secondary text-secondary-foreground py-2 rounded-md text-sm font-medium hover:bg-secondary/80 disabled:opacity-50"
+                    className="w-full bg-secondary text-secondary-foreground py-2 rounded-md text-sm font-medium hover:bg-secondary/80 disabled:opacity-50 flex items-center justify-center gap-2"
                     onClick={() => handleSingleImport(item)}
+                    disabled={loadingImports[item.externalId]}
                   >
-                    Import Model
+                    {loadingImports[item.externalId] ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                    {loadingImports[item.externalId] ? "Importing..." : "Import Model"}
                   </button>
                 )}
               </div>
@@ -527,17 +574,28 @@ function ApiSearchSection() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async function handleSingleImport(item: any) {
+    if (loadingImports[item.externalId]) return;
+    setLoadingImports(prev => ({ ...prev, [item.externalId]: true }));
+    
     try {
       const res = await fetch("/api/admin/import/url", {
         method: "POST",
         body: JSON.stringify({ url: item.sourceUrl }),
       });
+      
+      const data = await res.json();
+      
       if (res.ok) {
-        // Update local state to show "Already Imported"
         setResults(prev => prev.map(r => r.externalId === item.externalId ? { ...r, alreadyImported: true } : r));
+        setLastMessage({ type: 'success', text: `Successfully imported "${item.name}" to the queue.` });
+      } else {
+        setLastMessage({ type: 'error', text: data.error || "Failed to import model." });
       }
     } catch (e) {
       console.error(e);
+      setLastMessage({ type: 'error', text: "A network error occurred during import." });
+    } finally {
+      setLoadingImports(prev => ({ ...prev, [item.externalId]: false }));
     }
   }
 }
@@ -584,7 +642,7 @@ function ImportQueueSection() {
             <tr key={item.id} className="hover:bg-gray-50 transition-colors">
               <td className="px-4 py-3">
                 <div className="w-12 h-12 rounded bg-gray-100 border overflow-hidden">
-                  {item.thumbnailUrl && <img src={item.thumbnailUrl} alt={item.name} className="w-full h-full object-cover" />}
+                  {item.thumbnailUrl && <img src={proxiedImageUrl(item.thumbnailUrl)} alt={item.name} className="w-full h-full object-cover" />}
                 </div>
               </td>
               <td className="px-4 py-3 font-medium">{item.name}</td>
