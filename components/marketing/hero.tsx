@@ -72,12 +72,6 @@ export function Hero() {
             >
               <Link href="/get-a-quote">Get a Free Quote →</Link>
             </Button>
-            <Link
-              href="/delivery"
-              className="text-xs md:text-sm font-medium text-slate-500 hover:text-white transition-colors underline-offset-4 hover:underline pr-0 md:pr-4"
-            >
-              View Delivery Zones
-            </Link>
           </div>
         </div>
       </div>
