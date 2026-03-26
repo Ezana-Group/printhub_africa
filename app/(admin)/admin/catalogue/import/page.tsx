@@ -137,7 +137,7 @@ function UrlImportSection() {
                 {error.statusCode === 401 || error.error === "API_AUTH_FAILED" ? (
                   <p>Authentication with the external platform failed. Please verify your API tokens in the environment settings and try again.</p>
                 ) : error.statusCode === 403 ? (
-                  <p>Access Forbidden (403). This could be due to insufficient permissions or a security mismatch. If you are an administrator, try logging out and back in, or check if you have the 'catalogue_import' permission.</p>
+                  <p>Access Forbidden (403). This could be due to insufficient permissions or a security mismatch. If you are an administrator, try logging out and back in, or check if you have the &apos;catalogue_import&apos; permission.</p>
                 ) : error.statusCode === 429 || error.error === "RATE_LIMITED" ? (
                   <p>Rate limit exceeded. Too many requests have been made to the external platform. Please wait a minute before trying again.</p>
                 ) : error.statusCode === 503 || error.statusCode === 504 || error.error === "EXTERNAL_SERVICE_DOWN" ? (
