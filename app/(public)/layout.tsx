@@ -71,7 +71,11 @@ export default async function PublicLayout({
       <EmailVerificationBanner />
       <main id="main-content" className="min-h-[calc(100vh-8rem)]">{children}</main>
       <Footer business={business} />
-      <WhatsAppFloat whatsapp={business.whatsapp} />
+      <WhatsAppFloat 
+        whatsapp={business.whatsapp} 
+        whatsappNumber={business.whatsappNumber} 
+        whatsappMessage={business.whatsappMessage} 
+      />
       <CookieBanner />
       <TawkTo />
     </>

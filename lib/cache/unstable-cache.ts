@@ -11,6 +11,8 @@ const DEFAULTS: BusinessPublic = {
   favicon: null,
   primaryPhone: null,
   whatsapp: null,
+  whatsappNumber: null,
+  whatsappMessage: null,
   primaryEmail: "hello@printhub.africa",
   supportEmail: "support@printhub.africa",
   financeEmail: "finance@printhub.africa",
@@ -92,15 +94,36 @@ export const getCachedBusinessMetadata = unstable_cache(
 export const getCachedBusinessPublic = unstable_cache(
   async (): Promise<BusinessPublic> => {
     let row;
+    let notificationsRaw;
     try {
-      row = await prisma.businessSettings.findUnique({
-        where: { id: "default" },
-      });
+      [row, notificationsRaw] = await Promise.all([
+        prisma.businessSettings.findUnique({
+          where: { id: "default" },
+        }),
+        prisma.pricingConfig.findUnique({
+          where: { key: "adminSettings:notifications" },
+        }),
+      ]);
     } catch (e) {
       console.error("getCachedBusinessPublic error:", e);
       return DEFAULTS;
     }
-    if (!row) return DEFAULTS;
+
+    let whatsappNumber = null;
+    let whatsappMessage = null;
+
+    if (notificationsRaw?.valueJson) {
+      try {
+        const parsed = JSON.parse(notificationsRaw.valueJson);
+        whatsappNumber = parsed.whatsappNumber || null;
+        whatsappMessage = parsed.whatsappMessage || null;
+      } catch (e) {
+        console.error("Error parsing notifications settings:", e);
+      }
+    }
+
+    if (!row) return { ...DEFAULTS, whatsappNumber, whatsappMessage };
+
     return {
       businessName: row.businessName ?? DEFAULTS.businessName,
       tradingName: row.tradingName ?? DEFAULTS.tradingName,
@@ -110,6 +133,8 @@ export const getCachedBusinessPublic = unstable_cache(
       favicon: row.favicon ?? null,
       primaryPhone: row.primaryPhone ?? null,
       whatsapp: row.whatsapp ?? null,
+      whatsappNumber: whatsappNumber ?? row.whatsapp ?? null,
+      whatsappMessage: whatsappMessage ?? null,
       primaryEmail: row.primaryEmail ?? DEFAULTS.primaryEmail,
       supportEmail: row.supportEmail ?? DEFAULTS.supportEmail,
       financeEmail: row.financeEmail ?? DEFAULTS.financeEmail,

@@ -130,8 +130,9 @@ export function CatalogueItemDetail({ item, business }: CatalogueItemDetailProps
   }));
 
   const waHref = (text: string) => {
-    const digits = (business.whatsapp ?? "").replace(/\D/g, "") || "254700000000";
-    return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
+    const digits = (business.whatsappNumber ?? business.whatsapp ?? "").replace(/\D/g, "") || "254700000000";
+    const prefix = business.whatsappMessage ? `${business.whatsappMessage}\n\n` : "";
+    return `https://wa.me/${digits}?text=${encodeURIComponent(prefix + text)}`;
   };
 
   return (

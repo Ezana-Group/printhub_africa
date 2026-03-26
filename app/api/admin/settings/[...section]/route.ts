@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { revalidateTag, revalidatePath } from "next/cache";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 const STAFF_OR_ADMIN = ["STAFF", "ADMIN", "SUPER_ADMIN"];
@@ -53,6 +54,14 @@ export async function POST(
       update: { valueJson },
       create: { key, valueJson },
     });
+
+    // Revalidate business settings if relevant
+    if (businessSections.includes(firstSegment) || marketingSections.includes(firstSegment)) {
+      revalidateTag("business");
+      revalidateTag("homepage");
+      revalidatePath("/", "layout");
+    }
+
     return NextResponse.json({ success: true });
   } catch (e) {
     console.error("Settings save error:", e);
