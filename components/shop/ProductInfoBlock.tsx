@@ -9,19 +9,58 @@ import { ProductSocialProof } from "./ProductSocialProof";
 import { Clock, Weight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { MaterialSelector } from "./MaterialSelector";
+import type { BusinessPublic } from "@/lib/business-public";
+
+interface Consumable {
+  id: string;
+  name: string;
+  kind: string;
+  colourHex: string | null;
+}
+
+interface ProductPrintMaterial {
+  isDefault: boolean;
+  consumable: Consumable;
+}
+
+interface ProductVariant {
+  id: string;
+  name: string;
+  price: number | string;
+  stock: number;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  slug: string;
+  sku: string | null;
+  basePrice: number | string;
+  comparePrice: number | string | null;
+  isPOD: boolean;
+  isFeatured: boolean;
+  soldThisMonth: number;
+  shortDescription: string | null;
+  printTimeEstimate: string | null;
+  filamentWeightGrams: number | null;
+  images: string[];
+  printMaterials: ProductPrintMaterial[];
+  variants: ProductVariant[];
+  minOrderQty: number;
+  maxOrderQty: number | null;
+  stock: number;
+}
 
 interface Props {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  product: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  business: any;
+  product: Product;
+  business: BusinessPublic;
 }
 
 export function ProductInfoBlock({ product, business }: Props) {
   const [selectedColor, setSelectedColor] = useState<{ id: string; name: string; hex: string } | undefined>();
   
   const [selectedMaterial, setSelectedMaterial] = useState<{ id: string; name: string } | undefined>(() => {
-    const def = product.printMaterials?.find((m: any) => m.isDefault);
+    const def = product.printMaterials?.find((m) => m.isDefault);
     if (def) return { id: def.consumable.id, name: def.consumable.name };
     if (product.printMaterials?.length > 0) {
       const first = product.printMaterials[0];
@@ -100,7 +139,7 @@ export function ProductInfoBlock({ product, business }: Props) {
 
       <div className="mt-8 space-y-8">
         <MaterialSelector 
-          materials={product.printMaterials?.map((m: any) => ({
+          materials={product.printMaterials?.map((m) => ({
             id: m.consumable.id,
             name: m.consumable.name,
             kind: m.consumable.kind,
@@ -124,8 +163,7 @@ export function ProductInfoBlock({ product, business }: Props) {
             slug={product.slug}
             image={product.images?.[0] || undefined}
             basePrice={basePrice}
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            variants={product.variants.map((v: any) => ({
+            variants={product.variants.map((v) => ({
                id: v.id,
                name: v.name,
                price: Number(v.price),

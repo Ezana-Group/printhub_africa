@@ -12,7 +12,7 @@ import { LicenceBadge } from "@/components/catalogue/LicenceBadge";
 import { formatDescription, formatPrice } from "@/lib/utils";
 import type { BusinessPublic } from "@/lib/business-public";
 
-interface Photo {
+export interface Photo {
   id: string;
   url: string;
   altText: string | null;
@@ -20,7 +20,7 @@ interface Photo {
   sortOrder: number;
 }
 
-interface MaterialOption {
+export interface MaterialOption {
   id: string;
   materialCode: string;
   materialName: string;
@@ -29,7 +29,7 @@ interface MaterialOption {
   isDefault: boolean;
 }
 
-interface Designer {
+export interface Designer {
   id: string;
   name: string;
   username: string | null;
@@ -37,7 +37,7 @@ interface Designer {
   profileUrl: string | null;
 }
 
-interface Item {
+export interface Item {
   id: string;
   name: string;
   slug: string;

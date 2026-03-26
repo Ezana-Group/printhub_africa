@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getBusinessPublic } from "@/lib/business-public";
-import { CatalogueItemDetail } from "./catalogue-item-detail";
+import { CatalogueItemDetail, type Item } from "./catalogue-item-detail";
 
 export const dynamic = "force-dynamic";
 
@@ -48,5 +48,5 @@ export default async function CatalogueItemPage({ params }: Props) {
 
   if (!item) notFound();
 
-  return <CatalogueItemDetail item={item as any} business={business} />;
+  return <CatalogueItemDetail item={item as unknown as Item} business={business} />;
 }
