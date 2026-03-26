@@ -39,14 +39,14 @@ export default async function AdminContentEmailTemplatesPage({
       <AdminBreadcrumbs
         items={[
           { label: "Content", href: "/admin/content/legal" },
-          { label: "Email Templates" },
+          { label: "Templates" },
         ]}
       />
 
       <TemplateTabs />
 
       <div>
-        <h1 className="font-display text-2xl font-bold text-slate-900">Email Templates</h1>
+        <h1 className="font-display text-2xl font-bold text-slate-900">Templates</h1>
         <p className="text-slate-600 text-sm mt-1">
           Edit subject and body for automated emails. Use placeholders like {`{{businessName}}`}, {`{{orderNumber}}`} in subject and body.
         </p>

@@ -24,15 +24,15 @@ export async function GET(
     return NextResponse.json({ error: "Unknown template slug" }, { status: 404 });
   }
 
-  const row = await prisma.whatsappTemplate.findUnique({ where: { slug } });
+  const row = await (prisma as any).whatsappTemplate.findUnique({ where: { slug } });
   const meta = WHATSAPP_TEMPLATE_META[slug];
   const template = {
     slug,
     name: meta?.name ?? row?.name ?? slug,
     description: meta?.description ?? row?.description ?? undefined,
     body: row?.body ?? meta?.defaultBody ?? "",
-    updatedAt: row?.updatedAt?.toISOString() ?? null,
-    updatedBy: row?.updatedBy ?? null,
+    updatedAt: (row as any)?.updatedAt?.toISOString() ?? null,
+    updatedBy: (row as any)?.updatedBy ?? null,
   };
 
   return NextResponse.json(template);
@@ -64,7 +64,7 @@ export async function PATCH(
   }
 
   const meta = WHATSAPP_TEMPLATE_META[slug];
-  const updated = await prisma.whatsappTemplate.upsert({
+  const updated = await (prisma as any).whatsappTemplate.upsert({
     where: { slug },
     update: {
       body: templateBody,

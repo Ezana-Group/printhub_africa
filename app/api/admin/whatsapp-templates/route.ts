@@ -16,10 +16,10 @@ export async function GET() {
   const forbidden = requireContentAdmin(auth);
   if (forbidden) return forbidden;
 
-  const rows = await prisma.whatsappTemplate.findMany({
+  const rows = await (prisma as any).whatsappTemplate.findMany({
     orderBy: { slug: "asc" },
   });
-  const bySlug = new Map(rows.map((r) => [r.slug, r]));
+  const bySlug = new Map((rows as any[]).map((r) => [r.slug, r]));
 
   const list = WHATSAPP_TEMPLATE_SLUGS.map((slug) => {
     const meta = WHATSAPP_TEMPLATE_META[slug];

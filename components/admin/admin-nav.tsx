@@ -36,6 +36,7 @@ type NavItem = {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: "quotes" | "approval";
+  matchPrefixes?: string[];
 };
 
 type NavGroup = {
@@ -59,8 +60,12 @@ const NAV_GROUPS: NavGroup[] = [
     label: "COMMUNICATION",
     items: [
       { href: "/admin/email/inbox", label: "Email", icon: Mail },
-      { href: "/admin/content/email-templates", label: "Email Templates", icon: Mail },
-      { href: "/admin/content/whatsapp-templates", label: "WhatsApp Templates", icon: Mail },
+      { 
+        href: "/admin/content/email-templates", 
+        label: "Templates", 
+        icon: Mail,
+        matchPrefixes: ["/admin/content/whatsapp-templates"]
+      },
       { href: "/admin/support", label: "Support", icon: HelpCircle },
       { href: "/admin/reviews", label: "Reviews", icon: BarChart3 },
     ],
@@ -156,7 +161,8 @@ export function AdminNav({
                 const basePath = item.href.split("?")[0];
                 const isActive =
                   pathname === basePath ||
-                  (basePath !== "/admin/dashboard" && pathname.startsWith(basePath + "/"));
+                  (basePath !== "/admin/dashboard" && pathname.startsWith(basePath + "/")) ||
+                  item.matchPrefixes?.some(p => pathname === p || pathname.startsWith(p + "/"));
                 const showQuotesBadge = item.badge === "quotes" && newQuotesCount > 0;
                 const showApprovalBadge = item.badge === "approval" && pendingApprovalCount > 0;
                 return (

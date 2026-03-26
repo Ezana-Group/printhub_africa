@@ -15,16 +15,16 @@ export default async function AdminContentWhatsAppTemplatesPage({
   const { q: qRaw } = await searchParams;
   
   // Fetch rows from DB. Handle case where table might not exist yet during migration.
-  const rows = await prisma.whatsappTemplate.findMany({
+  const rows = await (prisma as any).whatsappTemplate.findMany({
     orderBy: { slug: "asc" },
   }).catch(() => []);
   
-  const bySlug = new Map(rows.map((r) => [r.slug, r]));
+  const bySlug = new Map((rows as any[]).map((r) => [r.slug, r]));
   const q = typeof qRaw === "string" ? qRaw.trim().toLowerCase() : "";
   const slugsToShow = q
     ? WHATSAPP_TEMPLATE_SLUGS.filter((slug) => {
         const meta = WHATSAPP_TEMPLATE_META[slug];
-        const row = bySlug.get(slug);
+        const row = bySlug.get(slug) as any;
         const name = (meta?.name ?? row?.name ?? slug).toLowerCase();
         const desc = (meta?.description ?? row?.description ?? "").toLowerCase();
         const body = (row?.body ?? meta?.defaultBody ?? "").toLowerCase();
@@ -42,14 +42,14 @@ export default async function AdminContentWhatsAppTemplatesPage({
       <AdminBreadcrumbs
         items={[
           { label: "Content", href: "/admin/content/legal" },
-          { label: "WhatsApp Templates" },
+          { label: "Templates" },
         ]}
       />
       
       <TemplateTabs />
       
       <div>
-        <h1 className="font-display text-2xl font-bold text-slate-900">WhatsApp Templates</h1>
+        <h1 className="font-display text-2xl font-bold text-slate-900">Templates</h1>
         <p className="text-slate-600 text-sm mt-1">
           Edit the pre-filled messages for WhatsApp links. Use placeholders like {`{{quoteNumber}}`}, {`{{orderNumber}}`}.
         </p>
@@ -88,7 +88,7 @@ export default async function AdminContentWhatsAppTemplatesPage({
           <tbody>
             {slugsToShow.map((slug) => {
               const meta = WHATSAPP_TEMPLATE_META[slug];
-              const row = bySlug.get(slug);
+              const row = bySlug.get(slug) as any;
               return (
                 <tr key={slug} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
                   <td className="p-4 font-medium text-slate-900">{meta?.name ?? row?.name ?? slug}</td>

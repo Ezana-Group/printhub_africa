@@ -10,7 +10,7 @@ export function renderWhatsAppTemplate(
 
 /** Get template by slug. Returns null if not found or body empty (use fallback). */
 export async function getWhatsAppTemplate(slug: string): Promise<string | null> {
-  const t = await prisma.whatsappTemplate.findUnique({ where: { slug } }).catch(() => null);
+  const t = await (prisma as any).whatsappTemplate.findUnique({ where: { slug } }).catch(() => null);
   if (!t || !t.body.trim()) return null;
   return t.body;
 }

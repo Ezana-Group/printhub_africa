@@ -28,7 +28,7 @@ export default async function EmailTemplateEditPage({
       <AdminBreadcrumbs
         items={[
           { label: "Content", href: "/admin/content/legal" },
-          { label: "Email Templates", href: "/admin/content/email-templates" },
+          { label: "Templates", href: "/admin/content/email-templates" },
           { label: name },
         ]}
       />
@@ -37,7 +37,7 @@ export default async function EmailTemplateEditPage({
           href="/admin/content/email-templates"
           className="text-sm text-muted-foreground hover:text-foreground"
         >
-          ← Back to Email Templates
+          ← Back to Templates
         </Link>
       </div>
       <EmailTemplateEditorClient

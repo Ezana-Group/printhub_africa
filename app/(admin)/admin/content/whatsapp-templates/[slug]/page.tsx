@@ -16,7 +16,7 @@ export default async function WhatsAppTemplateEditPage({
   const { slug } = await params;
   if (!WHATSAPP_TEMPLATE_SLUGS.includes(slug)) notFound();
 
-  const row = await prisma.whatsappTemplate.findUnique({ where: { slug } }).catch(() => null);
+  const row = await (prisma as any).whatsappTemplate.findUnique({ where: { slug } }).catch(() => null);
   const meta = WHATSAPP_TEMPLATE_META[slug];
   const name = meta?.name ?? row?.name ?? slug;
   const description = meta?.description ?? row?.description ?? undefined;
@@ -27,7 +27,7 @@ export default async function WhatsAppTemplateEditPage({
       <AdminBreadcrumbs
         items={[
           { label: "Content", href: "/admin/content/legal" },
-          { label: "WhatsApp Templates", href: "/admin/content/whatsapp-templates" },
+          { label: "Templates", href: "/admin/content/whatsapp-templates" },
           { label: name },
         ]}
       />
@@ -36,7 +36,7 @@ export default async function WhatsAppTemplateEditPage({
           href="/admin/content/whatsapp-templates"
           className="text-sm text-muted-foreground hover:text-foreground"
         >
-          ← Back to WhatsApp Templates
+          ← Back to Templates
         </Link>
       </div>
       <WhatsAppTemplateEditorClient
