@@ -35,8 +35,8 @@ interface Product {
   name: string;
   slug: string;
   sku: string | null;
-  basePrice: number | string;
-  comparePrice: number | string | null;
+  basePrice: any;
+  comparePrice: any | null;
   isPOD: boolean;
   isFeatured: boolean;
   soldThisMonth: number;

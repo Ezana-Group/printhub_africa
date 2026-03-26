@@ -88,7 +88,7 @@ export default async function ProductPage({ params }: Props) {
 
           {/* Right: Info */}
           <div className="lg:col-span-5 xl:col-span-5">
-            <ProductInfoBlock product={product} business={business} />
+            <ProductInfoBlock product={product as any} business={business} />
           </div>
         </div>
 
