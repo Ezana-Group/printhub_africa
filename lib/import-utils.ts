@@ -226,16 +226,26 @@ async function fetchThingiverseData(thingId: string, sourceUrl: string): Promise
 
 async function fetchMyMiniFactoryData(objectId: string, sourceUrl: string): Promise<ImportResult> {
   try {
-    const token = process.env.MMF_CLIENT_ID || process.env.MYMINIFACTORY_API_KEY;
-    if (!token) return { error: "API_CONFIG_MISSING", detail: "MMF_CLIENT_ID not set." };
+    const apiKey = process.env.MYMINIFACTORY_API_KEY;
+    const bearer = process.env.MMF_CLIENT_ID;
+    
+    if (!apiKey && !bearer) {
+      return { error: "API_CONFIG_MISSING", detail: "MYMINIFACTORY_API_KEY or MMF_CLIENT_ID not set." };
+    }
+
+    let url = `https://www.myminifactory.com/api/v2/objects/${objectId}`;
+    const headers: Record<string, string> = {
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+    };
+
+    if (apiKey) {
+      url += `?key=${apiKey}`;
+    } else if (bearer) {
+      headers['Authorization'] = `Bearer ${bearer}`;
+    }
 
     // MyMiniFactory v2 API
-    const res = await fetch(`https://www.myminifactory.com/api/v2/objects/${objectId}`, {
-      headers: { 
-        'Authorization': `Bearer ${token}`,
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-      }
-    });
+    const res = await fetch(url, { headers });
 
     if (!res.ok) return { error: "API_FETCH_FAILED", detail: `MMF API error: ${res.status}`, status: res.status };
     
@@ -325,19 +335,28 @@ export async function searchThingiverse(term: string, page: number = 1) {
 }
 
 export async function searchMyMiniFactory(term: string, page: number = 1) {
-  const token = process.env.MMF_CLIENT_ID; // Prompt says OAuth Bearer token, I'll use MMF_CLIENT_ID as the token for now
-  if (!token) throw new Error("MMF_CLIENT_ID_MISSING");
+  const apiKey = process.env.MYMINIFACTORY_API_KEY;
+  const bearer = process.env.MMF_CLIENT_ID;
+  
+  if (!apiKey && !bearer) throw new Error("MMF_API_CONFIG_MISSING");
 
-  const url = `https://www.myminifactory.com/api/v2/search?q=${encodeURIComponent(term)}&license=commercial&per_page=20&page=${page}`;
+  let url = `https://www.myminifactory.com/api/v2/search?q=${encodeURIComponent(term)}&commercial_use=1&per_page=20&page=${page}`;
+  const headers: Record<string, string> = {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+  };
+
+  if (apiKey) {
+    url += `&key=${apiKey}`;
+  } else if (bearer) {
+    headers['Authorization'] = `Bearer ${bearer}`;
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
 
   try {
     const res = await fetch(url, { 
-      headers: { 
-        Authorization: `Bearer ${token}`,
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-      },
+      headers,
       signal: controller.signal
     });
 
