@@ -54,9 +54,10 @@ interface Product {
 interface Props {
   product: Product;
   business: BusinessPublic;
+  whatsappTemplate?: string | null;
 }
 
-export function ProductInfoBlock({ product, business }: Props) {
+export function ProductInfoBlock({ product, business, whatsappTemplate }: Props) {
   const [selectedColor, setSelectedColor] = useState<{ id: string; name: string; hex: string } | undefined>();
   
   const [selectedMaterial, setSelectedMaterial] = useState<{ id: string; name: string } | undefined>(() => {
@@ -73,10 +74,21 @@ export function ProductInfoBlock({ product, business }: Props) {
   const comparePrice = product.comparePrice != null ? Number(product.comparePrice) : null;
   const isPOD = !!product.isPOD;
 
+  const renderWhatsAppMsg = (template: string | null | undefined, defaultMsg: string, context: Record<string, string>) => {
+    if (!template) return defaultMsg;
+    return template.replace(/\{\{(\w+)\}\}/g, (_, key) => context[key] ?? "");
+  };
+
   const waHref = (text: string) => {
-    const digits = (business.whatsappNumber ?? business.whatsapp ?? "").replace(/\D/g, "") || "254700000000";
+    const digits = (business.whatsappNumber ?? business.whatsapp ?? "").replace(/\D/g, "") || "254727410320";
     const prefix = business.whatsappMessage ? `${business.whatsappMessage}\n\n` : "";
-    return `https://wa.me/${digits}?text=${encodeURIComponent(prefix + text)}`;
+    
+    const finalMsg = renderWhatsAppMsg(whatsappTemplate, text, {
+      productName: product.name,
+      sku: product.sku ?? "",
+    });
+
+    return `https://wa.me/${digits}?text=${encodeURIComponent(prefix + finalMsg)}`;
   };
 
   return (

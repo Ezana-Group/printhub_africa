@@ -7,6 +7,8 @@ import Link from 'next/link'
 import type { QuoteStatus } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { QuotesList } from './QuotesList'
+import { getWhatsAppTemplate } from '@/lib/whatsapp-templates'
+import { getBusinessPublic } from '@/lib/business-public'
 
 export const metadata = { title: 'My Quotes | PrintHub' }
 
@@ -25,24 +27,13 @@ export default async function QuotesPage({
   const { status: statusParam } = await searchParams
   const statusFilter = (statusParam ?? 'all') as TabFilter
 
-  let quotes: Awaited<ReturnType<typeof fetchQuotes>> = []
-  let counts: Awaited<ReturnType<typeof fetchCounts>> = {
-    all: 0,
-    active: 0,
-    awaiting_you: 0,
-    in_progress: 0,
-    closed: 0,
-  }
-  try {
-    const [quotesList, countsResult] = await Promise.all([
-      fetchQuotes(userId, userEmail, statusFilter),
-      fetchCounts(userId, userEmail),
-    ])
-    quotes = quotesList
-    counts = countsResult
-  } catch {
-    quotes = []
-  }
+  const [quotes, counts, whatsappEnquiry, whatsappAccepted, business] = await Promise.all([
+    fetchQuotes(userId, userEmail, statusFilter),
+    fetchCounts(userId, userEmail),
+    getWhatsAppTemplate('quote-enquiry'),
+    getWhatsAppTemplate('quote-accepted'),
+    getBusinessPublic(),
+  ])
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-10">
@@ -62,7 +53,14 @@ export default async function QuotesPage({
       </div>
 
       <Suspense fallback={<div className="animate-pulse rounded-xl h-12 bg-gray-100" />}>
-        <QuotesList initialQuotes={quotes} initialStatus={statusFilter} counts={counts} />
+        <QuotesList 
+          initialQuotes={quotes} 
+          initialStatus={statusFilter} 
+          counts={counts} 
+          whatsappEnquiryTemplate={whatsappEnquiry}
+          whatsappAcceptedTemplate={whatsappAccepted}
+          whatsappNumber={business.whatsappNumber ?? business.whatsapp ?? '254727410320'}
+        />
       </Suspense>
     </div>
   )

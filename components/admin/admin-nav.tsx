@@ -60,6 +60,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/email/inbox", label: "Email", icon: Mail },
       { href: "/admin/content/email-templates", label: "Email Templates", icon: Mail },
+      { href: "/admin/content/whatsapp-templates", label: "WhatsApp Templates", icon: Mail },
       { href: "/admin/support", label: "Support", icon: HelpCircle },
       { href: "/admin/reviews", label: "Reviews", icon: BarChart3 },
     ],

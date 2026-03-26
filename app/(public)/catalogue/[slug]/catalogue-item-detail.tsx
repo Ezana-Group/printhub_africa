@@ -64,9 +64,10 @@ export interface Item {
 interface CatalogueItemDetailProps {
   item: Item;
   business: BusinessPublic;
+  whatsappTemplate?: string | null;
 }
 
-export function CatalogueItemDetail({ item, business }: CatalogueItemDetailProps) {
+export function CatalogueItemDetail({ item, business, whatsappTemplate }: CatalogueItemDetailProps) {
   const addItem = useCartStore((s) => s.addItem);
   
   const materials = Array.isArray(item.availableMaterials) ? item.availableMaterials : [];
@@ -129,10 +130,21 @@ export function CatalogueItemDetail({ item, business }: CatalogueItemDetailProps
     isPrimary: p.isPrimary
   }));
 
+  const renderWhatsAppMsg = (template: string | null | undefined, defaultMsg: string, context: Record<string, string>) => {
+    if (!template) return defaultMsg;
+    return template.replace(/\{\{(\w+)\}\}/g, (_, key) => context[key] ?? "");
+  };
+
   const waHref = (text: string) => {
-    const digits = (business.whatsappNumber ?? business.whatsapp ?? "").replace(/\D/g, "") || "254700000000";
+    const digits = (business.whatsappNumber ?? business.whatsapp ?? "").replace(/\D/g, "") || "254727410320";
     const prefix = business.whatsappMessage ? `${business.whatsappMessage}\n\n` : "";
-    return `https://wa.me/${digits}?text=${encodeURIComponent(prefix + text)}`;
+    
+    const finalMsg = renderWhatsAppMsg(whatsappTemplate, text, {
+      itemName: item.name,
+      category: item.category.name,
+    });
+
+    return `https://wa.me/${digits}?text=${encodeURIComponent(prefix + finalMsg)}`;
   };
 
   return (

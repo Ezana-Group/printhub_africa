@@ -10,6 +10,7 @@ import { formatDescription } from "@/lib/utils";
 import { LicenceBadge } from "@/components/catalogue/LicenceBadge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { getWhatsAppTemplate } from "@/lib/whatsapp-templates";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
-  const business = await getBusinessPublic();
+  const [business, whatsappTemplate] = await Promise.all([
+    getBusinessPublic(),
+    getWhatsAppTemplate("product-enquiry"),
+  ]);
   
   const product = await prisma.product.findFirst({
     where: { slug, isActive: true },
@@ -88,7 +92,11 @@ export default async function ProductPage({ params }: Props) {
 
           {/* Right: Info */}
           <div className="lg:col-span-5 xl:col-span-5">
-            <ProductInfoBlock product={product as any} business={business} />
+            <ProductInfoBlock 
+              product={product as any} 
+              business={business} 
+              whatsappTemplate={whatsappTemplate}
+            />
           </div>
         </div>
 

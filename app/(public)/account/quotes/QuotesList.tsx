@@ -142,10 +142,16 @@ export function QuotesList({
   initialQuotes,
   initialStatus = 'all',
   counts = defaultCounts,
+  whatsappEnquiryTemplate,
+  whatsappAcceptedTemplate,
+  whatsappNumber,
 }: {
   initialQuotes: QuoteItem[]
   initialStatus?: string
   counts?: TabCounts
+  whatsappEnquiryTemplate?: string | null
+  whatsappAcceptedTemplate?: string | null
+  whatsappNumber?: string
 }) {
   const searchParams = useSearchParams()
   const [quotes, setQuotes] = useState(initialQuotes)
@@ -202,6 +208,11 @@ export function QuotesList({
       setLoading(null)
     }
   }
+
+  const renderWhatsAppMsg = (template: string | null | undefined, defaultMsg: string, context: Record<string, string>) => {
+    if (!template) return defaultMsg;
+    return template.replace(/\{\{(\w+)\}\}/g, (_, key) => context[key] ?? "");
+  };
 
   const downloadFile = async (fileId: string, filename: string) => {
     try {
@@ -534,7 +545,12 @@ export function QuotesList({
                       </Button>
                     </div>
                     <a
-                      href={`https://wa.me/254727410320?text=${encodeURIComponent(`Hi PrintHub, I have a question about quote ${quote.quoteNumber}.`)}`}
+                      href={`https://wa.me/${whatsappNumber?.replace(/\D/g, '') || '254727410320'}?text=${encodeURIComponent(
+                        renderWhatsAppMsg(whatsappEnquiryTemplate, `Hi PrintHub, I have a question about quote ${quote.quoteNumber}.`, {
+                           quoteNumber: quote.quoteNumber,
+                           projectName: quote.projectName ?? "",
+                        })
+                      )}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="mt-3 flex items-center justify-center gap-2 py-2 text-sm text-gray-600 hover:bg-amber-100/50 rounded-xl transition"
@@ -557,7 +573,12 @@ export function QuotesList({
                       </div>
                     </div>
                     <a
-                      href={`https://wa.me/254727410320?text=${encodeURIComponent(`Hi PrintHub, I've accepted quote ${quote.quoteNumber}. Please let me know the next steps.`)}`}
+                      href={`https://wa.me/${whatsappNumber?.replace(/\D/g, '') || '254727410320'}?text=${encodeURIComponent(
+                        renderWhatsAppMsg(whatsappAcceptedTemplate, `Hi PrintHub, I've accepted quote ${quote.quoteNumber}. Please let me know the next steps.`, {
+                           quoteNumber: quote.quoteNumber,
+                           projectName: quote.projectName ?? "",
+                        })
+                      )}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-2.5 text-sm font-medium text-white transition hover:bg-green-700"
@@ -606,7 +627,7 @@ export function QuotesList({
                   <p className="mt-4 text-sm text-gray-600">
                     Our team is handling your order. Contact us on{' '}
                     <a
-                      href="https://wa.me/254727410320"
+                      href={`https://wa.me/${whatsappNumber?.replace(/\D/g, '') || '254727410320'}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-[#FF4D00] hover:underline"

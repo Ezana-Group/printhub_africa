@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getBusinessPublic } from "@/lib/business-public";
 import { CatalogueItemDetail, type Item } from "./catalogue-item-detail";
+import { getWhatsAppTemplate } from "@/lib/whatsapp-templates";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CatalogueItemPage({ params }: Props) {
   const { slug } = await params;
-  const business = await getBusinessPublic();
+  const [business, whatsappTemplate] = await Promise.all([
+    getBusinessPublic(),
+    getWhatsAppTemplate("catalogue-enquiry"),
+  ]);
   
   const item = await prisma.catalogueItem.findFirst({
     where: { slug, status: "LIVE" },
@@ -48,5 +52,11 @@ export default async function CatalogueItemPage({ params }: Props) {
 
   if (!item) notFound();
 
-  return <CatalogueItemDetail item={item as unknown as Item} business={business} />;
+  return (
+    <CatalogueItemDetail 
+      item={item as unknown as Item} 
+      business={business} 
+      whatsappTemplate={whatsappTemplate}
+    />
+  );
 }

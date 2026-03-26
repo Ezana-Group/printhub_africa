@@ -8,6 +8,8 @@ import { CookieBanner } from "@/components/CookieBanner";
 import { TawkTo } from "@/components/TawkTo";
 import { getCachedBusinessPublic, getCachedBusinessMetadata } from "@/lib/cache/unstable-cache";
 
+import { getWhatsAppTemplate } from "@/lib/whatsapp-templates";
+
 export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
 // Revalidate every 5 min so public pages can be cached (TTFB optimisation)
 export const revalidate = 300;
@@ -35,7 +37,10 @@ export default async function PublicLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const business = await getCachedBusinessPublic();
+  const [business, whatsappTemplate] = await Promise.all([
+    getCachedBusinessPublic(),
+    getWhatsAppTemplate("support-general"),
+  ]);
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://printhub.africa";
   const address = [business.address1, business.city, business.county, business.country].filter(Boolean).join(", ") || undefined;
   const localBusinessJsonLd = {
@@ -74,7 +79,7 @@ export default async function PublicLayout({
       <WhatsAppFloat 
         whatsapp={business.whatsapp} 
         whatsappNumber={business.whatsappNumber} 
-        whatsappMessage={business.whatsappMessage} 
+        whatsappMessage={whatsappTemplate ?? business.whatsappMessage} 
       />
       <CookieBanner />
       <TawkTo />
