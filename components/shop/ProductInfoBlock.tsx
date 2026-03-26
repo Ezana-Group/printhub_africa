@@ -9,6 +9,7 @@ import { ProductSocialProof } from "./ProductSocialProof";
 import { Clock, Weight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { MaterialSelector } from "./MaterialSelector";
+import { ConsumableColorSelector } from "./ConsumableColorSelector";
 import type { BusinessPublic } from "@/lib/business-public";
 
 interface Consumable {
@@ -58,22 +59,40 @@ interface Props {
 }
 
 export function ProductInfoBlock({ product, business, whatsappTemplate }: Props) {
-  const [selectedColor, setSelectedColor] = useState<{ id: string; name: string; hex: string } | undefined>();
-  
-  const [selectedMaterial, setSelectedMaterial] = useState<{ id: string; name: string } | undefined>(() => {
-    const def = product.printMaterials?.find((m) => m.isDefault);
-    if (def) return { id: def.consumable.id, name: def.consumable.name };
-    if (product.printMaterials?.length > 0) {
-      const first = product.printMaterials[0];
-      return { id: first.consumable.id, name: first.consumable.name };
-    }
-    return undefined;
+  // 1. All available material kinds (e.g. PETG, PLA+)
+  const kinds = Array.from(new Set(product.printMaterials?.map((m: ProductPrintMaterial) => m.consumable.kind) || [])) as string[];
+
+  // 2. State for split selection
+  const [selectedKind, setSelectedKind] = useState<string | undefined>(() => {
+    const def = product.printMaterials?.find((m: ProductPrintMaterial) => m.isDefault);
+    if (def) return def.consumable.kind;
+    return kinds[0];
   });
-  
+
+  const [selectedConsumableId, setSelectedConsumableId] = useState<string | undefined>(() => {
+    const def = product.printMaterials?.find((m: ProductPrintMaterial) => m.isDefault);
+    if (def) return def.consumable.id;
+    
+    // Fallback to first material of selected kind
+    const firstForKind = product.printMaterials?.find((m: ProductPrintMaterial) => m.consumable.kind === kinds[0]);
+    return firstForKind?.consumable.id;
+  });
+
+  // 3. Generic colors (used if no printMaterials or as secondary option)
+  const [selectedGenericColor, setSelectedGenericColor] = useState<{ id: string; name: string; hex: string } | undefined>();
+
+  // Derived: All consumables for the currently selected kind
+  const availableConsumables = product.printMaterials
+    ?.filter((m: ProductPrintMaterial) => m.consumable.kind === selectedKind)
+    .map((m: ProductPrintMaterial) => m.consumable) || [];
+
+  const selectedConsumable = availableConsumables.find((c: Consumable) => c.id === selectedConsumableId);
+
   const basePrice = Number(product.basePrice);
   const comparePrice = product.comparePrice != null ? Number(product.comparePrice) : null;
   const isPOD = !!product.isPOD;
 
+  // ... (whatsapp logic stays same)
   const renderWhatsAppMsg = (template: string | null | undefined, defaultMsg: string, context: Record<string, string>) => {
     if (!template) return defaultMsg;
     return template.replace(/\{\{(\w+)\}\}/g, (_, key) => context[key] ?? "");
@@ -151,23 +170,33 @@ export function ProductInfoBlock({ product, business, whatsappTemplate }: Props)
       )}
 
       <div className="mt-8 space-y-8">
+        {/* 1. Select Material Kind */}
         <MaterialSelector 
-          materials={product.printMaterials?.map((m) => ({
-            id: m.consumable.id,
-            name: m.consumable.name,
-            kind: m.consumable.kind,
-            colourHex: m.consumable.colourHex,
-            isDefault: m.isDefault
-          })) || []}
-          selectedMaterialId={selectedMaterial?.id}
-          onMaterialSelect={(m) => setSelectedMaterial({ id: m.id, name: m.name })}
+          kinds={kinds}
+          selectedKind={selectedKind}
+          onKindSelect={(kind) => {
+            setSelectedKind(kind);
+            // Auto-select first color for this kind
+            const first = product.printMaterials?.find(m => m.consumable.kind === kind);
+            if (first) setSelectedConsumableId(first.consumable.id);
+          }}
         />
 
-        <FilamentColorSelector 
-          productSlug={product.slug}
-          selectedColorId={selectedColor?.id}
-          onColorSelect={(c) => setSelectedColor({ id: c.id, name: c.name, hex: c.hexCode })}
+        {/* 2. Select Consumable Color */}
+        <ConsumableColorSelector
+          consumables={availableConsumables}
+          selectedConsumableId={selectedConsumableId}
+          onConsumableSelect={(c) => setSelectedConsumableId(c.id)}
         />
+
+        {/* 3. Fallback/Generic Color (if no print materials but colors are configured) */}
+        {kinds.length === 0 && (
+          <FilamentColorSelector 
+            productSlug={product.slug}
+            selectedColorId={selectedGenericColor?.id}
+            onColorSelect={(c) => setSelectedGenericColor({ id: c.id, name: c.name, hex: c.hexCode })}
+          />
+        )}
 
         <div className="pt-2">
           <AddToCartButton
@@ -185,8 +214,18 @@ export function ProductInfoBlock({ product, business, whatsappTemplate }: Props)
             stock={product.stock}
             minOrderQty={product.minOrderQty}
             maxOrderQty={product.maxOrderQty ?? undefined}
-            selectedColor={selectedColor ? { name: selectedColor.name, hex: selectedColor.hex } : undefined}
-            selectedMaterial={selectedMaterial}
+            selectedColor={
+              selectedConsumable 
+                ? { name: selectedConsumable.name, hex: selectedConsumable.colourHex || "" }
+                : selectedGenericColor 
+                  ? { name: selectedGenericColor.name, hex: selectedGenericColor.hex }
+                  : undefined
+            }
+            selectedMaterial={
+              selectedKind 
+                ? { id: selectedConsumableId || "", name: selectedKind }
+                : undefined
+            }
           />
         </div>
       </div>

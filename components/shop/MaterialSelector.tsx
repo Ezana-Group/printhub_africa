@@ -4,38 +4,30 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-interface Material {
-  id: string;
-  name: string;
-  kind: string;
-  colourHex: string | null;
-  isDefault: boolean;
-}
-
 interface Props {
-  materials: Material[];
-  selectedMaterialId?: string;
-  onMaterialSelect: (material: Material) => void;
+  kinds: string[];
+  selectedKind?: string;
+  onKindSelect: (kind: string) => void;
 }
 
-export function MaterialSelector({ materials, selectedMaterialId, onMaterialSelect }: Props) {
-  if (materials.length === 0) return null;
+export function MaterialSelector({ kinds, selectedKind, onKindSelect }: Props) {
+  if (kinds.length === 0) return null;
 
   return (
     <div className="space-y-3">
       <label className="text-sm font-semibold text-slate-900">
         Material: <span className="text-primary font-bold ml-1">
-          {materials.find(m => m.id === selectedMaterialId)?.name || "Select"}
+          {selectedKind || "Select"}
         </span>
       </label>
       
       <div className="flex flex-wrap gap-2">
-        {materials.map((material) => {
-          const isSelected = material.id === selectedMaterialId;
+        {kinds.map((kind) => {
+          const isSelected = kind === selectedKind;
 
           return (
             <Button
-              key={material.id}
+              key={kind}
               type="button"
               variant={isSelected ? "default" : "outline"}
               size="sm"
@@ -43,17 +35,9 @@ export function MaterialSelector({ materials, selectedMaterialId, onMaterialSele
                 "rounded-xl h-9 px-4 transition-all duration-200",
                 isSelected && "bg-primary text-white hover:bg-primary/90"
               )}
-              onClick={() => onMaterialSelect(material)}
+              onClick={() => onKindSelect(kind)}
             >
-              <div className="flex items-center gap-2">
-                {material.colourHex && (
-                  <span 
-                    className="h-3 w-3 rounded-full border border-white/20 shadow-sm" 
-                    style={{ backgroundColor: material.colourHex }}
-                  />
-                )}
-                <span>{material.name}</span>
-              </div>
+              <span>{kind}</span>
             </Button>
           );
         })}
