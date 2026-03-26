@@ -91,6 +91,10 @@ function innerMiddleware(req: Request) {
   const token = (req as Request & { nextauth?: { token?: { role?: string; isCorporate?: boolean } } }).nextauth?.token;
   const path = new URL(req.url).pathname;
 
+  if (path.startsWith("/api/admin") && !token) {
+    console.warn(`[MIDDLEWARE] Missing token for ${path}. Cookies: ${req.headers.get("cookie")?.substring(0, 50)}...`);
+  }
+
   const apiBlock = requireProtectedApi(path, token ?? null);
   if (apiBlock) return apiBlock;
 
