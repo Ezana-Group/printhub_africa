@@ -23,7 +23,7 @@ const FORM_DEFAULTS: Record<string, string> = {
   primaryPhone: "",
   whatsapp: "",
   primaryEmail: "hello@printhub.africa",
-  supportEmail: "support@printhub.africa",
+  supportEmail: "contact@printhub.africa",
   financeEmail: "finance@printhub.africa",
   address1: "",
   address2: "",
@@ -344,7 +344,7 @@ export function SettingsBusinessClient({
               </div>
               <div className="space-y-1.5">
                 <Label>Support Email</Label>
-                <Input value={getStr(data, "supportEmail")} onChange={(e) => update("supportEmail", e.target.value)} placeholder="support@printhub.africa" className="focus-visible:ring-orange-500" />
+                <Input value={getStr(data, "supportEmail")} onChange={(e) => update("supportEmail", e.target.value)} placeholder="contact@printhub.africa" className="focus-visible:ring-orange-500" />
               </div>
               <div className="space-y-1.5 sm:col-span-2">
                 <Label>Finance/Invoices Email</Label>

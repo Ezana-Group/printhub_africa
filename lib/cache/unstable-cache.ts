@@ -14,7 +14,7 @@ const DEFAULTS: BusinessPublic = {
   whatsappNumber: null,
   whatsappMessage: null,
   primaryEmail: "hello@printhub.africa",
-  supportEmail: "support@printhub.africa",
+  supportEmail: "contact@printhub.africa",
   financeEmail: "finance@printhub.africa",
   address1: null,
   address2: null,

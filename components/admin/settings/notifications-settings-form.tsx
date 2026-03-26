@@ -91,7 +91,7 @@ export function NotificationsSettingsForm() {
           <Label>From Email</Label>
           <Input name="emailFrom" defaultValue={val("emailFrom", "hello@printhub.africa")} />
           <Label>Reply-To</Label>
-          <Input name="emailReplyTo" placeholder="support@printhub.africa" defaultValue={val("emailReplyTo", "")} />
+          <Input name="emailReplyTo" placeholder="contact@printhub.africa" defaultValue={val("emailReplyTo", "")} />
         </div>
         <div className="mt-2 flex items-center gap-2">
           <Button type="button" variant="outline" size="sm" onClick={handleTestEmail} disabled={testEmailLoading}>

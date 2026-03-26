@@ -47,7 +47,7 @@ export async function GET() {
     primaryPhone: row.primaryPhone,
     whatsapp: row.whatsapp,
     primaryEmail: row.primaryEmail ?? "hello@printhub.africa",
-    supportEmail: row.supportEmail ?? "support@printhub.africa",
+    supportEmail: row.supportEmail ?? "contact@printhub.africa",
     financeEmail: row.financeEmail ?? "finance@printhub.africa",
     address1: row.address1,
     address2: row.address2,
