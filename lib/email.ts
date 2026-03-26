@@ -412,7 +412,14 @@ export async function sendCareerApplicationConfirmationEmail(
         <p>Best,<br>The ${businessName} Team<br>${site}</p>
       </div>
     `;
-  return sendWithTemplate("career-application-confirmation", email, context, defaultSubject, defaultHtml);
+  return sendWithTemplate(
+    "career-application-confirmation",
+    email,
+    context,
+    defaultSubject,
+    defaultHtml,
+    "PrintHub Careers <careers@printhub.africa>"
+  );
 }
 
 export async function sendCareerApplicationNotificationToAdmin(
@@ -471,7 +478,14 @@ export async function sendCareerStatusShortlistedEmail(
         <p>Best,<br>The ${businessName} Team<br>${site}</p>
       </div>
     `;
-  return sendWithTemplate("career-shortlisted", email, context, defaultSubject, defaultHtml);
+  return sendWithTemplate(
+    "career-shortlisted",
+    email,
+    context,
+    defaultSubject,
+    defaultHtml,
+    "PrintHub Careers <careers@printhub.africa>"
+  );
 }
 
 export async function sendCareerStatusRejectedEmail(
@@ -492,7 +506,14 @@ export async function sendCareerStatusRejectedEmail(
         <p>Best,<br>The ${businessName} Team<br>${site}</p>
       </div>
     `;
-  return sendWithTemplate("career-rejected", email, context, defaultSubject, defaultHtml);
+  return sendWithTemplate(
+    "career-rejected",
+    email,
+    context,
+    defaultSubject,
+    defaultHtml,
+    "PrintHub Careers <careers@printhub.africa>"
+  );
 }
 
 export async function sendCareerOfferMadeEmail(
@@ -513,7 +534,14 @@ export async function sendCareerOfferMadeEmail(
         <p>Best,<br>The ${businessName} Team<br>${site}</p>
       </div>
     `;
-  return sendWithTemplate("career-offer", email, context, defaultSubject, defaultHtml);
+  return sendWithTemplate(
+    "career-offer",
+    email,
+    context,
+    defaultSubject,
+    defaultHtml,
+    "PrintHub Careers <careers@printhub.africa>"
+  );
 }
 
 /** Abandoned cart — first reminder (e.g. 1 hour after leaving checkout) */
