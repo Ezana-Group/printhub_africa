@@ -11,7 +11,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Plus, MoreHorizontal, ExternalLink, Pencil, FileText } from "lucide-react";
+import { Plus, MoreHorizontal, ExternalLink, Pencil, FileText, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { JobListingForm } from "./job-listing-form";
 import type { JobListing, JobApplication, JobStatus, ApplicationStatus } from "@prisma/client";
 
@@ -53,6 +54,7 @@ const APP_STATUS_LABEL: Record<ApplicationStatus, string> = {
 
 type ListingRow = JobListing & { _count: { applications: number } };
 type ApplicationRow = JobApplication & {
+  reference: string | null;
   jobListing: { id: string; title: string; department: string; slug: string };
 };
 
@@ -71,12 +73,25 @@ export function CareersAdminClient({
 }) {
   const [tab, setTab] = useState<"listings" | "applications">(initialTab);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [listings, setListings] = useState(initialListings);
   const [applicationsList, setApplicationsList] = useState(initialApplications);
   void setApplicationsList; // reserved for refetch after mutations
-  const applications = filterJobId
-    ? applicationsList.filter((a) => a.jobListingId === filterJobId)
-    : applicationsList;
+  const applications = (
+    filterJobId
+      ? applicationsList.filter((a) => a.jobListingId === filterJobId)
+      : applicationsList
+  ).filter((a) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      a.firstName.toLowerCase().includes(q) ||
+      a.lastName.toLowerCase().includes(q) ||
+      a.email.toLowerCase().includes(q) ||
+      (a.reference && a.reference.toLowerCase().includes(q)) ||
+      a.jobListing.title.toLowerCase().includes(q)
+    );
+  });
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -237,6 +252,17 @@ export function CareersAdminClient({
 
       {tab === "applications" && (
         <>
+          <div className="flex flex-col sm:flex-row gap-4 items-center justify-between mb-2">
+            <div className="relative w-full sm:max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search applications..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="rounded-lg border p-4">
               <p className="text-sm text-muted-foreground">Total</p>
@@ -266,6 +292,7 @@ export function CareersAdminClient({
               <thead className="bg-muted/50">
                 <tr>
                   <th className="text-left p-3 font-medium">Applicant</th>
+                  <th className="text-left p-3 font-medium">Reference</th>
                   <th className="text-left p-3 font-medium">Role</th>
                   <th className="text-left p-3 font-medium">Status</th>
                   <th className="text-left p-3 font-medium">Applied</th>
@@ -283,6 +310,11 @@ export function CareersAdminClient({
                       <div className="text-xs text-muted-foreground">
                         {app.email} · {app.phone}
                       </div>
+                    </td>
+                    <td className="p-3">
+                      <code className="text-xs font-mono bg-muted px-1.5 py-0.5 rounded">
+                        {app.reference || "—"}
+                      </code>
                     </td>
                     <td className="p-3">
                       <div>{app.jobListing.title}</div>

@@ -141,10 +141,11 @@ export async function POST(
         answers: data.answers == null ? undefined : (data.answers as Prisma.InputJsonValue),
         source: data.source ?? null,
         referredBy: data.referredBy || null,
+        reference: `APP-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
       },
     });
 
-    const ref = `APP-${application.id.slice(-8).toUpperCase()}`;
+    const ref = application.reference || `APP-${application.id.slice(-8).toUpperCase()}`;
     await sendCareerApplicationConfirmationEmail(
       data.email,
       data.firstName,
