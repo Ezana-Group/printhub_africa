@@ -5,29 +5,30 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface Props {
-  kinds: string[];
-  selectedKind?: string;
-  onKindSelect: (kind: string) => void;
+  options: string[];
+  selectedOption?: string;
+  onOptionSelect: (option: string) => void;
+  label?: string;
 }
 
-export function MaterialSelector({ kinds, selectedKind, onKindSelect }: Props) {
-  if (kinds.length === 0) return null;
+export function MaterialSelector({ options, selectedOption, onOptionSelect, label = "Material" }: Props) {
+  if (options.length === 0) return null;
 
   return (
     <div className="space-y-3">
       <label className="text-sm font-semibold text-slate-900">
-        Material: <span className="text-primary font-bold ml-1">
-          {selectedKind || "Select"}
+        {label}: <span className="text-primary font-bold ml-1">
+          {selectedOption || "Select"}
         </span>
       </label>
       
       <div className="flex flex-wrap gap-2">
-        {kinds.map((kind) => {
-          const isSelected = kind === selectedKind;
+        {options.map((option) => {
+          const isSelected = option === selectedOption;
 
           return (
             <Button
-              key={kind}
+              key={option}
               type="button"
               variant={isSelected ? "default" : "outline"}
               size="sm"
@@ -35,9 +36,9 @@ export function MaterialSelector({ kinds, selectedKind, onKindSelect }: Props) {
                 "rounded-xl h-9 px-4 transition-all duration-200",
                 isSelected && "bg-primary text-white hover:bg-primary/90"
               )}
-              onClick={() => onKindSelect(kind)}
+              onClick={() => onOptionSelect(option)}
             >
-              <span>{kind}</span>
+              <span>{option}</span>
             </Button>
           );
         })}

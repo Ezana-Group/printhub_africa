@@ -59,34 +59,37 @@ interface Props {
 }
 
 export function ProductInfoBlock({ product, business, whatsappTemplate }: Props) {
-  // 1. All available material kinds (e.g. PETG, PLA+)
-  const kinds = Array.from(new Set(product.printMaterials?.map((m: ProductPrintMaterial) => m.consumable.kind) || [])) as string[];
+  const allConsumables = product.printMaterials?.map((m: ProductPrintMaterial) => m.consumable) || [];
 
-  // 2. State for split selection
-  const [selectedKind, setSelectedKind] = useState<string | undefined>(() => {
+  // 1. Group by unique color hex
+  const uniqueColors = Array.from(new Map(
+    allConsumables
+      .filter((c: Consumable) => !!c.colourHex)
+      .map((c: Consumable) => [c.colourHex, { hex: c.colourHex!, name: c.name }])
+  ).values());
+
+  // 2. State for split selection (Color First)
+  const [selectedColorHex, setSelectedColorHex] = useState<string | undefined>(() => {
     const def = product.printMaterials?.find((m: ProductPrintMaterial) => m.isDefault);
-    if (def) return def.consumable.kind;
-    return kinds[0];
+    if (def) return def.consumable.colourHex || undefined;
+    return uniqueColors[0]?.hex;
   });
 
   const [selectedConsumableId, setSelectedConsumableId] = useState<string | undefined>(() => {
     const def = product.printMaterials?.find((m: ProductPrintMaterial) => m.isDefault);
     if (def) return def.consumable.id;
     
-    // Fallback to first material of selected kind
-    const firstForKind = product.printMaterials?.find((m: ProductPrintMaterial) => m.consumable.kind === kinds[0]);
-    return firstForKind?.consumable.id;
+    // Fallback to first consumable of selected color
+    const firstForColor = allConsumables.find((c: Consumable) => c.colourHex === (selectedColorHex || uniqueColors[0]?.hex));
+    return firstForColor?.id;
   });
 
-  // 3. Generic colors (used if no printMaterials or as secondary option)
+  // 3. Generic colors (used if no printMaterials)
   const [selectedGenericColor, setSelectedGenericColor] = useState<{ id: string; name: string; hex: string } | undefined>();
 
-  // Derived: All consumables for the currently selected kind
-  const availableConsumables = product.printMaterials
-    ?.filter((m: ProductPrintMaterial) => m.consumable.kind === selectedKind)
-    .map((m: ProductPrintMaterial) => m.consumable) || [];
-
-  const selectedConsumable = availableConsumables.find((c: Consumable) => c.id === selectedConsumableId);
+  // Derived: All consumables matching selected color
+  const availableMaterials = allConsumables.filter((c: Consumable) => c.colourHex === selectedColorHex);
+  const selectedConsumable = allConsumables.find((c: Consumable) => c.id === selectedConsumableId);
 
   const basePrice = Number(product.basePrice);
   const comparePrice = product.comparePrice != null ? Number(product.comparePrice) : null;
@@ -170,27 +173,35 @@ export function ProductInfoBlock({ product, business, whatsappTemplate }: Props)
       )}
 
       <div className="mt-8 space-y-8">
-        {/* 1. Select Material Kind */}
-        <MaterialSelector 
-          kinds={kinds}
-          selectedKind={selectedKind}
-          onKindSelect={(kind) => {
-            setSelectedKind(kind);
-            // Auto-select first color for this kind
-            const first = product.printMaterials?.find(m => m.consumable.kind === kind);
-            if (first) setSelectedConsumableId(first.consumable.id);
+        {/* 1. Select Color First */}
+        <ConsumableColorSelector
+          colors={uniqueColors}
+          selectedColorHex={selectedColorHex}
+          onColorSelect={(hex) => {
+            setSelectedColorHex(hex);
+            // Auto-select first material for this color
+            const first = allConsumables.find((c: Consumable) => c.colourHex === hex);
+            if (first) setSelectedConsumableId(first.id);
           }}
         />
 
-        {/* 2. Select Consumable Color */}
-        <ConsumableColorSelector
-          consumables={availableConsumables}
-          selectedConsumableId={selectedConsumableId}
-          onConsumableSelect={(c) => setSelectedConsumableId(c.id)}
+        {/* 2. Select Material variant based on color */}
+        <MaterialSelector 
+          label="Material"
+          options={availableMaterials.map((c: Consumable) => c.kind === "FILAMENT" ? c.name : `${c.kind} (${c.name})`)}
+          selectedOption={selectedConsumable 
+            ? (selectedConsumable.kind === "FILAMENT" ? selectedConsumable.name : `${selectedConsumable.kind} (${selectedConsumable.name})`) 
+            : undefined}
+          onOptionSelect={(optionName) => {
+            const found = availableMaterials.find((c: Consumable) => 
+               (c.kind === "FILAMENT" ? c.name : `${c.kind} (${c.name})`) === optionName
+            );
+            if (found) setSelectedConsumableId(found.id);
+          }}
         />
 
-        {/* 3. Fallback/Generic Color (if no print materials but colors are configured) */}
-        {kinds.length === 0 && (
+        {/* 3. Fallback/Generic Color (if no print materials) */}
+        {allConsumables.length === 0 && (
           <FilamentColorSelector 
             productSlug={product.slug}
             selectedColorId={selectedGenericColor?.id}
@@ -222,8 +233,8 @@ export function ProductInfoBlock({ product, business, whatsappTemplate }: Props)
                   : undefined
             }
             selectedMaterial={
-              selectedKind 
-                ? { id: selectedConsumableId || "", name: selectedKind }
+              selectedConsumable 
+                ? { id: selectedConsumable.id, name: selectedConsumable.kind }
                 : undefined
             }
           />
