@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getBusinessPublic } from "@/lib/business-public";
 import { CatalogueItemDetail } from "./catalogue-item-detail";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +33,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function CatalogueItemPage({ params }: Props) {
-  const resolved = await params;
-  const slug = typeof resolved?.slug === "string" ? resolved.slug : "";
-  return <CatalogueItemDetail slug={slug} />;
+  const { slug } = await params;
+  const business = await getBusinessPublic();
+  
+  const item = await prisma.catalogueItem.findFirst({
+    where: { slug, status: "LIVE" },
+    include: {
+      category: { select: { id: true, name: true, slug: true } },
+      photos: { orderBy: { sortOrder: "asc" } },
+      availableMaterials: true,
+      designer: true,
+    },
+  });
+
+  if (!item) notFound();
+
+  return <CatalogueItemDetail item={item as any} business={business} />;
 }

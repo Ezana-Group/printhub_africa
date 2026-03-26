@@ -8,6 +8,7 @@ import { ProductTrustBadges } from "./ProductTrustBadges";
 import { ProductSocialProof } from "./ProductSocialProof";
 import { Clock, Weight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { MaterialSelector } from "./MaterialSelector";
 
 interface Props {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -18,6 +19,16 @@ interface Props {
 
 export function ProductInfoBlock({ product, business }: Props) {
   const [selectedColor, setSelectedColor] = useState<{ id: string; name: string; hex: string } | undefined>();
+  
+  const [selectedMaterial, setSelectedMaterial] = useState<{ id: string; name: string } | undefined>(() => {
+    const def = product.printMaterials?.find((m: any) => m.isDefault);
+    if (def) return { id: def.consumable.id, name: def.consumable.name };
+    if (product.printMaterials?.length > 0) {
+      const first = product.printMaterials[0];
+      return { id: first.consumable.id, name: first.consumable.name };
+    }
+    return undefined;
+  });
   
   const basePrice = Number(product.basePrice);
   const comparePrice = product.comparePrice != null ? Number(product.comparePrice) : null;
@@ -88,6 +99,18 @@ export function ProductInfoBlock({ product, business }: Props) {
       )}
 
       <div className="mt-8 space-y-8">
+        <MaterialSelector 
+          materials={product.printMaterials?.map((m: any) => ({
+            id: m.consumable.id,
+            name: m.consumable.name,
+            kind: m.consumable.kind,
+            colourHex: m.consumable.colourHex,
+            isDefault: m.isDefault
+          })) || []}
+          selectedMaterialId={selectedMaterial?.id}
+          onMaterialSelect={(m) => setSelectedMaterial({ id: m.id, name: m.name })}
+        />
+
         <FilamentColorSelector 
           productSlug={product.slug}
           selectedColorId={selectedColor?.id}
@@ -112,6 +135,7 @@ export function ProductInfoBlock({ product, business }: Props) {
             minOrderQty={product.minOrderQty}
             maxOrderQty={product.maxOrderQty ?? undefined}
             selectedColor={selectedColor ? { name: selectedColor.name, hex: selectedColor.hex } : undefined}
+            selectedMaterial={selectedMaterial}
           />
         </div>
       </div>

@@ -41,6 +41,16 @@ export default async function ProductPage({ params }: Props) {
       productImages: { orderBy: { sortOrder: "asc" } },
       variants: { orderBy: { price: "asc" } },
       externalModel: true,
+      printMaterials: {
+        include: {
+          consumable: true,
+        },
+      },
+      filamentColors: {
+        include: {
+          filamentColor: true,
+        },
+      },
     },
   });
 

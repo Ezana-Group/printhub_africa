@@ -30,6 +30,8 @@ export interface ShopCartItem {
   variantId?: string;
   colorName?: string;
   colorHex?: string;
+  materialName?: string;
+  materialId?: string;
   quantity: number;
   unitPrice: number;
   name: string;
@@ -72,7 +74,7 @@ function cartItemKey(i: CartItem): string {
     return `cat:${i.catalogueItemId}:${i.materialCode}:${i.colourHex}`;
   }
   const s = i as ShopCartItem;
-  return `shop:${s.productId}:${s.variantId ?? ""}:${s.colorHex ?? ""}`;
+  return `shop:${s.productId}:${s.variantId ?? ""}:${s.colorHex ?? ""}:${s.materialId ?? ""}`;
 }
 
 interface CartState {
