@@ -28,8 +28,8 @@ export function ConsumableColorSelector({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <label className="text-sm font-semibold text-slate-900">
-          Color: <span className="text-secondary font-bold ml-1">
-            {selectedColor?.name || "Select Color"}
+          Colour: <span className="text-secondary font-bold ml-1">
+            {selectedColor?.name || "Select Colour"}
           </span>
         </label>
       </div>

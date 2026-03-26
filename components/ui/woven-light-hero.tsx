@@ -116,7 +116,7 @@ const WovenCanvas = () => {
     mountRef.current.appendChild(renderer.domElement);
 
     const mouse = new THREE.Vector2(0, 0);
-    const clock = new THREE.Clock();
+    const startTime = performance.now();
 
     // --- Woven Silk ---
     const particleCount = 80000; // High particle count for detailed weave
@@ -177,7 +177,7 @@ const WovenCanvas = () => {
 
     const animate = () => {
         requestAnimationFrame(animate);
-        const elapsedTime = clock.getElapsedTime();
+        const elapsedTime = (performance.now() - startTime) / 1000;
         
         const mouseWorld = new THREE.Vector3(mouse.x * 3, mouse.y * 3, 0);
 

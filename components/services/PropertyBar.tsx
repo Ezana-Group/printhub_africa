@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 
-/** 5-segment bar with color by score: green high, amber mid, red low. Shows label and "4/5" on the right. */
+/** 5-segment bar with colour by score: green high, amber mid, red low. Shows label and "4/5" on the right. */
 export function PropertyBar({
   value,
   label,

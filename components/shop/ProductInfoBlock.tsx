@@ -10,6 +10,7 @@ import { Clock, Weight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { MaterialSelector } from "./MaterialSelector";
 import { ConsumableColorSelector } from "./ConsumableColorSelector";
+import { canonicalColorFromSpec } from "@/lib/3d-colour-utils";
 import type { BusinessPublic } from "@/lib/business-public";
 
 interface Consumable {
@@ -46,6 +47,13 @@ interface Product {
   filamentWeightGrams: number | null;
   images: string[];
   printMaterials: ProductPrintMaterial[];
+  filamentColors?: {
+    filamentColor: {
+      id: string;
+      name: string;
+      hexCode: string;
+    };
+  }[];
   variants: ProductVariant[];
   minOrderQty: number;
   maxOrderQty: number | null;
@@ -61,34 +69,44 @@ interface Props {
 export function ProductInfoBlock({ product, business, whatsappTemplate }: Props) {
   const allConsumables = product.printMaterials?.map((m: ProductPrintMaterial) => m.consumable) || [];
 
-  // 1. Group by unique color hex
-  const uniqueColors = Array.from(new Map(
+  // 1. Group by unique colour hex
+  const uniqueColours = Array.from(new Map(
     allConsumables
       .filter((c: Consumable) => !!c.colourHex)
-      .map((c: Consumable) => [c.colourHex, { hex: c.colourHex!, name: c.name }])
+      .map((c: Consumable) => {
+        // Try to find a matching named colour from the product's filament colours
+        const matchedFilamentColour = product.filamentColors?.find(
+          fc => fc.filamentColor.hexCode.toLowerCase() === c.colourHex?.toLowerCase()
+        );
+        
+        
+        const displayName = matchedFilamentColour?.filamentColor.name || canonicalColorFromSpec(c.name);
+        
+        return [c.colourHex, { hex: c.colourHex!, name: displayName }];
+      })
   ).values());
 
-  // 2. State for split selection (Color First)
-  const [selectedColorHex, setSelectedColorHex] = useState<string | undefined>(() => {
+  // 2. State for split selection (Colour First)
+  const [selectedColourHex, setSelectedColourHex] = useState<string | undefined>(() => {
     const def = product.printMaterials?.find((m: ProductPrintMaterial) => m.isDefault);
     if (def) return def.consumable.colourHex || undefined;
-    return uniqueColors[0]?.hex;
+    return uniqueColours[0]?.hex;
   });
 
   const [selectedConsumableId, setSelectedConsumableId] = useState<string | undefined>(() => {
     const def = product.printMaterials?.find((m: ProductPrintMaterial) => m.isDefault);
     if (def) return def.consumable.id;
     
-    // Fallback to first consumable of selected color
-    const firstForColor = allConsumables.find((c: Consumable) => c.colourHex === (selectedColorHex || uniqueColors[0]?.hex));
-    return firstForColor?.id;
+    // Fallback to first consumable of selected colour
+    const firstForColour = allConsumables.find((c: Consumable) => c.colourHex === (selectedColourHex || uniqueColours[0]?.hex));
+    return firstForColour?.id;
   });
 
-  // 3. Generic colors (used if no printMaterials)
-  const [selectedGenericColor, setSelectedGenericColor] = useState<{ id: string; name: string; hex: string } | undefined>();
+  // 3. Generic colours (used if no printMaterials)
+  const [selectedGenericColour, setSelectedGenericColour] = useState<{ id: string; name: string; hex: string } | undefined>();
 
-  // Derived: All consumables matching selected color
-  const availableMaterials = allConsumables.filter((c: Consumable) => c.colourHex === selectedColorHex);
+  // Derived: All consumables matching selected colour
+  const availableMaterials = allConsumables.filter((c: Consumable) => c.colourHex === selectedColourHex);
   const selectedConsumable = allConsumables.find((c: Consumable) => c.id === selectedConsumableId);
 
   const basePrice = Number(product.basePrice);
@@ -173,19 +191,19 @@ export function ProductInfoBlock({ product, business, whatsappTemplate }: Props)
       )}
 
       <div className="mt-8 space-y-8">
-        {/* 1. Select Color First */}
+        {/* 1. Select Colour First */}
         <ConsumableColorSelector
-          colors={uniqueColors}
-          selectedColorHex={selectedColorHex}
+          colors={uniqueColours}
+          selectedColorHex={selectedColourHex}
           onColorSelect={(hex) => {
-            setSelectedColorHex(hex);
-            // Auto-select first material for this color
+            setSelectedColourHex(hex);
+            // Auto-select first material for this colour
             const first = allConsumables.find((c: Consumable) => c.colourHex === hex);
             if (first) setSelectedConsumableId(first.id);
           }}
         />
 
-        {/* 2. Select Material variant based on color */}
+        {/* 2. Select Material variant based on colour */}
         <MaterialSelector 
           label="Material"
           options={availableMaterials.map((c: Consumable) => c.kind === "FILAMENT" ? c.name : `${c.kind} (${c.name})`)}
@@ -200,12 +218,12 @@ export function ProductInfoBlock({ product, business, whatsappTemplate }: Props)
           }}
         />
 
-        {/* 3. Fallback/Generic Color (if no print materials) */}
+        {/* 3. Fallback/Generic Colour (if no print materials) */}
         {allConsumables.length === 0 && (
           <FilamentColorSelector 
             productSlug={product.slug}
-            selectedColorId={selectedGenericColor?.id}
-            onColorSelect={(c) => setSelectedGenericColor({ id: c.id, name: c.name, hex: c.hexCode })}
+            selectedColorId={selectedGenericColour?.id}
+            onColorSelect={(c) => setSelectedGenericColour({ id: c.id, name: c.name, hex: c.hexCode })}
           />
         )}
 
@@ -227,9 +245,9 @@ export function ProductInfoBlock({ product, business, whatsappTemplate }: Props)
             maxOrderQty={product.maxOrderQty ?? undefined}
             selectedColor={
               selectedConsumable 
-                ? { name: selectedConsumable.name, hex: selectedConsumable.colourHex || "" }
-                : selectedGenericColor 
-                  ? { name: selectedGenericColor.name, hex: selectedGenericColor.hex }
+                ? { name: product.filamentColors?.find(fc => fc.filamentColor.hexCode.toLowerCase() === selectedConsumable.colourHex?.toLowerCase())?.filamentColor.name || canonicalColorFromSpec(selectedConsumable.name), hex: selectedConsumable.colourHex || "" }
+                : selectedGenericColour 
+                  ? { name: selectedGenericColour.name, hex: selectedGenericColour.hex }
                   : undefined
             }
             selectedMaterial={

@@ -2,10 +2,7 @@ import * as Sentry from "@sentry/nextjs";
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
 
-const dsn =
-  process.env.NEXT_PUBLIC_SENTRY_DSN ||
-  process.env.SENTRY_DSN ||
-  "https://4bb4b5d171d9823872bf4df402c6c069@o4511027307282432.ingest.de.sentry.io/4511027310755920";
+const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN;
 
 Sentry.init({
   dsn,

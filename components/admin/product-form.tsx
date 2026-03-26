@@ -376,7 +376,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             />
           </div>
           <div>
-            <Label htmlFor="colors">Colors (comma-separated)</Label>
+            <Label htmlFor="colors">Colours (comma-separated)</Label>
             <Input
               id="colors"
               value={colorsStr}

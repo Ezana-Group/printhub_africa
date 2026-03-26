@@ -98,13 +98,13 @@ export async function POST(
     let cvFileUrl: string;
 
     if (uploadUrl) {
-      // [R2 Storage] API — updated to use header auth + error handling
+      // [R2 Storage] API — updated to use Buffer for body to avoid protocol errors with direct File objects in server-side fetch
+      const buffer = Buffer.from(await cvFile.arrayBuffer());
       const res = await fetch(uploadUrl, {
         method: "PUT",
-        body: cvFile,
+        body: buffer,
         headers: { 
           "Content-Type": contentType,
-          "User-Agent": "PrintHub/1.0 (https://printhub.africa)"
         },
       });
       if (!res.ok) {

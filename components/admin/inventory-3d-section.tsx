@@ -113,7 +113,7 @@ type FilamentRow = {
 
 type ThreeDConsumable = FilamentRow & { kind: string };
 
-/** Accepts API shape where some fields may be missing or null; normalized inside. */
+/** Accepts API shape where some fields may be missing or null; normalised inside. */
 export type ThreeDConsumableInput = {
   id: string;
   kind: string;

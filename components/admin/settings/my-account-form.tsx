@@ -677,7 +677,7 @@ export function MyAccountForm({
           <DialogHeader>
             <DialogTitle>{pinSet ? "Change" : "Set"} production PIN</DialogTitle>
             <DialogDescription>
-              Enter your account password to authorize, then choose a 4-digit PIN for the production floor.
+              Enter your account password to authorise, then choose a 4-digit PIN for the production floor.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">

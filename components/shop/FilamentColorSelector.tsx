@@ -27,7 +27,7 @@ export function FilamentColorSelector({ productSlug, selectedColorId, onColorSel
       .then((data) => {
         if (Array.isArray(data)) {
           setColors(data);
-          // Auto-select first available color if none selected
+          // Auto-select first available colour if none selected
           if (!selectedColorId && data.length > 0) {
             const firstAvailable = data.find(c => c.isAvailable) || data[0];
             onColorSelect(firstAvailable);
@@ -57,7 +57,7 @@ export function FilamentColorSelector({ productSlug, selectedColorId, onColorSel
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <label className="text-sm font-semibold text-slate-900">
-          Available Colors: <span className="text-primary font-bold ml-1">{colors.find(c => c.id === selectedColorId)?.name || "Select"}</span>
+          Available Colours: <span className="text-primary font-bold ml-1">{colors.find(c => c.id === selectedColorId)?.name || "Select"}</span>
         </label>
       </div>
       
@@ -96,7 +96,7 @@ export function FilamentColorSelector({ productSlug, selectedColorId, onColorSel
       </div>
       
       <p className="text-[11px] text-slate-500 italic">
-        * Note: Printed colors may vary slightly from screen representation.
+        * Note: Printed colours may vary slightly from screen representation.
       </p>
     </div>
   );
