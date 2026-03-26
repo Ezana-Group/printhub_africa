@@ -17,6 +17,8 @@ export interface ExtractedModelData {
   rawData?: Record<string, unknown>;
 }
 
+export type ImportResult = ExtractedModelData | { error: string; detail?: string; status?: number };
+
 
 export function detectPlatform(url: string): ImportPlatform {
   try {
@@ -66,7 +68,7 @@ export async function downloadAndUploadImage(imageUrl: string): Promise<string |
   }
 }
 
-export async function parseUrlImport(url: string): Promise<ExtractedModelData | { error: string; detail?: string }> {
+export async function parseUrlImport(url: string): Promise<ImportResult> {
   try {
     const platform = detectPlatform(url);
     
@@ -101,7 +103,7 @@ export async function parseUrlImport(url: string): Promise<ExtractedModelData | 
   }
 }
 
-async function fetchPrintablesData(modelId: string, sourceUrl: string): Promise<ExtractedModelData | { error: string; detail?: string }> {
+async function fetchPrintablesData(modelId: string, sourceUrl: string): Promise<ImportResult> {
   try {
     const query = `
       query getPrint($id: String!) {
@@ -141,7 +143,7 @@ async function fetchPrintablesData(modelId: string, sourceUrl: string): Promise<
 
     clearTimeout(timeoutId);
 
-    if (!res.ok) return { error: "API_FETCH_FAILED", detail: `Printables GraphQL error: ${res.status}` };
+    if (!res.ok) return { error: "API_FETCH_FAILED", detail: `Printables GraphQL error: ${res.status}`, status: res.status };
     
     const json = await res.json();
     const data = json.data?.print;
@@ -168,7 +170,7 @@ async function fetchPrintablesData(modelId: string, sourceUrl: string): Promise<
   }
 }
 
-async function fetchThingiverseData(thingId: string, sourceUrl: string): Promise<ExtractedModelData | { error: string; detail?: string }> {
+async function fetchThingiverseData(thingId: string, sourceUrl: string): Promise<ImportResult> {
   try {
     const token = process.env.THINGIVERSE_ACCESS_TOKEN || process.env.THINGIVERSE_APP_TOKEN;
     if (!token) return { error: "API_CONFIG_MISSING", detail: "THINGIVERSE_ACCESS_TOKEN not set." };
@@ -189,7 +191,7 @@ async function fetchThingiverseData(thingId: string, sourceUrl: string): Promise
 
     if (!thingRes.ok) {
       clearTimeout(timeoutId);
-      return { error: "API_FETCH_FAILED", detail: `Thingiverse API error: ${thingRes.status}` };
+      return { error: "API_FETCH_FAILED", detail: `Thingiverse API error: ${thingRes.status}`, status: thingRes.status };
     }
     
     const thing = await thingRes.json();
@@ -222,7 +224,7 @@ async function fetchThingiverseData(thingId: string, sourceUrl: string): Promise
   }
 }
 
-async function fetchMyMiniFactoryData(objectId: string, sourceUrl: string): Promise<ExtractedModelData | { error: string; detail?: string }> {
+async function fetchMyMiniFactoryData(objectId: string, sourceUrl: string): Promise<ImportResult> {
   try {
     const token = process.env.MMF_CLIENT_ID || process.env.MYMINIFACTORY_API_KEY;
     if (!token) return { error: "API_CONFIG_MISSING", detail: "MMF_CLIENT_ID not set." };
@@ -235,7 +237,7 @@ async function fetchMyMiniFactoryData(objectId: string, sourceUrl: string): Prom
       }
     });
 
-    if (!res.ok) return { error: "API_FETCH_FAILED", detail: `MMF API error: ${res.status}` };
+    if (!res.ok) return { error: "API_FETCH_FAILED", detail: `MMF API error: ${res.status}`, status: res.status };
     
     const item = await res.json();
 

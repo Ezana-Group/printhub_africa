@@ -30,10 +30,11 @@ export async function POST(req: Request) {
 
     const extracted = await parseUrlImport(url);
     if ("error" in extracted) {
+      const status = (extracted as { status?: number }).status || 400;
       return NextResponse.json({ 
         error: extracted.error,
         detail: (extracted as { detail?: string }).detail 
-      }, { status: 400 });
+      }, { status });
     }
 
     // Download and upload images to R2 - NON-BLOCKING

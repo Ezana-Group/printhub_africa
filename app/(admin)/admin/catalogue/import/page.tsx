@@ -87,7 +87,7 @@ function UrlImportSection() {
       const data = await res.json();
       
       if (!res.ok || data.error) {
-        setError(data);
+        setError({ ...data, statusCode: res.status });
         // Show manual fallback for most failures
         if (data.error !== "ALREADY_IMPORTED") {
           setShowManual(true);
@@ -134,7 +134,11 @@ function UrlImportSection() {
             <div className="flex-1">
               <p className="font-semibold">Import Failed</p>
               <div className="text-sm space-y-1">
-                {error.error === "ALREADY_IMPORTED" ? (
+                {error.statusCode === 401 || error.statusCode === 403 || error.error === "API_AUTH_FAILED" ? (
+                  <p>Authentication with the external platform failed. Please verify your API tokens in the environment settings and try again.</p>
+                ) : error.statusCode === 503 || error.statusCode === 504 || error.error === "EXTERNAL_SERVICE_DOWN" ? (
+                  <p>The external platform (e.g. Thingiverse/Printables) is currently down or rate-limiting. Please try again in a few minutes.</p>
+                ) : error.error === "ALREADY_IMPORTED" ? (
                   <p>This model was already imported. <Link href={`/admin/catalogue/${error.existingId}/edit`} className="underline">View existing record</Link></p>
                 ) : error.error === "FETCH_FAILED" || error.error === "API_FETCH_FAILED" ? (
                   <p>Could not connect to the platform API. Please check your API credentials in Settings or try manual entry below.</p>
@@ -147,7 +151,7 @@ function UrlImportSection() {
                 ) : error.error === "NAME_NOT_FOUND" ? (
                   <p>Could not extract product name automatically. Please fill it in manually below.</p>
                 ) : (
-                  <p>Could not auto-import from this URL. Please use the manual form below.</p>
+                  <p>An unexpected error occurred ({error.statusCode || 500}). Please use the manual form below or try again later.</p>
                 )}
                 
                 {error.detail && (
@@ -374,6 +378,13 @@ function ApiSearchSection() {
       if (res.ok && data.results) {
         setResults(isNewSearch ? data.results : [...results, ...data.results]);
         setPage(nextPage);
+      } else {
+        setLastMessage({ 
+          type: 'error', 
+          text: res.status === 401 ? "External API Authentication Failed. Check your API keys." : 
+                res.status === 503 ? "The external platform is currently down or rate-limiting." :
+                data.error || "Search failed." 
+        });
       }
     } catch (e) {
       console.error(e);
