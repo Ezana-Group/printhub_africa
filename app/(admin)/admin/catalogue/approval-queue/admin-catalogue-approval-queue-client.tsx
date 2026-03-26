@@ -6,7 +6,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { 
   Search, 
-  Filter, 
   MoreVertical, 
   CheckCircle, 
   XCircle, 
@@ -16,12 +15,8 @@ import {
   ExternalLink,
   ChevronLeft,
   ChevronRight,
-  Loader2,
-  AlertCircle,
   Eye,
-  Calendar,
-  Layers,
-  Download
+  Layers
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -106,8 +101,8 @@ export function AdminCatalogueApprovalQueueClient() {
         setItems(data.items);
         setTotalPages(data.pagination.pages);
       }
-    } catch (err) {
-      console.error("Failed to fetch items", err);
+    } catch (error) {
+      console.error("Failed to fetch items", error);
       toast.error("Failed to load items");
     } finally {
       setLoading(false);
