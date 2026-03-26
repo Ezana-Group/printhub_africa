@@ -68,6 +68,9 @@ export async function POST(req: Request) {
     if (err.message.includes("AUTH_FAILED")) {
       return NextResponse.json({ error: "API_AUTH_FAILED", detail: "Authentication with the external platform failed. Please check your API keys." }, { status: 401 });
     }
+    if (err.message.includes("RATE_LIMITED")) {
+      return NextResponse.json({ error: "RATE_LIMITED", detail: "Too many requests to the external platform. Please wait a moment and try again." }, { status: 429 });
+    }
     if (err.message.includes("SERVICE_UNAVAILABLE")) {
       return NextResponse.json({ error: "EXTERNAL_SERVICE_DOWN", detail: "The external platform is currently down or under maintenance." }, { status: 503 });
     }

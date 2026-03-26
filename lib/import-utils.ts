@@ -191,7 +191,11 @@ async function fetchThingiverseData(thingId: string, sourceUrl: string): Promise
 
     if (!thingRes.ok) {
       clearTimeout(timeoutId);
-      return { error: "API_FETCH_FAILED", detail: `Thingiverse API error: ${thingRes.status}`, status: thingRes.status };
+      const status = thingRes.status;
+      if (status === 401 || status === 403) return { error: "API_AUTH_FAILED", detail: "Thingiverse authentication failed.", status: 403 };
+      if (status === 429) return { error: "RATE_LIMITED", detail: "Thingiverse rate limit exceeded.", status: 429 };
+      if (status >= 500) return { error: "EXTERNAL_SERVICE_DOWN", detail: `Thingiverse service error: ${status}`, status: 503 };
+      return { error: "API_FETCH_FAILED", detail: `Thingiverse API error: ${status}`, status };
     }
     
     const thing = await thingRes.json();
@@ -247,7 +251,13 @@ async function fetchMyMiniFactoryData(objectId: string, sourceUrl: string): Prom
     // MyMiniFactory v2 API
     const res = await fetch(url, { headers });
 
-    if (!res.ok) return { error: "API_FETCH_FAILED", detail: `MMF API error: ${res.status}`, status: res.status };
+    if (!res.ok) {
+      const status = res.status;
+      if (status === 401 || status === 403) return { error: "API_AUTH_FAILED", detail: "MyMiniFactory authentication failed.", status: 403 };
+      if (status === 429) return { error: "RATE_LIMITED", detail: "MyMiniFactory rate limit exceeded.", status: 429 };
+      if (status >= 500) return { error: "EXTERNAL_SERVICE_DOWN", detail: `MMF service error: ${status}`, status: 503 };
+      return { error: "API_FETCH_FAILED", detail: `MMF API error: ${status}`, status };
+    }
     
     const item = await res.json();
 
@@ -290,6 +300,10 @@ export async function searchThingiverse(term: string, page: number = 1) {
 
     if (res.status === 403 || res.status === 401) {
       throw new Error("THINGIVERSE_AUTH_FAILED");
+    }
+
+    if (res.status === 429) {
+      throw new Error("THINGIVERSE_RATE_LIMITED");
     }
 
     if (res.status === 503 || res.status === 504) {
@@ -364,6 +378,10 @@ export async function searchMyMiniFactory(term: string, page: number = 1) {
 
     if (res.status === 403 || res.status === 401) {
       throw new Error("MMF_AUTH_FAILED");
+    }
+
+    if (res.status === 429) {
+      throw new Error("MMF_RATE_LIMITED");
     }
 
     if (res.status === 503 || res.status === 504) {

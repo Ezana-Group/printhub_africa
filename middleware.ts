@@ -18,21 +18,32 @@ function isPublicCatalogueApi(pathname: string, method: string): boolean {
 /** Allowed origins for API mutations (CSRF). Request host (Vercel + previews), env URL, localhost. */
 function getAllowedOrigins(req: Request): string[] {
   const origins: string[] = [];
-  // Same-origin: the host this request was sent to (Vercel production + preview URLs work without extra config)
+  // Same-origin: the host this request was sent to
   try {
     origins.push(new URL(req.url).origin);
   } catch {
     // ignore
   }
+  
   const primary = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL;
   if (primary) {
     try {
-      const o = new URL(primary).origin;
-      if (!origins.includes(o)) origins.push(o);
+      const primaryOrigin = new URL(primary).origin;
+      if (!origins.includes(primaryOrigin)) origins.push(primaryOrigin);
+      
+      // Also allow www. version if not present, or naked domain if www. present
+      if (primaryOrigin.includes("://www.")) {
+        const naked = primaryOrigin.replace("://www.", "://");
+        if (!origins.includes(naked)) origins.push(naked);
+      } else if (!primaryOrigin.match(/:\/\/(\d{1,3}\.){3}\d{1,3}/)) { // don't add www to IPs
+        const www = primaryOrigin.replace("://", "://www.");
+        if (!origins.includes(www)) origins.push(www);
+      }
     } catch {
       // ignore
     }
   }
+  
   origins.push("http://localhost:3000", "http://127.0.0.1:3000");
   return origins;
 }

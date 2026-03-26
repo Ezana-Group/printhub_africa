@@ -118,16 +118,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ id: catalogueItem.id });
   } catch (error: unknown) {
     const body = await req.clone().json().catch(() => ({}));
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
     console.error('[IMPORT URL ERROR]', {
-      message: error instanceof Error ? error.message : String(error),
+      message: errorMessage,
       stack: error instanceof Error ? error.stack : undefined,
       url: body?.url,
     });
     
+    let status = 500;
+    if (errorMessage.includes("RATE_LIMITED")) status = 429;
+    else if (errorMessage.includes("FETCH_FAILED") || errorMessage.includes("SERVICE_DOWN")) status = 503;
+    else if (errorMessage.includes("AUTH_FAILED")) status = 401;
+
     return NextResponse.json({
       error: 'IMPORT_FAILED',
-      detail: error instanceof Error ? error.message : String(error),
+      detail: errorMessage,
       code: (error as { code?: string })?.code ?? null,
-    }, { status: 500 });
+    }, { status });
   }
 }

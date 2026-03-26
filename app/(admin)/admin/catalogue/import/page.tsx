@@ -134,10 +134,14 @@ function UrlImportSection() {
             <div className="flex-1">
               <p className="font-semibold">Import Failed</p>
               <div className="text-sm space-y-1">
-                {error.statusCode === 401 || error.statusCode === 403 || error.error === "API_AUTH_FAILED" ? (
+                {error.statusCode === 401 || error.error === "API_AUTH_FAILED" ? (
                   <p>Authentication with the external platform failed. Please verify your API tokens in the environment settings and try again.</p>
+                ) : error.statusCode === 403 ? (
+                  <p>Access Forbidden (403). This could be due to insufficient permissions or a security mismatch. If you are an administrator, try logging out and back in, or check if you have the 'catalogue_import' permission.</p>
+                ) : error.statusCode === 429 || error.error === "RATE_LIMITED" ? (
+                  <p>Rate limit exceeded. Too many requests have been made to the external platform. Please wait a minute before trying again.</p>
                 ) : error.statusCode === 503 || error.statusCode === 504 || error.error === "EXTERNAL_SERVICE_DOWN" ? (
-                  <p>The external platform (e.g. Thingiverse/Printables) is currently down or rate-limiting. Please try again in a few minutes.</p>
+                  <p>The external platform (e.g. Thingiverse/Printables) is currently down or under maintenance. Please try again in a few minutes.</p>
                 ) : error.error === "ALREADY_IMPORTED" ? (
                   <p>This model was already imported. <Link href={`/admin/catalogue/${error.existingId}/edit`} className="underline">View existing record</Link></p>
                 ) : error.error === "FETCH_FAILED" || error.error === "API_FETCH_FAILED" ? (
@@ -382,7 +386,9 @@ function ApiSearchSection() {
         setLastMessage({ 
           type: 'error', 
           text: res.status === 401 ? "External API Authentication Failed. Check your API keys." : 
-                res.status === 503 ? "The external platform is currently down or rate-limiting." :
+                res.status === 403 ? "Access Forbidden. Check your permissions or security settings." :
+                res.status === 429 ? "Rate limit exceeded. Please wait a moment." :
+                res.status === 503 ? "The external platform is currently down or under maintenance." :
                 data.error || "Search failed." 
         });
       }
