@@ -82,7 +82,7 @@ export async function PATCH(
     const item = await prisma.catalogueItem.update({
       where: { id },
       data: update as Parameters<typeof prisma.catalogueItem.update>[0]["data"],
-      include: { photos: { orderBy: { sortOrder: "asc" } } }
+      include: { photos: { where: { isPrimary: true }, take: 1 } }
     });
 
     // Sync to Product if LIVE
