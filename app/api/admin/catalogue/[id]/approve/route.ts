@@ -18,7 +18,7 @@ export async function POST(
 
   const item = await prisma.catalogueItem.findUnique({
     where: { id },
-    include: { photos: { where: { isPrimary: true }, take: 1 } }
+    include: { photos: { orderBy: { sortOrder: "asc" } } }
   });
   if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (item.status !== CatalogueStatus.PENDING_REVIEW) {
