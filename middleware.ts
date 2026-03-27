@@ -71,18 +71,21 @@ export async function middleware(req: NextRequest) {
   const apiBlock = checkApiOrigin(req);
   if (apiBlock) return apiBlock;
 
+  const isLocalhost = host.includes('localhost') || host.includes('127.0.0.1');
   const isAdminHost = host.startsWith('admin.');
   const isAdminPath = pathname.startsWith('/admin');
 
-  // Strict Routing Enforcements
-  if (isAdminHost && !isAdminPath) {
-    // Redirect bare admin.printhub.africa to dashboard
-    return NextResponse.redirect(new URL('/admin/dashboard', req.url));
-  }
+  // Strict Routing Enforcements (Skipped for localhost in development)
+  if (!isLocalhost) {
+    if (isAdminHost && !isAdminPath) {
+      // Redirect bare admin.printhub.africa to dashboard
+      return NextResponse.redirect(new URL('/admin/dashboard', req.url));
+    }
 
-  if (!isAdminHost && isAdminPath) {
-    // 404 to obscure admin portal on customer domains
-    return new NextResponse(null, { status: 404 });
+    if (!isAdminHost && isAdminPath) {
+      // 404 to obscure admin portal on customer domains
+      return new NextResponse(null, { status: 404 });
+    }
   }
 
   if (isAdminHost || isAdminPath) {

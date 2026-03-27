@@ -5,9 +5,11 @@ import { adminAuthOptions } from '@/lib/auth-admin'
 
 function isAdminRequest(req: NextRequest): boolean {
   const host = req.headers.get('host') ?? ''
+  const referer = req.headers.get('referer') ?? ''
   return (
     host.startsWith('admin.') ||
     host.includes('admin.printhub.africa') ||
+    referer.includes('/admin/') ||
     (process.env.NODE_ENV === 'development' && 
      req.nextUrl.searchParams.get('_admin') === '1')
   )
