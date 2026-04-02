@@ -1,5 +1,5 @@
 import { MARKETING_CONFIG } from "@/config/marketing-channels";
-import { prisma } from "@/lib/prisma";
+import * as crypto from "crypto";
 
 /**
  * Server-side Conversions API (CAPI)
@@ -19,8 +19,8 @@ export async function sendMetaConversionsEvent({
   eventTime?: number;
   eventSourceUrl?: string;
   eventId?: string;
-  userData?: Record<string, any>;
-  customData?: Record<string, any>;
+  userData?: Record<string, string | number | boolean | undefined>;
+  customData?: Record<string, string | number | boolean | undefined>;
 }) {
   if (!MARKETING_CONFIG.META_CONVERSIONS_API_ENABLED || !MARKETING_CONFIG.META_ACCESS_TOKEN) {
     return { success: false, reason: "CAPI disabled or no token" };
@@ -37,10 +37,10 @@ export async function sendMetaConversionsEvent({
         user_data: {
           client_ip_address: userData.ip,
           client_user_agent: userData.userAgent,
-          em: userData.email ? hashData(userData.email) : undefined,
-          ph: userData.phone ? hashData(userData.phone) : undefined,
-          fn: userData.firstName ? hashData(userData.firstName) : undefined,
-          ln: userData.lastName ? hashData(userData.lastName) : undefined,
+          em: userData.email ? hashData(String(userData.email)) : undefined,
+          ph: userData.phone ? hashData(String(userData.phone)) : undefined,
+          fn: userData.firstName ? hashData(String(userData.firstName)) : undefined,
+          ln: userData.lastName ? hashData(String(userData.lastName)) : undefined,
           fbc: userData.fbc,
           fbp: userData.fbp,
         },
@@ -178,7 +178,6 @@ export async function sendSnapConversionsEvent({
 
 /** Helper for hashing user data (SHA-256) as required by APIs. */
 function hashData(data: string): string {
-  const crypto = require("crypto");
   return crypto
     .createHash("sha256")
     .update(data.trim().toLowerCase())

@@ -84,7 +84,7 @@ export default async function AdminChannelsPage() {
                   <Badge variant="secondary">Offline</Badge>
                 )}
               </div>
-              <CardDescription>Email & SMS automation (via Africa's Talking).</CardDescription>
+              <CardDescription>Email & SMS automation (via Africa&apos;s Talking).</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">

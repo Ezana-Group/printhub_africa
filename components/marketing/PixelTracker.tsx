@@ -116,6 +116,7 @@ export function PixelTracker({ ga4Id }: { ga4Id?: string | null }) {
               width="1"
               style={{ display: "none" }}
               src={`https://www.facebook.com/tr?id=${MARKETING_CONFIG.META_PIXEL_ID}&ev=PageView&noscript=1`}
+              alt=""
             />
           </noscript>
         </>

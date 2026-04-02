@@ -4,6 +4,10 @@
 
 import { prisma } from "./prisma";
 
+export const MPESA_BASE_URL = (process.env.MPESA_ENV === "production" || process.env.NODE_ENV === "production")
+  ? "https://api.safaricom.co.ke"
+  : "https://sandbox.safaricom.co.ke";
+
 export async function getMpesaSettings() {
   const row = await prisma.businessSettings.findUnique({
     where: { id: "default" },

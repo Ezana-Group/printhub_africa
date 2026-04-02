@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
+import Link from "next/link";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -240,12 +241,12 @@ export default function AdminLoginPage() {
           </form>
 
           <div className="text-center">
-            <a 
+            <Link 
               href="/admin/forgot-password" 
               className="text-[10px] uppercase tracking-widest text-zinc-500 hover:text-white transition-colors"
             >
               Forgot Password?
-            </a>
+            </Link>
           </div>
         </div>
 

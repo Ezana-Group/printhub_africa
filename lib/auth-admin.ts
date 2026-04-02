@@ -21,6 +21,10 @@ function setCachedStaffPermissions(userId: string, permissions: string[]) {
   staffPermissionsCache.set(userId, { permissions, expiresAt: Date.now() + CACHE_TTL_MS });
 }
 
+export function invalidateStaffPermissionsCache(userId: string) {
+  staffPermissionsCache.delete(userId);
+}
+
 async function getGeoLocation(ip: string) {
   if (ip === "127.0.0.1" || ip === "localhost" || ip === "::1") return { country: "Local" };
   try {

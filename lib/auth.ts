@@ -9,6 +9,7 @@
 
 import { authOptionsAdmin } from "./auth-admin";
 import { authOptionsCustomer } from "./auth-customer";
+export { authOptionsCustomer };
 
 // Exporting both for extreme backward compatibility if any dynamic imports remain,
 // but they should be updated to use the correct one.
