@@ -1,5 +1,6 @@
 import type { NextAuthOptions } from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import { getServerSession } from "next-auth/next";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import * as bcrypt from "bcryptjs";
@@ -7,6 +8,14 @@ import * as crypto from "crypto";
 import { verifySync } from "otplib";
 import { sendEmail } from "@/lib/email";
 import { n8n } from "@/lib/n8n";
+
+/**
+ * Server-side authentication helper for Admin/Staff routes.
+ */
+export async function authAdmin(req?: any) {
+  const session = await getServerSession(authOptionsAdmin);
+  return (session?.user as any) || null;
+}
 
 // Reuse logic from lib/auth.ts
 const CACHE_TTL_MS = 5 * 60 * 1000;
