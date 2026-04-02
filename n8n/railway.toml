@@ -2,8 +2,9 @@
   builder = "DOCKERFILE"
 
 [deploy]
-  startCommand = "n8n start"
+  startCommand = "n8n"
   healthcheckPath = "/healthz"
   healthcheckPort = 5678
+  healthcheckTimeout = 100
   restartPolicyType = "ON_FAILURE"
-  restartPolicyMaxRetries = 3
+  restartPolicyMaxRetries = 5
