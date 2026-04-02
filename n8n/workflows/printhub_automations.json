@@ -1,177 +1,262 @@
 [
   {
-    "name": "PrintHub - Order Confirmation (Email + WA + SMS)",
+    "name": "1. PrintHub - Order Confirmation (Email + WA + SMS)",
     "nodes": [
       {
-        "parameters": {
-          "httpMethod": "POST",
-          "path": "order-confirmed",
-          "options": {
-            "rawBody": true
-          }
-        },
+        "parameters": { "httpMethod": "POST", "path": "order-confirmed", "options": { "rawBody": true } },
         "name": "Webhook: Order Confirmed",
         "type": "n8n-nodes-base.webhook",
         "typeVersion": 1,
         "position": [400, 300],
-        "webhookId": "order-confirmed-trigger"
+        "webhookId": "order-confirmed"
       },
       {
-        "parameters": {
-          "jsCode": "/* Verify PrintHub HMAC Signature */\nconst signature = $node[\"Webhook: Order Confirmed\"].json.headers[\"x-printhub-signature\"];\nconst body = $node[\"Webhook: Order Confirmed\"].json.body;\nconst secret = \"$N8N_WEBHOOK_SECRET\"; // Replaced by n8n Env Var\n\nconst hmac = crypto.createHmac('sha256', secret).update(JSON.stringify(body)).digest('hex');\n\nif (signature !== hmac) {\n  throw new Error('Invalid Signature from Next.js');\n}\n\nreturn body;"
-        },
+        "parameters": { "jsCode": "/* Verify Signature */\nconst crypto = require('crypto');\nconst signature = $node[\"Webhook: Order Confirmed\"].json.headers[\"x-printhub-signature\"];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node[\"Webhook: Order Confirmed\"].json.body)).digest('hex');\nif (signature !== hmac) throw new Error('Invalid Signature');\nreturn $node[\"Webhook: Order Confirmed\"].json.body;" },
         "name": "Verify Signature",
         "type": "n8n-nodes-base.code",
         "typeVersion": 1,
         "position": [620, 300]
       },
       {
-        "parameters": {
-          "url": "https://api.resend.com/emails",
-          "method": "POST",
-          "authentication": "headerAuth",
-          "headerParameters": {
-            "parameters": [
-              { "name": "Authorization", "value": "Bearer $RESEND_API_KEY" }
-            ]
-          },
-          "bodyParameters": {
-            "parameters": [
-              { "name": "from", "value": "PrintHub Africa <orders@printhub.africa>" },
-              { "name": "to", "value": "={{$json.customerEmail}}" },
-              { "name": "subject", "value": "=Order Confirmed: {{$json.orderNumber}}" },
-              { "name": "html", "value": "=<p>Hi {{$json.customerName}}, your order {{$json.orderNumber}} is confirmed!</p>" }
-            ]
-          }
-        },
-        "name": "Resend: Confirmation Email",
+        "parameters": { "url": "https://api.resend.com/emails", "method": "POST", "authentication": "headerAuth", "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.RESEND_API_KEY}}" }] }, "bodyParameters": { "parameters": [{ "name": "from", "value": "PrintHub Africa <orders@printhub.africa>" }, { "name": "to", "value": "={{$json.customerEmail}}" }, { "name": "subject", "value": "=Order Confirmed: {{$json.orderNumber}}" }, { "name": "html", "value": "=<p>Hi {{$json.customerName}}, order {{$json.orderNumber}} is confirmed!</p>" }] } },
+        "name": "Resend: Email",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.1,
         "position": [840, 200]
       },
       {
-        "parameters": {
-          "url": "=https://graph.facebook.com/v19.0/$WHATSAPP_PHONE_ID/messages",
-          "method": "POST",
-          "authentication": "headerAuth",
-          "headerParameters": {
-            "parameters": [
-              { "name": "Authorization", "value": "Bearer $WHATSAPP_TOKEN" }
-            ]
-          },
-          "bodyParameters": {
-            "parameters": [
-              { "name": "messaging_product", "value": "whatsapp" },
-              { "name": "to", "value": "={{$json.customerPhone}}" },
-              { "name": "type", "value": "template" },
-              { "name": "template", "value": "{ \"name\": \"order_confirmation\", \"language\": { \"code\": \"en\" }, \"components\": [ { \"type\": \"body\", \"parameters\": [ { \"type\": \"text\", \"text\": \"{{$json.orderNumber}}\" } ] } ] }" }
-            ]
-          }
-        },
-        "name": "WhatsApp: Confirmation",
+        "parameters": { "url": "=https://graph.facebook.com/v19.0/{{$env.WHATSAPP_PHONE_ID}}/messages", "method": "POST", "authentication": "headerAuth", "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.WHATSAPP_TOKEN}}" }] }, "bodyParameters": { "parameters": [{ "name": "messaging_product", "value": "whatsapp" }, { "name": "to", "value": "={{$json.customerPhone}}" }, { "name": "type", "value": "template" }, { "name": "template", "value": "{\"name\":\"order_confirmation\",\"language\":{\"code\":\"en\"}}" }] } },
+        "name": "WhatsApp: Notify",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.1,
         "position": [840, 400]
       }
     ],
-    "connections": {
-      "Webhook: Order Confirmed": {
-        "main": [
-          [
-            {
-              "node": "Verify Signature",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "Verify Signature": {
-        "main": [
-          [
-            {
-              "node": "Resend: Confirmation Email",
-              "type": "main",
-              "index": 0
-            },
-            {
-              "node": "WhatsApp: Confirmation",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      }
-    }
+    "connections": { "Webhook: Order Confirmed": { "main": [[{ "node": "Verify Signature", "type": "main", "index": 0 }]] }, "Verify Signature": { "main": [[{ "node": "Resend: Email", "type": "main", "index": 0 }, { "node": "WhatsApp: Notify", "type": "main", "index": 0 }]] } }
   },
   {
-    "name": "PrintHub - Abandoned Cart Recovery (Sequence)",
+    "name": "2. PrintHub - Order Status Changed (Logistics Notify)",
     "nodes": [
       {
-        "parameters": {
-          "rule": {
-            "interval": [
-              {
-                "field": "hours"
-              }
-            ]
-          }
-        },
-        "name": "Cron: Every Hour",
-        "type": "n8n-nodes-base.scheduleTrigger",
+        "parameters": { "httpMethod": "POST", "path": "order-status-changed", "options": { "rawBody": true } },
+        "name": "Webhook: Status Shift",
+        "type": "n8n-nodes-base.webhook",
         "typeVersion": 1,
-        "position": [400, 700]
+        "position": [400, 300],
+        "webhookId": "order-status-changed"
       },
       {
-        "parameters": {
-          "url": "https://admin.printhub.africa/api/n8n/get-abandoned-carts",
-          "method": "GET",
-          "authentication": "headerAuth",
-          "headerParameters": {
-            "parameters": [
-              { "name": "x-n8n-secret", "value": "$N8N_WEBHOOK_SECRET" }
-            ]
-          }
-        },
-        "name": "Fetch Carts",
+        "parameters": { "jsCode": "/* Verify Signature */\nconst crypto = require('crypto');\nconst signature = $node[\"Webhook: Status Shift\"].json.headers[\"x-printhub-signature\"];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node[\"Webhook: Status Shift\"].json.body)).digest('hex');\nif (signature !== hmac) throw new Error('Invalid Signature');\nreturn $node[\"Webhook: Status Shift\"].json.body;" },
+        "name": "Verify Auth",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [620, 300]
+      },
+      {
+        "parameters": { "conditions": { "string": [{ "value1": "={{$json.newStatus}}", "value2": "DISPATCHED" }] } },
+        "name": "If Dispatched",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 1,
+        "position": [840, 300]
+      },
+      {
+        "parameters": { "url": "https://api.resend.com/emails", "method": "POST", "authentication": "headerAuth", "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.RESEND_API_KEY}}" }] }, "bodyParameters": { "parameters": [{ "name": "from", "value": "PrintHub Shipping <delivery@printhub.africa>" }, { "name": "to", "value": "={{$json.customerEmail}}" }, { "name": "subject", "value": "=Your Order {{$json.orderNumber}} is on its way!" }, { "name": "html", "value": "=<p>Exciting news, {{$json.customerName}}! Your order is dispatched. Tracking: {{$json.trackingNumber}}</p>" }] } },
+        "name": "Notify: Dispatched",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.1,
-        "position": [620, 700]
-      },
-      {
-        "parameters": {
-          "fieldToSplit": "carts",
-          "options": {}
-        },
-        "name": "Split Carts",
-        "type": "n8n-nodes-base.splitInBatches",
-        "typeVersion": 1,
-        "position": [840, 700]
+        "position": [1060, 200]
       }
     ],
-    "connections": {
-      "Cron: Every Hour": {
-        "main": [
-          [
-            {
-              "node": "Fetch Carts",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
+    "connections": { "Webhook: Status Shift": { "main": [[{ "node": "Verify Auth", "type": "main", "index": 0 }]] }, "Verify Auth": { "main": [[{ "node": "If Dispatched", "type": "main", "index": 0 }]] }, "If Dispatched": { "main": [[{ "node": "Notify: Dispatched", "type": "main", "index": 0 }]] } }
+  },
+  {
+    "name": "3. PrintHub - Abandoned Cart Recovery (3-Stage Sequence)",
+    "nodes": [
+      {
+        "parameters": { "httpMethod": "POST", "path": "cart-abandoned", "options": { "rawBody": true } },
+        "name": "Webhook: Cart Abandoned",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [400, 300],
+        "webhookId": "cart-abandoned"
       },
-      "Fetch Carts": {
-        "main": [
-          [
-            {
-              "node": "Split Carts",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
+      {
+        "parameters": { "jsCode": "const crypto = require('crypto');\nconst signature = $node[\"Webhook: Cart Abandoned\"].json.headers[\"x-printhub-signature\"];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node[\"Webhook: Cart Abandoned\"].json.body)).digest('hex');\nif (signature !== hmac) throw new Error('Invalid');\nreturn $node[\"Webhook: Cart Abandoned\"].json.body;" },
+        "name": "Verify HMAC",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [620, 300]
+      },
+      {
+        "parameters": { "url": "https://admin.printhub.africa/api/n8n/generate-coupon", "method": "POST", "authentication": "headerAuth", "headerParameters": { "parameters": [{ "name": "x-n8n-secret", "value": "={{$env.N8N_WEBHOOK_SECRET}}" }] }, "bodyParameters": { "parameters": [{ "name": "customerId", "value": "={{$json.customerId}}" }, { "name": "discountType", "value": "PERCENTAGE" }, { "name": "value", "value": 10 }] } },
+        "name": "Generate 10% Coupon",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [840, 300]
       }
-    }
+    ],
+    "connections": { "Webhook: Cart Abandoned": { "main": [[{ "node": "Verify HMAC", "type": "main", "index": 0 }]] }, "Verify HMAC": { "main": [[{ "node": "Generate 10% Coupon", "type": "main", "index": 0 }]] } }
+  },
+  {
+    "name": "4. PrintHub - Payment Failed (Retry Flow)",
+    "nodes": [
+      {
+        "parameters": { "httpMethod": "POST", "path": "payment-failed", "options": { "rawBody": true } },
+        "name": "Webhook: Pay Failed",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [400, 300]
+      }
+    ],
+    "connections": {}
+  },
+  {
+    "name": "5. PrintHub - Quote Submitted (Customer + Sales Notify)",
+    "nodes": [
+      {
+        "parameters": { "httpMethod": "POST", "path": "quote-submitted", "options": { "rawBody": true } },
+        "name": "Webhook: Quote In",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [400, 300]
+      }
+    ],
+    "connections": {}
+  },
+  {
+    "name": "6. PrintHub - Quote Ready (PDF Delivery)",
+    "nodes": [
+      {
+        "parameters": { "httpMethod": "POST", "path": "quote-ready", "options": { "rawBody": true } },
+        "name": "Webhook: Quote Out",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [400, 300]
+      }
+    ],
+    "connections": {}
+  },
+  {
+    "name": "7. PrintHub - Staff Alert (Multi-Channel Dispatch)",
+    "nodes": [
+      {
+        "parameters": { "httpMethod": "POST", "path": "staff-alert", "options": { "rawBody": true } },
+        "name": "Webhook: Staff Alert",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [400, 300]
+      }
+    ],
+    "connections": {}
+  },
+  {
+    "name": "8. PrintHub - Security Alert (Impossible Travel)",
+    "nodes": [
+      {
+        "parameters": { "httpMethod": "POST", "path": "security-alert", "options": { "rawBody": true } },
+        "name": "Webhook: Security",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [400, 300],
+        "webhookId": "security-alert"
+      },
+      {
+        "parameters": { "jsCode": "const crypto = require('crypto');\nconst signature = $node[\"Webhook: Security\"].json.headers[\"x-printhub-signature\"];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node[\"Webhook: Security\"].json.body)).digest('hex');\nif (signature !== hmac) throw new Error('Invalid');\nreturn $node[\"Webhook: Security\"].json.body;" },
+        "name": "Verify HMAC Auth",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [620, 300]
+      },
+      {
+        "parameters": { "url": "https://api.resend.com/emails", "method": "POST", "authentication": "headerAuth", "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.RESEND_API_KEY}}" }] }, "bodyParameters": { "parameters": [{ "name": "from", "value": "PrintHub Security <security@printhub.africa>" }, { "name": "to", "value": "={{$json.superAdminEmail}}" }, { "name": "subject", "value": "=CRITICAL: Security Breach Detected - {{$json.type}}" }, { "name": "html", "value": "=<p>Security alert for {{$json.affectedUserName}} ({{$json.affectedUserEmail}}). Type: {{$json.type}}.</p>" }] } },
+        "name": "Alert: SuperAdmin",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [840, 300]
+      }
+    ],
+    "connections": { "Webhook: Security": { "main": [[{ "node": "Verify HMAC Auth", "type": "main", "index": 0 }]] }, "Verify HMAC Auth": { "main": [[{ "node": "Alert: SuperAdmin", "type": "main", "index": 0 }]] } }
+  },
+  {
+    "name": "9. PrintHub - Low Stock Notify (Procurement Flow)",
+    "nodes": [
+      {
+        "parameters": { "httpMethod": "POST", "path": "low-stock", "options": { "rawBody": true } },
+        "name": "Webhook: Low Stock",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [400, 300]
+      }
+    ],
+    "connections": {}
+  },
+  {
+    "name": "10. PrintHub - Social Media Export (9 Platforms)",
+    "nodes": [
+      {
+        "parameters": { "httpMethod": "POST", "path": "product-published", "options": { "rawBody": true } },
+        "name": "Webhook: Product Pub",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [400, 300],
+        "webhookId": "product-published"
+      },
+      {
+        "parameters": { "conditions": { "boolean": [{ "value1": "={{$json.exportFlags.google}}", "value2": true }] } },
+        "name": "If Google",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 1,
+        "position": [620, 200]
+      },
+      {
+        "parameters": { "conditions": { "boolean": [{ "value1": "={{$json.exportFlags.meta}}", "value2": true }] } },
+        "name": "If Meta",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 1,
+        "position": [620, 400]
+      }
+    ],
+    "connections": { "Webhook: Product Pub": { "main": [[{ "node": "If Google", "type": "main", "index": 0 }, { "node": "If Meta", "type": "main", "index": 0 }]] } }
+  },
+  {
+    "name": "11. PrintHub - New Staff Login (Security Verification)",
+    "nodes": [
+      {
+        "parameters": { "httpMethod": "POST", "path": "new-device-login", "options": { "rawBody": true } },
+        "name": "Webhook: New Login",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [400, 300]
+      }
+    ],
+    "connections": {}
+  },
+  {
+    "name": "12. PrintHub - B2B Lead Flow (Corporate Review)",
+    "nodes": [
+      {
+        "parameters": { "httpMethod": "POST", "path": "corporate-application", "options": { "rawBody": true } },
+        "name": "Webhook: Corp App",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [400, 300],
+        "webhookId": "corporate-application"
+      },
+      {
+        "parameters": { "jsCode": "const crypto = require('crypto');\nconst signature = $node[\"Webhook: Corp App\"].json.headers[\"x-printhub-signature\"];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node[\"Webhook: Corp App\"].json.body)).digest('hex');\nif (signature !== hmac) throw new Error('Invalid');\nreturn $node[\"Webhook: Corp App\"].json.body;" },
+        "name": "Verify Signature HMAC",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [620, 300]
+      },
+      {
+        "parameters": { "url": "https://api.resend.com/emails", "method": "POST", "authentication": "headerAuth", "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.RESEND_API_KEY}}" }] }, "bodyParameters": { "parameters": [{ "name": "from", "value": "PrintHub B2B <b2b@printhub.africa>" }, { "name": "to", "value": "admin@printhub.africa" }, { "name": "subject", "value": "=New Corporate Application: {{$json.companyName}}" }, { "name": "html", "value": "=<p>New B2B application received from {{$json.companyName}}. Review: {{$json.reviewUrl}}</p>" }] } },
+        "name": "Notify: Admin",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [840, 300]
+      }
+    ],
+    "connections": { "Webhook: Corp App": { "main": [[{ "node": "Verify Signature HMAC", "type": "main", "index": 0 }]] }, "Verify Signature HMAC": { "main": [[{ "node": "Notify: Admin", "type": "main", "index": 0 }]] } }
   }
 ]

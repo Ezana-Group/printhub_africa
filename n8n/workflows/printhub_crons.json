@@ -1,0 +1,89 @@
+[
+  {
+    "name": "Cron - Abandoned Cart Detector (Hourly)",
+    "nodes": [
+      {
+        "parameters": { "rule": { "interval": [{ "field": "hours" }] } },
+        "name": "Schedule",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [400, 300]
+      },
+      {
+        "parameters": { "url": "https://admin.printhub.africa/api/n8n/get-abandoned-carts", "method": "GET", "authentication": "headerAuth", "headerParameters": { "parameters": [{ "name": "x-n8n-secret", "value": "={{$env.N8N_WEBHOOK_SECRET}}" }] } },
+        "name": "Fetch High Intent Carts",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [620, 300]
+      },
+      {
+        "parameters": { "fieldToSplit": "carts", "options": {} },
+        "name": "Split into Batches",
+        "type": "n8n-nodes-base.splitInBatches",
+        "typeVersion": 1,
+        "position": [840, 300]
+      }
+    ],
+    "connections": { "Schedule": { "main": [[{ "node": "Fetch High Intent Carts", "type": "main", "index": 0 }]] }, "Fetch High Intent Carts": { "main": [[{ "node": "Split into Batches", "type": "main", "index": 0 }]] } }
+  },
+  {
+    "name": "Cron - Low Stock Scanner (Daily)",
+    "nodes": [
+      {
+        "parameters": { "rule": { "interval": [{ "field": "days" }] } },
+        "name": "Start of Day",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [400, 300]
+      },
+      {
+        "parameters": { "url": "https://admin.printhub.africa/api/n8n/stock-levels", "method": "GET", "authentication": "headerAuth", "headerParameters": { "parameters": [{ "name": "x-n8n-secret", "value": "={{$env.N8N_WEBHOOK_SECRET}}" }] } },
+        "name": "Pull Inventory Audit",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [620, 300]
+      }
+    ],
+    "connections": { "Start of Day": { "main": [[{ "node": "Pull Inventory Audit", "type": "main", "index": 0 }]] } }
+  },
+  {
+    "name": "Cron - Quote Monitor (Twice Daily)",
+    "nodes": [
+      {
+        "parameters": { "rule": { "interval": [{ "field": "hours", "value": 12 }] } },
+        "name": "Morning/Evening Check",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [400, 300]
+      },
+      {
+        "parameters": { "url": "https://admin.printhub.africa/api/n8n/check-quote-status", "method": "GET", "authentication": "headerAuth", "headerParameters": { "parameters": [{ "name": "x-n8n-secret", "value": "={{$env.N8N_WEBHOOK_SECRET}}" }] } },
+        "name": "Check Expiry Dates",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [620, 300]
+      }
+    ],
+    "connections": { "Morning/Evening Check": { "main": [[{ "node": "Check Expiry Dates", "type": "main", "index": 0 }]] } }
+  },
+  {
+    "name": "Cron - Hybrid Database Cleanup (Weekly)",
+    "nodes": [
+      {
+        "parameters": { "rule": { "interval": [{ "field": "weeks" }] } },
+        "name": "Weekly Maintenance",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [400, 300]
+      },
+      {
+        "parameters": { "url": "https://admin.printhub.africa/api/n8n/cleanup-sessions", "method": "POST", "authentication": "headerAuth", "headerParameters": { "parameters": [{ "name": "x-n8n-secret", "value": "={{$env.N8N_WEBHOOK_SECRET}}" }] } },
+        "name": "Purge Expired Sessions",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [620, 300]
+      }
+    ],
+    "connections": { "Weekly Maintenance": { "main": [[{ "node": "Purge Expired Sessions", "type": "main", "index": 0 }]] } }
+  }
+]

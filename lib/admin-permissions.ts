@@ -136,6 +136,7 @@ const ROUTE_PREFIX_POLICIES: { prefix: string; permission: PermissionKey }[] = [
   { prefix: "/admin/email/thread", permission: "email_view" },
   { prefix: "/admin/email/inbox", permission: "email_view" },
   { prefix: "/admin/email/settings", permission: "email_manage" },
+  { prefix: "/api/admin/n8n/sso", permission: "settings_manage" },
 ];
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
