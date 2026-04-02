@@ -1,26 +1,23 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { GET as adminGet, POST as adminPost } from "../admin/[...nextauth]/route";
+import { GET as customerGet, POST as customerPost } from "../customer/[...nextauth]/route";
 
-export async function GET(req: NextRequest) {
+export async function GET(req: NextRequest, ctx: { params: { nextauth: string[] } }) {
   const host = req.headers.get("host") ?? "";
-  const isAdmin = host.startsWith("admin.") || host.startsWith("admin.localhost") || (host.includes("localhost:3000") && req.nextUrl.pathname.startsWith("/admin"));
+  const isAdmin = host.startsWith("admin.") || host.startsWith("admin.localhost") || (host.includes("localhost") && req.nextUrl.pathname.startsWith("/admin"));
   
-  // Extract the segment after /api/auth/
-  const segments = req.nextUrl.pathname.split("/api/auth/")[1];
-  const searchParams = req.nextUrl.searchParams.toString();
-  
-  const target = isAdmin ? `/api/auth/admin/${segments}` : `/api/auth/customer/${segments}`;
-  const url = new URL(target + (searchParams ? `?${searchParams}` : ""), req.url);
-  
-  return NextResponse.redirect(url);
+  if (isAdmin) {
+    return adminGet(req, ctx);
+  }
+  return customerGet(req, ctx);
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest, ctx: { params: { nextauth: string[] } }) {
   const host = req.headers.get("host") ?? "";
-  const isAdmin = host.startsWith("admin.") || host.startsWith("admin.localhost") || (host.includes("localhost:3000") && req.nextUrl.pathname.startsWith("/admin"));
+  const isAdmin = host.startsWith("admin.") || host.startsWith("admin.localhost") || (host.includes("localhost") && req.nextUrl.pathname.startsWith("/admin"));
   
-  const segments = req.nextUrl.pathname.split("/api/auth/")[1];
-  const target = isAdmin ? `/api/auth/admin/${segments}` : `/api/auth/customer/${segments}`;
-  const url = new URL(target, req.url);
-  
-  return NextResponse.redirect(url, { status: 307 });
+  if (isAdmin) {
+    return adminPost(req, ctx);
+  }
+  return customerPost(req, ctx);
 }
