@@ -1,57 +1,56 @@
 # Railway Deployment Guide - PrintHub Africa
 
-This guide covers deploying the Next.js application to Railway with a **Subdomain-based Architecture** (Main site + Admin portal).
+This guide covers deploying the Next.js application to Railway with a **Subdomain-based Architecture** (Main site + Admin portal) and the **n8n Automation Engine**.
 
 ## 1. Prerequisites
 - A Railway account connected to your GitHub repository.
-- A Neon PostgreSQL database (or Railway's Postgres).
+- A **Neon PostgreSQL** database.
 - Custom domains (e.g., `printhub.africa`).
 
 ## 2. Setting Up Domains on Railway
 
-To support the subdomain architecture, you must add **two** custom domains to your Railway service:
+To support the subdomain architecture, you must add **three** custom domains to your Railway project (either in one service or separate services):
 
-1.  **Main Domain**: `printhub.africa` (or your chosen root domain).
-2.  **Admin Domain**: `admin.printhub.africa`.
+1.  **Main Domain**: `printhub.africa` (Next.js Root)
+2.  **Admin Domain**: `admin.printhub.africa` (Next.js Admin Rewrites)
+3.  **Automation Domain**: `n8n.printhub.africa` (n8n Service)
 
-### How to add:
-- Go to your Service → **Settings** → **Domains**.
-- Click **Add Custom Domain**.
-- Add the root domain first.
-- Add the subdomain (`admin.`) second.
-- Configure your DNS provider (Cloudflare, GoDaddy, etc.) with the provided CNAME records for **both**.
-
-## 3. Environment Variables
-
-Configure these critical variables in the Railway **Variables** tab. 
+## 3. Environment Variables (Next.js Service)
 
 ### Core App Settings
 | Variable | Value | Description |
 | :--- | :--- | :--- |
-| `NEXT_PUBLIC_APP_URL` | `https://printhub.africa` | Root URL for absolute links |
-| `NEXT_PUBLIC_ROOT_DOMAIN` | `.printhub.africa` | Cookie scope (include leading dot) |
-| `NEXT_PUBLIC_ADMIN_DOMAIN` | `admin.printhub.africa` | Required for admin session isolation |
-| `NEXTAUTH_URL` | `https://printhub.africa` | Main NextAuth callback origin |
-| `NEXTAUTH_SECRET` | `your-long-secure-secret` | Generate using `openssl rand -base64 32` |
+| `NEXT_PUBLIC_APP_URL` | `https://printhub.africa` | Root URL |
+| `NEXT_PUBLIC_ROOT_DOMAIN` | `.printhub.africa` | Cookie scope |
+| `NEXT_PUBLIC_ADMIN_DOMAIN` | `admin.printhub.africa` | Admin session isolation |
+| `NEXTAUTH_URL` | `https://printhub.africa` | Auth callback origin |
+| `DATABASE_URL` | `postgres://...` | Connection pooled (Neon) |
+| `DIRECT_URL` | `postgres://...` | Migrations (Neon) |
 
-### Database & Security
+### Automation (n8n) Settings
 | Variable | Value | Description |
 | :--- | :--- | :--- |
-| `DATABASE_URL` | `postgres://...` | Connection pooled URL (e.g., from Neon) |
-| `DIRECT_URL` | `postgres://...` | Direct connection for Prisma migrations |
-| `NODE_ENV` | `production` | Enforces Secure/HttpOnly/Strict cookies |
+| `N8N_WEBHOOK_BASE_URL` | `https://n8n.printhub.africa/webhook` | Webhook target for triggers |
+| `N8N_WEBHOOK_SECRET` | `your-secure-secret` | SHA256 Key for trigger signing |
+| `N8N_API_KEY` | `n8n_api_...` | For health checks (optional) |
 
-## 4. Deployment Workflow
+## 4. n8n Self-Hosted Setup (Railway)
 
-1.  **Migrations**: Railway will automatically run your `build` command. Ensure your `package.json` build step includes `prisma generate`:
-    ```json
-    "build": "prisma generate && next build"
-    ```
-2.  **Middleware**: The `middleware.ts` in this project automatically detects if a request is coming from the `admin.` subdomain and rewrites it to the `/admin` internal routes.
-3.  **Authentication**: Sessions are cross-domain isolated. Logging into the admin portal will set a `__Secure-printhub.admin.session` cookie limited to the admin subdomain.
+1.  **Deployment**: Use the `n8n/Dockerfile` and `n8n/railway.toml` provided in the repository.
+2.  **Variables**: 
+    - `N8N_ENCRYPTION_KEY`: A unique random string.
+    - `N8N_USER_MANAGEMENT_DISABLED`: `false` (highly recommended).
+    - `WEBHOOK_URL`: `https://n8n.printhub.africa/`
+3.  **Import**: Once deployed, log in and import the JSON workflows from the `n8n/workflows/` directory.
 
-## 5. Troubleshooting
+## 5. Deployment Workflow
 
-- **Invalid Redirects**: Ensure `NEXTAUTH_URL` exactly matches your root domain.
-- **Login Loops**: Check that `NEXT_PUBLIC_ROOT_DOMAIN` starts with a dot (`.`) if you want to share any settings, or matches exactly if you want strict isolation (as currently configured).
-- **SSL Errors**: Railway may take a few minutes to issue certificates for new subdomains. Wait for the "Active" status in the Domains tab.
+1.  **Migrations**: Railway runs `npm run build` which includes `prisma generate`. Migrations are applied via `npx prisma migrate deploy` in the `postbuild` or as a Railway deploy action.
+2.  **Middleware**: The `middleware.ts` automatically detects the `admin.` subdomain and handles rewrites.
+3.  **SSO**: Admins clicking "Automations" are automatically logged into n8n via a JWT-based SSO flow at `/api/admin/n8n/sso`.
+
+## 6. Troubleshooting
+
+- **Signature Mismatch**: Ensure `N8N_WEBHOOK_SECRET` is identical in both the Next.js and n8n environment variables.
+- **SSO Failures**: Check that `NEXTAUTH_SECRET` is set correctly; it is used to sign the SSO token.
+- **CORS**: n8n call-backs to `/api/n8n/*` require the `x-printhub-signature` header for verification.

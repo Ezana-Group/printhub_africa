@@ -48,6 +48,7 @@ export default async function AdminLayout({
       <AdminHeaderClient
         userName={session.user?.name ?? undefined}
         userEmail={session.user?.email ?? undefined}
+        role={role}
       />
       <EditableSectionProvider>
         <main className="fixed left-56 top-14 right-0 bottom-0 overflow-y-auto overflow-x-hidden bg-[#F9FAFB]">

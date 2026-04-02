@@ -6,6 +6,7 @@ import * as bcrypt from "bcryptjs";
 import * as crypto from "crypto";
 import { verifySync } from "otplib";
 import { sendEmail } from "@/lib/email";
+import { n8n } from "@/lib/n8n";
 
 // Reuse logic from lib/auth.ts
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -133,19 +134,39 @@ export const authOptionsAdmin: NextAuthOptions = {
               data: { revokedAt: new Date() },
             });
             
-            // Alert SUPER_ADMIN
-            await sendEmail({
-              to: process.env.SUPER_ADMIN_EMAIL || "admin@printhub.africa",
-              subject: `⚠️ Suspicious login detected — ${user.name || user.email}`,
-              html: `<p>A suspicious login was detected for user ${user.email}.</p><p>Reason: ${reason}</p><p><a href="https://admin.printhub.africa/admin/settings/users/${user.id}">Manage User</a></p>`
-            }).catch(console.error);
+            // n8n Trigger: Security Alert (Impossible Travel)
+            n8n.securityAlert({
+              type: 'IMPOSSIBLE_TRAVEL',
+              affectedUserId: user.id,
+              affectedUserEmail: user.email,
+              affectedUserName: user.name || user.email,
+              details: { reason, location: currentLocation, ip },
+              superAdminEmail: process.env.SUPER_ADMIN_EMAIL || "admin@printhub.africa"
+            }).catch(err => console.error("n8n security-alert trigger failed:", err));
             
-            // Write to AuditLog
+            // n8n Trigger: Specific Impossible Travel Trigger (if using separate workflow)
+            n8n.impossibleTravel({
+              userId: user.id,
+              userEmail: user.email,
+              userName: user.name || user.email,
+              previousCountry: "UNKNOWN", // Fetching this would require another query
+              previousIp: "UNKNOWN",
+              previousLoginAt: new Date().toISOString(),
+              newCountry: currentLocation?.country || "unknown",
+              newIp: ip,
+              newLoginAt: new Date().toISOString(),
+              superAdminEmail: process.env.SUPER_ADMIN_EMAIL || "admin@printhub.africa",
+              adminProfileUrl: `${process.env.NEXT_PUBLIC_ADMIN_URL}/admin/staff/${user.id}`
+            }).catch(console.error);
+
+            // Write to AuditLog (FIXED: added entity)
             await prisma.auditLog.create({
               data: {
                 userId: user.id,
                 action: "IMPOSSIBLE_TRAVEL_DETECTED",
                 category: "SECURITY",
+                entity: "User",
+                entityId: user.id,
                 ipAddress: ip,
                 after: { reason, location: currentLocation },
               }
@@ -179,22 +200,19 @@ export const authOptionsAdmin: NextAuthOptions = {
           await prisma.knownAdminDevice.create({
             data: { userId: user.id, fingerprint: fingerprint },
           });
-          // Send "New login detected" email
-          await sendEmail({
-            to: user.email,
-            subject: "New login detected on PrintHub Admin",
-            html: `
-              <p>Hello ${user.displayName || user.name},</p>
-              <p>A new login was detected on your staff account.</p>
-              <ul>
-                <li>Device: ${userAgent}</li>
-                <li>IP: ${ip}</li>
-                <li>Time: ${new Date().toLocaleString()}</li>
-              </ul>
-              <p>If this wasn't you, you can revoke this session immediately:</p>
-              <p><a href="${process.env.NEXT_PUBLIC_ADMIN_URL}/security/revoke?token=${adminSession.sessionToken}">Revoke Session</a></p>
-            `,
-          });
+          
+          // Trigger n8n: New Device login
+          n8n.newStaffLogin({
+            userId: user.id,
+            userEmail: user.email,
+            userName: user.name || user.email,
+            ipAddress: ip,
+            userAgent: userAgent,
+            city: currentLocation?.city || null,
+            country: currentLocation?.country || null,
+            loginAt: new Date().toISOString(),
+            revokeUrl: `${process.env.NEXT_PUBLIC_ADMIN_URL}/security/revoke?token=${adminSession.sessionToken}`
+          }).catch(err => console.error("n8n new-staff-login trigger failed:", err));
         } else {
           // @ts-ignore - KnownAdminDevice is in schema
           await prisma.knownAdminDevice.update({

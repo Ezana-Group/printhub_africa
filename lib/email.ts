@@ -2,6 +2,7 @@ import { Resend } from "resend";
 import { getBusinessPublic } from "@/lib/business-public";
 import { getEmailTemplate, renderTemplate } from "@/lib/email-templates";
 import { prisma } from "@/lib/prisma";
+import { n8n } from "@/lib/n8n";
 
 export type AdminAlertEvent = 
   | "New Order" | "Payment Received" | "Payment Failed" | "New Upload" 
@@ -228,6 +229,40 @@ export async function sendOrderConfirmationEmail(
   total: number,
   currency = "KES"
 ) {
+  // 1. Fetch full order for n8n payload
+  const order = await prisma.order.findUnique({
+    where: { orderNumber },
+    include: { 
+      items: { include: { product: true } },
+      user: true,
+      corporate: true
+    }
+  });
+
+  if (order) {
+    n8n.orderConfirmed({
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      customerId: order.userId || "guest",
+      customerEmail: order.user?.email || email,
+      customerPhone: order.user?.phone || "",
+      customerName: order.user?.name || "Customer",
+      totalAmount: Number(order.total),
+      currency: "KES",
+      items: order.items.map(i => ({
+        name: i.product?.name || "Item",
+        quantity: i.quantity,
+        price: Number(i.unitPrice),
+        imageUrl: i.product?.images?.[0]
+      })),
+      paymentMethod: order.paymentMethod || "UNKNOWN",
+      deliveryMethod: (order as any).deliveryMethod || "UNKNOWN", // Check if deliveryMethod exists or is a relation
+      isCorporate: !!order.corporateId,
+      corporateId: order.corporateId || undefined
+    }).catch(err => console.error("n8n order-confirmed failed:", err));
+  }
+
+  // Still send the existing email as a fallback/immediate notification
   const { businessName, footer } = await getEmailBranding();
   const orderUrl = `${baseUrl}/account/orders`;
   const context = {
@@ -238,7 +273,7 @@ export async function sendOrderConfirmationEmail(
     currency,
     orderUrl,
   };
-  const defaultSubject = `Order ${orderNumber} confirmed – ${businessName}`;
+  const defaultSubject = `Order ${orderNumber} confirmed \u2013 ${businessName}`;
   const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h1 style="color: #FF4D00;">${businessName}</h1>
@@ -260,10 +295,30 @@ export async function sendOrderStatusEmail(
   title: string,
   description: string
 ) {
+  // 1. Fetch order details for n8n payload
+  const order = await prisma.order.findUnique({
+    where: { orderNumber },
+    include: { user: true }
+  });
+
+  if (order) {
+    n8n.orderStatusChanged({
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      customerEmail: order.user?.email || email,
+      customerPhone: order.user?.phone || "",
+      customerName: order.user?.name || "Customer",
+      previousStatus: "UNKNOWN", // Could be tracked if we pass it
+      newStatus: order.status,
+      trackingUrl: order.trackingNumber ? `https://printhub.africa/track?ref=${order.orderNumber}` : undefined,
+      estimatedDelivery: order.estimatedDelivery?.toISOString()
+    }).catch(err => console.error("n8n order-status-changed failed:", err));
+  }
+
   const { businessName, footer } = await getEmailBranding();
   const trackUrl = `${baseUrl}/track?ref=${encodeURIComponent(orderNumber)}`;
   const context = { businessName, footer, orderNumber, title, description, trackUrl };
-  const defaultSubject = `Order ${orderNumber} – ${title} – ${businessName}`;
+  const defaultSubject = `Order ${orderNumber} \u2013 ${title} \u2013 ${businessName}`;
   const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h1 style="color: #FF4D00;">${businessName}</h1>

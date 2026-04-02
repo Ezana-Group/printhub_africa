@@ -33,9 +33,9 @@ PrintHub is a **full-stack e-commerce and print-services platform** for:
 ### Architecture Summary
 
 - **Single application:** Next.js 15 (App Router) monorepo — one codebase for web frontend and API (no separate mobile app).
-- **Backend:** Next.js API Routes (serverless on Vercel).
-- **Database:** PostgreSQL via Prisma ORM (e.g. Neon in production).
-- **Deployment:** Vercel-oriented; local Docker for database and optional ERPNext.
+- **Backend:** Next.js API Routes (running on Railway).
+- **Database:** PostgreSQL via Prisma ORM (Neon in production).
+- **Deployment:** Railway-oriented; local Docker for database and optional ERPNext.
 
 ### High-Level Architecture Diagram
 
@@ -45,35 +45,34 @@ flowchart TB
     Browser[Web Browser]
   end
 
-  subgraph "Next.js App (Vercel)"
+  subgraph "Next.js App (Railway)"
     AppRouter[App Router / Pages]
     APIRoutes[API Routes]
     Middleware[Middleware]
+  end
+
+  subgraph "Automation (n8n on Railway)"
+    Workflows[n8n Workflows]
   end
 
   subgraph "Core Libraries (lib/)"
     Auth[NextAuth]
     PrismaLib[Prisma Client]
     Email[Resend Email]
+    n8nLib[n8n Trigger Lib]
     S3R2[R2 / S3]
     Mpesa[M-Pesa]
-    Pesapal[Pesapal]
-    Stripe[Stripe]
     Marketing[Marketing Utils / CAPI]
   end
 
   subgraph External
-    DB[(PostgreSQL)]
+    DB[(PostgreSQL - Neon)]
     R2[Cloudflare R2]
     Resend[Resend]
-    Daraja[M-Pesa Daraja]
-    PaymentGW[Pesapal / Flutterwave / Stripe]
-    SMS[Africa's Talking]
-    Meta[Meta Pixel / CAPI]
-    Google[GTM / GA4 / Ads]
-    TikTok[TikTok Pixel / API]
     Klaviyo[Klaviyo Email]
     WhatsApp[WhatsApp Cloud API]
+    SMS[Africa's Talking]
+    Meta[Meta Pixel / CAPI]
   end
 
   Browser --> Middleware --> AppRouter
@@ -81,23 +80,12 @@ flowchart TB
   AppRouter --> PrismaLib
   APIRoutes --> Auth
   APIRoutes --> PrismaLib
-  APIRoutes --> Email
-  APIRoutes --> S3R2
-  APIRoutes --> Mpesa
-  APIRoutes --> Pesapal
-  APIRoutes --> Stripe
-  APIRoutes --> Marketing
+  APIRoutes --> n8nLib
+  n8nLib --> Workflows
+  Workflows --> Email
+  Workflows --> WhatsApp
+  Workflows --> Klaviyo
   PrismaLib --> DB
-  S3R2 --> R2
-  Email --> Resend
-  Mpesa --> Daraja
-  Pesapal --> PaymentGW
-  Stripe --> PaymentGW
-  Marketing --> Meta
-  Marketing --> TikTok
-  Marketing --> Google
-  Marketing --> Klaviyo
-  Marketing --> WhatsApp
   Auth --> DB
 ```
 
@@ -111,8 +99,8 @@ flowchart TB
 | **Language** | TypeScript |
 | **Styling** | Tailwind CSS, shadcn/ui (Radix), tailwindcss-animate |
 | **State** | Zustand (cart, checkout) |
-| **Backend** | Next.js API Routes (serverless) |
-| **ORM / DB** | Prisma 7, PostgreSQL (e.g. Neon) |
+| **Backend** | Next.js API Routes (Railway) |
+| **ORM / DB** | Prisma 7, PostgreSQL (Neon) |
 | **Auth** | NextAuth.js 4 (JWT, Prisma adapter) |
 | **Payments** | M-Pesa (Daraja), Pesapal, Flutterwave, Stripe |
 | **File storage** | Cloudflare R2 (S3-compatible); fallback AWS S3 |
@@ -120,7 +108,8 @@ flowchart TB
 | **SMS** | Africa's Talking (2FA, notifications) |
 | **PDF** | @react-pdf/renderer (invoices, quote PDFs) |
 | **Search (optional)** | Algolia |
-| **Analytics / monitoring** | Vercel Analytics & Speed Insights, Sentry; Meta Pixel, TikTok Pixel, GTM, GA4, X, Snapchat |
+| **Analytics / monitoring** | Railway monitoring, Sentry; Meta Pixel, TikTok Pixel, GTM, GA4, X, Snapchat |
+| **Automation** | **n8n** (Self-hosted on Railway) |
 | **Marketing Automation** | Klaviyo (Email), WhatsApp Business Cloud API |
 | **Live chat (optional)** | Tawk.to |
 | **Content (optional)** | Sanity (env vars) |

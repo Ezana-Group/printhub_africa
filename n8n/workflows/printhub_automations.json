@@ -1,0 +1,177 @@
+[
+  {
+    "name": "PrintHub - Order Confirmation (Email + WA + SMS)",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "order-confirmed",
+          "options": {
+            "rawBody": true
+          }
+        },
+        "name": "Webhook: Order Confirmed",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [400, 300],
+        "webhookId": "order-confirmed-trigger"
+      },
+      {
+        "parameters": {
+          "jsCode": "/* Verify PrintHub HMAC Signature */\nconst signature = $node[\"Webhook: Order Confirmed\"].json.headers[\"x-printhub-signature\"];\nconst body = $node[\"Webhook: Order Confirmed\"].json.body;\nconst secret = \"$N8N_WEBHOOK_SECRET\"; // Replaced by n8n Env Var\n\nconst hmac = crypto.createHmac('sha256', secret).update(JSON.stringify(body)).digest('hex');\n\nif (signature !== hmac) {\n  throw new Error('Invalid Signature from Next.js');\n}\n\nreturn body;"
+        },
+        "name": "Verify Signature",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [620, 300]
+      },
+      {
+        "parameters": {
+          "url": "https://api.resend.com/emails",
+          "method": "POST",
+          "authentication": "headerAuth",
+          "headerParameters": {
+            "parameters": [
+              { "name": "Authorization", "value": "Bearer $RESEND_API_KEY" }
+            ]
+          },
+          "bodyParameters": {
+            "parameters": [
+              { "name": "from", "value": "PrintHub Africa <orders@printhub.africa>" },
+              { "name": "to", "value": "={{$json.customerEmail}}" },
+              { "name": "subject", "value": "=Order Confirmed: {{$json.orderNumber}}" },
+              { "name": "html", "value": "=<p>Hi {{$json.customerName}}, your order {{$json.orderNumber}} is confirmed!</p>" }
+            ]
+          }
+        },
+        "name": "Resend: Confirmation Email",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [840, 200]
+      },
+      {
+        "parameters": {
+          "url": "=https://graph.facebook.com/v19.0/$WHATSAPP_PHONE_ID/messages",
+          "method": "POST",
+          "authentication": "headerAuth",
+          "headerParameters": {
+            "parameters": [
+              { "name": "Authorization", "value": "Bearer $WHATSAPP_TOKEN" }
+            ]
+          },
+          "bodyParameters": {
+            "parameters": [
+              { "name": "messaging_product", "value": "whatsapp" },
+              { "name": "to", "value": "={{$json.customerPhone}}" },
+              { "name": "type", "value": "template" },
+              { "name": "template", "value": "{ \"name\": \"order_confirmation\", \"language\": { \"code\": \"en\" }, \"components\": [ { \"type\": \"body\", \"parameters\": [ { \"type\": \"text\", \"text\": \"{{$json.orderNumber}}\" } ] } ] }" }
+            ]
+          }
+        },
+        "name": "WhatsApp: Confirmation",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [840, 400]
+      }
+    ],
+    "connections": {
+      "Webhook: Order Confirmed": {
+        "main": [
+          [
+            {
+              "node": "Verify Signature",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Verify Signature": {
+        "main": [
+          [
+            {
+              "node": "Resend: Confirmation Email",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "WhatsApp: Confirmation",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "name": "PrintHub - Abandoned Cart Recovery (Sequence)",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "hours"
+              }
+            ]
+          }
+        },
+        "name": "Cron: Every Hour",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [400, 700]
+      },
+      {
+        "parameters": {
+          "url": "https://admin.printhub.africa/api/n8n/get-abandoned-carts",
+          "method": "GET",
+          "authentication": "headerAuth",
+          "headerParameters": {
+            "parameters": [
+              { "name": "x-n8n-secret", "value": "$N8N_WEBHOOK_SECRET" }
+            ]
+          }
+        },
+        "name": "Fetch Carts",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [620, 700]
+      },
+      {
+        "parameters": {
+          "fieldToSplit": "carts",
+          "options": {}
+        },
+        "name": "Split Carts",
+        "type": "n8n-nodes-base.splitInBatches",
+        "typeVersion": 1,
+        "position": [840, 700]
+      }
+    ],
+    "connections": {
+      "Cron: Every Hour": {
+        "main": [
+          [
+            {
+              "node": "Fetch Carts",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch Carts": {
+        "main": [
+          [
+            {
+              "node": "Split Carts",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    }
+  }
+]

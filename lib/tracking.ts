@@ -10,6 +10,7 @@ import { sendSMS } from "@/lib/africas-talking";
 import { klaviyoPlacedOrder } from "@/lib/marketing/klaviyo";
 import { waOrderConfirmation, waShippingUpdate } from "@/lib/marketing/whatsapp";
 import { sendMetaConversionsEvent, sendTikTokEventsApi, sendSnapConversionsEvent } from "@/lib/marketing/conversions-api";
+import { n8n } from "@/lib/n8n";
 
 export const TRACKING_EVENTS: Record<
   string,
@@ -194,56 +195,65 @@ export async function createTrackingEvent(
     const email = order.shippingAddress?.email ?? order.user?.email;
     const phone = order.shippingAddress?.phone ?? order.user?.phone;
 
+    // 1. Central n8n status update trigger
+    n8n.orderStatusChanged({
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      customerEmail: email || "unknown",
+      customerPhone: phone || "",
+      customerName: order.user?.name || "Customer",
+      previousStatus: "UNKNOWN", 
+      newStatus: status,
+      trackingUrl: order.trackingNumber ? `${process.env.NEXT_PUBLIC_APP_URL}/track?ref=${order.orderNumber}` : undefined,
+      estimatedDelivery: order.estimatedDelivery?.toISOString()
+    }).catch(err => console.error("n8n order-status-changed trigger failed:", err));
+
+    // 2. Specific n8n trigger for confirmed orders
     if (status === "CONFIRMED") {
-      if (email) {
-        void klaviyoPlacedOrder(email, { 
-          id: order.id, 
-          total: Number(order.total), 
-          items: order.items.map(i => ({ id: i.productId, name: i.product?.name || "Product", unitPrice: Number(i.unitPrice), quantity: i.quantity }))
-        });
-        
-        if (options?.userData) {
-          const eventId = `order-${order.id}-${Date.now()}`;
-          const userData = { ...options.userData, email, phone };
-          
-          // Meta CAPI
-          sendMetaConversionsEvent({
-            eventName: "Purchase",
-            eventId,
-            userData,
-            customData: { value: Number(order.total), currency: "KES", order_id: order.id }
-          }).then((res: { success: boolean; error?: any }) => {
-            if (!res.success) logMarketingError("Meta CAPI", res.error, { orderId, eventId });
-          });
-
-          // TikTok CAPI
-          sendTikTokEventsApi({
-            event: "CompletePayment",
-            eventId,
-            userData,
-            customData: { value: Number(order.total), currency: "KES" }
-          }).then((res: { success: boolean; error?: any }) => {
-            if (!res.success) logMarketingError("TikTok API", res.error, { orderId, eventId });
-          });
-
-          // Snapchat CAPI
-          sendSnapConversionsEvent({
-            event: "PURCHASE",
-            eventId,
-            userData,
-            customData: { price: Number(order.total), currency: "KES", transaction_id: order.id }
-          }).then((res: { success: boolean; error?: any }) => {
-            if (!res.success) logMarketingError("Snap CAPI", res.error, { orderId, eventId });
-          });
-        }
-      }
-      if (phone) {
-        void waOrderConfirmation(phone, order.orderNumber, Number(order.total).toLocaleString());
-      }
+      n8n.orderConfirmed({
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        customerId: order.userId || "guest",
+        customerEmail: email || "unknown",
+        customerPhone: phone || "",
+        customerName: order.user?.name || "Customer",
+        totalAmount: Number(order.total),
+        currency: "KES",
+        items: order.items.map(i => ({
+          name: i.product?.name || "Product",
+          quantity: i.quantity,
+          price: Number(i.unitPrice),
+          imageUrl: i.product?.images?.[0]
+        })),
+        paymentMethod: order.paymentMethod || "UNKNOWN",
+        deliveryMethod: (order as any).deliveryMethod || "UNKNOWN",
+        isCorporate: !!order.corporateId,
+        corporateId: order.corporateId || undefined
+      }).catch(err => console.error("n8n order-confirmed trigger failed:", err));
     }
 
-    if (status === "SHIPPED" && phone) {
-      void waShippingUpdate(phone, order.orderNumber, order.trackingNumber || undefined);
+    // 3. Conversion API triggers (Server-side tracking)
+    // We keep these here for now as they are low-level tracking events, 
+    // though they could also move to n8n if desired.
+    if (status === "CONFIRMED" && email && options?.userData) {
+      const eventId = `order-${order.id}-${Date.now()}`;
+      const userData = { ...options.userData, email, phone: phone || undefined };
+      
+      // Meta CAPI
+      sendMetaConversionsEvent({
+        eventName: "Purchase",
+        eventId,
+        userData: userData as any,
+        customData: { value: Number(order.total), currency: "KES", order_id: order.id }
+      }).catch(err => console.error("Meta CAPI failed:", err));
+
+      // TikTok CAPI
+      sendTikTokEventsApi({
+        event: "CompletePayment",
+        eventId,
+        userData: userData as any,
+        customData: { value: Number(order.total), currency: "KES" }
+      }).catch(err => console.error("TikTok API failed:", err));
     }
   }
 }
