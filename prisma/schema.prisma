@@ -122,6 +122,9 @@ model AdminSession {
   lastActiveAt DateTime  @default(now())
   expiresAt    DateTime
   revokedAt    DateTime?
+  suspiciousLogin Boolean @default(false)
+  ipCountry    String?
+  ipCity       String?
   createdAt    DateTime  @default(now())
   user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -227,6 +230,15 @@ model Product {
   /// Running count of units sold this calendar month (reset by monthly cron)
   soldThisMonth        Int                     @default(0)
   /// Human-readable estimated print time, e.g. "4–6 hours"
+  exportToGoogle      Boolean  @default(true)
+  exportToMeta        Boolean  @default(true)  
+  exportToTiktok      Boolean  @default(true)
+  exportToLinkedIn    Boolean  @default(false)
+  exportToPinterest   Boolean  @default(false)
+  exportToX           Boolean  @default(false)
+  exportToGoogleBiz   Boolean  @default(true)
+  lastExportedAt      DateTime?
+  exportNotes         String?
   printTimeEstimate    String?
   /// Approximate filament weight in grams
   filamentWeightGrams  Float?
@@ -1495,6 +1507,9 @@ model AuditLog {
   before    Json?
   after     Json?
   ipAddress String?
+  category  String?
+  targetType String?
+  targetId  String?
   timestamp DateTime @default(now())
   user      User?    @relation(fields: [userId], references: [id])
 

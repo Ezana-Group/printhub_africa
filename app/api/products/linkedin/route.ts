@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     const products = await prisma.product.findMany({
       where: { 
         isActive: true, 
-        exportToPinterest: true 
+        exportToLinkedIn: true 
       },
       include: {
         category: { select: { name: true } },
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // CSV Headers for Pinterest
+    // CSV Headers for LinkedIn
     let csv = "id,title,description,availability,condition,price,link,image_link,brand\n";
     
     for (const p of products) {
@@ -38,12 +38,12 @@ export async function GET(req: NextRequest) {
     return new NextResponse(csv, { 
       headers: { 
         "Content-Type": "text/csv",
-        "Content-Disposition": 'attachment; filename="printhub-pinterest-feed.csv"',
+        "Content-Disposition": 'attachment; filename="printhub-linkedin-feed.csv"',
         "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=7200"
       } 
     });
   } catch (error) {
-    console.error("Pinterest Feed Error:", error);
-    return NextResponse.json({ error: "Failed to generate Pinterest feed" }, { status: 500 });
+    console.error("LinkedIn Feed Error:", error);
+    return NextResponse.json({ error: "Failed to generate LinkedIn feed" }, { status: 500 });
   }
 }

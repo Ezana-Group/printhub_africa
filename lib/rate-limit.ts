@@ -27,21 +27,22 @@ function prune() {
   }
 }
 
-function rateLimitInMemory(key: string, limit: number, windowMs: number): { ok: boolean } {
+function rateLimitInMemory(key: string, limit: number, windowMs: number): { success: boolean; remaining: number; resetAt: Date } {
   if (store.size > 10_000) prune();
   const now = Date.now();
   const entry = store.get(key);
-  if (!entry) {
-    store.set(key, { count: 1, resetAt: now + windowMs });
-    return { ok: true };
+  
+  if (!entry || now >= entry.resetAt) {
+    const resetAt = now + windowMs;
+    store.set(key, { count: 1, resetAt });
+    return { success: true, remaining: limit - 1, resetAt: new Date(resetAt) };
   }
-  if (now >= entry.resetAt) {
-    store.set(key, { count: 1, resetAt: now + windowMs });
-    return { ok: true };
-  }
+  
   entry.count += 1;
-  if (entry.count > limit) return { ok: false };
-  return { ok: true };
+  const remaining = Math.max(0, limit - entry.count);
+  const success = entry.count <= limit;
+  
+  return { success, remaining, resetAt: new Date(entry.resetAt) };
 }
 
 const redisLimiters = new Map<string, Ratelimit>();
@@ -68,19 +69,23 @@ function getRedisRatelimit(limit: number, windowSec: number): Ratelimit | null {
 }
 
 /**
- * Check rate limit. Returns { ok: true } if under limit, { ok: false } if over.
+ * Check rate limit. Returns success state with remaining quota and reset time.
  * Uses Redis when UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are set; otherwise in-memory.
- * @param key - Unique key (e.g. "register:1.2.3.4")
- * @param limit - Max requests per window
- * @param windowMs - Window in milliseconds
  */
-export async function rateLimit(key: string, limit: number, windowMs: number): Promise<{ ok: boolean }> {
+export async function rateLimit(key: string, options: { limit: number; windowMs: number }): Promise<{ success: boolean; remaining: number; resetAt: Date }> {
+  const { limit, windowMs } = options;
   const windowSec = Math.max(1, Math.ceil(windowMs / 1000));
   const rl = getRedisRatelimit(limit, windowSec);
+  
   if (rl) {
-    const { success } = await rl.limit(key);
-    return { ok: success };
+    const result = await rl.limit(key);
+    return { 
+      success: result.success, 
+      remaining: result.remaining, 
+      resetAt: new Date(result.reset) 
+    };
   }
+  
   return Promise.resolve(rateLimitInMemory(key, limit, windowMs));
 }
 

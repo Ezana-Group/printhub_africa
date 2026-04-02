@@ -25,16 +25,8 @@ export function invalidateStaffPermissionsCache(userId: string) {
   staffPermissionsCache.delete(userId);
 }
 
-async function getGeoLocation(ip: string) {
-  if (ip === "127.0.0.1" || ip === "localhost" || ip === "::1") return { country: "Local" };
-  try {
-    const res = await fetch(`https://ipapi.co/${ip}/json/`);
-    if (res.ok) return await res.json();
-  } catch (err) {
-    console.error("GeoIP fetch failed:", err);
-  }
-  return null;
-}
+import { checkImpossibleTravel } from "./impossible-travel";
+import { getLocationFromIp } from "./geo-detection";
 
 export const authOptionsAdmin: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -120,30 +112,44 @@ export const authOptionsAdmin: NextAuthOptions = {
         const ip = (req.headers?.["x-forwarded-for"] as string)?.split(",")[0] || "127.0.0.1";
         const userAgent = (req.headers?.["user-agent"] as string) || "unknown";
 
-        // Impossible Travel Check
-        // @ts-ignore - AdminSession is in schema
-        const lastSession = await prisma.adminSession.findFirst({
-          where: { userId: user.id, revokedAt: null },
-          orderBy: { lastActiveAt: "desc" },
-        });
-
-        if (lastSession && lastSession.ipAddress && lastSession.ipAddress !== ip) {
-          const [currentGeo, lastGeo] = await Promise.all([
-            getGeoLocation(ip),
-            getGeoLocation(lastSession.ipAddress),
-          ]);
+        // Impossible Travel Check - Asynchronous Validation
+        const currentLocation = await getLocationFromIp(ip);
+        
+        let isSuspiciousVal = false;
+        if (currentLocation) {
+          const { isSuspicious, reason } = await checkImpossibleTravel({
+            userId: user.id,
+            currentIp: ip,
+            currentLocation,
+            sessionId: "new-session", // not needed here
+          });
           
-          if (currentGeo?.country && lastGeo?.country && currentGeo.country !== lastGeo.country) {
-            const timeDiffHours = (Date.now() - lastSession.lastActiveAt.getTime()) / (1000 * 60 * 60);
-            if (timeDiffHours < 1) {
-              // Alert SUPER_ADMIN
-              await sendEmail({
-                to: process.env.SUPER_ADMIN_EMAIL || "admin@printhub.africa",
-                subject: "ALERT: Impossible Travel Detected",
-                html: `<p>User ${user.email} logged in from ${currentGeo.country} (${ip}) just ${Math.floor(timeDiffHours * 60)} minutes after being in ${lastGeo.country}.</p>`
-              });
-              throw new Error("IMPOSSIBLE_TRAVEL");
-            }
+          isSuspiciousVal = isSuspicious;
+
+          if (isSuspicious) {
+            // Revoke all other active AdminSessions
+            await prisma.adminSession.updateMany({
+              where: { userId: user.id, revokedAt: null },
+              data: { revokedAt: new Date() },
+            });
+            
+            // Alert SUPER_ADMIN
+            await sendEmail({
+              to: process.env.SUPER_ADMIN_EMAIL || "admin@printhub.africa",
+              subject: `⚠️ Suspicious login detected — ${user.name || user.email}`,
+              html: `<p>A suspicious login was detected for user ${user.email}.</p><p>Reason: ${reason}</p><p><a href="https://admin.printhub.africa/admin/settings/users/${user.id}">Manage User</a></p>`
+            }).catch(console.error);
+            
+            // Write to AuditLog
+            await prisma.auditLog.create({
+              data: {
+                userId: user.id,
+                action: "IMPOSSIBLE_TRAVEL_DETECTED",
+                category: "SECURITY",
+                ipAddress: ip,
+                after: { reason, location: currentLocation },
+              }
+            }).catch(console.error);
           }
         }
 
@@ -155,6 +161,9 @@ export const authOptionsAdmin: NextAuthOptions = {
             ipAddress: ip,
             userAgent: userAgent,
             expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000),
+            suspiciousLogin: isSuspiciousVal,
+            ipCountry: currentLocation?.country,
+            ipCity: currentLocation?.city,
           },
         });
 

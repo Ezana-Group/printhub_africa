@@ -4,9 +4,10 @@ import { requireRole } from "@/lib/settings-api";
 import { validateDanger } from "@/lib/danger";
 import { writeAudit } from "@/lib/audit";
 import { subDays } from "date-fns";
+import { withRateLimit } from "@/lib/rate-limit-wrapper";
 
 /** POST: Anonymize all customers inactive for more than X days. */
-export async function POST(req: Request) {
+async function _POST(req: Request) {
   const auth = await requireRole(req, "SUPER_ADMIN");
   if (auth instanceof NextResponse) return auth;
 
@@ -28,10 +29,10 @@ export async function POST(req: Request) {
         role: "CUSTOMER",
         isAnonymised: { not: true },
         OR: [
-          { lastLogin: { lt: cutOffDate } },
+          { lastActiveAt: { lt: cutOffDate } },
           { 
             AND: [
-              { lastLogin: null },
+              { lastActiveAt: null },
               { createdAt: { lt: cutOffDate } }
             ]
           }
@@ -97,3 +98,5 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Failed to perform bulk anonymization" }, { status: 500 });
   }
 }
+
+export const POST = withRateLimit(_POST, { limit: 5, windowMs: 60000, keyPrefix: "admin_bulk", byUserId: true });

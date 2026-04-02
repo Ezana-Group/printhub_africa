@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { safePublicFileUrl } from "@/lib/r2";
-import { ProductAvailability } from "@prisma/client";
+import { 
+  getBaseUrl, 
+  escapeXml, 
+  getProductImageUrl, 
+  AVAILABILITY_MAP 
+} from "@/lib/marketing/feed-utils";
 
 /**
  * GET /api/products/google
@@ -10,30 +15,14 @@ import { ProductAvailability } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
-function getBaseUrl(req: Request): string {
-  try {
-    const u = new URL(req.url);
-    return u.origin;
-  } catch {
-    return process.env.NEXT_PUBLIC_APP_URL ?? "https://printhub.africa";
-  }
-}
-
-function escapeXml(unsafe: string | null | undefined): string {
-  if (!unsafe) return "";
-  return unsafe
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
-}
-
 export async function GET(req: NextRequest) {
   try {
     const baseUrl = getBaseUrl(req);
     const products = await prisma.product.findMany({
-      where: { isActive: true },
+      where: { 
+        isActive: true, 
+        exportToGoogle: true 
+      },
       include: {
         category: { select: { name: true } },
         productImages: { orderBy: { sortOrder: "asc" } },
@@ -41,37 +30,25 @@ export async function GET(req: NextRequest) {
     });
 
     const items = products.map((p) => {
-      const imgs = p.productImages ?? [];
-      const featured = imgs.find((i) => i.isPrimary) ?? imgs[0];
-      const rawImage = p.images?.[0] ?? featured?.url ?? null;
-      const imageUrl =
-        rawImage && rawImage.startsWith("http")
-          ? rawImage
-          : featured?.storageKey
-            ? safePublicFileUrl(featured.storageKey)
-            : baseUrl + "/images/placeholder-product.webp";
+      const imageUrl = getProductImageUrl(p as any, baseUrl);
 
-      const additionalImages = imgs
-        .filter((img) => img.id !== featured?.id)
-        .slice(0, 10)
+      const additionalImages = (p.productImages ?? [])
+        .slice(1, 11) // skip primary, take up to 10 more
         .map((img) => {
-          const url = (img.url && img.url.startsWith("http")) ? img.url : img.storageKey ? safePublicFileUrl(img.storageKey) : null;
+          const url = (img.url && img.url.startsWith("http")) 
+            ? img.url 
+            : img.storageKey ? safePublicFileUrl(img.storageKey) : null;
           return url ? `<g:additional_image_link>${escapeXml(url)}</g:additional_image_link>` : "";
         })
+        .filter(Boolean)
         .join("\n");
-
-      const availabilityMap = {
-        IN_STOCK: "in stock",
-        ON_ORDER: "out of stock",
-        PRE_ORDER: "preorder",
-        IMPORT_ON_REQUEST: "out of stock",
-        PRINT_ON_DEMAND: "in stock",
-      };
 
       // Map local category to Google's taxonomy or fallback
       const googleCategory = p.category.name.toLowerCase().includes("3d") 
         ? "Toys & Games > Toys > Specialized Toys > 3D Printers" 
         : "Arts & Entertainment > Hobbies & Creative Arts > Arts & Crafts > Art & Crafting Materials > Printing & Printmaking";
+
+      const availability = AVAILABILITY_MAP[p.availability] || "in stock";
 
       return `
     <item>
@@ -82,7 +59,7 @@ export async function GET(req: NextRequest) {
       <g:image_link>${escapeXml(imageUrl)}</g:image_link>
       ${additionalImages}
       <g:condition>new</g:condition>
-      <g:availability>${availabilityMap[p.availability] || "in stock"}</g:availability>
+      <g:availability>${availability}</g:availability>
       <g:price>${Number(p.basePrice)} KES</g:price>
       ${p.comparePrice ? `<g:sale_price>${Number(p.comparePrice)} KES</g:sale_price>` : ""}
       <g:brand>${escapeXml(p.brand || "PrintHub Africa")}</g:brand>

@@ -21,7 +21,9 @@ interface CallbackBody {
   };
 }
 
-export async function POST(req: Request) {
+import { withRateLimit } from "@/lib/rate-limit-wrapper";
+
+async function _POST(req: Request) {
   const ipCheck = getMpesaCallbackIpCheck(req);
   if (!ipCheck.allowed && ipCheck.productionRequiresWhitelist) {
     return NextResponse.json(
@@ -142,3 +144,5 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ ResultCode: 0, ResultDesc: "Success" });
 }
+
+export const POST = withRateLimit(_POST, { limit: 100, windowMs: 60000, keyPrefix: "payment_webhook" });

@@ -3,13 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { getPesapalTransactionStatus } from "@/lib/pesapal";
 import { decrementStockForOrder } from "@/lib/stock";
 import { createTrackingEvent } from "@/lib/tracking";
+import { withRateLimit } from "@/lib/rate-limit-wrapper";
 
 /**
  * POST /api/payments/pesapal/callback
  * PesaPal IPN (Instant Payment Notification). Register this URL in PesaPal dashboard.
  * Fetches transaction status from PesaPal (IPN does not include status), then updates Payment + Order.
  */
-export async function POST(req: NextRequest) {
+async function _POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== "object") {
@@ -90,3 +91,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "Error" }, { status: 500 });
   }
 }
+
+export const POST = withRateLimit(_POST, { limit: 100, windowMs: 60000, keyPrefix: "payment_webhook" });

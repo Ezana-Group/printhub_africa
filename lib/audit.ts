@@ -9,7 +9,9 @@ export interface AuditEntry {
   after?: any;
   ipAddress?: string;
   details?: any;
-  category?: string; // For backward compatibility
+  category?: string; 
+  targetType?: string;
+  targetId?: string;
   request?: Request; // For backward compatibility
 }
 
@@ -27,10 +29,11 @@ export async function createAuditLog(entry: AuditEntry) {
         entity: entry.entity || entry.category || "SYSTEM",
         entityId: entry.entityId,
         before: entry.before ? JSON.parse(JSON.stringify(entry.before)) : undefined,
-        after: entry.after ? JSON.parse(JSON.stringify(entry.after)) : undefined,
         ipAddress: ip,
-        // If there's an extra details field in the schema, we'd use it. 
-        // AuditLog model: userId, action, entity, entityId, before, after, ipAddress, createdAt
+        category: entry.category,
+        targetType: entry.targetType,
+        targetId: entry.targetId,
+        after: entry.after ? JSON.parse(JSON.stringify(entry.after)) : (entry.details ? JSON.parse(JSON.stringify(entry.details)) : undefined),
       },
     });
   } catch (error) {
