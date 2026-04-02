@@ -51,9 +51,14 @@ export async function middleware(request: NextRequest) {
     let response = NextResponse.next();
 
     // Internal Rewrite for admin subdomain: admin.printhub.africa/orders -> /admin/orders
-    if (host.startsWith('admin.') && !pathname.startsWith("/admin") && !pathname.startsWith("/api") && pathname !== "/login") {
+    // Special case: /login -> /admin/login
+    if (host.startsWith('admin.') && !pathname.startsWith("/admin") && !pathname.startsWith("/api")) {
       const url = request.nextUrl.clone();
-      url.pathname = `/admin${pathname}`;
+      if (pathname === "/login") {
+        url.pathname = "/admin/login";
+      } else {
+        url.pathname = `/admin${pathname}`;
+      }
       response = NextResponse.rewrite(url);
     }
 

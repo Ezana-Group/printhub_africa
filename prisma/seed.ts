@@ -33,14 +33,16 @@ async function main() {
   await assertPrinthubDatabase(prisma);
 
   const defaultHash = await bcrypt.hash(TEST_PASSWORD, 12);
-  const adminHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
+  const adminEmail = process.env.SUPER_ADMIN_EMAIL || "admin@printhub.africa";
+  const adminRawPassword = process.env.SUPER_ADMIN_PASSWORD || "Admin@Printhub2025!";
+  const adminHash = await bcrypt.hash(adminRawPassword, 12);
 
   // Super Admin (existing account – password unchanged if already present)
   const admin = await prisma.user.upsert({
-    where: { email: "admin@printhub.africa" },
+    where: { email: adminEmail },
     update: {},
     create: {
-      email: "admin@printhub.africa",
+      email: adminEmail,
       name: "PrintHub Super Admin",
       passwordHash: adminHash,
       role: UserRole.SUPER_ADMIN,
