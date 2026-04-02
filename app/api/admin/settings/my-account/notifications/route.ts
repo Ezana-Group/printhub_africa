@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 
 const STAFF_OR_ADMIN = ["STAFF", "ADMIN", "SUPER_ADMIN"];
 
 /** GET: Return current user's notification preferences (for My Notifications page). */
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user?.id || !role || !STAFF_OR_ADMIN.includes(role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -25,7 +25,7 @@ export async function GET() {
 
 /** POST: Save current user's notification preferences. */
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user?.id || !role || !STAFF_OR_ADMIN.includes(role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

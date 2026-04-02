@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
@@ -11,7 +11,7 @@ import { formatPrice } from "@/lib/utils";
 export default async function CorporateDashboardPage() {
   try {
 
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   if (!session?.user?.id) redirect("/login");
 
   const corporate = await getCorporateAccount();

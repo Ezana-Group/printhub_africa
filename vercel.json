@@ -1,0 +1,49 @@
+{
+  "rewrites": [
+    {
+      "source": "/admin/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "^printhub\\.africa$"
+        }
+      ],
+      "destination": "https://admin.printhub.africa/admin/:path*"
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "^admin\\.printhub\\.africa$"
+        }
+      ],
+      "destination": "/admin/:path*"
+    },
+    {
+      "source": "/login",
+      "has": [
+        {
+          "type": "host",
+          "value": "^admin\\.printhub\\.africa$"
+        }
+      ],
+      "destination": "/admin/login"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/admin/:path*",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'none'"
+        }
+      ]
+    }
+  ]
+}

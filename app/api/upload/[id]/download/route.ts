@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { prisma } from "@/lib/prisma";
 import {
   createPresignedDownloadUrl,
@@ -12,7 +12,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   const { id } = await params;
 
   const file = await prisma.uploadedFile.findUnique({

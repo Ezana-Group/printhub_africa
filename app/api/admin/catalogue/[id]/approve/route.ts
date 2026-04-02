@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/admin-api-guard";
 import { CatalogueStatus, ProductType, ProductAvailability } from "@prisma/client";
@@ -12,7 +12,7 @@ export async function POST(
 ) {
   const auth = await requireAdminApi({ permission: "products_edit" });
   if (auth instanceof NextResponse) return auth;
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const userId = session?.user?.id ?? null;
   const { id } = await ctx.params;
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { prisma } from "@/lib/prisma";
 import { ensureUniqueOrderNumber } from "@/lib/order-utils";
 import { createTrackingEvent } from "@/lib/tracking";
@@ -45,7 +45,7 @@ const createOrderSchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   let body: unknown;
   try {
     body = await req.json();
@@ -344,7 +344,7 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

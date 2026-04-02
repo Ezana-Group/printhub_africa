@@ -5,7 +5,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { prisma } from "@/lib/prisma";
 import { getPesapalTransactionStatus } from "@/lib/pesapal";
 import { sendOrderConfirmationEmail } from "@/lib/email";
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: {

@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSection } from "@/lib/admin-route-guard";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { EmailThreadClient } from "@/components/admin/email/email-thread-client";
 
 const STATUS_SET = new Set(["OPEN", "CLOSED", "SPAM"]);
@@ -32,7 +32,7 @@ export default async function AdminEmailThreadPage({
   const mailboxId = qp.mailboxId?.trim() ? qp.mailboxId.trim() : undefined;
   const assignedToId = qp.assignedToId?.trim() ? qp.assignedToId.trim() : undefined;
 
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   if (!session?.user) return notFound();
   const currentUser = session.user as { id?: string; role?: string; permissions?: string[] };
 

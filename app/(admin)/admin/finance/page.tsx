@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import { FinanceTabs } from "@/components/admin/finance-tabs";
 import { requireAdminSection } from "@/lib/admin-route-guard";
@@ -10,7 +10,7 @@ export default async function AdminFinancePage() {
   try {
 
   await requireAdminSection("/admin/finance");
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role ?? "STAFF";
   const permissions = (session?.user as { permissions?: string[] })?.permissions ?? [];
   const canEditFinance = hasFinanceAccess(role, permissions, true);

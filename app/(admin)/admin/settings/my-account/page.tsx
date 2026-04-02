@@ -1,12 +1,12 @@
 export const dynamic = 'force-dynamic'
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { MyAccountForm } from "@/components/admin/settings/my-account-form";
 
 export default async function AdminMyAccountPage() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   if (!session?.user) redirect("/login");
 
   const role = (session.user as { role?: string })?.role ?? "STAFF";

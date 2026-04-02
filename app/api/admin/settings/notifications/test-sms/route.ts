@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { sendSMS } from "@/lib/africas-talking";
 import { writeAudit } from "@/lib/audit";
 
 /** POST: Send a test SMS. Body: { to?: string } — phone number (defaults to current user's phone if set). Uses DB settings with env fallback. */
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user || !["ADMIN", "SUPER_ADMIN"].includes(role ?? "")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

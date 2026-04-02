@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
@@ -14,7 +14,7 @@ import { ShoppingCart, Printer, FileText } from "lucide-react";
 const PRINT_JOB_TYPES = ["LARGE_FORMAT", "THREE_D_PRINT", "CUSTOM_PRINT"] as const;
 
 export default async function AdminDashboardPage() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   if (!session?.user) redirect("/login");
   const role = (session.user as { role?: string }).role;
   const permissions = (session.user as { permissions?: string[] }).permissions;

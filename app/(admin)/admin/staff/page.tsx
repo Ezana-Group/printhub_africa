@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { StaffAdminClient } from "@/components/admin/staff-admin-client";
 import { requireAdminSection } from "@/lib/admin-route-guard";
 
@@ -16,7 +16,7 @@ export default async function AdminStaffPage() {
   try {
 
   await requireAdminSection("/admin/staff");
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   const canInvite = role && CAN_ADD_STAFF.includes(role);
 

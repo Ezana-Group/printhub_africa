@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { requireAdminSettings } from "@/lib/auth-guard";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import { SettingsBusinessClient } from "@/components/admin/settings-business-client";
 
@@ -18,7 +18,7 @@ function toStrMap(row: Record<string, unknown> | null): Record<string, string> {
 export default async function AdminSettingsBusinessPage() {
   try {
     await requireAdminSettings();
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptionsAdmin);
     const role = (session?.user as { role?: string })?.role ?? "STAFF";
     const canEdit = role === "ADMIN" || role === "SUPER_ADMIN";
 

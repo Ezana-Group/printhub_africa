@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { sendEmail } from "@/lib/email";
 import { writeAudit } from "@/lib/audit";
 
 /** POST: Send a test email to the current user (or to the email in the body). Uses DB settings with env fallback. */
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user || !["ADMIN", "SUPER_ADMIN"].includes(role ?? "")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

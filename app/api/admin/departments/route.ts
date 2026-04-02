@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 
 const ADMIN_STAFF_ROLES = ["STAFF", "ADMIN", "SUPER_ADMIN"];
 
 /** GET: List departments (for dropdowns and manager). Admin/Staff only. */
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user || !role || !ADMIN_STAFF_ROLES.includes(role)) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
@@ -24,7 +24,7 @@ export async function GET() {
 
 /** POST: Create department. Admin only. */
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user || (role !== "ADMIN" && role !== "SUPER_ADMIN")) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { rateLimit, getRateLimitClientIp } from "@/lib/rate-limit";
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   if (!(await rateLimit(`quote-submit:${ip}`, QUOTE_SUBMIT_LIMIT, QUOTE_SUBMIT_WINDOW_MS)).ok) {
     return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
   }
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Sign in to submit a quote request." }, { status: 401 });
   }

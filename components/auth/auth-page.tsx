@@ -175,33 +175,31 @@ export function AuthPage({
     setLoginError("");
     setLoginLoading(true);
     try {
-      const res = await fetch("/api/auth/validate-login", {
+      const res = await fetch("/api/auth/customer/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: loginEmail, password: loginPassword }),
       });
       const data = await res.json().catch(() => ({}));
-      if (res.ok && data.requires2FA && data.token) {
-        const callbackUrl = getCallbackUrl();
-        window.location.href = `/login/verify?t=${encodeURIComponent(data.token)}&callbackUrl=${encodeURIComponent(callbackUrl)}`;
-        return;
-      }
-      if (res.ok && !data.requires2FA) {
-        const result = await signIn("credentials", {
-          email: loginEmail,
-          password: loginPassword,
-          callbackUrl: getCallbackUrl(),
-          redirect: false,
-        });
+      if (!res.ok) {
+        setLoginError(data.error ?? "Invalid email or password.");
         setLoginLoading(false);
-        if (result?.ok && result?.url) {
-          window.location.href = result.url;
-          return;
-        }
-        setLoginError(result?.error === "CredentialsSignin" ? "Invalid email or password." : result?.error ?? "Sign in failed.");
         return;
       }
-      setLoginError(data.error ?? "Invalid email or password.");
+      
+      const result = await signIn("credentials", {
+        email: loginEmail,
+        password: loginPassword,
+        callbackUrl: getCallbackUrl(),
+        redirect: false,
+      });
+
+      setLoginLoading(false);
+      if (result?.ok && result?.url) {
+        window.location.href = result.url;
+        return;
+      }
+      setLoginError(result?.error === "CredentialsSignin" ? "Invalid email or password." : result?.error ?? "Sign in failed.");
     } catch {
       setLoginError("Something went wrong");
     } finally {

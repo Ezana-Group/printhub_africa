@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import { writeAudit } from "@/lib/audit";
 import { sendPasswordResetEmail, sendStaffInviteEmail } from "@/lib/email";
@@ -13,7 +13,7 @@ export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   const actorId = (session?.user as { id?: string } | undefined)?.id;
   if (!session?.user || !role || !ADMIN_ROLES.includes(role)) {

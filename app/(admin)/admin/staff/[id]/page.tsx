@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSection } from "@/lib/admin-route-guard";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ export default async function AdminStaffDetailPage({
   try {
 
   await requireAdminSection("/admin/staff");
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role ?? "STAFF";
   const canEditStaff = ADMIN_ROLES.includes(role);
 

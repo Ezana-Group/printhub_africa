@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 
 const ADMIN_ROLES = ["STAFF", "ADMIN", "SUPER_ADMIN"];
@@ -9,7 +9,7 @@ const HARDWARE_TYPES = ["LARGE_FORMAT_PRINTER", "THREE_D_PRINTER"] as const;
 
 /** GET: List inventory hardware items, optional filter by category */
 export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user || !role || !ADMIN_ROLES.includes(role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -66,7 +66,7 @@ export async function GET(req: Request) {
 
 /** POST: Create a new inventory hardware/maintenance/accessory item */
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user || !role || !ADMIN_ROLES.includes(role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

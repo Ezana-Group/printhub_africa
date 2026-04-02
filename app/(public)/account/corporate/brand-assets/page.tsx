@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCorporateAccount } from "@/lib/corporate";
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic"; // no DB at Docker build — render at r
 export default async function CorporateBrandAssetsPage() {
   try {
 
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   if (!session?.user?.id) redirect("/login");
 
   const corporate = await getCorporateAccount();

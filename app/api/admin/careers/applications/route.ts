@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import { ApplicationStatus } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
@@ -19,7 +19,7 @@ function requireAdmin(session: { user?: { role?: string } } | null) {
  * Query: jobId?, status?, search? (name/email)
  */
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const err = requireAdmin(session);
   if (err) return err;
 

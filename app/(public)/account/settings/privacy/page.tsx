@@ -1,11 +1,11 @@
 export const dynamic = 'force-dynamic'
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { redirect } from "next/navigation";
 import { PrivacyDataClient } from "./privacy-data-client";
 
 export default async function PrivacyDataPage() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   if (!session?.user?.id) redirect("/login");
 
   return (

@@ -228,7 +228,7 @@ CREATE TABLE "ExternalModel" (
     "rawData" JSONB,
     "importedBy" TEXT NOT NULL,
     "importedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "status" "ImportStatus" NOT NULL DEFAULT 'PENDING_REVIEW',
+    "status" "ImportStatus" NOT NULL DEFAULT 'PENDING',
     "reviewedBy" TEXT,
     "reviewedAt" TIMESTAMP(3),
     "rejectionReason" TEXT,

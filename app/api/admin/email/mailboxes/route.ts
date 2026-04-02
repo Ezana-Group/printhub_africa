@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import { canAccessRoute } from "@/lib/admin-permissions";
 import { z } from "zod";
@@ -13,7 +13,7 @@ const createMailboxSchema = z.object({
 });
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   const permissions = (session?.user as { permissions?: string[] })?.permissions;
 
@@ -44,7 +44,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   const permissions = (session?.user as { permissions?: string[] })?.permissions;
 

@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { requireAdminSection } from "@/lib/admin-route-guard";
 import { prisma } from "@/lib/prisma";
 import { InviteStaffPageClient } from "./invite-staff-page-client";
@@ -13,7 +13,7 @@ export default async function AdminStaffInvitePage() {
   try {
 
   await requireAdminSection("/admin/staff");
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!role || !CAN_INVITE_ROLES.includes(role)) {
     redirect("/admin/access-denied");

@@ -5,7 +5,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { prisma } from "@/lib/prisma";
 import { getObjectBuffer, isR2Configured } from "@/lib/r2";
 import { generateInvoicePdfBuffer } from "@/lib/invoice-pdf";
@@ -16,7 +16,7 @@ export async function GET(
   _req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   const { id: invoiceId } = await context.params;
 
   const invoice = await prisma.invoice.findUnique({

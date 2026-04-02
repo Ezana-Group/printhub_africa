@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth";
 import type { Session } from "next-auth";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { hasPermission, hasFinanceAccess } from "@/lib/admin-permissions";
 import type { PermissionKey } from "@/lib/admin-permissions";
 
@@ -17,9 +17,10 @@ export type AdminApiAuth = { session: Session; role: string; permissions: string
  * Use at the start of an admin API route. Returns session + role + permissions if allowed, or a 401/403 NextResponse to return.
  */
 export async function requireAdminApi(context: AdminApiContext): Promise<AdminApiAuth | NextResponse> {
-  const session = await getServerSession(authOptions);
-  const role = (session?.user as { role?: string })?.role;
-  const permissions = (session?.user as { permissions?: string[] })?.permissions ?? [];
+  const session = await getServerSession(authOptionsAdmin);
+  const user = session?.user as any;
+  const role = user?.role;
+  const permissions = user?.permissions ?? [];
 
   if (!session?.user || !role) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

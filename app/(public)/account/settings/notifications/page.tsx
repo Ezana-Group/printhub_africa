@@ -1,12 +1,12 @@
 export const dynamic = 'force-dynamic'
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { NotificationSettingsClient } from "./notification-settings-client";
 
 export default async function AccountSettingsNotificationsPage() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   if (!session?.user) redirect("/login");
 
   return (

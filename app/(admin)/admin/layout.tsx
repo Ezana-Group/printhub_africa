@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
@@ -14,11 +14,18 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) redirect("/login");
-  const role = (session.user as { role?: string }).role;
-  const permissions = (session.user as { permissions?: string[] }).permissions;
-  if (!role || !ADMIN_ROLES.includes(role)) redirect("/login");
+  const session = await getServerSession(authOptionsAdmin);
+  if (!session?.user) {
+    redirect("/login");
+  }
+  
+  const user = session.user as any;
+  if (!user.role || !ADMIN_ROLES.includes(user.role)) {
+    redirect("/login");
+  }
+
+  const role = user.role;
+  const permissions = user.permissions;
 
   const newQuotesCount = await prisma.quote.count({ where: { status: "new" } }).catch(() => 0);
   const pendingApprovalCount = await prisma.catalogueItem.count({ where: { status: "PENDING_REVIEW" } }).catch(() => 0);

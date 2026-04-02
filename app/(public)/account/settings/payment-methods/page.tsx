@@ -1,12 +1,12 @@
 export const dynamic = 'force-dynamic'
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { PaymentMethodsClient } from "./payment-methods-client";
 
 export default async function AccountSettingsPaymentMethodsPage() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   if (!session?.user) redirect("/login");
 
   return (

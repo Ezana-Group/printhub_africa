@@ -1,13 +1,13 @@
 export const dynamic = 'force-dynamic'
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { SavedAddressesList } from "@/components/account/saved-addresses-list";
 
 export default async function AccountSettingsAddressesPage() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   if (!session?.user?.id) redirect("/login");
 
   let addresses: Awaited<ReturnType<typeof prisma.savedAddress.findMany>> = [];

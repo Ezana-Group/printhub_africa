@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { redirect } from "next/navigation";
 import { getSettingsNavForRole } from "@/lib/settings-nav-config";
 import { SettingsNav } from "@/components/admin/settings-nav";
@@ -11,7 +11,7 @@ export default async function AdminSettingsLayout({
   children: React.ReactNode;
 }) {
   await requireAdminSection("/admin/settings");
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   if (!session?.user) redirect("/login");
   const role = (session.user as { role?: string }).role ?? "STAFF";
   const navItems = getSettingsNavForRole(role);

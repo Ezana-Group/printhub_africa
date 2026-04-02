@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
@@ -20,7 +20,7 @@ const prefsSchema = z.object({
 });
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const prefs = await prisma.userNotificationPrefs.upsert({
     where: { userId: session.user.id },
@@ -31,7 +31,7 @@ export async function GET() {
 }
 
 export async function PATCH(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = prefsSchema.safeParse(await req.json().catch(() => ({})));
   if (!body.success) return NextResponse.json({ error: "Invalid body" }, { status: 400 });

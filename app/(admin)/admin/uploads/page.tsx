@@ -1,13 +1,13 @@
 export const dynamic = 'force-dynamic'
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { canAccessRoute } from "@/lib/admin-permissions";
 import { AdminUploadsClient } from "./admin-uploads-client";
 import { prisma } from "@/lib/prisma";
 
 export default async function AdminUploadsPage() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role ?? "";
   const permissions = (session?.user as { permissions?: string[] })?.permissions ?? [];
   if (!canAccessRoute("/admin/uploads", role, permissions)) {

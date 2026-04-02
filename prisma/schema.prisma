@@ -44,7 +44,10 @@ model User {
   passwordExpired          Boolean                    @default(false)
   passwordHistory          String[]                   @default([])
   lastActiveAt             DateTime?                  @default(now())
+  lastLoginIp              String?
   accounts                 Account[]
+  adminSessions            AdminSession[]
+  knownAdminDevices        KnownAdminDevice[]
   addresses                Address[]
   auditLogs                AuditLog[]
   backupRecords            BackupRecord[]
@@ -108,6 +111,31 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model AdminSession {
+  id           String    @id @default(cuid())
+  userId       String
+  sessionToken String    @unique
+  ipAddress    String?
+  userAgent    String?
+  lastActiveAt DateTime  @default(now())
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sessionToken])
+}
+
+model KnownAdminDevice {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fingerprint String
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
 }
 
 model Account {

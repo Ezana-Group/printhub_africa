@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { prisma } from "@/lib/prisma";
 import {
   createPresignedUploadUrl,
@@ -129,7 +129,7 @@ export async function POST(req: Request) {
   try {
     let session: SessionLike = null;
     try {
-      session = (await getServerSession(authOptions)) as SessionLike;
+      session = (await getServerSession(authOptionsCustomer)) as SessionLike;
     } catch (authErr) {
       console.error("Presign auth error:", authErr);
       return NextResponse.json(

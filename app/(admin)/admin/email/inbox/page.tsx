@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdminSection } from "@/lib/admin-route-guard";
 import { EmailInboxThreePane } from "@/components/admin/email/email-inbox-three-pane";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { Prisma } from "@prisma/client";
 
 function stripHtml(html: string): string {
@@ -20,7 +20,7 @@ export default async function AdminEmailInboxPage() {
 
   await requireAdminSection("/admin/email/inbox");
 
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role as string;
   const currentUserId = session?.user?.id as string;
   const permissions = (session?.user as { permissions?: string[] })?.permissions ?? [];

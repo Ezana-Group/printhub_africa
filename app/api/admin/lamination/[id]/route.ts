@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 
@@ -8,7 +8,7 @@ const ADMIN_ROLES = ["STAFF", "ADMIN", "SUPER_ADMIN"];
 const updateSchema = z.object({ name: z.string().optional(), pricePerSqm: z.number().min(0).optional() });
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user || !role || !ADMIN_ROLES.includes(role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

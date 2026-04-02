@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { prisma } from "@/lib/prisma";
 import { stkPush } from "@/lib/mpesa";
 import { checkMpesaHealth } from "@/lib/mpesa-health";
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   if (!(await rateLimit(`stkpush:${ip}`, STKPUSH_LIMIT, STKPUSH_WINDOW_MS)).ok) {
     return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   }
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   const userId = (session?.user as { id?: string })?.id;
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

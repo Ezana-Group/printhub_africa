@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { generateQuoteNumber, QUOTE_TYPE_API_TO_DB } from "@/lib/quote-utils";
@@ -32,7 +32,7 @@ const createBodySchema = z.object({
 });
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user || !["STAFF", "ADMIN", "SUPER_ADMIN"].includes(role ?? "")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -108,7 +108,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptionsCustomer);
     const raw = await req.json();
     const parsed = createBodySchema.safeParse(raw);
     if (!parsed.success) {

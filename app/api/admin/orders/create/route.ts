@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import { ensureUniqueOrderNumber } from "@/lib/order-utils";
 import { createTrackingEvent } from "@/lib/tracking";
@@ -8,7 +8,7 @@ import { createTrackingEvent } from "@/lib/tracking";
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "STAFF"];
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user?.id || !role || !ADMIN_ROLES.includes(role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

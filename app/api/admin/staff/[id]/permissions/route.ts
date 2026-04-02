@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions, invalidateStaffPermissionsCache } from "@/lib/auth";
+import { authOptionsAdmin, invalidateStaffPermissionsCache } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import { writeAudit } from "@/lib/audit";
 import { PERMISSION_KEYS } from "@/lib/admin-permissions";
@@ -20,7 +20,7 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   const actorId = (session?.user as { id?: string } | undefined)?.id;
   if (!session?.user || !role || !ADMIN_ROLES.includes(role)) {
@@ -84,7 +84,7 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user || !role || !ADMIN_ROLES.includes(role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

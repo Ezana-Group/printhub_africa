@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
@@ -13,7 +13,7 @@ export default async function AcceptInvitePage({
 }) {
   try {
 
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   if (session?.user) redirect("/admin");
   const { token, id } = await searchParams;
   if (!token || !id) {

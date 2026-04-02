@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { canAccessRoute } from "@/lib/admin-permissions";
 import { prisma } from "@/lib/prisma";
 import { CatalogueStatus } from "@prisma/client";
@@ -11,7 +11,7 @@ import { AdminCatalogueQueueClient } from "./admin-catalogue-queue-client";
 export default async function AdminCatalogueQueuePage() {
   try {
 
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role ?? "";
   const permissions = (session?.user as { permissions?: string[] })?.permissions ?? [];
   if (!canAccessRoute("/admin/catalogue/queue", role, permissions)) {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import { JobStatus } from "@prisma/client";
 import { z } from "zod";
@@ -18,7 +18,7 @@ function requireAdmin(session: { user?: { role?: string } } | null) {
  * GET /api/admin/careers/listings — all listings (all statuses).
  */
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const err = requireAdmin(session);
   if (err) return err;
 
@@ -63,7 +63,7 @@ const createSchema = z.object({
  * POST /api/admin/careers/listings — create listing.
  */
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const err = requireAdmin(session);
   if (err) return err;
 

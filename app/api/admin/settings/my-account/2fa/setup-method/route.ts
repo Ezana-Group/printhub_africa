@@ -4,7 +4,7 @@
  */
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
@@ -12,7 +12,7 @@ const STAFF_OR_ADMIN = ["STAFF", "ADMIN", "SUPER_ADMIN"];
 const bodySchema = z.object({ method: z.enum(["email", "sms"]) });
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user?.id || !role || !STAFF_OR_ADMIN.includes(role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { redirect } from "next/navigation";
 import { Plus_Jakarta_Sans, Fraunces } from "next/font/google";
 import { AccountShell } from "@/components/account/AccountShell";
@@ -22,7 +22,7 @@ export default async function AccountLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   if (!session) redirect("/login");
 
   let quotedCount = 0;

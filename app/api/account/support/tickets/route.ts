@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { prisma } from "@/lib/prisma";
 import { getNextTicketNumber } from "@/lib/next-invoice-number";
 import { sendTicketCreatedEmail } from "@/lib/email";
@@ -14,7 +14,7 @@ const createSchema = z.object({
 
 /** GET /api/account/support/tickets — list tickets for logged-in user */
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -42,7 +42,7 @@ export async function GET() {
 
 /** POST /api/account/support/tickets — create ticket (logged-in user) */
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

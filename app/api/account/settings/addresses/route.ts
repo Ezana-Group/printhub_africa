@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
@@ -16,7 +16,7 @@ const createSchema = z.object({
 });
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const list = await prisma.savedAddress.findMany({
     where: { userId: session.user.id },
@@ -26,7 +26,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const count = await prisma.savedAddress.count({ where: { userId: session.user.id } });
   if (count >= 5) return NextResponse.json({ error: "Maximum 5 addresses reached" }, { status: 400 });

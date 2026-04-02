@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { canAccessRoute } from "@/lib/admin-permissions";
 import {
   createPresignedDownloadUrl,
@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   const role = (session?.user as { role?: string })?.role;
   const permissions = (session?.user as { permissions?: string[] })?.permissions;
 

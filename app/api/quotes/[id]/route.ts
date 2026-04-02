@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { prisma } from "@/lib/prisma";
 import { QUOTE_TYPE_DB_TO_API } from "@/lib/quote-utils";
 import {
@@ -28,7 +28,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   const { id } = await params;
   const role = (session?.user as { role?: string })?.role;
   const isStaff = session?.user && ["STAFF", "ADMIN", "SUPER_ADMIN"].includes(role ?? "");
@@ -74,7 +74,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
   const role = (session.user as { role?: string })?.role;
@@ -249,7 +249,7 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   const role = (session?.user as { role?: string })?.role;
   if (role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Forbidden. Super Admin only." }, { status: 403 });

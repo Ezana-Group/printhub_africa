@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { Suspense } from 'react'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { authOptionsCustomer } from '@/lib/auth-customer'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import type { QuoteStatus } from '@prisma/client'
@@ -17,7 +17,7 @@ export default async function QuotesPage({
 }: {
   searchParams: Promise<{ status?: string }>
 }) {
-  const session = await getServerSession(authOptions)
+  const session = await getServerSession(authOptionsCustomer)
   if (!session?.user?.id) redirect('/login?next=/account/quotes')
 
   const userId = session.user.id as string

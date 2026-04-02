@@ -5,12 +5,12 @@
  */
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user?.id || !role || !["STAFF", "ADMIN", "SUPER_ADMIN"].includes(role)) {
     return NextResponse.json({ error: "Unauthorized", valid: false }, { status: 401 });
