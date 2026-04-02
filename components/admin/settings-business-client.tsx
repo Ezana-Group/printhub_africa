@@ -16,7 +16,7 @@ const getStr = (obj: Record<string, string>, key: string) => obj[key] ?? "";
 const FORM_DEFAULTS: Record<string, string> = {
   businessName: "PrintHub",
   tradingName: "PrintHub (An Ezana Group Company)",
-  tagline: "Professional Printing. Nairobi. Kenya.",
+  tagline: "Professional Printing. Eldoret. Kenya.",
   website: "printhub.africa",
   logo: "",
   favicon: "",
@@ -27,8 +27,8 @@ const FORM_DEFAULTS: Record<string, string> = {
   financeEmail: "finance@printhub.africa",
   address1: "",
   address2: "",
-  city: "Nairobi",
-  county: "Nairobi County",
+  city: "Eldoret",
+  county: "Uasin Gishu County",
   country: "Kenya",
   googleMapsUrl: "",
   hoursWeekdays: "",
@@ -136,7 +136,7 @@ export function SettingsBusinessClient({
             {[
               { label: "Business name", value: getStr(data, "businessName") || "PrintHub" },
               { label: "Trading name", value: getStr(data, "tradingName") || "PrintHub (An Ezana Group Company)" },
-              { label: "Tagline", value: getStr(data, "tagline") || "Professional Printing. Nairobi. Kenya." },
+              { label: "Tagline", value: getStr(data, "tagline") || "Professional Printing. Eldoret. Kenya." },
               { label: "Website", value: getStr(data, "website") || "printhub.africa" },
             ].map((row, i) => (
               <div
@@ -312,8 +312,8 @@ export function SettingsBusinessClient({
               { label: "Finance/Invoices Email", value: getStr(data, "financeEmail") },
               { label: "Address Line 1", value: getStr(data, "address1") },
               { label: "Address Line 2", value: getStr(data, "address2") },
-              { label: "Town/City", value: getStr(data, "city") || "Nairobi" },
-              { label: "County", value: getStr(data, "county") || "Nairobi County" },
+              { label: "Town/City", value: getStr(data, "city") || "Eldoret" },
+              { label: "County", value: getStr(data, "county") || "Uasin Gishu County" },
               { label: "Country", value: getStr(data, "country") || "Kenya" },
               { label: "Map URL", value: getStr(data, "googleMapsUrl") },
             ].map((row, i) => (

@@ -21,20 +21,21 @@ export function Hero() {
           <span className="text-primary">Deliver Everywhere.</span>
         </h1>
         <p className="mt-6 text-lg md:text-xl text-slate-300 max-w-xl mx-auto">
-          From Nairobi to all of Kenya — banners, signage, vehicle wraps, and custom 3D prints.
+          From Eldoret to all of Kenya — banners, signage, vehicle wraps, and custom 3D prints.
         </p>
         <div className="mt-10 flex flex-wrap gap-6 justify-center items-center">
           <LiquidButton
             asChild
+            variant="stained"
             size="xl"
-            className="text-white border border-white/20 min-w-[180px]"
+            className="text-white min-w-[200px]"
           >
             <Link href="/shop">Shop Now</Link>
           </LiquidButton>
           <LiquidButton
             asChild
             size="xl"
-            className="text-white border border-white/20 min-w-[180px]"
+            className="text-white border border-white/10 min-w-[200px]"
           >
             <Link href="/services">Explore Services</Link>
           </LiquidButton>

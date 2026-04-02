@@ -28,6 +28,7 @@ import {
   Truck,
   PanelLeft,
   Zap,
+  Brain,
 } from "lucide-react";
 import { canAccessRoute } from "@/lib/admin-permissions";
 import { cn } from "@/lib/utils";
@@ -103,6 +104,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "ADMIN",
     items: [
+      { href: "/admin/ai", label: "AI Control Centre", icon: Brain },
       { href: "/api/admin/n8n/sso", label: "Automations", icon: Zap },
       { href: "/admin/staff", label: "Staff", icon: UserCog },
       { href: "/admin/reports", label: "Reports", icon: BarChart3 },

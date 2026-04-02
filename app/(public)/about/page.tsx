@@ -122,7 +122,7 @@ export default async function AboutPage() {
             <div className="relative aspect-[4/3] rounded overflow-hidden border-l-4 border-primary">
               <Image
                 src={siteImages.about_story_image}
-                alt="PrintHub production floor — Nairobi"
+                alt="PrintHub production floor — Eldoret"
                 fill
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, 400px"

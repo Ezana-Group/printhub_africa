@@ -3,7 +3,6 @@ import { Syne, DM_Sans, JetBrains_Mono, Playfair_Display } from "next/font/googl
 import { ConsentGatedAnalytics } from "@/components/ConsentGatedAnalytics";
 import { CookieBanner } from "@/components/CookieBanner";
 import { PixelTrackerWrapper } from "@/components/marketing/pixel-tracker-wrapper";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Providers } from "@/components/providers";
 import { getCachedBusinessMetadata } from "@/lib/cache/unstable-cache";
 import { ProfileCompletionGate } from "@/components/layout/profile-completion-gate";
@@ -50,18 +49,16 @@ const defaultMetadataBase = (() => {
   }
 })();
 
-const shouldEnableSpeedInsights = process.env.VERCEL === "1";
-
 export async function generateMetadata(): Promise<Metadata> {
     const meta = await getCachedBusinessMetadata().catch(() => ({ 
       favicon: null, updatedAt: null, businessName: "PrintHub", tagline: null, logo: null, seo: null, googleSiteVerification: null 
     }));
   const businessName = meta.seo?.siteName || meta.businessName || "PrintHub";
-  const defaultTitle = meta.seo?.defaultTitle || `${businessName} | Large Format & 3D Printing | Nairobi, Kenya`;
+  const defaultTitle = meta.seo?.defaultTitle || `${businessName} | Large Format & 3D Printing | Eldoret, Kenya`;
   const description =
     meta.seo?.defaultDescription ||
     meta.tagline ||
-    "Large format printing and 3D printing for Nairobi and all of Kenya. Banners, signage, vehicle wraps, canvas, custom 3D prints. An Ezana Group Company.";
+    "Large format printing and 3D printing for Eldoret and all of Kenya. Banners, signage, vehicle wraps, canvas, custom 3D prints. An Ezana Group Company.";
   
   const updatedAtTime = meta.updatedAt ? new Date(meta.updatedAt).getTime() : 0;
   const faviconUrl =
@@ -150,7 +147,6 @@ export default function RootLayout({
         <CookieBanner />
         <PixelTrackerWrapper />
         <ConsentGatedAnalytics />
-        {shouldEnableSpeedInsights ? <SpeedInsights /> : null}
       </body>
     </html>
   );

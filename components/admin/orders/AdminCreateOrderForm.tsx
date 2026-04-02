@@ -434,7 +434,7 @@ export function AdminCreateOrderForm({
             >
               <option value="STANDARD_COURIER">Standard courier</option>
               <option value="EXPRESS_COURIER">Express courier</option>
-              <option value="OWN_RIDER">Own rider (Nairobi)</option>
+              <option value="OWN_RIDER">Own rider (Eldoret)</option>
               <option value="CUSTOMER_PICKUP">Customer pickup (free)</option>
             </select>
           </div>

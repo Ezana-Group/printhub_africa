@@ -271,7 +271,7 @@ export function getSampleContextForSlug(slug: string): Record<string, string> {
         ...base, orderNumber: "ORD-2025-001", trackingNumber: "TRK123",
         trackingLine: "<p><strong>Tracking:</strong> TRK123</p>", trackUrl: `${b}/track?ref=ORD-2025-001`,
         deliveryMethod: "Standard", courierName: "FastCourier Kenya",
-        estimatedDeliveryDate: "25 Mar 2025", deliveryZone: "Nairobi CBD",
+        estimatedDeliveryDate: "25 Mar 2025", deliveryZone: "Eldoret CBD",
       };
     case "delivery-delivered":
       return { ...base, orderNumber: "ORD-2025-001", ordersUrl: `${b}/account/orders`, deliveryMethod: "Standard", courierName: "FastCourier Kenya" };

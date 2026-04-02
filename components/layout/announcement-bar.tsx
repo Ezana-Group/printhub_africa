@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import type { BusinessPublic } from "@/lib/business-public";
 
 const MESSAGES = (city: string) => [
-  { id: 1, text: `Free delivery on orders over KES 5,000 in ${city || "Nairobi"}`, href: "/shop" },
+  { id: 1, text: `Free delivery on orders over KES 5,000 in ${city || "Eldoret"}`, href: "/shop" },
   { id: 2, text: "48hr turnaround on large format prints", href: "/services/large-format" },
   { id: 3, text: "Upload your design — we'll print it. Get a quote today.", href: "/get-a-quote" },
 ];
@@ -15,8 +15,8 @@ const MESSAGES = (city: string) => [
 export function AnnouncementBar({ business }: { business?: BusinessPublic }) {
   const [dismissed, setDismissed] = useState(false);
   const [index] = useState(0);
-  const location = [business?.city, business?.country].filter(Boolean).join(", ") || "Nairobi, Kenya";
-  const msg = MESSAGES(business?.city ?? "Nairobi")[index];
+  const location = [business?.city, business?.country].filter(Boolean).join(", ") || "Eldoret, Kenya";
+  const msg = MESSAGES(business?.city ?? "Eldoret")[index];
 
   if (dismissed) return null;
 

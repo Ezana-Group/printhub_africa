@@ -118,7 +118,7 @@ export function Header({ business }: { business?: BusinessPublic }) {
             {/* Fixed header — logo (close button is absolute in SheetContent) */}
             <div className="flex flex-shrink-0 items-center border-b border-slate-200 px-6 py-4 pr-14">
               <Image
-                src={business?.logo ?? "/logo.png"}
+                src={business?.logo || "/logo.png"}
                 alt={siteName}
                 width={120}
                 height={32}
@@ -273,7 +273,7 @@ export function Header({ business }: { business?: BusinessPublic }) {
           className="font-display text-xl font-bold text-slate-900 flex items-center gap-2.5"
         >
           <Image
-            src={business?.logo ?? "/logo.png"}
+            src={business?.logo || "/logo.png"}
             alt={siteName}
             width={140}
             height={36}

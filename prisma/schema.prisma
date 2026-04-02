@@ -230,35 +230,45 @@ model Product {
   /// Running count of units sold this calendar month (reset by monthly cron)
   soldThisMonth        Int                     @default(0)
   /// Human-readable estimated print time, e.g. "4–6 hours"
-  exportToGoogle      Boolean  @default(true)
-  exportToMeta        Boolean  @default(true)  
-  exportToTiktok      Boolean  @default(true)
-  exportToLinkedIn    Boolean  @default(false)
-  exportToPinterest   Boolean  @default(false)
-  exportToX           Boolean  @default(false)
-  exportToGoogleBiz   Boolean  @default(true)
-  lastExportedAt      DateTime?
-  exportNotes         String?
-  printTimeEstimate    String?
+  exportToGoogle                Boolean  @default(true)
+  exportToMeta                  Boolean  @default(true)  
+  exportToTiktok                Boolean  @default(true)
+  exportToLinkedIn              Boolean  @default(false)
+  exportToPinterest             Boolean  @default(false)
+  exportToX                     Boolean  @default(false)
+  exportToGoogleBiz             Boolean  @default(true)
+  exportToInstagramStories      Boolean  @default(false)
+  exportToInstagramReels        Boolean  @default(false)
+  exportToYoutubeShorts         Boolean  @default(false)
+  exportToWhatsappStatus        Boolean  @default(false)
+  exportToWhatsappChannel       Boolean  @default(false)
+  exportToTelegram              Boolean  @default(false)
+  exportToGoogleDiscover        Boolean  @default(false)
+  exportToJiji                  Boolean  @default(false)
+  lastExportedAt                DateTime?
+  exportNotes                   String?
+  printTimeEstimate             String?
   /// Approximate filament weight in grams
-  filamentWeightGrams  Float?
+  filamentWeightGrams           Float?
   /// URL to a dimension diagram image shown as a tab in the gallery
-  dimensionDiagramUrl  String?
-  externalModel        ExternalModel?
-  catalogueItem        CatalogueItem?          @relation("CatalogueProductLink")
-  catalogueSourceItem  CatalogueItem?          @relation("CataloguePODSource", fields: [catalogueItemId], references: [id])
-  inventory            Inventory[]
-  orderItems           OrderItem[]
-  category             Category                @relation(fields: [categoryId], references: [id])
-  productImages        ProductImage[]
-  printMaterials       ProductPrintMaterial[]
-  filamentColors       ProductFilamentColor[]
-  reviews              ProductReview[]
-  variants             ProductVariant[]
-  shopStockMovements   ShopInventoryMovement[]
-  shopPOLines          ShopPurchaseOrderLine[]
-  wishlists            Wishlist[]
-  stockNotifications   StockNotification[]
+  dimensionDiagramUrl           String?
+  externalModel                 ExternalModel?
+  catalogueItem                 CatalogueItem?          @relation("CatalogueProductLink")
+  catalogueSourceItem           CatalogueItem?          @relation("CataloguePODSource", fields: [catalogueItemId], references: [id])
+  inventory                     Inventory[]
+  orderItems                    OrderItem[]
+  category                      Category                @relation(fields: [categoryId], references: [id])
+  productImages                 ProductImage[]
+  printMaterials                ProductPrintMaterial[]
+  filamentColors                ProductFilamentColor[]
+  reviews                       ProductReview[]
+  variants                      ProductVariant[]
+  shopStockMovements            ShopInventoryMovement[]
+  shopPOLines                   ShopPurchaseOrderLine[]
+  wishlists                     Wishlist[]
+  stockNotifications            StockNotification[]
+  mockups                       ProductMockup[]
+  videos                        ProductVideo[]
 
   @@index([categoryId])
   @@index([slug])
@@ -1842,6 +1852,21 @@ model BusinessSettings {
   pendingFactoryReset       Boolean   @default(false)
   factoryResetExecuteAt     DateTime?
   factoryResetInitiatedBy   String?
+
+  // AI Control Settings
+  aiRequireApproval         Boolean   @default(true)
+  aiAutoMockups             Boolean   @default(false)
+  aiAutoVideos              Boolean   @default(false)
+  aiVoiceTranscription      Boolean   @default(true)
+  aiTelegramBot             Boolean   @default(false)
+  aiWeeklyTrendReport       Boolean   @default(true)
+  aiMonthlyBusinessReport   Boolean   @default(true)
+  aiJijiEnabled             Boolean   @default(false)
+  aiCustomerReplyModel      String?   @default("claude-opus-4-6")
+  aiDescriptionModel        String?   @default("claude-opus-4-6")
+  aiImageGenerator          String?   @default("both")
+  aiElevenLabsCharUsed      Int?      @default(0)
+  aiElevenLabsCharLimit     Int?      @default(10000)
 }
 
 model ApiKey {
@@ -2985,4 +3010,78 @@ model MarketingErrorLog {
 
   @@index([channel])
   @@index([createdAt])
+}
+
+// ─── AI-Generated Content Models ────────────────────────────────────────────
+
+model ProductMockup {
+  id          String    @id @default(cuid())
+  productId   String
+  platform    String    // instagram|linkedin|tiktok|variation
+  imageUrl    String    // R2 permanent URL
+  generator   String    // dalle3|stabilityai
+  prompt      String
+  isApproved  Boolean   @default(false)
+  isUsed      Boolean   @default(false)
+  approvedAt  DateTime?
+  approvedBy  String?
+  createdAt   DateTime  @default(now())
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([isApproved])
+  @@index([platform])
+}
+
+model ProductVideo {
+  id           String    @id @default(cuid())
+  productId    String
+  platform     String    // tiktok|youtube_shorts|instagram_reels
+  videoUrl     String    // R2 URL of final video (with audio if combined)
+  audioUrl     String?   // R2 URL of ElevenLabs voiceover
+  thumbnailUrl String?   // R2 URL of mockup image used as thumbnail
+  duration     Int?      // seconds
+  isApproved   Boolean   @default(false)
+  isPosted     Boolean   @default(false)
+  approvedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  product      Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([platform])
+  @@index([isApproved])
+}
+
+model ContentCalendar {
+  id              String   @id @default(cuid())
+  weekStarting    DateTime
+  strategy        Json     // Gemini strategy output
+  contentCalendar Json     // Claude formatted content calendar (HTML + structured)
+  generatedBy     String   @default("ai")
+  createdAt       DateTime @default(now())
+
+  @@index([weekStarting])
+}
+
+model AiServiceLog {
+  id           String   @id @default(cuid())
+  service      String   // claude|openai-gpt4o|openai-gpt4o-mini|dalle3|whisper|elevenlabs|runway|stability|gemini|perplexity
+  operation    String   // e.g. customer-reply|mockup-generate|transcribe
+  model        String?  // specific model used
+  inputTokens  Int?     @default(0)
+  outputTokens Int?     @default(0)
+  imageCount   Int?     @default(0)
+  audioChars   Int?     @default(0)
+  durationSecs Int?     @default(0)
+  costUsd      Float?   @default(0) // calculated cost in USD
+  success      Boolean  @default(true)
+  error        String?
+  entityId     String?  // productId, orderId, etc.
+  entityType   String?  // product|order|customer
+  createdAt    DateTime @default(now())
+
+  @@index([service])
+  @@index([createdAt])
+  @@index([success])
+  @@index([entityId])
 }

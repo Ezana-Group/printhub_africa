@@ -396,7 +396,7 @@ export async function sendPickupConfirmationEmail(
         <p>Your order <strong>${orderNumber}</strong> is confirmed. You'll pay when you collect.</p>
         <p><strong>Pickup code:</strong> <span style="font-size: 1.2em; letter-spacing: 0.2em;">${pickupCode}</span></p>
         <p><strong>Amount to pay at collection:</strong> KSh ${totalKes.toLocaleString()}</p>
-        <p>We'll notify you when your order is ready. Bring this code to our Nairobi studio.</p>
+        <p>We'll notify you when your order is ready. Bring this code to our Eldoret location.</p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
     `;

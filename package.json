@@ -59,8 +59,6 @@
     "@tiptap/starter-kit": "^3.20.4",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.37.0",
-    "@vercel/analytics": "^2.0.1",
-    "@vercel/speed-insights": "^2.0.0",
     "adm-zip": "^0.5.16",
     "algoliasearch": "^5.49.2",
     "bcryptjs": "^3.0.3",
