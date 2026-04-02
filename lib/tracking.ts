@@ -7,6 +7,9 @@ import { prisma } from "@/lib/prisma";
 import { getBusinessPublic } from "@/lib/business-public";
 import { sendOrderStatusEmail } from "@/lib/email";
 import { sendSMS } from "@/lib/africas-talking";
+import { klaviyoPlacedOrder } from "@/lib/marketing/klaviyo";
+import { waOrderConfirmation, waShippingUpdate } from "@/lib/marketing/whatsapp";
+import { sendMetaConversionsEvent, sendTikTokEventsApi, sendSnapConversionsEvent } from "@/lib/marketing/conversions-api";
 
 export const TRACKING_EVENTS: Record<
   string,
@@ -135,6 +138,12 @@ export type CreateTrackingEventOptions = {
   courierRef?: string;
   isPublic?: boolean;
   createdBy?: string;
+  userData?: {
+    ip?: string;
+    userAgent?: string;
+    fbc?: string;
+    fbp?: string;
+  };
 };
 
 export async function createTrackingEvent(
@@ -169,5 +178,88 @@ export async function createTrackingEvent(
   }
   if (template.sendEmail) {
     void sendTrackingEmail(orderId, status);
+  }
+
+  // --- MARKETING TRIGGERS ---
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { 
+      shippingAddress: true, 
+      user: { select: { email: true, phone: true, name: true } },
+      items: { include: { product: true } } 
+    },
+  });
+
+  if (order) {
+    const email = order.shippingAddress?.email ?? order.user?.email;
+    const phone = order.shippingAddress?.phone ?? order.user?.phone;
+
+    if (status === "CONFIRMED") {
+      if (email) {
+        void klaviyoPlacedOrder(email, { 
+          id: order.id, 
+          total: Number(order.total), 
+          items: order.items.map(i => ({ id: i.productId, name: i.product?.name || "Product", unitPrice: Number(i.unitPrice), quantity: i.quantity }))
+        });
+        
+        if (options?.userData) {
+          const eventId = `order-${order.id}-${Date.now()}`;
+          const userData = { ...options.userData, email, phone };
+          
+          // Meta CAPI
+          sendMetaConversionsEvent({
+            eventName: "Purchase",
+            eventId,
+            userData,
+            customData: { value: Number(order.total), currency: "KES", order_id: order.id }
+          }).then((res: { success: boolean; error?: any }) => {
+            if (!res.success) logMarketingError("Meta CAPI", res.error, { orderId, eventId });
+          });
+
+          // TikTok CAPI
+          sendTikTokEventsApi({
+            event: "CompletePayment",
+            eventId,
+            userData,
+            customData: { value: Number(order.total), currency: "KES" }
+          }).then((res: { success: boolean; error?: any }) => {
+            if (!res.success) logMarketingError("TikTok API", res.error, { orderId, eventId });
+          });
+
+          // Snapchat CAPI
+          sendSnapConversionsEvent({
+            event: "PURCHASE",
+            eventId,
+            userData,
+            customData: { price: Number(order.total), currency: "KES", transaction_id: order.id }
+          }).then((res: { success: boolean; error?: any }) => {
+            if (!res.success) logMarketingError("Snap CAPI", res.error, { orderId, eventId });
+          });
+        }
+      }
+      if (phone) {
+        void waOrderConfirmation(phone, order.orderNumber, Number(order.total).toLocaleString());
+      }
+    }
+
+    if (status === "SHIPPED" && phone) {
+      void waShippingUpdate(phone, order.orderNumber, order.trackingNumber || undefined);
+    }
+  }
+}
+
+/** Logs marketing errors to the database for admin troubleshooting. */
+async function logMarketingError(channel: string, error: any, payload?: any) {
+  try {
+    // @ts-ignore - bypassing persistent prisma property linting after generation
+    await prisma.marketingErrorLog.create({
+      data: {
+        channel,
+        error: typeof error === "string" ? error : JSON.stringify(error),
+        payload: payload || null,
+      },
+    });
+  } catch (e) {
+    console.error("Failed to log marketing error:", e);
   }
 }

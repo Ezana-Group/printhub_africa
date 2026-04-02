@@ -5,6 +5,7 @@ import { capturePaymentFailure, capturePaymentSuccess } from "@/lib/sentry-event
 import { createInvoiceForOrder } from "@/lib/invoice-create";
 import { decrementStockForOrder } from "@/lib/stock";
 import { addOrderToProductionQueue } from "@/lib/production-queue";
+import { createTrackingEvent } from "@/lib/tracking";
 
 interface CallbackBody {
   Body: {
@@ -109,6 +110,14 @@ export async function POST(req: Request) {
     } catch (e) {
       console.error("Production queue add on M-Pesa callback:", e);
     }
+    
+    // Trigger marketing and tracking events
+    void createTrackingEvent(mpesa.payment.orderId, "CONFIRMED", {
+      userData: {
+        ip: req.headers.get("x-forwarded-for") || undefined,
+        userAgent: req.headers.get("user-agent") || undefined,
+      }
+    });
   } else {
     await prisma.mpesaTransaction.update({
       where: { id: mpesa.id },

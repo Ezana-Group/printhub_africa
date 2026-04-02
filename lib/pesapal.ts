@@ -1,14 +1,27 @@
-/**
- * PesaPal API v3 helpers for Kenya card/mobile payments.
- * Auth: RequestToken; Orders: SubmitOrderRequest.
- */
+import { prisma } from "./prisma";
 
 const SANDBOX_BASE = "https://cybqa.pesapal.com/pesapalv3";
 const PRODUCTION_BASE = "https://pay.pesapal.com/v3";
 
-function getBaseUrl(): string {
-  const env = (process.env.PESAPAL_ENV ?? "sandbox").toLowerCase();
-  return env === "production" || env === "live" ? PRODUCTION_BASE : SANDBOX_BASE;
+export async function getPesapalSettings() {
+  const row = await prisma.businessSettings.findUnique({
+    where: { id: "default" },
+    select: {
+      pesapalEnvironment: true,
+      pesapalConsumerKey: true,
+      pesapalConsumerSecret: true,
+    },
+  }).catch(() => null);
+
+  const env = (row?.pesapalEnvironment || process.env.PESAPAL_ENV || "sandbox").toLowerCase();
+  const baseUrl = env === "production" || env === "live" ? PRODUCTION_BASE : SANDBOX_BASE;
+
+  return {
+    env,
+    baseUrl,
+    consumerKey: row?.pesapalConsumerKey || process.env.PESAPAL_CONSUMER_KEY,
+    consumerSecret: row?.pesapalConsumerSecret || process.env.PESAPAL_CONSUMER_SECRET,
+  };
 }
 
 export interface PesapalAuthResponse {
@@ -22,13 +35,13 @@ export interface PesapalAuthResponse {
  * Get a bearer token (valid ~5 minutes). Call before SubmitOrderRequest.
  */
 export async function getPesapalAccessToken(): Promise<string> {
-  const key = process.env.PESAPAL_CONSUMER_KEY;
-  const secret = process.env.PESAPAL_CONSUMER_SECRET;
+  const settings = await getPesapalSettings();
+  const { consumerKey: key, consumerSecret: secret, baseUrl: base } = settings;
+
   if (!key || !secret) {
-    throw new Error("PESAPAL_CONSUMER_KEY and PESAPAL_CONSUMER_SECRET are required");
+    throw new Error("PesaPal Consumer Key and Secret are required");
   }
-  // [PesaPal] API — updated to use header auth + error handling
-  const base = getBaseUrl();
+
   const res = await fetch(`${base}/api/Auth/RequestToken`, {
     method: "POST",
     headers: {
@@ -90,9 +103,10 @@ export interface PesapalSubmitOrderResponse {
  * Submit an order to PesaPal; returns the redirect_url for the customer to complete payment.
  */
 export async function submitPesapalOrder(params: PesapalSubmitOrderParams): Promise<PesapalSubmitOrderResponse> {
+  const settings = await getPesapalSettings();
   const token = await getPesapalAccessToken();
-  const base = getBaseUrl();
-  // [PesaPal] API — updated to use header auth + error handling
+  const { baseUrl: base } = settings;
+  
   const res = await fetch(`${base}/api/Transactions/SubmitOrderRequest`, {
     method: "POST",
     headers: {
@@ -132,10 +146,11 @@ export async function getPesapalTransactionStatus(orderTrackingId: string): Prom
   amount?: number;
   message?: string;
 }> {
+  const settings = await getPesapalSettings();
   const token = await getPesapalAccessToken();
-  const base = getBaseUrl();
+  const { baseUrl: base } = settings;
   const url = `${base}/api/Transactions/GetTransactionStatus?orderTrackingId=${encodeURIComponent(orderTrackingId)}`;
-  // [PesaPal] API — updated to use header auth + error handling
+  
   const res = await fetch(url, {
     method: "GET",
     headers: {
@@ -158,10 +173,7 @@ export async function getPesapalTransactionStatus(orderTrackingId: string): Prom
   return data;
 }
 
-export function isPesapalConfigured(): boolean {
-  return !!(
-    process.env.PESAPAL_CONSUMER_KEY &&
-    process.env.PESAPAL_CONSUMER_SECRET &&
-    process.env.PESAPAL_NOTIFICATION_ID
-  );
+export async function isPesapalConfigured(): Promise<boolean> {
+  const settings = await getPesapalSettings();
+  return !!(settings.consumerKey && settings.consumerSecret);
 }

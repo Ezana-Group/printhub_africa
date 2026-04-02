@@ -34,6 +34,12 @@ export type BusinessPublic = {
   showStatsExperience: boolean;
   showStatsMachines: boolean;
   showStatsStaff: boolean;
+  ga4MeasurementId?: string | null;
+  hotjarSiteId?: string | null;
+  searchConsoleVerification?: string | null;
+  algoliaEnabled?: boolean;
+  whatsappFloatingButton?: boolean;
+  whatsappPrefilledMessage?: string | null;
 };
 
 const DEFAULTS: BusinessPublic = {
@@ -70,6 +76,12 @@ const DEFAULTS: BusinessPublic = {
   showStatsExperience: false,
   showStatsMachines: false,
   showStatsStaff: false,
+  ga4MeasurementId: null,
+  hotjarSiteId: null,
+  searchConsoleVerification: null,
+  algoliaEnabled: false,
+  whatsappFloatingButton: true,
+  whatsappPrefilledMessage: "Hi, I'd like to enquire about your printing services.",
 };
 
 export async function getBusinessPublic(): Promise<BusinessPublic> {
@@ -111,5 +123,11 @@ export async function getBusinessPublic(): Promise<BusinessPublic> {
     showStatsExperience: row.showStatsExperience ?? false,
     showStatsMachines: row.showStatsMachines ?? false,
     showStatsStaff: row.showStatsStaff ?? false,
+    ga4MeasurementId: row.ga4MeasurementId,
+    hotjarSiteId: row.hotjarSiteId,
+    searchConsoleVerification: row.searchConsoleVerification,
+    algoliaEnabled: row.algoliaEnabled ?? false,
+    whatsappFloatingButton: row.whatsappFloatingButton ?? true,
+    whatsappPrefilledMessage: row.whatsappPrefilledMessage ?? DEFAULTS.whatsappPrefilledMessage,
   };
 }

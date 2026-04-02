@@ -10,6 +10,7 @@ import { formatDescription } from "@/lib/utils";
 import { LicenceBadge } from "@/components/catalogue/LicenceBadge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { ViewContentTracker } from "@/components/marketing/ViewContentTracker";
 
 export const dynamic = "force-dynamic";
 
@@ -21,12 +22,49 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const product = await prisma.product.findFirst({
     where: { slug, isActive: true },
-    select: { name: true, shortDescription: true, metaTitle: true, metaDescription: true, images: true },
+    select: { 
+      name: true, 
+      shortDescription: true, 
+      metaTitle: true, 
+      metaDescription: true, 
+      images: true,
+      basePrice: true,
+      availability: true,
+      variants: { select: { price: true }, take: 1 },
+    },
   });
   if (!product) return { title: "Shop | PrintHub Kenya" };
+  const title = product.metaTitle ?? `${product.name} | PrintHub Kenya`;
+  const description = product.metaDescription ?? product.shortDescription ?? undefined;
+  const image = product.images?.[0] || "/images/og/default-og.webp";
+
+  const url = `${process.env.NEXT_PUBLIC_APP_URL}/shop/${slug}`;
+  const price = product.variants?.[0]?.price ?? product.basePrice;
+
   return {
-    title: product.metaTitle ?? `${product.name} | PrintHub Kenya`,
-    description: product.metaDescription ?? product.shortDescription ?? undefined,
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      siteName: "PrintHub Africa",
+      images: [{ url: image, width: 1200, height: 630 }],
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [image],
+    },
+    other: {
+      "product:price:amount": Number(price).toString(),
+      "product:price:currency": "KES",
+      "product:availability": product.availability === "IN_STOCK" ? "instock" : "out of stock",
+      "og:product:condition": "new",
+    }
   };
 }
 
@@ -52,6 +90,14 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <div className="bg-white min-h-screen">
+      <ViewContentTracker 
+        product={{ 
+          id: product.id, 
+          name: product.name, 
+          price: Number(product.basePrice), 
+          category: product.category?.name 
+        }} 
+      />
       <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-4 md:py-8">
         {/* Breadcrumbs */}
         <nav className="mb-8 text-[13px] font-medium text-slate-400 flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-2 scrollbar-hide">

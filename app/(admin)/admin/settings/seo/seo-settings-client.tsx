@@ -6,25 +6,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Loader2 } from "lucide-react";
+import { Loader2, Globe, Search, MessageSquare, Twitter } from "lucide-react";
 import { useState } from "react";
 
 type SeoSettings = {
-  id?: string;
-  siteName?: string;
-  siteTagline?: string;
-  metaTitleTemplate?: string;
-  defaultMetaDescription?: string;
-  googleVerification?: string;
-  bingVerification?: string;
+  seoSiteName?: string;
+  seoTagline?: string;
+  seoDefaultTitle?: string;
+  seoDefaultDescription?: string;
+  googleSiteVerification?: string;
   canonicalDomain?: string;
   twitterHandle?: string;
   twitterCardType?: string;
-  defaultOgImageUrl?: string;
+  defaultOgImage?: string;
   robotsTxt?: string;
   sitemapIncludePages?: boolean;
   sitemapIncludeProducts?: boolean;
-  sitemapIncludeBlog?: boolean;
   sitemapIncludeCategories?: boolean;
 };
 
@@ -34,7 +31,7 @@ export function SeoSettingsClient() {
 
   const handleRegenerateSitemap = async () => {
     try {
-      const res = await fetch("/api/admin/settings/seo/sitemap/generate", { method: "POST" });
+      const res = await fetch("/api/admin/settings/seo/sitemap-regenerate", { method: "POST" });
       const json = await res.json().catch(() => ({}));
       if (res.ok) setSitemapMessage(`✓ Sitemap regenerated at ${new Date().toLocaleTimeString()}`);
       else setSitemapMessage(json.error ?? "Failed");
@@ -45,130 +42,187 @@ export function SeoSettingsClient() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-muted-foreground">
+      <div className="flex items-center gap-2 text-muted-foreground py-10">
         <Loader2 className="h-5 w-5 animate-spin" />
-        Loading…
+        Loading SEO configuration…
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <form id="settings-seo" className="space-y-6">
-        <SectionCard title="Global SEO" description="Site name, tagline, default meta title and description.">
-          <div className="grid gap-2">
-            <Label>Site name</Label>
-            <Input
-              value={data?.siteName ?? ""}
-              onChange={(e) => patch({ siteName: e.target.value })}
-            />
-            <Label>Site tagline</Label>
-            <Input
-              value={data?.siteTagline ?? ""}
-              onChange={(e) => patch({ siteTagline: e.target.value })}
-            />
-            <Label>Default meta title template</Label>
-            <Input
-              value={data?.metaTitleTemplate ?? ""}
-              onChange={(e) => patch({ metaTitleTemplate: e.target.value })}
-            />
-            <Label>Default meta description (160 chars max)</Label>
-            <Input
-              placeholder="Meta description"
-              maxLength={160}
-              value={data?.defaultMetaDescription ?? ""}
-              onChange={(e) => patch({ defaultMetaDescription: e.target.value })}
-            />
-            <Label>Google site verification</Label>
-            <Input
-              placeholder="Paste meta tag content"
-              value={data?.googleVerification ?? ""}
-              onChange={(e) => patch({ googleVerification: e.target.value })}
-            />
-            <Label>Canonical domain</Label>
-            <Input value={data?.canonicalDomain ?? "https://printhub.africa"} readOnly className="bg-muted" />
-          </div>
-        </SectionCard>
-        <SectionCard title="Sitemap" description="Include pages, products, categories. Regenerate on demand.">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={data?.sitemapIncludePages ?? true}
-                onCheckedChange={(v) => patch({ sitemapIncludePages: v })}
+      <form id="settings-seo" className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+        <SectionCard 
+          title="Global Search Engine Optimization" 
+          description="Control how your site appears in search results."
+        >
+          <div className="grid gap-4">
+            <div className="grid gap-2">
+              <Label>Site Name</Label>
+              <Input
+                value={data?.seoSiteName ?? ""}
+                onChange={(e) => patch({ seoSiteName: e.target.value })}
+                placeholder="e.g. PrintHub Africa"
               />
-              <Label>Pages</Label>
             </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={data?.sitemapIncludeProducts ?? true}
-                onCheckedChange={(v) => patch({ sitemapIncludeProducts: v })}
+            <div className="grid gap-2">
+              <Label>Site Tagline</Label>
+              <Input
+                value={data?.seoTagline ?? ""}
+                onChange={(e) => patch({ seoTagline: e.target.value })}
+                placeholder="e.g. Printing the Future, Made in Kenya"
               />
-              <Label>Products</Label>
             </div>
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={data?.sitemapIncludeCategories ?? true}
-                onCheckedChange={(v) => patch({ sitemapIncludeCategories: v })}
+            <div className="grid gap-2">
+              <Label>Default Meta Title</Label>
+              <Input
+                value={data?.seoDefaultTitle ?? ""}
+                onChange={(e) => patch({ seoDefaultTitle: e.target.value })}
+                placeholder="Primary title for the homepage"
               />
-              <Label>Categories</Label>
+              <p className="text-xs text-muted-foreground italic">Recommended: 50-60 characters.</p>
+            </div>
+            <div className="grid gap-2">
+              <Label>Default Meta Description</Label>
+              <textarea
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                maxLength={160}
+                value={data?.seoDefaultDescription ?? ""}
+                onChange={(e) => patch({ seoDefaultDescription: e.target.value })}
+                placeholder="Summary of your business for search engines..."
+              />
+              <p className="text-xs text-muted-foreground italic">Max 160 characters.</p>
+            </div>
+            <div className="grid gap-2">
+              <Label>Canonical Domain</Label>
+              <Input 
+                value={data?.canonicalDomain ?? "https://printhub.africa"} 
+                onChange={(e) => patch({ canonicalDomain: e.target.value })}
+                placeholder="https://yourdomain.com"
+              />
+              <p className="text-xs text-muted-foreground italic">Ensures all URLs point to a single authoritative domain.</p>
             </div>
           </div>
-          <p className="mt-2 text-sm text-muted-foreground">URL: https://printhub.africa/sitemap.xml</p>
-          <Button type="button" variant="outline" size="sm" className="mt-2" onClick={handleRegenerateSitemap}>
-            Regenerate Now
-          </Button>
-          {sitemapMessage && <p className="mt-2 text-sm text-green-600">{sitemapMessage}</p>}
         </SectionCard>
-        <SectionCard title="Robots.txt" description="Disallow /admin/, /api/, /account/. Allow /. Sitemap URL.">
-          <textarea
-            className="w-full min-h-[120px] rounded-md border border-input bg-background px-3 py-2 font-mono text-sm"
-            value={data?.robotsTxt ?? ""}
-            onChange={(e) => patch({ robotsTxt: e.target.value })}
-            placeholder="User-agent: *&#10;Disallow: /admin/&#10;..."
-          />
+
+        <SectionCard 
+          title="Sitemap & Indexing" 
+          description="Configure which sections of your site should be crawled by search engines."
+        >
+          <div className="grid gap-6">
+            <div className="flex flex-wrap items-center gap-6">
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={data?.sitemapIncludePages ?? true}
+                  onCheckedChange={(v) => patch({ sitemapIncludePages: v })}
+                />
+                <Label>Include Static Pages</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={data?.sitemapIncludeProducts ?? true}
+                  onCheckedChange={(v) => patch({ sitemapIncludeProducts: v })}
+                />
+                <Label>Include Products</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={data?.sitemapIncludeCategories ?? true}
+                  onCheckedChange={(v) => patch({ sitemapIncludeCategories: v })}
+                />
+                <Label>Include Categories</Label>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t">
+              <Label className="block mb-2">Robots.txt Rules</Label>
+              <textarea
+                className="w-full min-h-[120px] rounded-md border border-input bg-background px-3 py-2 font-mono text-sm"
+                value={data?.robotsTxt ?? ""}
+                onChange={(e) => patch({ robotsTxt: e.target.value })}
+                placeholder="User-agent: *&#10;Disallow: /admin/&#10;..."
+              />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Button type="button" variant="outline" size="sm" onClick={handleRegenerateSitemap}>
+                Regenerate Sitemap
+              </Button>
+              {sitemapMessage && <p className="text-sm text-green-600 font-medium">{sitemapMessage}</p>}
+            </div>
+          </div>
         </SectionCard>
-        <SectionCard title="Open Graph / Social" description="Default OG image 1200×630. Twitter card, handle.">
-          <Label>Twitter card type</Label>
-          <select
-            className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            value={data?.twitterCardType ?? "summary_large_image"}
-            onChange={(e) => patch({ twitterCardType: e.target.value })}
-          >
-            <option value="summary_large_image">summary_large_image</option>
-            <option value="summary">summary</option>
-          </select>
-          <Label className="mt-4 block">Twitter handle</Label>
-          <Input
-            value={data?.twitterHandle ?? ""}
-            onChange={(e) => patch({ twitterHandle: e.target.value })}
-          />
+
+        <SectionCard 
+          title="Verification & Social" 
+          description="External service verification and social sharing (Open Graph) defaults."
+        >
+          <div className="grid gap-4">
+            <div className="grid gap-2">
+              <Label>Google Site Verification</Label>
+              <Input
+                placeholder="Paste code from Google Search Console"
+                value={data?.googleSiteVerification ?? ""}
+                onChange={(e) => patch({ googleSiteVerification: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Default OG Image URL</Label>
+              <Input
+                value={data?.defaultOgImage ?? ""}
+                onChange={(e) => patch({ defaultOgImage: e.target.value })}
+                placeholder="https://domain.com/default-og.png"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>Twitter Handle</Label>
+                <Input
+                  value={data?.twitterHandle ?? ""}
+                  onChange={(e) => patch({ twitterHandle: e.target.value })}
+                  placeholder="@yourbusiness"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Twitter Card Type</Label>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  value={data?.twitterCardType ?? "summary_large_image"}
+                  onChange={(e) => patch({ twitterCardType: e.target.value })}
+                >
+                  <option value="summary_large_image">Summary Large Image</option>
+                  <option value="summary">Summary</option>
+                </select>
+              </div>
+            </div>
+          </div>
         </SectionCard>
       </form>
 
       {isDirty && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white px-6 py-3 shadow-lg">
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-sm text-amber-600">
-              <span className="h-2 w-2 rounded-full bg-amber-500" />
-              Unsaved changes
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/80 backdrop-blur-md px-6 py-4 shadow-xl">
+          <div className="max-w-4xl mx-auto flex items-center justify-between">
+            <span className="flex items-center gap-2 text-sm text-amber-600 font-medium">
+              <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+              Unsaved changes in SEO configuration
             </span>
             <div className="flex gap-3">
-              <button type="button" onClick={discard} className="rounded-md px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700">
+              <Button variant="ghost" type="button" onClick={discard}>
                 Discard
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                onClick={() => save().then(() => {}).catch(() => {})}
+                onClick={() => save()}
                 disabled={saving}
-                className="rounded-md bg-[#FF4D00] px-4 py-1.5 text-sm text-white disabled:opacity-60"
+                className="bg-[#FF4D00] hover:bg-[#E64500] text-white"
               >
-                {saving ? "Saving…" : "Save Changes"}
-              </button>
+                {saving ? "Saving…" : "Save SEO Settings"}
+              </Button>
             </div>
           </div>
         </div>
       )}
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-sm text-destructive font-medium mt-2">{error}</p>}
     </div>
   );
 }

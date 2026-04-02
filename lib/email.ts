@@ -1,6 +1,45 @@
 import { Resend } from "resend";
 import { getBusinessPublic } from "@/lib/business-public";
 import { getEmailTemplate, renderTemplate } from "@/lib/email-templates";
+import { prisma } from "@/lib/prisma";
+
+export type AdminAlertEvent = 
+  | "New Order" | "Payment Received" | "Payment Failed" | "New Upload" 
+  | "Quote Request" | "Quote Accepted" | "Cancellation" | "Refund" 
+  | "Corporate Application" | "Low Stock" | "Maintenance Alert" 
+  | "Support Ticket" | "Negative Review";
+
+export async function sendAdminAlert({
+  event,
+  subject,
+  html,
+}: {
+  event: AdminAlertEvent;
+  subject: string;
+  html: string;
+}) {
+  const settings = await prisma.businessSettings.findUnique({
+    where: { id: "default" },
+    select: { adminAlertEmail: true, adminAlertEvents: true },
+  }).catch(() => null);
+
+  if (!settings?.adminAlertEmail) return;
+
+  const enabledEvents = Array.isArray(settings.adminAlertEvents) 
+    ? (settings.adminAlertEvents as string[]) 
+    : [];
+
+  if (!enabledEvents.includes(event)) {
+    console.log(`[AdminAlert] Event ${event} is disabled. Skipping email.`);
+    return;
+  }
+
+  return sendEmail({
+    to: settings.adminAlertEmail,
+    subject: `[Admin Alert] ${event}: ${subject}`,
+    html,
+  });
+}
 
 async function getEmailBranding() {
   const b = await getBusinessPublic();
@@ -10,6 +49,23 @@ async function getEmailBranding() {
 }
 
 const defaultFrom = process.env.FROM_EMAIL ?? "PrintHub <hello@printhub.africa>";
+
+async function getEmailSettings() {
+  const row = await prisma.businessSettings.findUnique({
+    where: { id: "default" },
+    select: {
+      resendApiKey: true,
+      emailFromName: true,
+      emailFrom: true,
+    },
+  }).catch(() => null);
+
+  return {
+    apiKey: row?.resendApiKey || process.env.RESEND_API_KEY,
+    fromName: row?.emailFromName,
+    fromEmail: row?.emailFrom,
+  };
+}
 
 export async function sendEmail({
   to,
@@ -24,13 +80,24 @@ export async function sendEmail({
   text?: string;
   fromOverride?: string;
 }) {
-  if (!process.env.RESEND_API_KEY) {
-    console.warn("RESEND_API_KEY not set; email not sent:", { to, subject });
+  const settings = await getEmailSettings();
+
+  if (!settings.apiKey) {
+    console.warn("Resend API key not set; email not sent:", { to, subject });
     return { success: false, error: "email_not_configured" };
   }
-  const resend = new Resend(process.env.RESEND_API_KEY);
+
+  const resend = new Resend(settings.apiKey);
+
+  let from = fromOverride ?? defaultFrom;
+  if (!fromOverride && settings.fromEmail) {
+    from = settings.fromName 
+      ? `${settings.fromName} <${settings.fromEmail}>`
+      : settings.fromEmail;
+  }
+
   const payload: { from: string; to: string[]; subject: string; html?: string; text?: string } = {
-    from: fromOverride ?? defaultFrom,
+    from,
     to: [to],
     subject,
   };
@@ -38,7 +105,6 @@ export async function sendEmail({
   else if (text) payload.text = text;
   else payload.text = subject;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await resend.emails.send(payload as any);
   if (error) throw error;
   return data;

@@ -31,6 +31,8 @@ const updateSchema = z.object({
   tags: z.array(z.string().max(50)).optional(),
 });
 
+import { detectBackInStock } from "@/lib/marketing/back-in-stock";
+
 export async function PATCH(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> }
@@ -44,6 +46,17 @@ export async function PATCH(
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
   const data = parsed.data;
+
+  // --- Fetch current product for stock comparison ---
+  const currentProduct = await prisma.product.findUnique({
+    where: { id },
+    select: { stock: true, slug: true, categoryId: true },
+  });
+
+  if (!currentProduct) {
+    return NextResponse.json({ error: "Product not found" }, { status: 404 });
+  }
+
   if (data.slug !== undefined) {
     const existing = await prisma.product.findFirst({
       where: { slug: data.slug, NOT: { id } },
@@ -54,9 +67,7 @@ export async function PATCH(
   }
   let skuUpdate: string | null | undefined = data.sku;
   if (data.sku !== undefined && (data.sku === null || (typeof data.sku === "string" && !data.sku.trim()))) {
-    const categoryIdForSku =
-      data.categoryId ??
-      (await prisma.product.findUnique({ where: { id }, select: { categoryId: true } }))?.categoryId;
+    const categoryIdForSku = data.categoryId ?? currentProduct.categoryId;
     skuUpdate = await generateNextProductSku(categoryIdForSku ?? undefined);
   } else if (data.sku !== undefined && typeof data.sku === "string" && data.sku.trim()) {
     const existingBySku = await prisma.product.findFirst({
@@ -97,6 +108,12 @@ export async function PATCH(
       where: { id },
       data: updateData,
     });
+
+    // --- Trigger Back-In-Stock if applicable ---
+    if (data.stock !== undefined) {
+      void detectBackInStock(id, currentProduct.stock, data.stock);
+    }
+
     revalidateTag("products");
     revalidateTag("homepage");
     revalidatePath("/shop");

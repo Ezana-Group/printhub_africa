@@ -5,23 +5,16 @@ import { prisma } from "@/lib/prisma";
 import { sendVerificationEmail } from "@/lib/email";
 import { generateToken, getVerifyEmailExpiry } from "@/lib/tokens";
 import { rateLimit, getRateLimitClientIp } from "@/lib/rate-limit";
-
-const passwordSchema = z
-  .string()
-  .min(8, "At least 8 characters")
-  .regex(/[a-z]/, "Password must include a lowercase letter")
-  .regex(/[A-Z]/, "Password must include an uppercase letter")
-  .regex(/[0-9]/, "Password must include a number")
-  .regex(/[^a-zA-Z0-9]/, "Password must include a special character (e.g. !@#$%)");
+import { getPasswordPolicy, validatePasswordAgainstPolicy } from "@/lib/password-utils";
 
 const schema = z
   .object({
     email: z.string().email(),
-    password: passwordSchema,
+    password: z.string(), // Validation moved to logical check against DB policy
     confirmPassword: z.string().min(1, "Please confirm your password"),
     firstName: z.string().min(1, "First name is required").max(100),
     lastName: z.string().min(1, "Last name is required").max(100),
-    acceptTerms: z.literal(true).optional(), // optional for backwards compatibility; frontend enforces
+    acceptTerms: z.literal(true).optional(), 
     marketingConsent: z.boolean().optional().default(false),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -47,6 +40,14 @@ export async function POST(req: Request) {
       );
     }
     const { email, password, firstName, lastName, marketingConsent = false } = parsed.data;
+
+    // Password Policy Validation
+    const policy = await getPasswordPolicy();
+    const validation = validatePasswordAgainstPolicy(password, policy);
+    if (!validation.valid) {
+      return NextResponse.json({ error: { password: validation.errors } }, { status: 400 });
+    }
+
     // confirmPassword was already validated by refine()
     const fullName = [firstName.trim(), lastName.trim()].filter(Boolean).join(" ");
 
@@ -65,6 +66,8 @@ export async function POST(req: Request) {
         email,
         name: fullName || null,
         passwordHash,
+        passwordChangedAt: now,
+        passwordHistory: [passwordHash],
         acceptedTermsAt: now,
         termsVersion: "1.0",
         marketingConsent,

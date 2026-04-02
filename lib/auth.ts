@@ -212,6 +212,48 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Account locked. Try again after 15 minutes.");
         }
 
+        // --- SECURITY & POLICY CHECKS ---
+        const businessSettings = await prisma.businessSettings.findUnique({
+          where: { id: "default" },
+          select: { passwordPolicy: true, twoFactorPolicy: true, sessionSettings: true },
+        });
+        const passwordPolicy = (businessSettings?.passwordPolicy as any) || {};
+        const twoFactorPolicy = (businessSettings?.twoFactorPolicy as any) || {
+          superAdmin: "Enforced",
+          admin: "Enforced",
+          staff: "Recommended",
+          customer: "Optional",
+        };
+        const sessionSettings = (businessSettings?.sessionSettings as any) || { concurrentAdminMax: 3 };
+
+        // 1. Password Expiry Check
+        if (user.passwordExpired) {
+          throw new Error("PASSWORD_EXPIRED");
+        }
+        if (passwordPolicy.passwordExpiry && passwordPolicy.passwordExpiry !== "Never") {
+          let days = 90;
+          if (passwordPolicy.passwordExpiry === "30 days") days = 30;
+          else if (passwordPolicy.passwordExpiry === "180 days") days = 180;
+          else if (passwordPolicy.passwordExpiry === "1 year") days = 365;
+
+          const cutoff = new Date();
+          cutoff.setDate(cutoff.getDate() - days);
+          if (user.passwordChangedAt && user.passwordChangedAt < cutoff) {
+            await prisma.user.update({ where: { id: user.id }, data: { passwordExpired: true } });
+            throw new Error("PASSWORD_EXPIRED");
+          }
+        }
+
+        // 2. Concurrent Session Check (Admins only)
+        if (["ADMIN", "SUPER_ADMIN", "STAFF"].includes(user.role)) {
+          const activeSessions = await prisma.session.count({
+            where: { userId: user.id, expires: { gt: new Date() } },
+          });
+          if (activeSessions >= (sessionSettings.concurrentAdminMax || 3)) {
+            throw new Error("MAX_SESSIONS_REACHED");
+          }
+        }
+
         const valid = await bcrypt.compare(credentials.password, user.passwordHash);
         if (!valid) {
           const attempts = (user.failedLoginAttempts ?? 0) + 1;
@@ -402,12 +444,18 @@ export const authOptions: NextAuthOptions = {
       }
       if (user) {
         token.id = user.id;
-        const dbU = user as { role?: string; emailVerified?: Date | boolean; displayName?: string; phone?: string; name?: string };
+        const dbU = user as any;
         token.role = dbU.role ?? "CUSTOMER";
         token.emailVerified = !!dbU.emailVerified;
         token.displayName = dbU.displayName;
         token.phone = dbU.phone;
         token.name = dbU.name;
+        token.lastActiveAt = Date.now();
+      } else {
+        // Throttled update to activity timestamp
+        if (!token.lastActiveAt || Date.now() - (token.lastActiveAt as number) > 5 * 60 * 1000) {
+          token.lastActiveAt = Date.now();
+        }
       }
       // Corporate: add corporate membership to token for approved accounts (cached, 5 min TTL)
       const userId = token.id as string;
@@ -466,16 +514,17 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as { id?: string }).id = token.id as string;
-        (session.user as { role?: string }).role = token.role as string;
-        (session.user as { permissions?: string[] }).permissions = token.permissions as string[] | undefined;
-        (session.user as { isCorporate?: boolean }).isCorporate = token.isCorporate as boolean | undefined;
-        (session.user as { corporateId?: string }).corporateId = token.corporateId as string | undefined;
-        (session.user as { corporateRole?: string }).corporateRole = token.corporateRole as string | undefined;
-        (session.user as { corporateTier?: string }).corporateTier = token.corporateTier as string | undefined;
-        (session.user as { emailVerified?: boolean }).emailVerified = token.emailVerified as boolean | undefined;
-        (session.user as { displayName?: string | null }).displayName = token.displayName as string | null | undefined;
-        (session.user as { phone?: string | null }).phone = token.phone as string | null | undefined;
+        (session.user as any).id = token.id as string;
+        (session.user as any).role = token.role as string;
+        (session.user as any).permissions = token.permissions as string[] | undefined;
+        (session.user as any).isCorporate = token.isCorporate as boolean | undefined;
+        (session.user as any).corporateId = token.corporateId as string | undefined;
+        (session.user as any).corporateRole = token.corporateRole as string | undefined;
+        (session.user as any).corporateTier = token.corporateTier as string | undefined;
+        (session.user as any).emailVerified = token.emailVerified as boolean | undefined;
+        (session.user as any).displayName = token.displayName as string | null | undefined;
+        (session.user as any).phone = token.phone as string | null | undefined;
+        (session.user as any).lastActiveAt = token.lastActiveAt as number | undefined;
         session.user.name = token.name as string | null | undefined;
       }
       return session;
@@ -488,6 +537,16 @@ export const authOptions: NextAuthOptions = {
         return baseUrl;
       }
       return baseUrl;
+    },
+  },
+  events: {
+    async session({ session }) {
+      if (session?.user?.id) {
+        await prisma.user.update({
+          where: { id: (session.user as any).id },
+          data: { lastActiveAt: new Date() },
+        }).catch(() => {});
+      }
     },
   },
   secret: process.env.NEXTAUTH_SECRET,

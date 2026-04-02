@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getPesapalTransactionStatus } from "@/lib/pesapal";
 import { decrementStockForOrder } from "@/lib/stock";
+import { createTrackingEvent } from "@/lib/tracking";
 
 /**
  * POST /api/payments/pesapal/callback
@@ -74,6 +75,14 @@ export async function POST(req: NextRequest) {
       } catch (e) {
         console.error("Stock decrement on PesaPal callback:", e);
       }
+
+      // Trigger marketing and tracking events
+      void createTrackingEvent(order.id, "CONFIRMED", {
+        userData: {
+          ip: req.headers.get("x-forwarded-for") || undefined,
+          userAgent: req.headers.get("user-agent") || undefined,
+        }
+      });
     }
     return NextResponse.json({ message: "OK" });
   } catch (e) {

@@ -1,36 +1,45 @@
-/**
- * Audit logging for admin actions. Uses AuditLog model (entity, entityId, action, after).
- */
-import { prisma } from "@/lib/prisma";
+import { prisma } from "./prisma";
 
-export type AuditParams = {
+export interface AuditEntry {
   userId?: string;
   action: string;
   entity?: string;
   entityId?: string;
-  /** @deprecated Use entityId instead; if entityId is omitted, targetId is used. */
-  targetId?: string;
-  /** @deprecated Use entity instead; if entity is omitted, category is used as entity. */
-  category?: string;
-  details?: string;
-  after?: Record<string, unknown>;
-  request?: Request;
-};
+  before?: any;
+  after?: any;
+  ipAddress?: string;
+  details?: any;
+  category?: string; // For backward compatibility
+  request?: Request; // For backward compatibility
+}
 
-export async function writeAudit(params: AuditParams): Promise<void> {
-  const entity = params.entity ?? params.category ?? "Unknown";
-  const entityId = params.entityId ?? params.targetId;
-  const payload = { ...(params.after ?? {}), ...(params.details != null ? { details: params.details } : {}) };
-  prisma.auditLog
-    .create({
+export async function createAuditLog(entry: AuditEntry) {
+  try {
+    let ip = entry.ipAddress;
+    if (!ip && entry.request) {
+      ip = entry.request.headers.get("x-forwarded-for") || undefined;
+    }
+
+    return await prisma.auditLog.create({
       data: {
-        userId: params.userId,
-        action: params.action,
-        entity,
-        entityId,
-        after: Object.keys(payload).length ? payload : undefined,
-        ipAddress: params.request?.headers.get("x-forwarded-for") ?? params.request?.headers.get("x-real-ip") ?? undefined,
+        userId: entry.userId,
+        action: entry.action,
+        entity: entry.entity || entry.category || "SYSTEM",
+        entityId: entry.entityId,
+        before: entry.before ? JSON.parse(JSON.stringify(entry.before)) : undefined,
+        after: entry.after ? JSON.parse(JSON.stringify(entry.after)) : undefined,
+        ipAddress: ip,
+        // If there's an extra details field in the schema, we'd use it. 
+        // AuditLog model: userId, action, entity, entityId, before, after, ipAddress, createdAt
       },
-    })
-    .catch((err) => console.error("Audit log write failed:", err));
+    });
+  } catch (error) {
+    console.error("[AuditLog] Error creating audit log entry:", error);
+    return null;
+  }
+}
+
+/** Backward compatibility wrapper for existing code */
+export async function writeAudit(params: AuditEntry) {
+  return createAuditLog(params);
 }

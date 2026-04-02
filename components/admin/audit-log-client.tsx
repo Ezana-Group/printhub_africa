@@ -33,6 +33,7 @@ export function AuditLogClient() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [q, setQ] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -54,6 +55,33 @@ export function AuditLogClient() {
 
   const applyFilters = () => {
     setPage(1);
+  };
+
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      const params = new URLSearchParams();
+      if (from) params.set("from", from);
+      if (to) params.set("to", to);
+      if (q.trim()) params.set("q", q.trim());
+      
+      const res = await fetch(`/api/admin/settings/audit-log/export?${params}`);
+      if (!res.ok) throw new Error("Export failed");
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `audit-log-${new Date().toISOString().split("T")[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Export error:", error);
+      alert("Failed to export audit log.");
+    } finally {
+      setExporting(false);
+    }
   };
 
   const formatTs = (ts: string) => {
@@ -90,6 +118,20 @@ export function AuditLogClient() {
         <Button type="button" variant="outline" size="sm" onClick={applyFilters}>
           Apply
         </Button>
+        <div className="flex-1" />
+        <Button 
+          type="button" 
+          variant="default" 
+          size="sm" 
+          onClick={handleExport}
+          disabled={exporting}
+          className="bg-primary hover:bg-primary/90"
+        >
+          {exporting ? "Exporting..." : "Export CSV"}
+        </Button>
+      </div>
+      <div className="mb-4 text-xs text-muted-foreground italic">
+        Showing {data?.logs?.length || 0} of {data?.total || 0} total entries
       </div>
       {loading ? (
         <p className="text-sm text-muted-foreground py-8">Loading...</p>

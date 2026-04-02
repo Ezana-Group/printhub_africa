@@ -2,13 +2,21 @@ import { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
 import { JobStatus } from "@prisma/client";
 
-const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://printhub.africa";
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const seo = await prisma.seoSettings.findUnique({ where: { id: "default" } }).catch(() => null);
-  const includePages = seo?.sitemapIncludePages ?? true;
-  const includeProducts = seo?.sitemapIncludeProducts ?? true;
-  const includeCategories = seo?.sitemapIncludeCategories ?? true;
+  const settings = await prisma.businessSettings.findUnique({ 
+    where: { id: "default" },
+    select: {
+      sitemapIncludePages: true,
+      sitemapIncludeProducts: true,
+      sitemapIncludeCategories: true,
+      canonicalDomain: true,
+    }
+  }).catch(() => null);
+
+  const base = settings?.canonicalDomain || process.env.NEXT_PUBLIC_APP_URL || "https://printhub.africa";
+  const includePages = settings?.sitemapIncludePages ?? true;
+  const includeProducts = settings?.sitemapIncludeProducts ?? true;
+  const includeCategories = settings?.sitemapIncludeCategories ?? true;
 
   const staticPages = includePages
     ? [
@@ -72,7 +80,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .findMany({ where: { isActive: true }, select: { slug: true } })
       .then((rows) =>
         rows.map((r) => ({
-          url: `${base}/shop/category/${r.slug}`,
+          url: `${base}/shop?category=${r.slug}`,
           lastModified: new Date(),
           changeFrequency: "monthly" as const,
           priority: 0.6,
@@ -99,11 +107,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
+  const feedUrls: MetadataRoute.Sitemap = [
+    { url: `${base}/api/products/feed`, lastModified: new Date(), changeFrequency: "always", priority: 0.5 },
+    { url: `${base}/api/products/google`, lastModified: new Date(), changeFrequency: "always", priority: 0.5 },
+    { url: `${base}/api/products/tiktok`, lastModified: new Date(), changeFrequency: "always", priority: 0.5 },
+  ];
+
   return [
     ...staticPages,
     ...(Array.isArray(jobSlugs) ? jobSlugs : []),
     ...productUrls,
     ...categoryUrls,
     ...catalogueItemUrls,
+    ...feedUrls,
   ];
 }
+
+

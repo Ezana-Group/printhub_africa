@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/store/cart-store";
 import type { CartItem } from "@/store/cart-store";
+import { trackAddToCart } from "@/lib/marketing/event-tracker";
 
 interface Variant {
   id: string;
@@ -62,6 +63,14 @@ export function AddToCartButton({
       colorHex: selectedColor?.hex,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any; // Cast as any because we added colors to ShopCartItem in store
+
+    trackAddToCart({
+      id: productId,
+      name: name,
+      price: price,
+      quantity: quantity,
+    });
+
     addItem(item);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);

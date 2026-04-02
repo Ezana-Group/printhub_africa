@@ -5,9 +5,13 @@ import { requireRole } from "@/lib/settings-api";
 export async function GET(req: Request) {
   const auth = await requireRole(req, "SUPER_ADMIN");
   if (auth instanceof NextResponse) return auth;
-  const sys = await prisma.systemSettings.findUnique({
+  const sys = await prisma.businessSettings.findUnique({
     where: { id: "default" },
-    select: { pendingFactoryReset: true, factoryResetExecuteAt: true, factoryResetInitiatedBy: true },
+    select: { 
+      pendingFactoryReset: true, 
+      factoryResetExecuteAt: true, 
+      factoryResetInitiatedBy: true 
+    },
   });
   if (!sys?.pendingFactoryReset || !sys.factoryResetExecuteAt) {
     return NextResponse.json({ pending: false });

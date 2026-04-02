@@ -4,8 +4,7 @@
  * Production: https://api.safaricom.co.ke
  */
 
-import { MPESA_BASE_URL, getAccessToken, formatPhone } from "@/lib/mpesa-utils";
-
+import { getAccessToken, formatPhone, getMpesaSettings } from "@/lib/mpesa-utils";
 
 export interface StkPushResult {
   MerchantRequestID: string;
@@ -21,12 +20,12 @@ export async function stkPush(
   accountReference: string,
   transactionDesc: string
 ): Promise<StkPushResult> {
-  const shortcode = process.env.MPESA_SHORTCODE;
-  const passkey = process.env.MPESA_PASSKEY;
-  const callbackUrl = process.env.MPESA_CALLBACK_URL;
+  const settings = await getMpesaSettings();
+  const { shortCode: shortcode, passkey, baseUrl } = settings;
+  const callbackUrl = process.env.MPESA_CALLBACK_URL || `${process.env.NEXT_PUBLIC_APP_URL}/api/payments/mpesa/callback`;
 
-  if (!shortcode || !passkey || !callbackUrl) {
-    throw new Error("MPESA_SHORTCODE, MPESA_PASSKEY, MPESA_CALLBACK_URL required");
+  if (!shortcode || !passkey) {
+    throw new Error("M-Pesa Business Short Code and Passkey required");
   }
 
   const token = await getAccessToken();
@@ -48,8 +47,8 @@ export async function stkPush(
     TransactionDesc: transactionDesc,
   };
 
-  // [M-Pesa] API — updated to use header auth + error handling
-  const res = await fetch(`${MPESA_BASE_URL}/mpesa/stkpush/v1/processrequest`, {
+  // [M-Pesa] API
+  const res = await fetch(`${baseUrl}/mpesa/stkpush/v1/processrequest`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
@@ -76,9 +75,9 @@ export interface StkPushQueryResult {
 }
 
 export async function stkPushQuery(checkoutRequestId: string): Promise<StkPushQueryResult> {
-  const shortcode = process.env.MPESA_SHORTCODE;
-  const passkey = process.env.MPESA_PASSKEY;
-  if (!shortcode || !passkey) throw new Error("MPESA_SHORTCODE, MPESA_PASSKEY required");
+  const settings = await getMpesaSettings();
+  const { shortCode: shortcode, passkey, baseUrl } = settings;
+  if (!shortcode || !passkey) throw new Error("M-Pesa Business Short Code and Passkey required");
 
   const token = await getAccessToken();
   const timestamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
@@ -91,8 +90,8 @@ export async function stkPushQuery(checkoutRequestId: string): Promise<StkPushQu
     CheckoutRequestID: checkoutRequestId,
   };
 
-  // [M-Pesa] API — updated to use header auth + error handling
-  const res = await fetch(`${MPESA_BASE_URL}/mpesa/stkpushquery/v1/query`, {
+  // [M-Pesa] API
+  const res = await fetch(`${baseUrl}/mpesa/stkpushquery/v1/query`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,

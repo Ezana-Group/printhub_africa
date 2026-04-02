@@ -38,9 +38,12 @@ model User {
   twoFaMethod              String?
   otpCodeHash              String?
   otpExpiresAt             DateTime?
-  /// Where invite / password-setup emails are sent (optional). Login email remains `email`.
-  personalEmail            String?
+  displayEmail             String?
   displayName              String?
+  passwordChangedAt        DateTime?                  @default(now())
+  passwordExpired          Boolean                    @default(false)
+  passwordHistory          String[]                   @default([])
+  lastActiveAt             DateTime?                  @default(now())
   accounts                 Account[]
   addresses                Address[]
   auditLogs                AuditLog[]
@@ -215,6 +218,7 @@ model Product {
   shopStockMovements   ShopInventoryMovement[]
   shopPOLines          ShopPurchaseOrderLine[]
   wishlists            Wishlist[]
+  stockNotifications   StockNotification[]
 
   @@index([categoryId])
   @@index([slug])
@@ -1722,24 +1726,110 @@ model BusinessSettings {
   showStatsMachines     Boolean   @default(false)
   showStatsOrders       Boolean   @default(false)
   showStatsStaff        Boolean   @default(false)
+
+  // Integrations & Analytics
+  ga4MeasurementId          String?
+  hotjarSiteId              String?
+  searchConsoleVerification String?
+  algoliaEnabled            Boolean?  @default(false)
+  sentryDsn                 String?
+  storageBucket             String?
+  storagePublicBucket       String?
+  storageCdnUrl             String?
+  apiSecretKey              String?
+
+  // Security & Access Settings
+  passwordPolicy            Json?     // { minLength, requireUppercase, requireNumbers, requireSpecialChars, passwordExpiry, preventReuseOf }
+  twoFactorPolicy           Json?     // { superAdmin, admin, staff, customer }
+  sessionSettings           Json?     // { adminTimeoutHours, customerTimeoutDays, concurrentAdminMax }
+  ipAllowlist               Json?     // { enabled, ips: [] }
+  rateLimitSettings         Json?     // { loginMaxAttempts, loginLockoutMinutes, apiLimitPerMinute, checkoutLimitPer10Min, restrictMpesaIps }
+
+  // Notifications
+  resendApiKey              String?
+  emailFromName             String?
+  emailFrom                 String?
+  emailReplyTo              String?
+  atApiKey                  String?
+  atUsername                String?
+  atSenderId                String?
+  whatsappNumber            String?
+  whatsappPrefilledMessage  String?
+  whatsappFloatingButton    Boolean   @default(true)
+  adminAlertEmail           String?
+  adminAlertEvents          Json      @default("[]")
+
+  // Payments & Checkout
+  mpesaEnvironment          String?   @default("sandbox")
+  mpesaShortCode            String?
+  mpesaPasskey              String?
+  mpesaConsumerKey          String?
+  mpesaConsumerSecret       String?
+  mpesaPaybillNumber        String?
+  mpesaTillNumber           String?
+  pesapalConsumerKey        String?
+  pesapalConsumerSecret     String?
+  pesapalEnvironment        String?   @default("sandbox")
+  bankTransferEnabled       Boolean   @default(false)
+  bankTransferThreshold     Float     @default(0)
+  bankTransferDetails       String?
+  guestCheckoutEnabled      Boolean   @default(true)
+  minimumOrderValue         Float     @default(0)
+  paymentTimeoutMinutes     Int       @default(30)
+  quotePrefix               String?   @default("PHUB-QT-")
+  invoiceDueDays            Int       @default(30)
+
+  // SEO Settings
+  seoSiteName               String?
+  seoTagline                String?
+  seoDefaultTitle           String?
+  seoDefaultDescription     String?
+  googleSiteVerification    String?
+  canonicalDomain           String?
+  sitemapIncludePages       Boolean   @default(true)
+  sitemapIncludeProducts    Boolean   @default(true)
+  sitemapIncludeCategories  Boolean   @default(true)
+  robotsTxt                 String?
+  twitterCardType           String?   @default("summary_large_image")
+  twitterHandle             String?
+  defaultOgImage            String?
+
+  // Infrastructure & Danger Zone
+  developerMode             Boolean   @default(false)
+  pendingFactoryReset       Boolean   @default(false)
+  factoryResetExecuteAt     DateTime?
+  factoryResetInitiatedBy   String?
 }
 
-model SeoSettings {
-  id                       String    @id
-  siteName                 String?
-  titleTemplate            String?
-  defaultTitle             String?
-  defaultDescription       String?
-  ogImageUrl               String?
-  twitterHandle            String?
-  sitemapGeneratedAt       DateTime?
-  updatedAt                DateTime  @updatedAt
-  defaultOgImageUrl        String?
-  robotsTxt                String?
-  sitemapIncludeCategories Boolean?  @default(true)
-  sitemapIncludePages      Boolean?  @default(true)
-  sitemapIncludeProducts   Boolean?  @default(true)
+model ApiKey {
+  id          String    @id @default(cuid())
+  name        String
+  keyHash     String    @unique
+  keyPrefix   String    // e.g. ph_live_
+  permissions Json?     // e.g. ["read:products", "write:orders"]
+  expiresAt   DateTime?
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  createdBy   String
+  createdAt   DateTime  @default(now())
+
+  @@index([keyHash])
+  @@index([createdBy])
 }
+
+model OAuthToken {
+  id           String    @id @default(cuid())
+  provider     String    @unique // xero, quickbooks, google-business
+  accessToken  String
+  refreshToken String?
+  tenantId     String?   // For Xero
+  realmId      String?   // For QuickBooks
+  expiresAt    DateTime?
+  businessName String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
 
 model ShippingSettings {
   id                       String   @id
@@ -2153,6 +2243,15 @@ model BackupRecord {
   filename    String
   errorMsg    String?
   createdBy   User     @relation(fields: [createdById], references: [id])
+}
+
+model SystemBackup {
+  id        String   @id @default(cuid())
+  createdBy String
+  createdAt DateTime @default(now())
+  sizeBytes Float
+  r2Key     String
+  status    String
 }
 
 model DemoBooking {
@@ -2819,4 +2918,28 @@ enum WarrantyStatus {
   EXPIRED
   CLAIMED
   VOID
+}
+model StockNotification {
+  id        String   @id @default(cuid())
+  email     String?
+  phone     String?
+  productId String
+  createdAt DateTime @default(now())
+  notifiedAt DateTime?
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([email])
+  @@index([phone])
+}
+
+model MarketingErrorLog {
+  id        String   @id @default(cuid())
+  channel   String
+  error     String
+  payload   Json?
+  createdAt DateTime @default(now())
+
+  @@index([channel])
+  @@index([createdAt])
 }

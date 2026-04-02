@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Syne, DM_Sans, JetBrains_Mono, Playfair_Display } from "next/font/google";
 import { ConsentGatedAnalytics } from "@/components/ConsentGatedAnalytics";
+import { CookieBanner } from "@/components/CookieBanner";
+import { PixelTrackerWrapper } from "@/components/marketing/pixel-tracker-wrapper";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Providers } from "@/components/providers";
 import { getCachedBusinessMetadata } from "@/lib/cache/unstable-cache";
@@ -38,7 +40,7 @@ const playfairDisplay = Playfair_Display({
   adjustFontFallback: true,
 });
 
-const metadataBase = (() => {
+const defaultMetadataBase = (() => {
   const raw = process.env.NEXT_PUBLIC_APP_URL?.trim();
   const url = raw || "https://printhub.africa";
   try {
@@ -52,7 +54,7 @@ const shouldEnableSpeedInsights = process.env.VERCEL === "1";
 
 export async function generateMetadata(): Promise<Metadata> {
     const meta = await getCachedBusinessMetadata().catch(() => ({ 
-      favicon: null, updatedAt: null, businessName: "PrintHub", tagline: null, logo: null, seo: null 
+      favicon: null, updatedAt: null, businessName: "PrintHub", tagline: null, logo: null, seo: null, googleSiteVerification: null 
     }));
   const businessName = meta.seo?.siteName || meta.businessName || "PrintHub";
   const defaultTitle = meta.seo?.defaultTitle || `${businessName} | Large Format & 3D Printing | Nairobi, Kenya`;
@@ -68,6 +70,8 @@ export async function generateMetadata(): Promise<Metadata> {
       : null;
 
   const ogImage = meta.seo?.ogImageUrl || meta.logo || "/images/og/default-og.webp";
+  const canonical = meta.seo?.canonicalDomain || process.env.NEXT_PUBLIC_APP_URL || "https://printhub.africa";
+  const metadataBase = new URL(canonical);
 
   return {
     title: {
@@ -76,6 +80,12 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description,
     metadataBase,
+    alternates: {
+      canonical: "./",
+    },
+    verification: {
+      google: meta.googleSiteVerification || undefined,
+    },
     icons: faviconUrl
       ? {
           icon: [
@@ -108,7 +118,9 @@ export async function generateMetadata(): Promise<Metadata> {
       ],
     },
     twitter: {
-      card: "summary_large_image",
+      card: (meta.seo?.twitterCardType as any) || "summary_large_image",
+      site: meta.seo?.twitterHandle || undefined,
+      creator: meta.seo?.twitterHandle || undefined,
       images: [ogImage],
     },
   };
@@ -135,6 +147,8 @@ export default function RootLayout({
           {children}
           <ProfileCompletionGate />
         </Providers>
+        <CookieBanner />
+        <PixelTrackerWrapper />
         <ConsentGatedAnalytics />
         {shouldEnableSpeedInsights ? <SpeedInsights /> : null}
       </body>

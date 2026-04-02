@@ -9,16 +9,21 @@ interface SettingsSwitchProps {
   defaultValue?: boolean;
   label?: React.ReactNode;
   className?: string;
+  onChange?: (checked: boolean) => void;
 }
 
 /**
- * A Switch that participates in form submission via a hidden input.
- * FormData will include name="true"|"false" when the form is submitted.
+ * A Switch that participates in form submission via a hidden input or via onChange callback.
  */
-export function SettingsSwitch({ name, defaultValue = false, label, className }: SettingsSwitchProps) {
+export function SettingsSwitch({ name, defaultValue = false, label, className, onChange }: SettingsSwitchProps) {
   const [checked, setChecked] = useState(defaultValue);
   const generatedId = useId();
   const switchId = name.replace(/[^a-zA-Z0-9-_]/g, "_") || generatedId;
+
+  const handleCheckedChange = (newChecked: boolean) => {
+    setChecked(newChecked);
+    if (onChange) onChange(newChecked);
+  };
 
   return (
     <div className={className ? `flex items-center gap-4 ${className}` : "flex items-center gap-4"}>
@@ -32,7 +37,7 @@ export function SettingsSwitch({ name, defaultValue = false, label, className }:
       <Switch
         id={switchId}
         checked={checked}
-        onCheckedChange={setChecked}
+        onCheckedChange={handleCheckedChange}
         aria-label={typeof label === "string" ? label : name}
       />
       {label != null && <Label htmlFor={switchId} className="cursor-pointer">{label}</Label>}

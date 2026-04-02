@@ -59,6 +59,7 @@ flowchart TB
     Mpesa[M-Pesa]
     Pesapal[Pesapal]
     Stripe[Stripe]
+    Marketing[Marketing Utils / CAPI]
   end
 
   subgraph External
@@ -68,6 +69,11 @@ flowchart TB
     Daraja[M-Pesa Daraja]
     PaymentGW[Pesapal / Flutterwave / Stripe]
     SMS[Africa's Talking]
+    Meta[Meta Pixel / CAPI]
+    Google[GTM / GA4 / Ads]
+    TikTok[TikTok Pixel / API]
+    Klaviyo[Klaviyo Email]
+    WhatsApp[WhatsApp Cloud API]
   end
 
   Browser --> Middleware --> AppRouter
@@ -80,12 +86,18 @@ flowchart TB
   APIRoutes --> Mpesa
   APIRoutes --> Pesapal
   APIRoutes --> Stripe
+  APIRoutes --> Marketing
   PrismaLib --> DB
   S3R2 --> R2
   Email --> Resend
   Mpesa --> Daraja
   Pesapal --> PaymentGW
   Stripe --> PaymentGW
+  Marketing --> Meta
+  Marketing --> TikTok
+  Marketing --> Google
+  Marketing --> Klaviyo
+  Marketing --> WhatsApp
   Auth --> DB
 ```
 
@@ -108,7 +120,8 @@ flowchart TB
 | **SMS** | Africa's Talking (2FA, notifications) |
 | **PDF** | @react-pdf/renderer (invoices, quote PDFs) |
 | **Search (optional)** | Algolia |
-| **Analytics / monitoring** | Vercel Analytics & Speed Insights, Sentry; optional GA/Hotjar |
+| **Analytics / monitoring** | Vercel Analytics & Speed Insights, Sentry; Meta Pixel, TikTok Pixel, GTM, GA4, X, Snapchat |
+| **Marketing Automation** | Klaviyo (Email), WhatsApp Business Cloud API |
 | **Live chat (optional)** | Tawk.to |
 | **Content (optional)** | Sanity (env vars) |
 | **External ERP** | ERPNext (Docker; finance, inventory, HR) |
@@ -163,6 +176,7 @@ Printhub_Africa_ProdV1/
 │   ├── ui/                 # shadcn components
 │   ├── layout/             # Header, Footer
 │   ├── shop/, account/, admin/, services/, upload/, marketing/
+│   ├── marketing/          # PixelTracker, ViewContentTracker
 │   └── ...
 ├── lib/                    # Core services and utilities
 │   ├── prisma.ts
@@ -171,6 +185,8 @@ Printhub_Africa_ProdV1/
 │   ├── s3.ts, r2.ts
 │   ├── mpesa.ts, pesapal.ts, stripe/
 │   ├── cart-calculations.ts, order-utils.ts, tracking.ts, production-queue.ts
+│   ├── marketing/          # event-tracker.ts (client), conversions-api.ts (CAPI), klaviyo.ts, whatsapp.ts
+│   ├── cache/              # unstable-cache (business metadata)
 │   ├── admin-permissions.ts, admin-api-guard.ts, admin-route-guard.ts, admin-utils.ts
 │   ├── twofa-token.ts, audit.ts, constants.ts, db-guard.ts, role-permissions.ts
 │   ├── invoice-pdf.ts, quote-pdf.ts, virustotal.ts, backup-utils.ts
@@ -402,6 +418,8 @@ All API routes live under `app/api/`. Protection is enforced by **middleware** a
 | **/api/orders/** | POST create, GET list; [id]: confirmation, invoice, payment-status | Session for list; order access for [id] |
 | **/api/payments/** | mpesa (stkpush, callback, b2c-callback, status), pesapal (initiate, callback), flutterwave (initiate), stripe (create-intent), manual (POST), pickup (confirm) | Mixed (callbacks public with validation) |
 | **/api/admin/** | Full admin: orders, quotes, deliveries, production-queue, refunds, products, categories, reviews, customers, finance, inventory, catalogue, coupons, staff, corporate, careers, support, content, settings, reports | STAFF/ADMIN/SUPER_ADMIN + permission checks |
+| **/api/admin/channels** | View status of marketing feeds and pixel configurations | STAFF/ADMIN roles |
+| **/api/admin/stats** | Dashboard statistics and analytical summaries | STAFF/ADMIN roles |
 | **/api/admin/catalogue/[id]/stl** | POST/DELETE STL files for catalogue items | catalogue_edit |
 | **/api/admin/inventory/hardware** | Assets, maintenance, hardware items for calculator | inventory_edit |
 | **/api/admin/3d-consumables** | Filament, resin, and other 3D printer supplies | inventory_edit |
@@ -409,6 +427,7 @@ All API routes live under `app/api/`. Protection is enforced by **middleware** a
 | **/api/quotes/** | GET/POST quotes, upload, [id] GET/PATCH, [id]/pdf | Session for create/list; access by resource |
 | **/api/quote/** | submit (contact-style), materials | Public / session |
 | **/api/upload/** | presign (POST), confirm (POST), [id]/download | Session / context |
+| **/api/branding/favicon** | Dynamic favicon with fallback and database caching | Public |
 | **/api/invoices/[id]** | download, send | Order/invoice access |
 | **/api/shipping/** | fee, pickup-locations, courier-locations | Public / session |
 | **/api/calculator/** | rates (large-format, 3d-print) | Public |
@@ -420,7 +439,11 @@ All API routes live under `app/api/`. Protection is enforced by **middleware** a
 | **/api/faq**, **/api/settings/business-public** | Public | Public |
 | **/api/coupons/validate** | Validate coupon code | Session / checkout |
 | **/api/cron/abandoned-carts** | Abandoned cart emails | CRON_SECRET |
-| **/api/health**, **/api/feeds/products**, **/api/products/[slug]/reviews** | Health, feeds, reviews | Public |
+| **/api/health**, **/api/feeds/products** | Health, legacy feeds | Public |
+| **/api/products/feed** | Universal JSON product feed for Meta/Pinterest | Public |
+| **/api/products/google** | Google Product Feed (XML/RSS) | Public |
+| **/api/products/tiktok** | TikTok Catalog Feed (JSON/CSV) | Public |
+| **/api/products/[slug]/reviews** | Product reviews | Public |
 | **/api/unsubscribe/abandoned-cart** | Opt-out | Public |
 
 ### 5.2 Order Creation Flow (API)
@@ -489,6 +512,7 @@ All API routes live under `app/api/`. Protection is enforced by **middleware** a
    - **Pay on pickup:** POST `/api/payments/pickup` (pickup code, confirm).
 4. **Recovery:** Payment link (admin) or `/pay/[orderId]` for retry (e.g. resend STK).
 5. **Fulfilment:** Order status → PROCESSING, PRINTING, READY_FOR_COLLECTION, SHIPPED, DELIVERED; ProductionQueue for items; Delivery for shipping; OrderTrackingEvent and optional email (lib/tracking).
+6. **Marketing Triggers:** On `CONFIRMED` status, system triggers Klaviyo "Placed Order", Meta CAPI "Purchase", TikTok Events API, and WhatsApp confirmation. On `SHIPPED`, triggers WhatsApp update.
 
 ### 7.3 Quote Flow (Unified)
 
@@ -522,6 +546,20 @@ All API routes live under `app/api/`. Protection is enforced by **middleware** a
 ### 7.6 Abandoned Cart
 
 - **Cron:** GET `/api/cron/abandoned-carts` (CRON_SECRET) → finds carts, sends recovery email (Resend); recoveryEmailSent1At / recoveryEmailSent2At; `/api/unsubscribe/abandoned-cart` for opt-out.
+- **Klaviyo:** High-conversion abandoned cart flows (1h/24h) and WhatsApp recovery (3h) are managed via `lib/marketing` triggers.
+
+### 7.7 Marketing & Growth
+
+1. **Product Feeds:**
+   - Universal JSON: `/api/products/feed`
+   - Google Merchant (XML): `/api/products/google`
+   - TikTok Catalog (JSON): `/api/products/tiktok`
+2. **Client-side Tracking:** `PixelTracker.tsx` conditionally loads scripts for Meta, TikTok, GTM, X, and Snap based on user consent stored in `printhub-cookie-consent`.
+3. **Server-side Conversions (CAPI):** Backend triggers in `lib/tracking.ts` send hashed user data to Meta and TikTok on successful payment to ensure 100% attribution accuracy.
+4. **Automated Communication:**
+   - **Klaviyo:** Handles e-commerce lifecycle emails.
+   - **WhatsApp Business API:** Sends transactional updates (confirmation, shipping) directly to customer phones.
+
 
 ---
 
@@ -541,6 +579,11 @@ All API routes live under `app/api/`. Protection is enforced by **middleware** a
 | **Google / Facebook / Apple OAuth** | Social login | GOOGLE_*, FACEBOOK_*, APPLE_* | NextAuth in lib/auth.ts. |
 | **Sentry** | Error tracking | NEXT_PUBLIC_SENTRY_DSN, SENTRY_* | instrumentation.ts. |
 | **Algolia** | Search | NEXT_PUBLIC_ALGOLIA_*, ALGOLIA_* | Optional; Admin → Settings → Integrations. |
+| **Meta** | Advertising & Tracking | NEXT_PUBLIC_META_*, META_ACCESS_TOKEN | PixelTracking.tsx, conversions-api.ts (CAPI). |
+| **TikTok** | Advertising & Tracking | NEXT_PUBLIC_TIKTOK_*, TIKTOK_EVENTS_API_TOKEN | tiktok-pixel, TikTok Events API. |
+| **Google** | Ads & Analytics | NEXT_PUBLIC_GTM_*, NEXT_PUBLIC_GA4_* | GTM tracking, GA4 events. |
+| **Klaviyo** | Email Marketing | KLAVIYO_API_KEY, NEXT_PUBLIC_KLAVIYO_* | Abandoned cart recovery, post-purchase flows. |
+| **WhatsApp** | Order Updates | WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN | Cloud API messaging for notifications. |
 | **Tawk.to** | Live chat | NEXT_PUBLIC_TAWK_* | Optional; component. |
 | **VirusTotal** | Upload scanning | VIRUSTOTAL_API_KEY | Optional; post-upload. |
 | **ERPNext** | ERP (finance, inventory, HR) | ERPNEXT_* | Docker; scripts erpnext-setup, erpnext-migrate. |

@@ -49,3 +49,36 @@ export async function searchProducts(
     return { hits: [], nbHits: 0 };
   }
 }
+
+/**
+ * Push products to Algolia index.
+ */
+export async function indexProducts(products: any[]) {
+  if (!isAlgoliaConfigured()) return;
+  const client = algoliasearch(appId!, process.env.ALGOLIA_ADMIN_KEY!); // Admin key required for indexing
+  try {
+    const records = products.map((p) => ({
+      objectID: p.id,
+      name: p.name,
+      slug: p.slug,
+      description: p.description,
+      shortDescription: p.shortDescription,
+      images: p.images,
+      basePrice: Number(p.basePrice),
+      isFeatured: p.isFeatured,
+      isActive: p.isActive,
+      category: p.category?.name,
+      brand: p.brand,
+      tags: p.tags,
+      updatedAt: p.updatedAt,
+    }));
+
+    await client.saveObjects({
+      indexName,
+      objects: records,
+    });
+  } catch (e) {
+    console.error("Algolia indexing error:", e);
+    throw e;
+  }
+}
