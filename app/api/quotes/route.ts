@@ -167,15 +167,39 @@ export async function POST(req: NextRequest) {
       three_d_print: "3D Print",
       design_and_print: "Design+Print",
     };
-    void Promise.resolve()
-      .then(() =>
-        sendQuoteReceivedEmail(
-          data.customerEmail,
-          quote.quoteNumber,
-          typeLabels[typeDb] ?? typeDb
-        )
-      )
-      .catch((err) => console.error("Quote received email error:", err));
+
+    // --- AUTOMATION TRIGGERS ---
+    void Promise.all([
+      // 1. Customer Email
+      sendQuoteReceivedEmail(
+        data.customerEmail,
+        quote.quoteNumber,
+        typeLabels[typeDb] ?? typeDb
+      ),
+      // 2. Staff Alerts (WhatsApp/Telegram)
+      (async () => {
+        const { n8n } = await import("@/lib/n8n");
+        return n8n.staffAlert({
+          type: 'NEW_QUOTE',
+          title: `📄 New Quote Request #${quote.quoteNumber}`,
+          message: `Type: ${typeLabels[typeDb] || typeDb}\nCustomer: ${quote.customerName}\nProject: ${quote.projectName || 'N/A'}\nBudget: ${quote.budgetRange || 'Unspecified'}`,
+          urgency: 'medium',
+          actionUrl: `${process.env.NEXT_PUBLIC_APP_URL}/admin/quotes/${quote.id}`,
+          targetRoles: ['STAFF', 'ADMIN']
+        });
+      })(),
+      // 3. n8n Master Trigger
+      (async () => {
+        const { n8n } = await import("@/lib/n8n");
+        return n8n.quoteSubmitted({
+          quoteId: quote.id,
+          customerEmail: quote.customerEmail,
+          customerName: quote.customerName,
+          quoteType: typeDb,
+          reviewUrl: `${process.env.NEXT_PUBLIC_APP_URL}/admin/quotes/${quote.id}`
+        });
+      })()
+    ]).catch((err) => console.error("Quote triggers error:", err));
 
     return NextResponse.json({
       success: true,

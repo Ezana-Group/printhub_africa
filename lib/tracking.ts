@@ -230,6 +230,16 @@ export async function createTrackingEvent(
         isCorporate: !!order.corporateId,
         corporateId: order.corporateId || undefined
       }).catch(err => console.error("n8n order-confirmed trigger failed:", err));
+
+      // 2b. Urgent Staff Alert for new revenue
+      n8n.staffAlert({
+        type: 'NEW_ORDER',
+        title: `💰 New Order #${order.orderNumber}`,
+        message: `New order from ${order.user?.name || 'Guest'} for KES ${Number(order.total).toLocaleString()}. Items: ${order.items.length}`,
+        urgency: 'high',
+        actionUrl: `${process.env.NEXT_PUBLIC_APP_URL}/admin/orders/${order.id}`,
+        targetRoles: ['STAFF', 'ADMIN']
+      }).catch(err => console.error("n8n staff-alert trigger failed:", err));
     }
 
     // 3. Conversion API triggers (Server-side tracking)

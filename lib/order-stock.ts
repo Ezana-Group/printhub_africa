@@ -60,35 +60,15 @@ export async function decrementOrderStock(orderId: string): Promise<void> {
     });
 
     if (inv) {
-      await prisma.$transaction([
-        prisma.inventory.update({
-          where: { id: inv.id },
-          data: {
-            quantity: { decrement: item.quantity },
-            reservedQuantity: { decrement: item.quantity },
-          },
-        }),
-        prisma.shopInventoryMovement.create({
-          data: {
-            productId: item.productId,
-            quantity: qty,
-            reason: "SOLD",
-            reference: order.orderNumber,
-          },
-        }),
-      ]);
-    } else {
-      if (variantId) {
-        await prisma.productVariant.update({
-          where: { id: variantId },
-          data: { stock: { decrement: item.quantity } },
-        });
-      } else {
-        await prisma.product.update({
-          where: { id: item.productId },
-          data: { stock: { decrement: item.quantity } },
-        });
-      }
+      const updatedInv = await prisma.inventory.update({
+        where: { id: inv.id },
+        data: {
+          quantity: { decrement: item.quantity },
+          reservedQuantity: { decrement: item.quantity },
+        },
+        include: { product: true }
+      });
+
       await prisma.shopInventoryMovement.create({
         data: {
           productId: item.productId,
@@ -97,6 +77,81 @@ export async function decrementOrderStock(orderId: string): Promise<void> {
           reference: order.orderNumber,
         },
       });
+
+      // Check for low stock alert
+      if (updatedInv.quantity <= updatedInv.lowStockThreshold) {
+        const { n8n } = await import("@/lib/n8n");
+        n8n.lowStock({
+          items: [{
+            itemId: updatedInv.id,
+            itemName: updatedInv.product.name,
+            itemType: 'Product',
+            currentStock: updatedInv.quantity,
+            minimumStock: updatedInv.lowStockThreshold,
+            unit: 'units'
+          }]
+        }).catch(err => console.error("n8n low-stock trigger failed:", err));
+      }
+    } else {
+      if (variantId) {
+        const variant = await prisma.productVariant.update({
+          where: { id: variantId },
+          data: { stock: { decrement: item.quantity } },
+          include: { product: true }
+        });
+        
+        await prisma.shopInventoryMovement.create({
+          data: {
+            productId: item.productId,
+            quantity: qty,
+            reason: "SOLD",
+            reference: order.orderNumber,
+          },
+        });
+
+        // Simple check for variant stock
+        if (variant.stock <= 5) { // default threshold for variants without explicit inventory
+          const { n8n } = await import("@/lib/n8n");
+          n8n.lowStock({
+            items: [{
+              itemId: variant.id,
+              itemName: `${variant.product.name} (${variant.name})`,
+              itemType: 'Product',
+              currentStock: variant.stock,
+              minimumStock: 5,
+              unit: 'units'
+            }]
+          }).catch(err => console.error("n8n low-stock trigger failed:", err));
+        }
+      } else {
+        const product = await prisma.product.update({
+          where: { id: item.productId },
+          data: { stock: { decrement: item.quantity } },
+        });
+
+        await prisma.shopInventoryMovement.create({
+          data: {
+            productId: item.productId,
+            quantity: qty,
+            reason: "SOLD",
+            reference: order.orderNumber,
+          },
+        });
+
+        if (product.stock !== null && product.lowStockThreshold !== null && product.stock <= product.lowStockThreshold) {
+          const { n8n } = await import("@/lib/n8n");
+          n8n.lowStock({
+            items: [{
+              itemId: product.id,
+              itemName: product.name,
+              itemType: 'Product',
+              currentStock: product.stock,
+              minimumStock: product.lowStockThreshold,
+              unit: 'units'
+            }]
+          }).catch(err => console.error("n8n low-stock trigger failed:", err));
+        }
+      }
     }
   }
 }

@@ -219,6 +219,44 @@ export default function CheckoutPage() {
       .catch(() => {});
   }, [session?.user]);
 
+  // ABANDONED CART RECOVERY: Debounced contact saving
+  useEffect(() => {
+    const email = contact.email?.trim();
+    const phone = contact.phone?.trim();
+    if (!email && !phone) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const payload = {
+          sessionId: cartSessionId ?? undefined,
+          cartId: cartId ?? undefined,
+          email: email || undefined,
+          phone: phone || undefined,
+          items: items.map((i) =>
+            isCatalogueCartItem(i)
+              ? { catalogueItemId: i.catalogueItemId, quantity: i.quantity, unitPrice: i.unitPrice, name: i.name, slug: i.slug, type: "CATALOGUE" }
+              : { productId: i.productId, variantId: i.variantId, quantity: i.quantity, unitPrice: i.unitPrice, name: i.name, slug: i.slug }
+          ),
+        };
+        const res = await fetch("/api/checkout/cart", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.cartId && data.cartId !== cartId) {
+            setCartId(data.cartId, data.sessionId ?? data.cartId);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to sync abandoned cart data:", err);
+      }
+    }, 2000); // 2 second debounce
+
+    return () => clearTimeout(timer);
+  }, [contact.email, contact.phone, cartId, cartSessionId, items, setCartId]);
+
   useEffect(() => {
     if (step !== 1 || !session?.user) return;
     if (!orderForSelf) {
