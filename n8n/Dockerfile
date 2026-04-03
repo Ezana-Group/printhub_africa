@@ -2,11 +2,9 @@ FROM n8nio/n8n:2.14.2
 
 USER root
 
-# Install necessary system dependencies (curl for healthchecks, ffmpeg for media tasks)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+# Note: Base n8n 2.x images are 'hardened' and do not include a package manager (apk/apt-get).
+# System dependencies like ffmpeg are handled by the separate printhub-ffmpeg-service.
+# The internal n8n healthcheck is enabled via environment variables.
 
 # Create the data directory and set permissions
 RUN mkdir -p /home/node/.n8n && chown -R node:node /home/node/.n8n
