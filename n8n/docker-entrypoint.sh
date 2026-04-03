@@ -30,7 +30,15 @@ done
 if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
     echo "CRITICAL: Database not reachable after $MAX_RETRIES attempts. Starting n8n anyway to catch internal errors..."
 else
-    echo "Database is reachable. Starting n8n (automatic migrations will run)..."
+    echo "Database is reachable."
+    
+    # --- New: Forced Migration Step (v3.4) ---
+    echo "Forcing database migrations before startup..."
+    if n8n db:migrate; then
+        echo "Database migrations completed successfully."
+    else
+        echo "CRITICAL: Database migrations failed! Attempting to start n8n anyway for diagnostic logs..."
+    fi
 fi
 
 # 3. Start n8n automated import in the background
