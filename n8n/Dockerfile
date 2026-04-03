@@ -14,7 +14,6 @@ RUN chmod +x /docker-entrypoint.sh
 USER node
 
 # Important for Railway: Fallback to 5678 if PORT is not set
-ENV N8N_PORT=5678
 ENV N8N_LISTEN_ADDRESS=0.0.0.0
 ENV N8N_PROTOCOL=http
 ENV NODE_ENV=production
@@ -30,6 +29,5 @@ ENV DB_POSTGRESDB_SSL_MODE=require
 ENV N8N_CORS_ALLOWED_ORIGINS="https://admin.printhub.africa"
 ENV N8N_LOG_LEVEL=debug
 
-EXPOSE 5678
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
