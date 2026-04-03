@@ -57,6 +57,8 @@ export async function middleware(request: NextRequest) {
       const url = request.nextUrl.clone();
       if (pathname === "/login") {
         url.pathname = "/admin/login";
+      } else if (pathname === "/") {
+        url.pathname = "/admin/dashboard";
       } else {
         url.pathname = `/admin${pathname}`;
       }
