@@ -1,19 +1,29 @@
-import { PrismaClient, UserRole } from "@prisma/client";
-import * as bcrypt from "bcryptjs";
 import path from "node:path";
 import { config } from "dotenv";
 
-// Load environment variables
+// Load environment variables BEFORE any other imports to ensure they are available for initialization
 const root = path.resolve(__dirname, "..");
 config({ path: path.join(root, ".env.local") });
 config({ path: path.join(root, ".env") });
 
-import { prisma } from "../lib/prisma";
+import { PrismaClient, UserRole } from "@prisma/client";
+import * as bcrypt from "bcryptjs";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 
 async function main() {
   const adminEmail = "admin@printhub.africa";
   const newPassword = "AlphaTango26"; // User confirmed this works
   const hashed = await bcrypt.hash(newPassword, 12);
+
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL is not set. Ensure it is in your .env file.");
+  }
+
+  const pool = new Pool({ connectionString });
+  const adapter = new PrismaPg(pool);
+  const prisma = new PrismaClient({ adapter });
 
   console.log(`🚀 Attempting to promote ${adminEmail} to SUPER_ADMIN...`);
 
