@@ -61,16 +61,29 @@
       },
       {
         "parameters": {
+          "url": "https://admin.printhub.africa/api/n8n/get-template",
+          "method": "POST",
+          "authentication": "headerAuth",
+          "headerParameters": { "parameters": [{ "name": "x-printhub-signature", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" }] },
+          "bodyParametersJson": "={ \"slug\": \"stock-alert-email\", \"type\": \"EMAIL\" }"
+        },
+        "name": "Fetch Stock Alert Template",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [800, 350]
+      },
+      {
+        "parameters": {
           "url": "https://api.resend.com/emails",
           "method": "POST",
           "authentication": "headerAuth",
           "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.RESEND_API_KEY}}" }] },
-          "bodyParametersJson": "={ \"from\": \"PrintHub Stock <stock@printhub.africa>\", \"to\": \"{{ $env.ADMIN_EMAIL }}\", \"subject\": \"📦 Product Out of Stock: {{ $json.productName }}\", \"html\": \"<h2>📦 Product Out of Stock</h2><p><strong>{{ $json.productName }}</strong> (SKU: {{ $json.sku || 'N/A' }}) has gone out of stock.</p><p><a href='https://admin.printhub.africa/admin/products/{{ $json.productId }}'>Update Product →</a></p>\" }"
+          "bodyParametersJson": "={ \"from\": \"PrintHub Stock <stock@printhub.africa>\", \"to\": \"{{ $env.ADMIN_EMAIL }}\", \"subject\": \"{{ $node['Fetch Stock Alert Template'].json.subject }}\", \"html\": \"{{ ($node['Fetch Stock Alert Template'].json.bodyHtml || '').replace(/{{productName}}/g, $json.productName).replace(/{{sku}}/g, $json.sku || 'N/A').replace(/{{productId}}/g, $json.productId) }}\" }"
         },
         "name": "Email: Out of Stock Alert",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.1,
-        "position": [800, 450]
+        "position": [1000, 450]
       },
       {
         "parameters": {
@@ -83,7 +96,7 @@
         "name": "Mark Product Synced",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.1,
-        "position": [1000, 300]
+        "position": [1200, 300]
       }
     ],
     "connections": {
@@ -92,9 +105,11 @@
       "Calculate Differential": { "main": [[{ "node": "Significant Price Change?", "type": "main", "index": 0 }, { "node": "Going Out of Stock?", "type": "main", "index": 0 }]] },
       "Significant Price Change?": { "main": [[{ "node": "Meta: Update Catalog Price", "type": "main", "index": 0 }], [{ "node": "Mark Product Synced", "type": "main", "index": 0 }]] },
       "Meta: Update Catalog Price": { "main": [[{ "node": "Mark Product Synced", "type": "main", "index": 0 }]] },
-      "Going Out of Stock?": { "main": [[{ "node": "Email: Out of Stock Alert", "type": "main", "index": 0 }], []] },
+      "Going Out of Stock?": { "main": [[{ "node": "Fetch Stock Alert Template", "type": "main", "index": 0 }], []] },
+      "Fetch Stock Alert Template": { "main": [[{ "node": "Email: Out of Stock Alert", "type": "main", "index": 0 }]] },
       "Email: Out of Stock Alert": { "main": [[{ "node": "Mark Product Synced", "type": "main", "index": 0 }]] }
     }
+
   },
   {
     "name": "9. PrintHub - Sync Social Feeds (Catalog Manager)",
@@ -217,11 +232,11 @@
       },
       {
         "parameters": {
-          "url": "https://admin.printhub.africa/api/n8n/generate-insights-pdf",
+          "url": "https://admin.printhub.africa/api/n8n/generate-pdf",
           "method": "POST",
           "authentication": "headerAuth",
           "headerParameters": { "parameters": [{ "name": "x-printhub-signature", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" }] },
-          "bodyParametersJson": "={ \"htmlReport\": \"<h1>PrintHub Africa — Official Quotation</h1><p><strong>Quote Reference:</strong> {{ $json.quoteNumber || $json.id }}</p><p><strong>Client:</strong> {{ $json.customerName }}</p><p><strong>Project:</strong> {{ $json.projectName }}</p><p><strong>Date:</strong> {{ new Date().toLocaleDateString('en-GB') }}</p><hr/><h2>Scope & Pricing</h2><p>{{ $json.aiDraft || $json.description }}</p><table style='border-collapse:collapse;width:100%'><tr><td style='padding:8px;border:1px solid #ccc'><strong>Subtotal</strong></td><td style='padding:8px;border:1px solid #ccc;text-align:right'>KES {{ ($json.amount || 0).toLocaleString() }}</td></tr><tr><td style='padding:8px;border:1px solid #ccc'>VAT (16%)</td><td style='padding:8px;border:1px solid #ccc;text-align:right'>KES {{ (($json.amount || 0) * 0.16).toLocaleString() }}</td></tr><tr style='font-weight:bold'><td style='padding:8px;border:1px solid #ccc'>TOTAL</td><td style='padding:8px;border:1px solid #ccc;text-align:right'>KES {{ (($json.amount || 0) * 1.16).toLocaleString() }}</td></tr></table><p style='margin-top:20px;color:#666;font-size:12px'>This quote is valid for 14 days. PrintHub Africa · Nairobi, Kenya · hello@printhub.africa</p>\", \"month\": {{ new Date().getMonth() }}, \"year\": {{ new Date().getFullYear() }} }"
+          "bodyParametersJson": "={ \"type\": \"QUOTE\", \"filename\": \"quote-{{ $json.quoteNumber || $json.id }}.pdf\", \"data\": { \"businessName\": \"PrintHub Africa\", \"businessAddress\": \"Nairobi, Kenya\", \"invoiceNumber\": \"{{ $json.quoteNumber || $json.id }}\", \"orderNumber\": \"{{ $json.id }}\", \"date\": \"{{ new Date().toLocaleDateString('en-GB') }}\", \"billTo\": \"{{ $json.customerName }}\", \"billToEmail\": \"{{ $json.customerEmail }}\", \"billToAddress\": \"Kenya\", \"items\": [{ \"name\": \"{{ $json.projectName }}\", \"qty\": 1, \"unitPrice\": {{ $json.amount || 0 }}, \"lineTotal\": {{ $json.amount || 0 }} }], \"subtotal\": {{ $json.amount || 0 }}, \"vatAmount\": {{ ($json.amount || 0) * 0.16 }}, \"totalAmount\": {{ ($json.amount || 0) * 1.16 }}, \"vatOnInvoices\": true } }"
         },
         "name": "Generate Quote PDF",
         "type": "n8n-nodes-base.httpRequest",
@@ -230,11 +245,37 @@
       },
       {
         "parameters": {
+          "url": "https://admin.printhub.africa/api/n8n/get-template",
+          "method": "POST",
+          "authentication": "headerAuth",
+          "headerParameters": { "parameters": [{ "name": "x-printhub-signature", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" }] },
+          "bodyParametersJson": "={ \"slug\": \"quote-ready-email\", \"type\": \"EMAIL\" }"
+        },
+        "name": "Fetch Email Template",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [600, 400]
+      },
+      {
+        "parameters": {
+          "url": "https://admin.printhub.africa/api/n8n/get-template",
+          "method": "POST",
+          "authentication": "headerAuth",
+          "headerParameters": { "parameters": [{ "name": "x-printhub-signature", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" }] },
+          "bodyParametersJson": "={ \"slug\": \"quote-ready-whatsapp\", \"type\": \"WHATSAPP\" }"
+        },
+        "name": "Fetch WhatsApp Template",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [600, 600]
+      },
+      {
+        "parameters": {
           "url": "https://api.resend.com/emails",
           "method": "POST",
           "authentication": "headerAuth",
           "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.RESEND_API_KEY}}" }] },
-          "bodyParametersJson": "={ \"from\": \"PrintHub Africa <quotes@printhub.africa>\", \"to\": \"{{ $node['Get Full Quote Details'].json.customerEmail }}\", \"subject\": \"Your PrintHub Quote is Ready — {{ $node['Get Full Quote Details'].json.projectName }}\", \"html\": \"<h2>Hi {{ $node['Get Full Quote Details'].json.customerName.split(' ')[0] }}! 👋</h2><p>Great news — your quote for <strong>{{ $node['Get Full Quote Details'].json.projectName }}</strong> is ready.</p><div style='background:#f9fafb;border-radius:8px;padding:16px;margin:16px 0'><p style='margin:0'><strong>Quote Total: KES {{ (($node['Get Full Quote Details'].json.amount || 0) * 1.16).toLocaleString() }}</strong> (incl. VAT)</p></div>{{ $node['Generate Quote PDF'].json.pdfUrl ? '<p><a href=\\'' + $node[\\'Generate Quote PDF\\'].json.pdfUrl + '\\' style=\\'background:#f97316;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block\\'>📄 Download Full Quote PDF →</a></p>' : '' }}<p>To accept this quote, simply reply to this email or WhatsApp us and we'll get your order into production.</p><p>This quote is valid for <strong>14 days</strong>.</p><p>Warm regards,<br/>The PrintHub Africa Team 🖨️</p>\" }"
+          "bodyParametersJson": "={ \"from\": \"PrintHub Africa <quotes@printhub.africa>\", \"to\": \"{{ $node['Get Full Quote Details'].json.customerEmail }}\", \"subject\": \"{{ $node['Fetch Email Template'].json.subject }}\", \"html\": \"{{ ($node['Fetch Email Template'].json.bodyHtml || '').replace(/{{customerName}}/g, $node['Get Full Quote Details'].json.customerName).replace(/{{projectName}}/g, $node['Get Full Quote Details'].json.projectName).replace(/{{quoteTotal}}/g, (($node['Get Full Quote Details'].json.amount || 0) * 1.16).toLocaleString()).replace(/{{pdfUrl}}/g, $node['Generate Quote PDF'].json.pdfUrl || '') }}\" }"
         },
         "name": "Email: Quote to Customer",
         "type": "n8n-nodes-base.httpRequest",
@@ -247,7 +288,7 @@
           "method": "POST",
           "authentication": "headerAuth",
           "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}" }] },
-          "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{ $node['Get Full Quote Details'].json.customerPhone }}\", \"type\": \"text\", \"text\": { \"body\": \"Hi {{ $node['Get Full Quote Details'].json.customerName.split(' ')[0] }}! 👋\\n\\nYour PrintHub quote for *{{ $node['Get Full Quote Details'].json.projectName }}* is ready.\\n\\n💰 Total: KES {{ (($node['Get Full Quote Details'].json.amount || 0) * 1.16).toLocaleString() }} (incl. VAT)\\n📧 Full PDF sent to your email.\\n\\nReply here to accept or ask any questions. We're ready to get started! 🚀\" } }"
+          "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{ $node['Get Full Quote Details'].json.customerPhone }}\", \"type\": \"text\", \"text\": { \"body\": \"{{ ($node['Fetch WhatsApp Template'].json.bodyText || '').replace(/{{customerName}}/g, $node['Get Full Quote Details'].json.customerName).replace(/{{projectName}}/g, $node['Get Full Quote Details'].json.projectName).replace(/{{quoteTotal}}/g, (($node['Get Full Quote Details'].json.amount || 0) * 1.16).toLocaleString()) }}\" } }"
         },
         "name": "WhatsApp: Quote Notification",
         "type": "n8n-nodes-base.httpRequest",
@@ -258,9 +299,12 @@
     "connections": {
       "Webhook: Quote Ready": { "main": [[{ "node": "Verify Signature", "type": "main", "index": 0 }]] },
       "Verify Signature": { "main": [[{ "node": "Get Full Quote Details", "type": "main", "index": 0 }]] },
-      "Get Full Quote Details": { "main": [[{ "node": "Generate Quote PDF", "type": "main", "index": 0 }]] },
-      "Generate Quote PDF": { "main": [[{ "node": "Email: Quote to Customer", "type": "main", "index": 0 }, { "node": "WhatsApp: Quote Notification", "type": "main", "index": 0 }]] }
+      "Get Full Quote Details": { "main": [[{ "node": "Generate Quote PDF", "type": "main", "index": 0 }, { "node": "Fetch Email Template", "type": "main", "index": 0 }, { "node": "Fetch WhatsApp Template", "type": "main", "index": 0 }]] },
+      "Generate Quote PDF": { "main": [[{ "node": "Email: Quote to Customer", "type": "main", "index": 0 }, { "node": "WhatsApp: Quote Notification", "type": "main", "index": 0 }]] },
+      "Fetch Email Template": { "main": [[{ "node": "Email: Quote to Customer", "type": "main", "index": 0 }]] },
+      "Fetch WhatsApp Template": { "main": [[{ "node": "WhatsApp: Quote Notification", "type": "main", "index": 0 }]] }
     }
+
   },
   {
     "name": "12. PrintHub - New Device Login (Admin Security)",
