@@ -58,11 +58,17 @@ if [ -z "$DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED" ]; then
     echo "SSL: Set DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED=false for compatibility."
 fi
 
-# 5. Final check: if still empty, warned (n8n will likely default to SQLite or fail)
+# Ensure SSL Mode is 'require' for Neon
+if [ -z "$DB_POSTGRESDB_SSL_MODE" ]; then
+    export DB_POSTGRESDB_SSL_MODE="require"
+    echo "SSL: Set DB_POSTGRESDB_SSL_MODE=require for Neon connectivity."
+fi
+
+# 5. Final check: show exact connection details for debugging
 if [ -z "$DB_POSTGRESDB_HOST" ]; then
     echo "Warning: No database host detected. n8n might fail to start or use SQLite."
 else
-    echo "n8n ready to connect to: $DB_POSTGRESDB_USER@$DB_POSTGRESDB_HOST:$DB_POSTGRESDB_PORT/$DB_POSTGRESDB_DATABASE"
+    echo "n8n connecting to: $DB_POSTGRESDB_USER@$DB_POSTGRESDB_HOST:$DB_POSTGRESDB_PORT/$DB_POSTGRESDB_DATABASE (SSL: $DB_POSTGRESDB_SSL_MODE)"
 fi
 
 # Execute n8n
