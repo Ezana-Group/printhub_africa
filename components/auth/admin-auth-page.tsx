@@ -55,6 +55,7 @@ export function AdminAuthPage() {
       const lastLoginAt = (session.user as any).lastLoginAt;
       const lastLoginIp = (session.user as any).lastLoginIp;
       if (lastLoginAt) {
+        setLoading(false); // Stop the spinner
         toast.success(`Welcome back!`, {
           description: `Last login: ${new Date(lastLoginAt).toLocaleString()} from ${lastLoginIp || 'unknown IP'}`,
         });

@@ -23,6 +23,9 @@ ENV N8N_HEALTHCHECK_ENABLED=true
 # Set localhost so internal healthcheck works as intended
 ENV N8N_HEALTHCHECK_HOST=localhost
 ENV N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
+# Database defaults for Neon
+ENV DB_TYPE=postgresdb
+ENV DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED=false
 
 EXPOSE 5678
 

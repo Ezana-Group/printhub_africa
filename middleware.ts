@@ -9,7 +9,7 @@ export async function middleware(request: NextRequest) {
   const isAdminDomain = 
     host.startsWith('admin.') || 
     host.startsWith('admin.localhost') ||
-    (host.includes('localhost:3000') && pathname.startsWith('/admin'));
+    (host.includes('localhost') && pathname.startsWith('/admin'));
 
   const isProduction = process.env.NODE_ENV === "production";
   const ADMIN_COOKIE = isProduction ? "__Secure-printhub.admin.session" : "printhub.admin.session";
@@ -35,8 +35,8 @@ export async function middleware(request: NextRequest) {
     // Redirect to login if no session and not on auth pages
     if (!token && !isLoginPage && !isAuthApi) {
       const loginUrl = new URL("/login", request.url);
-      // If we're on localhost:3000 and the path was /admin/..., we should probably keep /admin/login
-      if (host.includes('localhost:3000') && !pathname.startsWith('/admin')) {
+      // If we're on localhost and the path is an admin path, we should use /admin/login
+      if (host.includes('localhost') && pathname.startsWith('/admin')) {
           loginUrl.pathname = '/admin/login';
       }
       return NextResponse.redirect(loginUrl);

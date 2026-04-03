@@ -51,7 +51,14 @@ else
     echo "Using default N8N_PORT: $N8N_PORT"
 fi
 
-# 4. Final check: if still empty, warned (n8n will likely default to SQLite or fail)
+# 4. Handle SSL for external databases (Neon/RDS)
+# Default DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED to false if not set
+if [ -z "$DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED" ]; then
+    export DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED="false"
+    echo "SSL: Set DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED=false for compatibility."
+fi
+
+# 5. Final check: if still empty, warned (n8n will likely default to SQLite or fail)
 if [ -z "$DB_POSTGRESDB_HOST" ]; then
     echo "Warning: No database host detected. n8n might fail to start or use SQLite."
 else
