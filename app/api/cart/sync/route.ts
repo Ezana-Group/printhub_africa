@@ -13,6 +13,8 @@ const cartItemSchema = z.union([
   z.object({
     productId: z.string(),
     variantId: z.string().optional(),
+    colorName: z.string().optional(),
+    colorHex: z.string().optional(),
     quantity: z.number().min(1),
     unitPrice: z.number(),
     name: z.string(),

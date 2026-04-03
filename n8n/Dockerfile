@@ -18,6 +18,7 @@ ENV N8N_LISTEN_ADDRESS=0.0.0.0
 ENV N8N_PROTOCOL=http
 ENV NODE_ENV=production
 ENV N8N_METRICS=true
+ENV N8N_HEALTHCHECK_ACTIVE=true
 ENV N8N_HEALTHCHECK_ENABLED=true
 # Set localhost so internal healthcheck works as intended
 ENV N8N_HEALTHCHECK_HOST=localhost

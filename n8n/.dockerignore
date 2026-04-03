@@ -1,0 +1,6 @@
+Dockerfile
+railway.toml
+docker-entrypoint.sh
+.env
+.git
+node_modules

@@ -27,18 +27,35 @@ fi
 if [ -z "$DB_POSTGRESDB_HOST" ] && [ -n "$DATABASE_URL" ]; then
     echo "Extracting database details from DATABASE_URL..."
     
-    # Simple regex extraction for Postgres URL: postgresql://user:pass@host:port/db?options
-    # We use sed to handle potential query parameters that can break simple 'cut'
-    export DB_POSTGRESDB_USER=$(echo "$DATABASE_URL" | sed -n 's|.*://\([^:]*\):.*|\1|p')
-    export DB_POSTGRESDB_PASSWORD=$(echo "$DATABASE_URL" | sed -n 's|.*://[^:]*:\([^@]*\)@.*|\1|p')
-    export DB_POSTGRESDB_HOST=$(echo "$DATABASE_URL" | sed -n 's|.*@\([^:/]*\)[:/].*|\1|p')
-    export DB_POSTGRESDB_PORT=$(echo "$DATABASE_URL" | sed -n 's|.*:\([0-9]*\)/.*|\1|p')
+    # Extract components using more robust methods
+    # Using sed with basic URL pattern: protocol://user:password@host:port/database
+    
+    # 1. Remove protocol prefix (matches postgres:// or postgresql://)
+    CLEAN_URL=$(echo "$DATABASE_URL" | sed 's|^[^:]*://||')
+    
+    # 2. Extract credentials and connection string
+    CREDS=$(echo "$CLEAN_URL" | cut -d'@' -f1)
+    CONN=$(echo "$CLEAN_URL" | cut -d'@' -f2-)
+    
+    export DB_POSTGRESDB_USER=$(echo "$CREDS" | cut -d':' -f1)
+    export DB_POSTGRESDB_PASSWORD=$(echo "$CREDS" | cut -s -d':' -f2-)
+    
+    # 3. Extract host, port and database
+    # Split by / to separate host:port from database and query params
+    HOST_PORT_PART=$(echo "$CONN" | cut -d'/' -f1)
+    DB_QUERY_PART=$(echo "$CONN" | cut -s -d'/' -f2-)
+    
+    export DB_POSTGRESDB_HOST=$(echo "$HOST_PORT_PART" | cut -d':' -f1)
+    export DB_POSTGRESDB_PORT=$(echo "$HOST_PORT_PART" | cut -s -d':' -f2)
     [ -z "$DB_POSTGRESDB_PORT" ] && export DB_POSTGRESDB_PORT=5432
-    export DB_POSTGRESDB_DATABASE=$(echo "$DATABASE_URL" | sed -n 's|.*/\([^?]*\).*|\1|p')
+    
+    # Extract database name (remove query parameters)
+    export DB_POSTGRESDB_DATABASE=$(echo "$DB_QUERY_PART" | cut -d'?' -f1)
 
     echo "Extracted Host: $DB_POSTGRESDB_HOST"
     echo "Extracted Port: $DB_POSTGRESDB_PORT"
     echo "Extracted DB: $DB_POSTGRESDB_DATABASE"
+    echo "Extracted User: $DB_POSTGRESDB_USER"
 fi
 
 # 3. Handle Port Mapping
