@@ -8,7 +8,7 @@ const root = path.resolve(__dirname, "..");
 config({ path: path.join(root, ".env.local") });
 config({ path: path.join(root, ".env") });
 
-const prisma = new PrismaClient();
+import { prisma } from "../lib/prisma";
 
 async function main() {
   const adminEmail = "admin@printhub.africa";
