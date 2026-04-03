@@ -1,11 +1,16 @@
-FROM n8nio/n8n:latest
+FROM n8nio/n8n:1.76.0
 
 USER root
-# Ensure the directory exists and has correct permissions
+
+# Install necessary system dependencies (curl for healthchecks, ffmpeg for media tasks)
+RUN apk add --no-cache curl ffmpeg
+
+# Create the data directory and set permissions
 RUN mkdir -p /home/node/.n8n && chown -R node:node /home/node/.n8n
 
-# Copy the local n8n configuration files
-COPY --chown=node:node . /home/node/.n8n
+# Copy the workflows and other local files into a temporary folder
+# We'll use this if we need to pre-load or reference them.
+COPY --chown=node:node . /home/node/n8n-config/
 
 # Copy and setup entrypoint script
 COPY --chown=node:node docker-entrypoint.sh /docker-entrypoint.sh
@@ -13,22 +18,18 @@ RUN chmod +x /docker-entrypoint.sh
 
 USER node
 
-# Important for Railway: Fallback to 5678 if PORT is not set
+# n8n environment variables
 ENV N8N_LISTEN_ADDRESS=0.0.0.0
-ENV N8N_PROTOCOL=http
+ENV N8N_PROTOCOL=https
 ENV NODE_ENV=production
 ENV N8N_METRICS=true
 ENV N8N_HEALTHCHECK_ACTIVE=true
-ENV N8N_HEALTHCHECK_ENABLED=true
-# Set localhost so internal healthcheck works as intended
 ENV N8N_HEALTHCHECK_HOST=localhost
-ENV N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
-# Database defaults for Neon
-ENV DB_TYPE=postgresdb
-ENV DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED=false
-ENV DB_POSTGRESDB_SSL_MODE=require
-ENV N8N_CORS_ALLOWED_ORIGINS="https://admin.printhub.africa"
-ENV N8N_LOG_LEVEL=debug
 
+# Use project-level storage
+ENV N8N_USER_FOLDER=/home/node/.n8n
+
+# Log level
+ENV N8N_LOG_LEVEL=info
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
