@@ -7,9 +7,14 @@ RUN mkdir -p /home/node/.n8n && chown -R node:node /home/node/.n8n
 # Copy the local n8n configuration files
 COPY --chown=node:node . /home/node/.n8n
 
+# Copy and setup entrypoint script
+COPY --chown=node:node docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
 USER node
 
 ENV N8N_PORT=5678
+ENV N8N_LISTEN_ADDRESS=0.0.0.0
 ENV N8N_PROTOCOL=http
 ENV NODE_ENV=production
 ENV N8N_METRICS=true
@@ -17,3 +22,6 @@ ENV N8N_HEALTHCHECK_ENABLED=true
 ENV N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
 
 EXPOSE 5678
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
+

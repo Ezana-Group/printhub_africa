@@ -4,7 +4,16 @@ import { GET as customerGet, POST as customerPost } from "../customer/[...nextau
 
 export async function GET(req: NextRequest, ctx: { params: { nextauth: string[] } }) {
   const host = req.headers.get("host") ?? "";
-  const isAdmin = host.startsWith("admin.") || host.startsWith("admin.localhost") || (host.includes("localhost") && req.nextUrl.pathname.startsWith("/admin"));
+  const referer = req.headers.get("referer") || "";
+  
+  // Detection logic for admin: check subdomains or localhost with admin pathing
+  const isAdmin = 
+    host.startsWith("admin.") || 
+    host.startsWith("admin.localhost") || 
+    (host.includes("localhost") && (
+      req.nextUrl.pathname.includes("/admin") || 
+      referer.includes("/admin")
+    ));
   
   if (isAdmin) {
     return adminGet(req, ctx);
@@ -14,7 +23,15 @@ export async function GET(req: NextRequest, ctx: { params: { nextauth: string[] 
 
 export async function POST(req: NextRequest, ctx: { params: { nextauth: string[] } }) {
   const host = req.headers.get("host") ?? "";
-  const isAdmin = host.startsWith("admin.") || host.startsWith("admin.localhost") || (host.includes("localhost") && req.nextUrl.pathname.startsWith("/admin"));
+  const referer = req.headers.get("referer") || "";
+  
+  const isAdmin = 
+    host.startsWith("admin.") || 
+    host.startsWith("admin.localhost") || 
+    (host.includes("localhost") && (
+      req.nextUrl.pathname.includes("/admin") || 
+      referer.includes("/admin")
+    ));
   
   if (isAdmin) {
     return adminPost(req, ctx);

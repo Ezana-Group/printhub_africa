@@ -108,19 +108,33 @@ export function AdminAuthPage() {
       }
 
       // Step 2: Complete sign in with NextAuth
+      console.log("Proceeding to NextAuth signIn...");
       const result = await signIn("credentials", {
         email,
         password,
         totpCode,
         redirect: false,
+        callbackUrl: "/admin",
       });
 
       if (result?.error) {
+        console.error("SignIn error:", result.error);
         setError("Sign in failed. Please try again.");
         setLoading(false);
+      } else if (result?.ok) {
+        console.log("SignIn successful, waiting for session update...");
+        // Use a timeout as a safety net in case useSession doesn't fire immediately
+        setTimeout(() => {
+          if (loading) {
+            setLoading(false);
+            router.push("/admin");
+          }
+        }, 5000);
+      } else {
+        setLoading(false);
       }
-      // Success handled by useSession effect
     } catch (err) {
+      console.error("Login unexpected error:", err);
       setError("An unexpected error occurred.");
       setLoading(false);
     }
