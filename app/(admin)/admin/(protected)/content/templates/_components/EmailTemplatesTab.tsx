@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { EMAIL_TEMPLATE_META } from "@/lib/email-templates";
+import { EMAIL_TEMPLATE_META } from "@/lib/email-templates-constants";
 
 interface EmailTemplate {
   id: string;

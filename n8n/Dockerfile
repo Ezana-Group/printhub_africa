@@ -13,15 +13,17 @@ RUN chmod +x /docker-entrypoint.sh
 
 USER node
 
+# Important for Railway: Fallback to 5678 if PORT is not set
 ENV N8N_PORT=5678
 ENV N8N_LISTEN_ADDRESS=0.0.0.0
 ENV N8N_PROTOCOL=http
 ENV NODE_ENV=production
 ENV N8N_METRICS=true
 ENV N8N_HEALTHCHECK_ENABLED=true
+# Set localhost so internal healthcheck works as intended
+ENV N8N_HEALTHCHECK_HOST=localhost
 ENV N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
 
 EXPOSE 5678
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
-

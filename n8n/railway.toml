@@ -3,8 +3,8 @@
 
 [deploy]
   healthcheckPath = "/healthz"
-  healthcheckPort = 5678
   healthcheckTimeout = 300
   restartPolicyType = "ON_FAILURE"
   restartPolicyMaxRetries = 5
   numReplicas = 1
+# healthcheckPort is omitted to allow Railway to detect the dynamic PORT automatically
