@@ -42,13 +42,13 @@ export async function POST(
       data: {
         name: data.name,
         slug: finalSlug,
-        description: data.description,
+        description: data.fullDescription || data.description,
         shortDescription: data.shortDescription,
         categoryId: data.categoryId,
         productType: "READYMADE_3D",
         images: data.imageUrls,
-        basePrice: data.basePrice,
-        comparePrice: data.comparePrice || null,
+        basePrice: data.suggestedPriceMin || data.basePrice || 0,
+        comparePrice: data.suggestedPriceMax || data.comparePrice || null,
         stock: 0,
         isActive: true, // Show in shop immediately upon approval
         tags: data.tags,
@@ -86,6 +86,49 @@ export async function POST(
 
     revalidateTag("products");
     revalidatePath("/admin/catalogue/import");
+    revalidatePath("/shop");
+    revalidatePath("/catalogue");
+
+    // --- AUTOMATION TRIGGERS ---
+    try {
+      const { n8n } = await import("@/lib/n8n");
+      
+      // 1. Internal Staff Alert (WhatsApp/Telegram)
+      void n8n.staffAlert({
+        type: 'PRODUCT_PUBLISHED',
+        title: `🚀 New Product Published: ${product.name}`,
+        message: `A new product has been successfully imported and published to the shop.\n\nCategory: ${data.categoryId}\nPrice: KES ${data.basePrice}\nSource: ${importQueue ? 'Printables/External' : 'Manual Upload'}`,
+        urgency: 'low',
+        actionUrl: `${process.env.NEXT_PUBLIC_APP_URL}/shop/product/${product.slug}`,
+        targetRoles: ['STAFF', 'ADMIN']
+      });
+
+      // 2. Global Marketing Trigger (Socials/Search)
+      void n8n.productPublished({
+        productId: product.id,
+        productName: product.name,
+        productSlug: product.slug,
+        description: product.description || "",
+        price: Number(product.basePrice),
+        currency: 'KES',
+        imageUrls: data.imageUrls || [],
+        category: data.categoryId,
+        productUrl: `${process.env.NEXT_PUBLIC_APP_URL}/shop/product/${product.slug}`,
+        exportFlags: {
+          google: true,
+          meta: true,
+          tiktok: true,
+          linkedin: true,
+          pinterest: true,
+          x: true,
+          googleBusiness: true,
+          snapchat: true,
+          youtube: true
+        }
+      });
+    } catch (err) {
+      console.error("n8n triggers failed:", err);
+    }
 
     return NextResponse.json({ productId: product.id });
   } catch (error: unknown) {

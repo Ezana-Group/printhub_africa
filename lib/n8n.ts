@@ -18,7 +18,7 @@ function signPayload(payload: string): string {
 
 export async function triggerN8nWorkflow(
   workflowWebhookPath: string,
-  payload: Record<string, unknown>,
+  payload: any,
   options?: { blocking?: boolean }
 ): Promise<void> {
   if (!N8N_BASE_URL) {
@@ -205,7 +205,7 @@ export interface QuoteReadyPayload {
 
 export interface StaffAlertPayload {
   type: 'NEW_ORDER' | 'PAYMENT_MANUAL' | 'NEW_QUOTE' | 'LOW_STOCK' | 
-        'PRODUCTION_DELAYED' | 'SUPPORT_TICKET'
+        'PRODUCTION_DELAYED' | 'SUPPORT_TICKET' | 'PRODUCT_PUBLISHED'
   title: string
   message: string
   urgency: 'low' | 'medium' | 'high' | 'critical'
