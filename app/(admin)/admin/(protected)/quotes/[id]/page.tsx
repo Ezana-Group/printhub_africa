@@ -241,6 +241,8 @@ export default async function AdminQuoteDetailPage({
             closedBy={quote.closedBy}
             closedAt={serialized.closedAt}
             closedReason={quote.closedReason}
+            aiDraft={(quote as any).aiDraft}
+            aiDraftGeneratedAt={(quote as any).aiDraftGeneratedAt?.toISOString() ?? null}
           />
           <AdminQuoteCancelRestore
             quoteId={quote.id}

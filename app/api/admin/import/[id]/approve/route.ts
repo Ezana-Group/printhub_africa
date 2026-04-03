@@ -14,12 +14,19 @@ export async function POST(
   const data = await req.json();
 
   try {
-    const existingModel = await prisma.externalModel.findUnique({
+    let existingModel = await prisma.externalModel.findUnique({
       where: { id },
-    });
+    }) as any;
 
+    let importQueue = null;
     if (!existingModel) {
-      return NextResponse.json({ error: "MODEL_NOT_FOUND" }, { status: 404 });
+      importQueue = await prisma.catalogueImportQueue.findUnique({
+        where: { id },
+      });
+      if (!importQueue) {
+        return NextResponse.json({ error: "MODEL_NOT_FOUND" }, { status: 404 });
+      }
+      existingModel = importQueue;
     }
 
     // 1. Create Product
@@ -48,24 +55,34 @@ export async function POST(
       }
     });
 
-    // 2. Update ExternalModel
-    await prisma.externalModel.update({
-      where: { id },
-      data: {
-        status: "APPROVED",
-        reviewedBy: auth.session.user.id,
-        reviewedAt: new Date(),
-        productId: product.id,
-        name: data.name,
-        description: data.description,
-        printInfo: data.printInfo,
-        tags: data.tags,
-        categoryId: data.categoryId,
-        licenceType: data.licenceType,
-        licenceVerified: true,
-        notes: data.internalNotes,
-      }
-    });
+    // 2. Update Model Record
+    if (importQueue) {
+      await prisma.catalogueImportQueue.update({
+        where: { id },
+        data: {
+          status: "APPROVED",
+          productId: product.id,
+        }
+      });
+    } else {
+      await prisma.externalModel.update({
+        where: { id },
+        data: {
+          status: "APPROVED",
+          reviewedBy: auth.session.user.id,
+          reviewedAt: new Date(),
+          productId: product.id,
+          name: data.name,
+          description: data.description,
+          printInfo: data.printInfo,
+          tags: data.tags,
+          categoryId: data.categoryId,
+          licenceType: data.licenceType,
+          licenceVerified: true,
+          notes: data.internalNotes,
+        }
+      });
+    }
 
     revalidateTag("products");
     revalidatePath("/admin/catalogue/import");

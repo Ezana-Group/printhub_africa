@@ -263,7 +263,9 @@ export async function sendOrderConfirmationEmail(
     }).catch(err => console.error("n8n order-confirmed failed:", err));
   }
 
-  // Still send the existing email as a fallback/immediate notification
+  // Fallback: commenting out direct Resend call. 
+  // n8n is the primary orchestrator for order-confirmation (Email + WA + SMS).
+  /*
   const { businessName, footer } = await getEmailBranding();
   const orderUrl = `${baseUrl}/account/orders`;
   const context = {
@@ -287,6 +289,7 @@ export async function sendOrderConfirmationEmail(
       </div>
     `;
   return sendWithTemplate("order-confirmation", email, context, defaultSubject, defaultHtml);
+  */
 }
 
 /** Order status update (tracking) — used by createTrackingEvent. */
@@ -316,6 +319,9 @@ export async function sendOrderStatusEmail(
     }).catch(err => console.error("n8n order-status-changed failed:", err));
   }
 
+  // Fallback: commenting out direct Resend call for status changes.
+  // n8n handles logistics notifications (WhatsApp + Email).
+  /*
   const { businessName, footer } = await getEmailBranding();
   const trackUrl = `${baseUrl}/track?ref=${encodeURIComponent(orderNumber)}`;
   const context = { businessName, footer, orderNumber, title, description, trackUrl };
@@ -331,6 +337,7 @@ export async function sendOrderStatusEmail(
       </div>
     `;
   return sendWithTemplate("order-status", email, context, defaultSubject, defaultHtml);
+  */
 }
 
 /** Manual payment submitted — we received your reference; team will confirm within 30 min. */

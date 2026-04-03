@@ -106,6 +106,25 @@ export const n8n = {
 
   corporateApplicationSubmitted: (payload: CorporateAppPayload) =>
     triggerN8nWorkflow('corporate-application', payload),
+
+  catalogueImportEnhance: (payload: CatalogueImportPayload) =>
+    triggerN8nWorkflow('enhance-catalogue-import', payload),
+}
+
+// ... existing interfaces ...
+
+export interface CatalogueImportPayload {
+  importId: string
+  sourceUrl: string
+  platform: string
+  originalName: string | null
+  originalDescription: string | null
+  originalTags: string[]
+  imageUrls: string[]
+  designerName: string | null
+  licenseType: string | null
+  downloadCount: number | null
+  likeCount: number | null
 }
 
 // TypeScript interfaces for all payloads

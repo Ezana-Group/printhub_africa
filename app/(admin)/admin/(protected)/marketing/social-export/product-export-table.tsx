@@ -15,6 +15,26 @@ interface Product {
   exportToPinterest: boolean;
   exportToX: boolean;
   exportToGoogleBiz: boolean;
+  exportToSnapchat: boolean;
+  exportToYoutube: boolean;
+  exportToInstagramStories: boolean;
+  exportToInstagramReels: boolean;
+  exportToYoutubeShorts: boolean;
+  exportToWhatsappStatus: boolean;
+  exportToWhatsappChannel: boolean;
+  exportToTelegram: boolean;
+  exportToGoogleDiscover: boolean;
+  exportToGoogleMapsPost: boolean;
+  exportToBingPlaces: boolean;
+  exportToAppleMaps: boolean;
+  exportToPigiaMe: boolean;
+  exportToOlxKenya: boolean;
+  exportToReddit: boolean;
+  exportToLinkedInNewsletter: boolean;
+  exportToMedium: boolean;
+  exportToNextdoor: boolean;
+  exportToJiji: boolean;
+  featuredThisWeek: boolean;
 }
 
 export function ProductExportTable({ 
@@ -89,6 +109,26 @@ export function ProductExportTable({
     { field: "exportToPinterest", label: "Pinterest" },
     { field: "exportToX", label: "X" },
     { field: "exportToGoogleBiz", label: "G-Biz" },
+    { field: "exportToSnapchat", label: "Snapchat" },
+    { field: "exportToYoutube", label: "YouTube" },
+    { field: "exportToInstagramStories", label: "IG Stories" },
+    { field: "exportToInstagramReels", label: "IG Reels" },
+    { field: "exportToYoutubeShorts", label: "YT Shorts" },
+    { field: "exportToWhatsappStatus", label: "WA Status" },
+    { field: "exportToWhatsappChannel", label: "WA Channel" },
+    { field: "exportToTelegram", label: "Telegram" },
+    { field: "exportToGoogleDiscover", label: "Discover" },
+    { field: "exportToGoogleMapsPost", label: "Maps Post" },
+    { field: "exportToBingPlaces", label: "Bing" },
+    { field: "exportToAppleMaps", label: "Apple" },
+    { field: "exportToPigiaMe", label: "PigiaMe" },
+    { field: "exportToOlxKenya", label: "OLX" },
+    { field: "exportToReddit", label: "Reddit" },
+    { field: "exportToLinkedInNewsletter", label: "LI News" },
+    { field: "exportToMedium", label: "Medium" },
+    { field: "exportToNextdoor", label: "Nextdoor" },
+    { field: "exportToJiji", label: "Jiji" },
+    { field: "featuredThisWeek", label: "SMS Feature" },
   ] as const;
 
   return (
@@ -177,7 +217,7 @@ export function ProductExportTable({
 
             {filteredProducts.length === 0 && (
               <tr>
-                <td colSpan={8} className="p-10 text-center text-muted-foreground italic">
+                <td colSpan={30} className="p-10 text-center text-muted-foreground italic">
                   No products found matching your search.
                 </td>
               </tr>

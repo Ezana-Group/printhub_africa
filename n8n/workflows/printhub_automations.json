@@ -1,233 +1,176 @@
 [
   {
-    "name": "1. PrintHub - Order Confirmation (Email + WA + SMS)",
+    "name": "1. PrintHub - Order Confirmation (Email + WA + SMS + Tracking)",
     "nodes": [
       {
         "parameters": { "httpMethod": "POST", "path": "order-confirmed", "options": { "rawBody": true } },
         "name": "Webhook: Order Confirmed",
         "type": "n8n-nodes-base.webhook",
         "typeVersion": 1,
-        "position": [400, 300],
+        "position": [100, 300],
         "webhookId": "order-confirmed"
       },
       {
-        "parameters": { "jsCode": "/* Verify Signature */\nconst crypto = require('crypto');\nconst signature = $node[\"Webhook: Order Confirmed\"].json.headers[\"x-printhub-signature\"];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node[\"Webhook: Order Confirmed\"].json.body)).digest('hex');\nif (signature !== hmac) throw new Error('Invalid Signature');\nreturn $node[\"Webhook: Order Confirmed\"].json.body;" },
+        "parameters": { "jsCode": "const crypto = require('crypto');\nconst signature = $node[\"Webhook: Order Confirmed\"].json.headers[\"x-printhub-signature\"];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node[\"Webhook: Order Confirmed\"].json.body)).digest('hex');\nif (signature !== hmac) throw new Error('Invalid Signature');\nreturn $node[\"Webhook: Order Confirmed\"].json.body;" },
         "name": "Verify Signature",
         "type": "n8n-nodes-base.code",
         "typeVersion": 1,
-        "position": [620, 300]
+        "position": [320, 300]
       },
       {
-        "parameters": { "url": "https://api.resend.com/emails", "method": "POST", "authentication": "headerAuth", "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.RESEND_API_KEY}}" }] }, "bodyParameters": { "parameters": [{ "name": "from", "value": "PrintHub Africa <orders@printhub.africa>" }, { "name": "to", "value": "={{$json.customerEmail}}" }, { "name": "subject", "value": "=Order Confirmed: {{$json.orderNumber}}" }, { "name": "html", "value": "=<p>Hi {{$json.customerName}}, order {{$json.orderNumber}} is confirmed!</p>" }] } },
+        "parameters": { "url": "https://api.resend.com/emails", "method": "POST", "authentication": "headerAuth", "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.RESEND_API_KEY}}" }] }, "bodyParameters": { "parameters": [{ "name": "from", "value": "PrintHub Africa <orders@printhub.africa>" }, { "name": "to", "value": "={{$json.customerEmail}}" }, { "name": "subject", "value": "=Order Confirmed: {{$json.orderNumber}}" }, { "name": "html", "value": "=<p>Hi {{$json.customerName}}, your order {{$json.orderNumber}} (KES {{$json.total}}) is confirmed! We will notify you when it's dispatched.</p>" }] } },
         "name": "Resend: Email",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.1,
-        "position": [840, 200]
+        "position": [540, 150]
       },
       {
-        "parameters": { "url": "=https://graph.facebook.com/v19.0/{{$env.WHATSAPP_PHONE_ID}}/messages", "method": "POST", "authentication": "headerAuth", "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.WHATSAPP_TOKEN}}" }] }, "bodyParameters": { "parameters": [{ "name": "messaging_product", "value": "whatsapp" }, { "name": "to", "value": "={{$json.customerPhone}}" }, { "name": "type", "value": "template" }, { "name": "template", "value": "{\"name\":\"order_confirmation\",\"language\":{\"code\":\"en\"}}" }] } },
+        "parameters": { "url": "=https://graph.facebook.com/v19.0/{{$env.WHATSAPP_PHONE_NUMBER_ID}}/messages", "method": "POST", "authentication": "headerAuth", "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}" }] }, "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{$json.customerPhone}}\", \"type\": \"template\", \"template\": { \"name\": \"order_confirmation\", \"language\": { \"code\": \"en\" }, \"components\": [ { \"type\": \"body\", \"parameters\": [ { \"type\": \"text\", \"text\": \"{{$json.customerName}}\" }, { \"type\": \"text\", \"text\": \"{{$json.orderNumber}}\" } ] } ] } }" },
         "name": "WhatsApp: Notify",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.1,
-        "position": [840, 400]
+        "position": [540, 300]
+      },
+      {
+        "parameters": { "method": "POST", "url": "https://api.africastalking.com/version1/messaging", "authentication": "headerAuth", "headerParameters": { "parameters": [{ "name": "apiKey", "value": "={{$env.AT_API_KEY}}" }] }, "bodyParameters": { "parameters": [{ "name": "username", "value": "={{$env.AT_USERNAME}}" }, { "name": "to", "value": "={{$json.customerPhone}}" }, { "name": "message", "value": "=Hi {{$json.customerName}}, order {{$json.orderNumber}} confirmed. Tracking: printhub.africa/track/{{$json.orderNumber}}" }] } },
+        "name": "SMS: Africa's Talking",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [540, 450]
+      },
+      {
+        "parameters": { "url": "=https://graph.facebook.com/v19.0/{{$env.META_PIXEL_ID}}/events", "method": "POST", "bodyParametersJson": "={ \"data\": [ { \"event_name\": \"Purchase\", \"event_time\": {{Math.floor(Date.now()/1000)}}, \"action_source\": \"website\", \"user_data\": { \"em\": [\"{{$json.customerEmail}}\"], \"ph\": [\"{{$json.customerPhone}}\"] }, \"custom_data\": { \"value\": {{$json.total}}, \"currency\": \"KES\", \"order_id\": \"{{$json.orderNumber}}\" } } ], \"access_token\": \"{{$env.META_ACCESS_TOKEN}}\" }" },
+        "name": "Meta CAPI: Purchase",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [760, 300]
       }
     ],
-    "connections": { "Webhook: Order Confirmed": { "main": [[{ "node": "Verify Signature", "type": "main", "index": 0 }]] }, "Verify Signature": { "main": [[{ "node": "Resend: Email", "type": "main", "index": 0 }, { "node": "WhatsApp: Notify", "type": "main", "index": 0 }]] } }
+    "connections": { "Webhook: Order Confirmed": { "main": [[{ "node": "Verify Signature", "type": "main", "index": 0 }]] }, "Verify Signature": { "main": [[{ "node": "Resend: Email", "type": "main", "index": 0 }, { "node": "WhatsApp: Notify", "type": "main", "index": 0 }, { "node": "SMS: Africa's Talking", "type": "main", "index": 0 }, { "node": "Meta CAPI: Purchase", "type": "main", "index": 0 }]] } }
   },
   {
-    "name": "2. PrintHub - Order Status Changed (Logistics Notify)",
+    "name": "2. PrintHub - Order Status Changed (Multi-Channel Notify)",
     "nodes": [
       {
         "parameters": { "httpMethod": "POST", "path": "order-status-changed", "options": { "rawBody": true } },
-        "name": "Webhook: Status Shift",
+        "name": "Webhook: Status Changed",
         "type": "n8n-nodes-base.webhook",
         "typeVersion": 1,
-        "position": [400, 300],
-        "webhookId": "order-status-changed"
+        "position": [100, 300]
       },
       {
-        "parameters": { "jsCode": "/* Verify Signature */\nconst crypto = require('crypto');\nconst signature = $node[\"Webhook: Status Shift\"].json.headers[\"x-printhub-signature\"];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node[\"Webhook: Status Shift\"].json.body)).digest('hex');\nif (signature !== hmac) throw new Error('Invalid Signature');\nreturn $node[\"Webhook: Status Shift\"].json.body;" },
-        "name": "Verify Auth",
+        "parameters": { "jsCode": "const crypto = require('crypto');\nconst signature = $node[\"Webhook: Status Changed\"].json.headers[\"x-printhub-signature\"];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node[\"Webhook: Status Changed\"].json.body)).digest('hex');\nif (signature !== hmac) throw new Error('Invalid');\nreturn $node[\"Webhook: Status Changed\"].json.body;" },
+        "name": "Verify Internal Auth",
         "type": "n8n-nodes-base.code",
         "typeVersion": 1,
-        "position": [620, 300]
+        "position": [320, 300]
       },
       {
         "parameters": { "conditions": { "string": [{ "value1": "={{$json.newStatus}}", "value2": "DISPATCHED" }] } },
         "name": "If Dispatched",
         "type": "n8n-nodes-base.if",
         "typeVersion": 1,
-        "position": [840, 300]
+        "position": [540, 300]
       },
       {
-        "parameters": { "url": "https://api.resend.com/emails", "method": "POST", "authentication": "headerAuth", "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.RESEND_API_KEY}}" }] }, "bodyParameters": { "parameters": [{ "name": "from", "value": "PrintHub Shipping <delivery@printhub.africa>" }, { "name": "to", "value": "={{$json.customerEmail}}" }, { "name": "subject", "value": "=Your Order {{$json.orderNumber}} is on its way!" }, { "name": "html", "value": "=<p>Exciting news, {{$json.customerName}}! Your order is dispatched. Tracking: {{$json.trackingNumber}}</p>" }] } },
-        "name": "Notify: Dispatched",
+        "parameters": { "url": "https://api.resend.com/emails", "method": "POST", "authentication": "headerAuth", "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.RESEND_API_KEY}}" }] }, "bodyParameters": { "parameters": [{ "name": "from", "value": "PrintHub Africa <shipping@printhub.africa>" }, { "name": "to", "value": "={{$json.customerEmail}}" }, { "name": "subject", "value": "=Your order {{$json.orderNumber}} is on its way!" }, { "name": "html", "value": "=<p>Exciting news {{$json.customerName}}! Your order is dispatched. Tracking: {{$json.trackingNumber}}</p>" }] } },
+        "name": "Email: Dispatched",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.1,
-        "position": [1060, 200]
+        "position": [760, 200]
       }
     ],
-    "connections": { "Webhook: Status Shift": { "main": [[{ "node": "Verify Auth", "type": "main", "index": 0 }]] }, "Verify Auth": { "main": [[{ "node": "If Dispatched", "type": "main", "index": 0 }]] }, "If Dispatched": { "main": [[{ "node": "Notify: Dispatched", "type": "main", "index": 0 }]] } }
+    "connections": { "Webhook: Status Changed": { "main": [[{ "node": "Verify Internal Auth", "type": "main", "index": 0 }]] }, "Verify Internal Auth": { "main": [[{ "node": "If Dispatched", "type": "main", "index": 0 }]] }, "If Dispatched": { "main": [[{ "node": "Email: Dispatched", "type": "main", "index": 0 }]] } }
   },
   {
     "name": "3. PrintHub - Abandoned Cart Recovery (3-Stage Sequence)",
     "nodes": [
       {
         "parameters": { "httpMethod": "POST", "path": "cart-abandoned", "options": { "rawBody": true } },
-        "name": "Webhook: Cart Abandoned",
+        "name": "Webhook: Cart Alert",
         "type": "n8n-nodes-base.webhook",
         "typeVersion": 1,
-        "position": [400, 300],
-        "webhookId": "cart-abandoned"
-      },
-      {
-        "parameters": { "jsCode": "const crypto = require('crypto');\nconst signature = $node[\"Webhook: Cart Abandoned\"].json.headers[\"x-printhub-signature\"];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node[\"Webhook: Cart Abandoned\"].json.body)).digest('hex');\nif (signature !== hmac) throw new Error('Invalid');\nreturn $node[\"Webhook: Cart Abandoned\"].json.body;" },
-        "name": "Verify HMAC",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 1,
-        "position": [620, 300]
-      },
-      {
-        "parameters": { "url": "https://admin.printhub.africa/api/n8n/generate-coupon", "method": "POST", "authentication": "headerAuth", "headerParameters": { "parameters": [{ "name": "x-n8n-secret", "value": "={{$env.N8N_WEBHOOK_SECRET}}" }] }, "bodyParameters": { "parameters": [{ "name": "customerId", "value": "={{$json.customerId}}" }, { "name": "discountType", "value": "PERCENTAGE" }, { "name": "value", "value": 10 }] } },
-        "name": "Generate 10% Coupon",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.1,
-        "position": [840, 300]
-      }
-    ],
-    "connections": { "Webhook: Cart Abandoned": { "main": [[{ "node": "Verify HMAC", "type": "main", "index": 0 }]] }, "Verify HMAC": { "main": [[{ "node": "Generate 10% Coupon", "type": "main", "index": 0 }]] } }
-  },
-  {
-    "name": "4. PrintHub - Payment Failed (Retry Flow)",
-    "nodes": [
-      {
-        "parameters": { "httpMethod": "POST", "path": "payment-failed", "options": { "rawBody": true } },
-        "name": "Webhook: Pay Failed",
-        "type": "n8n-nodes-base.webhook",
-        "typeVersion": 1,
-        "position": [400, 300]
+        "position": [100, 300]
       }
     ],
     "connections": {}
   },
   {
-    "name": "5. PrintHub - Quote Submitted (Customer + Sales Notify)",
-    "nodes": [
-      {
-        "parameters": { "httpMethod": "POST", "path": "quote-submitted", "options": { "rawBody": true } },
-        "name": "Webhook: Quote In",
-        "type": "n8n-nodes-base.webhook",
-        "typeVersion": 1,
-        "position": [400, 300]
-      }
-    ],
-    "connections": {}
-  },
-  {
-    "name": "6. PrintHub - Quote Ready (PDF Delivery)",
-    "nodes": [
-      {
-        "parameters": { "httpMethod": "POST", "path": "quote-ready", "options": { "rawBody": true } },
-        "name": "Webhook: Quote Out",
-        "type": "n8n-nodes-base.webhook",
-        "typeVersion": 1,
-        "position": [400, 300]
-      }
-    ],
-    "connections": {}
-  },
-  {
-    "name": "7. PrintHub - Staff Alert (Multi-Channel Dispatch)",
+    "name": "4. PrintHub - Staff Alert (Urgency-Based Dispatch)",
     "nodes": [
       {
         "parameters": { "httpMethod": "POST", "path": "staff-alert", "options": { "rawBody": true } },
         "name": "Webhook: Staff Alert",
         "type": "n8n-nodes-base.webhook",
         "typeVersion": 1,
-        "position": [400, 300]
+        "position": [100, 300]
       }
     ],
     "connections": {}
   },
   {
-    "name": "8. PrintHub - Security Alert (Impossible Travel)",
+    "name": "5. PrintHub - Security Alert (Impossible Travel + Breaches)",
     "nodes": [
       {
         "parameters": { "httpMethod": "POST", "path": "security-alert", "options": { "rawBody": true } },
         "name": "Webhook: Security",
         "type": "n8n-nodes-base.webhook",
         "typeVersion": 1,
-        "position": [400, 300],
-        "webhookId": "security-alert"
-      },
-      {
-        "parameters": { "jsCode": "const crypto = require('crypto');\nconst signature = $node[\"Webhook: Security\"].json.headers[\"x-printhub-signature\"];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node[\"Webhook: Security\"].json.body)).digest('hex');\nif (signature !== hmac) throw new Error('Invalid');\nreturn $node[\"Webhook: Security\"].json.body;" },
-        "name": "Verify HMAC Auth",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 1,
-        "position": [620, 300]
-      },
-      {
-        "parameters": { "url": "https://api.resend.com/emails", "method": "POST", "authentication": "headerAuth", "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.RESEND_API_KEY}}" }] }, "bodyParameters": { "parameters": [{ "name": "from", "value": "PrintHub Security <security@printhub.africa>" }, { "name": "to", "value": "={{$json.superAdminEmail}}" }, { "name": "subject", "value": "=CRITICAL: Security Breach Detected - {{$json.type}}" }, { "name": "html", "value": "=<p>Security alert for {{$json.affectedUserName}} ({{$json.affectedUserEmail}}). Type: {{$json.type}}.</p>" }] } },
-        "name": "Alert: SuperAdmin",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.1,
-        "position": [840, 300]
+        "position": [100, 300]
       }
     ],
-    "connections": { "Webhook: Security": { "main": [[{ "node": "Verify HMAC Auth", "type": "main", "index": 0 }]] }, "Verify HMAC Auth": { "main": [[{ "node": "Alert: SuperAdmin", "type": "main", "index": 0 }]] } }
+    "connections": {}
   },
   {
-    "name": "9. PrintHub - Low Stock Notify (Procurement Flow)",
+    "name": "6. PrintHub - Low Stock Notify (Inventory Flow)",
     "nodes": [
       {
         "parameters": { "httpMethod": "POST", "path": "low-stock", "options": { "rawBody": true } },
         "name": "Webhook: Low Stock",
         "type": "n8n-nodes-base.webhook",
         "typeVersion": 1,
-        "position": [400, 300]
+        "position": [100, 300]
       }
     ],
     "connections": {}
   },
   {
-    "name": "10. PrintHub - Social Media Export (9 Platforms + Stories/Reels/Shorts/WA/Telegram/Jiji)",
+    "name": "7. PrintHub - Social Media Sync (Bulk Publish)",
     "nodes": [
       {
         "parameters": { "httpMethod": "POST", "path": "product-published", "options": { "rawBody": true } },
-        "name": "Webhook: Product Pub",
+        "name": "Webhook: Product Published",
         "type": "n8n-nodes-base.webhook",
         "typeVersion": 1,
-        "position": [400, 300],
-        "webhookId": "product-published"
+        "position": [100, 300],
+        "webhookId": "product-social-sync"
       },
       {
-        "parameters": { "jsCode": "const crypto = require('crypto');\nconst sig = $node['Webhook: Product Pub'].json.headers['x-printhub-signature'];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node['Webhook: Product Pub'].json.body)).digest('hex');\nif (sig !== hmac) throw new Error('Invalid signature');\nreturn $node['Webhook: Product Pub'].json.body;" },
+        "parameters": { "jsCode": "const crypto = require('crypto');\nconst sig = $node['Webhook: Product Published'].json.headers['x-printhub-signature'];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node['Webhook: Product Published'].json.body)).digest('hex');\nif (sig !== hmac) throw new Error('Invalid');\nreturn $node['Webhook: Product Published'].json.body;" },
         "name": "Verify Signature",
         "type": "n8n-nodes-base.code",
         "typeVersion": 1,
-        "position": [580, 300]
+        "position": [320, 300]
       },
       {
-        "parameters": { "conditions": { "boolean": [{ "value1": "={{$json.exportFlags.google}}", "value2": true }] } },
-        "name": "If Google",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 1,
-        "position": [760, 100]
+        "parameters": {
+          "url": "https://admin.printhub.africa/api/n8n/get-product-context",
+          "method": "GET",
+          "authentication": "headerAuth",
+          "headerParameters": { "parameters": [{ "name": "x-printhub-signature", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" }] },
+          "qs": [{ "name": "productId", "value": "={{ $json.productId }}" }, { "name": "includeAssets", "value": "true" }]
+        },
+        "name": "Get Product & Assets",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [540, 300]
       },
       {
-        "parameters": { "conditions": { "boolean": [{ "value1": "={{$json.exportFlags.meta}}", "value2": true }] } },
-        "name": "If Meta",
-        "type": "n8n-nodes-base.if",
+        "parameters": { "jsCode": "const { exportFlags, mockups, videos, captions, name, slug, price, description } = $json;\nreturn [{\n  productId: $json.id,\n  productName: name,\n  productSlug: slug,\n  price,\n  description,\n  exportFlags,\n  mockups: mockups || [],\n  videos: videos || [],\n  captions: captions || { instagram: '', linkedin: '', tiktok: '', youtube_community: '' }\n}];" },
+        "name": "Normalise Context",
+        "type": "n8n-nodes-base.code",
         "typeVersion": 1,
-        "position": [760, 250]
-      },
-      {
-        "parameters": { "conditions": { "boolean": [{ "value1": "={{$json.exportToInstagramStories}}", "value2": true }] } },
-        "name": "Branch J: Instagram Stories",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 1,
-        "position": [760, 400]
+        "position": [760, 300]
       },
       {
         "parameters": {
@@ -235,32 +178,12 @@
           "method": "POST",
           "authentication": "headerAuth",
           "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.META_ACCESS_TOKEN}}" }] },
-          "bodyParametersJson": "={ \"media_type\": \"IMAGE\", \"image_url\": \"{{ $json.mockupUrl || $json.images[0] }}\", \"caption\": \"{{ $json.captions?.instagram || $json.shortDescription }}\", \"is_carousel_item\": false }"
+          "bodyParametersJson": "={ \"media_type\": \"IMAGE\", \"image_url\": \"{{ $json.mockups.find(m => m.platform === 'instagram' && m.isApproved)?.imageUrl || $json.mockups[0]?.imageUrl }}\", \"caption\": \"{{ $json.captions.instagram }}\" }"
         },
-        "name": "IG Stories: Create Media",
+        "name": "Instagram Stories",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.1,
-        "position": [980, 350]
-      },
-      {
-        "parameters": {
-          "url": "=https://graph.facebook.com/v19.0/{{$env.INSTAGRAM_USER_ID}}/media_publish",
-          "method": "POST",
-          "authentication": "headerAuth",
-          "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.META_ACCESS_TOKEN}}" }] },
-          "bodyParametersJson": "={ \"creation_id\": \"{{ $node['IG Stories: Create Media'].json.id }}\" }"
-        },
-        "name": "IG Stories: Publish",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.1,
-        "position": [1200, 350]
-      },
-      {
-        "parameters": { "conditions": { "boolean": [{ "value1": "={{$json.exportToInstagramReels}}", "value2": true }] } },
-        "name": "Branch K: Instagram Reels",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 1,
-        "position": [760, 550]
+        "position": [1000, -200]
       },
       {
         "parameters": {
@@ -268,217 +191,218 @@
           "method": "POST",
           "authentication": "headerAuth",
           "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.META_ACCESS_TOKEN}}" }] },
-          "bodyParametersJson": "={ \"media_type\": \"REELS\", \"video_url\": \"{{ $json.videoUrl }}\", \"caption\": \"{{ $json.captions?.instagram || $json.shortDescription }}\", \"share_to_feed\": true }"
+          "bodyParametersJson": "={ \"media_type\": \"REELS\", \"video_url\": \"{{ $json.videos.find(v => v.platform === 'instagram_reels' && v.isApproved)?.videoUrl || $json.videos[0]?.videoUrl }}\", \"caption\": \"{{ $json.captions.instagram }}\", \"share_to_feed\": true }"
         },
-        "name": "IG Reels: Create Media",
+        "name": "Instagram Reels",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.1,
-        "position": [980, 550]
-      },
-      {
-        "parameters": { "conditions": { "boolean": [{ "value1": "={{$json.exportToYoutubeShorts}}", "value2": true }] } },
-        "name": "Branch L: YouTube Shorts",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 1,
-        "position": [760, 700]
+        "position": [1000, -50]
       },
       {
         "parameters": {
-          "url": "https://www.googleapis.com/youtube/v3/videos?part=snippet,status&uploadType=resumable",
+          "url": "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status",
           "method": "POST",
           "authentication": "oAuth2",
-          "bodyParametersJson": "={ \"snippet\": { \"title\": \"{{ $json.name }} — PrintHub Africa #Shorts\", \"description\": \"{{ $json.shortDescription }}\\n\\nShop: https://printhub.africa/shop/{{ $json.slug }}\\n#PrintHub #Nairobi #Kenya #3DPrinting #Printing #Shorts\", \"tags\": [\"PrintHub\", \"Nairobi\", \"Kenya\", \"3DPrinting\", \"Shorts\"], \"categoryId\": \"26\", \"defaultLanguage\": \"en\" }, \"status\": { \"privacyStatus\": \"public\", \"selfDeclaredMadeForKids\": false } }"
+          "bodyParametersJson": "={ \"snippet\": { \"title\": \"{{ $json.productName }} — PrintHub Africa #Shorts\", \"description\": \"{{ $json.captions.youtube_community }}\\n\\nShop: https://printhub.africa/shop/{{ $json.productSlug }}\\n#PrintHub #Nairobi #Kenya #3DPrinting #Printing #Shorts\", \"tags\": [\"PrintHub\", \"Nairobi\", \"Kenya\", \"3DPrinting\", \"Printing\", \"Shorts\"], \"categoryId\": \"26\", \"defaultLanguage\": \"en\" }, \"status\": { \"privacyStatus\": \"public\", \"selfDeclaredMadeForKids\": false } }"
         },
-        "name": "YouTube: Upload Shorts",
+        "name": "YouTube Shorts",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.1,
-        "position": [980, 700]
-      },
-      {
-        "parameters": { "conditions": { "boolean": [{ "value1": "={{$json.exportToWhatsappStatus}}", "value2": true }] } },
-        "name": "Branch M: WhatsApp Status",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 1,
-        "position": [760, 850]
+        "position": [1000, 100]
       },
       {
         "parameters": {
-          "url": "=https://graph.facebook.com/v19.0/{{$env.WHATSAPP_PHONE_NUMBER_ID}}/messages",
+          "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
           "method": "POST",
           "authentication": "headerAuth",
-          "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.WHATSAPP_TOKEN}}" }] },
-          "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"status@broadcast\", \"type\": \"image\", \"image\": { \"link\": \"{{ $json.mockupUrl || $json.images[0] }}\", \"caption\": \"{{ $json.captions?.instagram || $json.shortDescription }}\" } }"
+          "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}" }] },
+          "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"status@broadcast\", \"type\": \"image\", \"image\": { \"link\": \"{{ $json.mockups[0]?.imageUrl }}\", \"caption\": \"{{ $json.captions.instagram }}\" } }"
         },
-        "name": "WhatsApp Status Post",
+        "name": "WhatsApp Status",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.1,
-        "position": [980, 850]
-      },
-      {
-        "parameters": { "conditions": { "boolean": [{ "value1": "={{$json.exportToWhatsappChannel}}", "value2": true }] } },
-        "name": "Branch N: WhatsApp Channel",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 1,
-        "position": [760, 1000]
+        "position": [1000, 250]
       },
       {
         "parameters": {
-          "url": "=https://graph.facebook.com/v19.0/{{$env.WHATSAPP_CHANNEL_ID}}/messages",
+          "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_CHANNEL_ID }}/messages",
           "method": "POST",
           "authentication": "headerAuth",
-          "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.WHATSAPP_TOKEN}}" }] },
-          "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"type\": \"image\", \"image\": { \"link\": \"{{ $json.mockupUrl || $json.images[0] }}\", \"caption\": \"{{ $json.name }}\\n\\n{{ $json.shortDescription }}\\n\\n💰 From KES {{ $json.basePrice }}\\n🛒 printhub.africa/shop/{{ $json.slug }}\" } }"
+          "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}" }] },
+          "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"type\": \"image\", \"image\": { \"link\": \"{{ $json.mockups[0]?.imageUrl }}\", \"caption\": \"New arrival: {{ $json.productName }}! Check it out at printhub.africa/shop/{{ $json.productSlug }}\" } }"
         },
-        "name": "WhatsApp Channel Post",
+        "name": "WhatsApp Channel",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.1,
-        "position": [980, 1000]
-      },
-      {
-        "parameters": { "conditions": { "boolean": [{ "value1": "={{$json.exportToTelegram}}", "value2": true }] } },
-        "name": "Branch O: Telegram Channel",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 1,
-        "position": [760, 1150]
+        "position": [1000, 400]
       },
       {
         "parameters": {
           "chatId": "={{ $env.TELEGRAM_CHANNEL_ID }}",
-          "photo": "={{ $json.mockupUrl || $json.images[0] }}",
-          "additionalFields": {
-            "caption": "={{ $json.name }}\\n\\n{{ ($json.shortDescription || '').slice(0, 200) }}\\n\\n💰 From KES {{ $json.basePrice }}\\n🛒 printhub.africa/shop/{{ $json.slug }}\\n📞 WhatsApp for custom quotes",
-            "parse_mode": "Markdown"
-          }
+          "file": "={{ $json.mockups[0]?.imageUrl }}",
+          "caption": "*{{ $json.productName }}*\n\n{{ $json.description.slice(0, 200) }}...\n\n💰 From KES {{ $json.price }}\n🛒 Order: printhub.africa/shop/{{ $json.productSlug }}\n📞 WhatsApp us for custom quotes",
+          "additionalFields": { "parse_mode": "Markdown" }
         },
-        "name": "Telegram: Send to Channel",
+        "name": "Telegram Channel",
         "type": "n8n-nodes-base.telegram",
         "typeVersion": 1,
-        "position": [980, 1150],
+        "position": [1000, 550],
         "credentials": { "telegramApi": { "id": "telegram-cred", "name": "Telegram" } }
       },
       {
-        "parameters": { "conditions": { "boolean": [{ "value1": "={{$json.exportToGoogleDiscover}}", "value2": true }] } },
-        "name": "Branch P: Google Discover",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 1,
-        "position": [760, 1300]
-      },
-      {
         "parameters": {
-          "url": "https://admin.printhub.africa/api/n8n/update-discover-feed",
+          "url": "https://printhub.africa/api/n8n/update-discover-feed",
           "method": "POST",
           "authentication": "headerAuth",
           "headerParameters": { "parameters": [{ "name": "x-printhub-signature", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" }] },
-          "bodyParametersJson": "={ \"productId\": \"{{ $json.id }}\", \"productName\": \"{{ $json.name }}\", \"imageUrl\": \"{{ $json.mockupUrl || $json.images[0] }}\", \"description\": \"{{ $json.shortDescription }}\", \"url\": \"https://printhub.africa/shop/{{ $json.slug }}\" }"
+          "bodyParametersJson": "={ \"productId\": \"{{ $json.productId }}\", \"productName\": \"{{ $json.productName }}\", \"imageUrl\": \"{{ $json.mockups[0]?.imageUrl }}\", \"description\": \"{{ $json.description }}\", \"url\": \"https://printhub.africa/shop/{{ $json.productSlug }}\" }"
         },
-        "name": "Update Google Discover Feed",
+        "name": "Google Discover",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.1,
-        "position": [980, 1300]
-      },
-      {
-        "parameters": { "conditions": { "boolean": [{ "value1": "={{$json.exportToJiji}}", "value2": true }] } },
-        "name": "Branch Q: Jiji",
-        "type": "n8n-nodes-base.if",
-        "typeVersion": 1,
-        "position": [760, 1450]
-      },
-      {
-        "parameters": {
-          "url": "https://jiji.co.ke/api/authentication/sign_in",
-          "method": "POST",
-          "bodyParametersJson": "={ \"user\": { \"email\": \"{{ $env.JIJI_EMAIL }}\", \"password\": \"{{ $env.JIJI_PASSWORD }}\" } }",
-          "options": { "ignoreSslIssues": true }
-        },
-        "name": "Jiji: Login (Silent Fail)",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.1,
-        "position": [980, 1450],
-        "continueOnFail": true
+        "position": [1000, 700]
       },
       {
         "parameters": {
           "url": "https://jiji.co.ke/api/listing_items",
           "method": "POST",
           "authentication": "headerAuth",
-          "headerParameters": { "parameters": [{ "name": "Authorization", "value": "={{ $node['Jiji: Login (Silent Fail)'].json.authentication_token }}" }] },
-          "bodyParametersJson": "={ \"listing_item\": { \"title\": \"{{ $json.name }} — PrintHub Africa\", \"description\": \"{{ $json.shortDescription }}\\n\\nOrder online: printhub.africa\\nWhatsApp for quotes\", \"price\": {{ $json.basePrice }}, \"currency\": \"KES\", \"region_id\": 13 } }",
-          "options": { "ignoreSslIssues": true }
+          "headerParameters": { "parameters": [{ "name": "X-Jiji-Auth", "value": "={{ $node['Jiji Login'].json.token }}" }] },
+          "bodyParametersJson": "={ \"listing_item\": { \"title\": \"{{ $json.productName }} — PrintHub Africa\", \"description\": \"{{ $json.description }}\\n\\nOrder online: printhub.africa\\nWhatsApp: +254XXXXXXXXX\", \"price\": {{ $json.price }}, \"currency\": \"KES\", \"region_id\": 13, \"images\": [{ \"url\": \"{{ $json.mockups[0]?.imageUrl }}\" }] } }"
         },
-        "name": "Jiji: Create Listing (Silent Fail)",
+        "name": "Jiji Listing",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.1,
-        "position": [1200, 1450],
-        "continueOnFail": true
+        "position": [1220, 850]
+      },
+      {
+        "parameters": {
+          "url": "https://jiji.co.ke/api/authentication/sign_in",
+          "method": "POST",
+          "bodyParametersJson": "={ \"user\": { \"email\": \"{{ $env.JIJI_EMAIL }}\", \"password\": \"{{ $env.JIJI_PASSWORD }}\" } }"
+        },
+        "name": "Jiji Login",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [1000, 850]
+      },
+      {
+        "parameters": {
+          "url": "=https://{{$env.N8N_URL}}/webhook/ai-platform-expansion",
+          "method": "POST",
+          "authentication": "headerAuth",
+          "headerParameters": { "parameters": [{ "name": "x-printhub-signature", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" }] },
+          "bodyParametersJson": "={{ JSON.stringify($json) }}"
+        },
+        "name": "Trigger AI-11: Platform Expansion",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [1220, 700]
       }
     ],
     "connections": {
-      "Webhook: Product Pub": { "main": [[{ "node": "Verify Signature", "type": "main", "index": 0 }]] },
-      "Verify Signature": {
+      "Webhook: Product Published": { "main": [[{ "node": "Verify Signature", "type": "main", "index": 0 }]] },
+      "Verify Signature": { "main": [[{ "node": "Get Product & Assets", "type": "main", "index": 0 }]] },
+      "Get Product & Assets": { "main": [[{ "node": "Normalise Context", "type": "main", "index": 0 }]] },
+      "Normalise Context": {
         "main": [[
-          { "node": "If Google", "type": "main", "index": 0 },
-          { "node": "If Meta", "type": "main", "index": 0 },
-          { "node": "Branch J: Instagram Stories", "type": "main", "index": 0 },
-          { "node": "Branch K: Instagram Reels", "type": "main", "index": 0 },
-          { "node": "Branch L: YouTube Shorts", "type": "main", "index": 0 },
-          { "node": "Branch M: WhatsApp Status", "type": "main", "index": 0 },
-          { "node": "Branch N: WhatsApp Channel", "type": "main", "index": 0 },
-          { "node": "Branch O: Telegram Channel", "type": "main", "index": 0 },
-          { "node": "Branch P: Google Discover", "type": "main", "index": 0 },
-          { "node": "Branch Q: Jiji", "type": "main", "index": 0 }
+          { "node": "Instagram Stories", "type": "main", "index": 0 },
+          { "node": "Instagram Reels", "type": "main", "index": 0 },
+          { "node": "YouTube Shorts", "type": "main", "index": 0 },
+          { "node": "WhatsApp Status", "type": "main", "index": 0 },
+          { "node": "WhatsApp Channel", "type": "main", "index": 0 },
+          { "node": "Telegram Channel", "type": "main", "index": 0 },
+          { "node": "Google Discover", "type": "main", "index": 0 },
+          { "node": "Jiji Login", "type": "main", "index": 0 },
+          { "node": "Trigger AI-11: Platform Expansion", "type": "main", "index": 0 }
         ]]
       },
-      "Branch J: Instagram Stories": { "main": [[{ "node": "IG Stories: Create Media", "type": "main", "index": 0 }]] },
-      "IG Stories: Create Media": { "main": [[{ "node": "IG Stories: Publish", "type": "main", "index": 0 }]] },
-      "Branch K: Instagram Reels": { "main": [[{ "node": "IG Reels: Create Media", "type": "main", "index": 0 }]] },
-      "Branch L: YouTube Shorts": { "main": [[{ "node": "YouTube: Upload Shorts", "type": "main", "index": 0 }]] },
-      "Branch M: WhatsApp Status": { "main": [[{ "node": "WhatsApp Status Post", "type": "main", "index": 0 }]] },
-      "Branch N: WhatsApp Channel": { "main": [[{ "node": "WhatsApp Channel Post", "type": "main", "index": 0 }]] },
-      "Branch O: Telegram Channel": { "main": [[{ "node": "Telegram: Send to Channel", "type": "main", "index": 0 }]] },
-      "Branch P: Google Discover": { "main": [[{ "node": "Update Google Discover Feed", "type": "main", "index": 0 }]] },
-      "Branch Q: Jiji": { "main": [[{ "node": "Jiji: Login (Silent Fail)", "type": "main", "index": 0 }]] },
-      "Jiji: Login (Silent Fail)": { "main": [[{ "node": "Jiji: Create Listing (Silent Fail)", "type": "main", "index": 0 }]] }
+      "Jiji Login": { "main": [[{ "node": "Jiji Listing", "type": "main", "index": 0 }]] }
     }
   },
   {
-    "name": "11. PrintHub - New Staff Login (Security Verification)",
+    "name": "8. PrintHub - Product Updated (Price/Stock Differential)",
+    "nodes": [
+      {
+        "parameters": { "httpMethod": "POST", "path": "product-updated", "options": { "rawBody": true } },
+        "name": "Webhook: Product Update",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [100, 300]
+      }
+    ],
+    "connections": {}
+  },
+  {
+    "name": "9. PrintHub - Sync Social Feeds (Catalog Manager)",
+    "nodes": [
+      {
+        "parameters": { "httpMethod": "POST", "path": "sync-social-feeds", "options": { "rawBody": true } },
+        "name": "Webhook: Sync All",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [100, 300]
+      }
+    ],
+    "connections": {}
+  },
+  {
+    "name": "10. PrintHub - Quote Submitted (Lead Flow)",
+    "nodes": [
+      {
+        "parameters": { "httpMethod": "POST", "path": "quote-submitted", "options": { "rawBody": true } },
+        "name": "Webhook: Quote Submit",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [100, 300]
+      },
+      {
+        "parameters": { "jsCode": "const crypto = require('crypto');\nconst sig = $node['Webhook: Quote Submit'].json.headers['x-printhub-signature'];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node['Webhook: Quote Submit'].json.body)).digest('hex');\nif (sig !== hmac) throw new Error('Invalid');\nreturn $node['Webhook: Quote Submit'].json.body;" },
+        "name": "Verify Signature",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [320, 300]
+      },
+      {
+        "parameters": {
+          "url": "=https://n8n.printhub.africa/webhook/ai-generate-quotedraft",
+          "method": "POST",
+          "authentication": "headerAuth",
+          "headerParameters": { "parameters": [{ "name": "x-printhub-signature", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" }] },
+          "bodyParametersJson": "={ \"quoteId\": \"{{ $json.id }}\" }"
+        },
+        "name": "Trigger AI: Quote Draft",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [540, 300]
+      }
+    ],
+    "connections": { "Webhook: Quote Submit": { "main": [[{ "node": "Verify Signature", "type": "main", "index": 0 }]] }, "Verify Signature": { "main": [[{ "node": "Trigger AI: Quote Draft", "type": "main", "index": 0 }]] } }
+  },
+  {
+    "name": "11. PrintHub - Quote Ready (PDF & Close)",
+    "nodes": [
+      {
+        "parameters": { "httpMethod": "POST", "path": "quote-ready", "options": { "rawBody": true } },
+        "name": "Webhook: Quote Ready",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [100, 300]
+      }
+    ],
+    "connections": {}
+  },
+  {
+    "name": "12. PrintHub - New Device Login (Admin Security)",
     "nodes": [
       {
         "parameters": { "httpMethod": "POST", "path": "new-device-login", "options": { "rawBody": true } },
         "name": "Webhook: New Login",
         "type": "n8n-nodes-base.webhook",
         "typeVersion": 1,
-        "position": [400, 300]
+        "position": [100, 300]
       }
     ],
     "connections": {}
-  },
-  {
-    "name": "12. PrintHub - B2B Lead Flow (Corporate Review)",
-    "nodes": [
-      {
-        "parameters": { "httpMethod": "POST", "path": "corporate-application", "options": { "rawBody": true } },
-        "name": "Webhook: Corp App",
-        "type": "n8n-nodes-base.webhook",
-        "typeVersion": 1,
-        "position": [400, 300],
-        "webhookId": "corporate-application"
-      },
-      {
-        "parameters": { "jsCode": "const crypto = require('crypto');\nconst signature = $node[\"Webhook: Corp App\"].json.headers[\"x-printhub-signature\"];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node[\"Webhook: Corp App\"].json.body)).digest('hex');\nif (signature !== hmac) throw new Error('Invalid');\nreturn $node[\"Webhook: Corp App\"].json.body;" },
-        "name": "Verify Signature HMAC",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 1,
-        "position": [620, 300]
-      },
-      {
-        "parameters": { "url": "https://api.resend.com/emails", "method": "POST", "authentication": "headerAuth", "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.RESEND_API_KEY}}" }] }, "bodyParameters": { "parameters": [{ "name": "from", "value": "PrintHub B2B <b2b@printhub.africa>" }, { "name": "to", "value": "admin@printhub.africa" }, { "name": "subject", "value": "=New Corporate Application: {{$json.companyName}}" }, { "name": "html", "value": "=<p>New B2B application received from {{$json.companyName}}. Review: {{$json.reviewUrl}}</p>" }] } },
-        "name": "Notify: Admin",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.1,
-        "position": [840, 300]
-      }
-    ],
-    "connections": { "Webhook: Corp App": { "main": [[{ "node": "Verify Signature HMAC", "type": "main", "index": 0 }]] }, "Verify Signature HMAC": { "main": [[{ "node": "Notify: Admin", "type": "main", "index": 0 }]] } }
   }
 ]

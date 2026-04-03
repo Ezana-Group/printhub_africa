@@ -22,20 +22,33 @@ export async function POST(req: NextRequest) {
     const coupon = await prisma.coupon.create({
       data: {
         code,
-        discountValue: discount,
-        discountType: type === "percentage" ? "PERCENTAGE" : "FIXED",
+        value: discount,
+        type: type === "percentage" ? "PERCENTAGE" : "FIXED",
         maxUses: 1,
-        expiresAt,
+        startDate: new Date(),
+        expiryDate: expiresAt,
         isActive: true,
-        description: `Auto-generated for abandoned cart recovery (#${customerId})`,
-        metadata: {
-          customerId,
-          source: source || "n8n_abandoned_cart",
-        },
+        applicableTo: "ALL",
       },
     });
+    
+    // Log the generation
+    await (prisma.auditLog as any).create({
+      data: {
+        category: 'AUTOMATION',
+        action: 'COUPON_GENERATED',
+        entity: 'Coupon',
+        entityId: coupon.id,
+        details: {
+          code: coupon.code,
+          customerId,
+          source: source || 'n8n_abandoned_cart'
+        },
+        severity: 'LOW'
+      }
+    }).catch(console.error);
 
-    return NextResponse.json({ code: coupon.code, expiresAt: coupon.expiresAt });
+    return NextResponse.json({ code: coupon.code, expiresAt: coupon.expiryDate });
   } catch (err) {
     console.error("[generate-coupon] Error generating coupon:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

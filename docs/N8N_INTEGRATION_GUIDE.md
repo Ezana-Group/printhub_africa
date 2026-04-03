@@ -1,74 +1,147 @@
-# PrintHub Africa - n8n Integration & Setup Guide
+# PrintHub Africa - n8n Integration & Setup Guide (v3.1)
 
 This guide covers the finalized n8n automation infrastructure, including credentials, deployment on Railway, and verification.
 
 ---
 
-## 1. Credentials Setup Guide (Expanded)
+## 1. Credentials Setup Guide
 
-To enable all 12 workflows, you must configure the following external services in the **n8n Credentials** panel.
+To enable all workflows, you must configure the following external services in the **n8n Credentials** panel **AND** set the matching env vars in the Railway dashboard.
 
-### 1.1 WhatsApp Business (Meta)
-- **What to get**: `WHATSAPP_PHONE_ID` and `WHATSAPP_TOKEN` (Permanent Access Token).
-- **Where**: [Meta for Developers](https://developers.facebook.com) → Your App → WhatsApp → Getting Started.
-- **n8n Setup**: Use **Header Auth** with `Authorization: Bearer <token>`.
-- **Screenshot Description**: The "Temporary access token" section in Meta dashboard (ensure you generate a permanent one in System Users).
+### 1.1 Messaging & Communication
+| Service | n8n Credential | Required Env Vars |
+|---|---|---|
+| WhatsApp Business | Header Auth | `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_CHANNEL_ID` |
+| Telegram | Telegram API | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHANNEL_ID` |
+| Africa's Talking (SMS) | Header Auth | `AT_API_KEY`, `AT_USERNAME` (**production only, not sandbox**) |
 
-### 1.2 Resend (Emails)
-- **What to get**: `RESEND_API_KEY`.
-- **Where**: [Resend.com](https://resend.com) → API Keys.
-- **n8n Setup**: Header Auth: `Authorization: Bearer <key>`.
-- **Screenshot Description**: The dashboard showing the green "Create API Key" button and the key string.
+### 1.2 Social Media Publishing
+| Service | n8n Credential | Required Env Vars |
+|---|---|---|
+| Meta/Instagram | Header Auth | `META_ACCESS_TOKEN`, `META_PIXEL_ID`, `META_AD_ACCOUNT_ID`, `INSTAGRAM_USER_ID` |
+| YouTube | OAuth2 | Scope: `https://www.googleapis.com/auth/youtube.upload` |
+| TikTok | Header Auth | `TIKTOK_EVENTS_API_TOKEN`, `TIKTOK_AD_ACCOUNT_ID` |
+| Jiji Kenya | HTTP Session | `JIJI_EMAIL`, `JIJI_PASSWORD` |
+| PigiaMe | HTTP Session | `PIGIAME_EMAIL`, `PIGIAME_PASSWORD` |
+| OLX Kenya | OAuth2 | `OLX_EMAIL`, `OLX_PASSWORD` |
+| Reddit | OAuth2 | `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `REDDIT_USERNAME`, `REDDIT_PASSWORD` |
+| LinkedIn | OAuth2 | `LINKEDIN_ORGANIZATION_ID`, `LINKEDIN_NEWSLETTER_ID` |
+| Medium | Header Auth | `MEDIUM_INTEGRATION_TOKEN`, `MEDIUM_USER_ID` |
 
-### 1.3 Social Media Flags (n8n API)
-- Ensure all 9 social media flags are enabled in PrintHub `.env`:
-  `EXPORT_GOOGLE_MERCHANT=true`, etc.
+### 1.3 Location Platforms
+| Service | Required Env Vars |
+|---|---|
+| Google Business Profile | `GOOGLE_ACCOUNT_ID`, `GOOGLE_LOCATION_ID`, `GOOGLE_MAPS_PLACE_ID` |
+| Bing Places | `BING_MAPS_KEY`, `BING_BUSINESS_ID` |
+| Apple Maps | `APPLE_KEY_ID`, `APPLE_TEAM_ID`, `APPLE_PRIVATE_KEY` (base64), `APPLE_PLACE_ID` |
+
+### 1.4 AI & Media Services
+| Service | n8n Credential | Required Env Vars |
+|---|---|---|
+| Anthropic | Header Auth | `ANTHROPIC_API_KEY` (Claude 3.5 Sonnet/Opus) |
+| OpenAI | Header Auth | `OPENAI_API_KEY` (GPT-4o, DALL-E 3, Whisper) |
+| Stability AI | Header Auth | `STABILITY_API_KEY` |
+| ElevenLabs | Header Auth | `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID` |
+| Runway ML | Header Auth | `RUNWAY_API_KEY` |
+| Google Gemini | Direct API | `GEMINI_API_KEY` |
+| Perplexity | Header Auth | `PERPLEXITY_API_KEY` |
+
+### 1.5 Internal & Infrastructure
+| Variable | Description |
+|---|---|
+| `ADMIN_EMAIL` | Receives all AI notification emails (mockups ready, sentiment reports, etc.) |
+| `SUPER_ADMIN_EMAIL` | Receives monthly BI reports |
+| `BUSINESS_PHONE` | Phone number embedded in PigiaMe/OLX listing bodies |
+| `FFMPEG_SERVICE_URL` | URL of the Railway FFmpeg worker (for AI-9 video combining) |
+| `COMBINE_SECRET` | Shared secret between n8n and FFmpeg service |
+| `N8N_WEBHOOK_SECRET` | HMAC secret — **must match exactly in Railway n8n env vars** |
 
 ---
 
 ## 2. Railway Setup Checklist
 
-Follow these steps to deploy the n8n container to Railway:
+### 2.1 Main n8n Instance
+- [x] **Deploy from Dockerfile**: Use `n8n/Dockerfile`.
+- [x] **Add PostgreSQL**: Separate Neon Postgres instance for n8n metadata.
+- [ ] **Environment Variables**: Add all keys from `n8n/.env.example` into the Railway dashboard.
+- [ ] **⚠️ Critical**: Set `AT_USERNAME` to your **production** Africa's Talking username.
 
-- [ ] **Create New Project**: Select "Empty Project" in Railway.
-- [ ] **Add PostgreSQL Add-on**: (Separate from the main PrintHub DB). Create a new Postgres instance within the n8n project.
-- [ ] **Deploy from Dockerfile**: 
-  - Point Railway to the `n8n/` directory.
-  - Builder: `DOCKERFILE`.
-- [ ] **Set Environment Variables**:
-  - `N8N_WEBHOOK_SECRET`: Should match PrintHub's `N8N_WEBHOOK_SECRET`.
-  - `N8N_ENCRYPTION_KEY`: A unique random string.
-  - `WEBHOOK_URL`: `https://n8n.printhub.africa/`.
-  - `DATABASE_URL`: Use the URL from the Railway Postgres add-on.
-- [ ] **Custom Domain**: 
-  - Add `n8n.printhub.africa`.
-  - DNS: Add a **CNAME** record for `n8n` pointing to the Railway-provided domain.
+### 2.2 FFmpeg Worker Service
+- [ ] **Create New Service** in Railway.
+- [ ] **Deploy from `/n8n/ffmpeg-service`** with Dockerfile builder, Port `3001`.
+- [ ] **Set Worker Env Vars**: `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_PUBLIC_BUCKET`, `COMBINE_SECRET`.
+- [ ] **Link to n8n**: Add `FFMPEG_SERVICE_URL` to your main n8n instance env vars.
 
 ---
 
-## 3. Testing Checklist (Scenario Verification)
+## 3. Workflow Import Guide
 
-Run these tests to verify the integration is 100% operational:
+Import workflow files **in this order**:
 
-### 3.1 Order Lifecycle
-- [ ] **Place Test Order**: Confirm WhatsApp and Email are received immediately.
-- [ ] **Abandon Cart**: Wait 1 hour (or trigger cron manually) → Verify stage 1 recovery email with 10% coupon.
+1. `n8n/workflows/printhub_automations.json` — Base 12 Workflows (Webhooks 1, 2, 7, 10 with full logic)
+2. `n8n/workflows/printhub_stubs_part1.json` — Workflows 3, 4, 5, 6 (Abandoned Cart, Staff Alert, Security, Low Stock)
+3. `n8n/workflows/printhub_stubs_part2.json` — Workflows 8, 9, 11, 12 (Product Update, Social Sync, Quote Ready, New Device Login)
+4. `n8n/workflows/printhub_ai_new_workflows.json` — AI-1 to AI-7
+5. `n8n/workflows/printhub_ai_optimised.json` — AI-8 to AI-10
+6. `n8n/workflows/printhub_ai_crons_v2.json` — Cron AI-1 to Cron AI-3
+7. `n8n/workflows/printhub_platform_expansion.json` — AI-11 to AI-13
 
-### 3.2 Marketing & Sales
-- [ ] **Publish Product**: Set all 9 export flags → Verify n8n webhook receives payload and branches to all 9 platforms.
-- [ ] **Low Stock Cron**: Manually run the Stock Audit cron → Verify staff receive notification.
-
-### 3.3 Security & Admin
-- [ ] **Trigger Security Alert**: (e.g., attempt impossible travel login) → Verify SUPER_ADMIN receives Email + SMS.
-- [ ] **Admin Sidebar**: Log in as ADMIN → Confirm "Automations" link is visible and opens n8n via SSO.
-- [ ] **Role Access**: Log in as STAFF → Attempt to access `/api/admin/n8n/sso` → Confirm 403 Forbidden.
+Then:
+- Go to **Settings → Credentials** and add all external service credentials.
+- **Activate** all 13+ workflows.
 
 ---
 
-## 4. n8n Import Instructions
+## 4. Workflow Status Reference
 
-1. Log into `https://n8n.printhub.africa`.
-2. Go to **Workflows** → **Import from File**.
-3. Select `n8n/workflows/printhub_automations.json`.
-4. Select `n8n/workflows/printhub_crons.json`.
-5. Activate all workflows.
+| # | Workflow | Webhook Path | Status |
+|---|---|---|---|
+| 1 | Order Confirmation | `order-confirmed` | ✅ Full logic |
+| 2 | Order Status Changed | `order-status-changed` | ✅ Full logic |
+| 3 | Abandoned Cart Recovery | `cart-abandoned` | ⚠️ Stub — needs logic |
+| 4 | Staff Alert | `staff-alert` | ⚠️ Stub — needs logic |
+| 5 | Security Alert | `security-alert` | ⚠️ Stub — needs logic |
+| 6 | Low Stock Notify | `low-stock` | ⚠️ Stub — needs logic |
+| 7 | Social Media Sync | `product-published` | ✅ Full logic |
+| 8 | Product Updated | `product-updated` | ⚠️ Stub — needs logic |
+| 9 | Sync Social Feeds | `sync-social-feeds` | ⚠️ Stub — needs logic |
+| 10 | Quote Submitted | `quote-submitted` | ✅ Full logic |
+| 11 | Quote Ready | `quote-ready` | ⚠️ Stub — needs logic |
+| 12 | New Device Login | `new-device-login` | ⚠️ Stub — needs logic |
+| AI-1 | Auto-Generate Social Posts | `ai-generate-social` | ✅ Full logic |
+| AI-2 | WhatsApp Auto-Reply | `whatsapp-incoming` | ✅ Full logic |
+| AI-3 | Generate Ad Copy | `ai-generate-adcopy` | ✅ Full logic |
+| AI-4 | Auto-Generate Descriptions | `ai-generate-descriptions` | ✅ Full logic |
+| AI-5 | AI-Assisted Quote Responses | `ai-generate-quotedraft` | ✅ Full logic |
+| AI-6 | Sentiment Analysis | `ai-analyse-sentiment` | ✅ Full logic |
+| AI-8 | Generate Lifestyle Mockups | `generate-mockups` | ✅ Full logic |
+| AI-9 | Generate Video Content | `generate-video` | ✅ Full logic |
+| AI-10 | Telegram Customer Chat Bot | Telegram Trigger | ✅ Full logic |
+| AI-11 | Extended Platform Posting | `ai-platform-expansion` | ✅ Full logic |
+| AI-12 | SMS Weekly Broadcast | Cron: Friday 9AM | ✅ Full logic |
+| AI-13 | Long-Form SEO Content Engine | Cron: Wednesday 6AM | ✅ Full logic |
+| Cron AI-1 | Daily Sentiment Report | Cron: Daily 9AM EAT | ✅ Full logic |
+| Cron AI-2 | Weekly Trend Report | Cron: Monday 7AM EAT | ✅ Full logic |
+| Cron AI-3 | Monthly BI Report | Cron: 1st of month 6AM EAT | ✅ Full logic |
+
+---
+
+## 5. Testing Checklist
+
+### 5.1 Core Comms
+- [ ] **Order Confirmation**: Place a test order → Verify email + WhatsApp + SMS + Meta CAPI fire.
+- [ ] **WhatsApp Reply**: Send a text + voice note to the WhatsApp number → Verify Claude replies.
+- [ ] **Telegram Bot**: Send a message → Verify Claude replies and escalation email works.
+
+### 5.2 AI Generation
+- [ ] **AI-1 Social Posts**: Publish a product → Verify GPT-4o posts saved to `adCopyVariations`.
+- [ ] **AI-4 Descriptions**: Trigger → Verify product `description` and `shortDescription` updated.
+- [ ] **AI-8 Mockups**: Trigger `generate-mockups` → Verify DALL-E images appear in admin AI panel.
+- [ ] **AI-9 Video**: Trigger with a product → Verify ElevenLabs + Runway + FFmpeg merge produces video.
+
+### 5.3 Platform Publishing (Workflow 7)
+- [ ] **Trigger Social Sync**: Publish a product with export flags set → Verify it fans out to Instagram, YouTube Shorts, WhatsApp Status, WhatsApp Channel, Telegram, Jiji.
+
+### 5.4 Crons
+- [ ] **Cron AI-2**: On Monday, verify weekly strategy + content calendar email arrives.
+- [ ] **Cron AI-3**: On 1st of month, verify monthly BI PDF report email arrives.

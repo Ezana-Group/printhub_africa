@@ -33,6 +33,8 @@ model User {
   acceptedTermsAt          DateTime?
   marketingConsent         Boolean                    @default(false)
   marketingConsentAt       DateTime?
+  smsMarketingOptIn        Boolean                    @default(false)
+  smsUnsubscribedAt        DateTime?
   termsVersion             String?
   productionPinHash        String?
   twoFaMethod              String?
@@ -237,22 +239,41 @@ model Product {
   specifications           Json?
   exportNotes              String?
   /// Human-readable estimated print time, e.g. "4–6 hours"
-  exportToGoogle           Boolean                 @default(true)
-  exportToGoogleBiz        Boolean                 @default(true)
-  exportToLinkedIn         Boolean                 @default(false)
-  exportToMeta             Boolean                 @default(true)
-  exportToPinterest        Boolean                 @default(false)
-  exportToTiktok           Boolean                 @default(true)
-  exportToX                Boolean                 @default(false)
-  lastExportedAt           DateTime?
-  exportToGoogleDiscover   Boolean                 @default(false)
-  exportToInstagramReels   Boolean                 @default(false)
-  exportToInstagramStories Boolean                 @default(false)
-  exportToJiji             Boolean                 @default(false)
-  exportToTelegram         Boolean                 @default(false)
-  exportToWhatsappChannel  Boolean                 @default(false)
-  exportToWhatsappStatus   Boolean                 @default(false)
-  exportToYoutubeShorts    Boolean                 @default(false)
+  exportToGoogle            Boolean @default(true)
+  exportToMeta              Boolean @default(true)
+  exportToTiktok            Boolean @default(true)
+  exportToLinkedIn          Boolean @default(false)
+  exportToPinterest         Boolean @default(false)
+  exportToX                 Boolean @default(false)
+  exportToGoogleBiz         Boolean @default(true)
+  exportToSnapchat          Boolean @default(false)
+  exportToYoutube           Boolean @default(false)
+  exportToInstagramStories  Boolean @default(false)
+  exportToInstagramReels    Boolean @default(false)
+  exportToYoutubeShorts     Boolean @default(false)
+  exportToWhatsappStatus    Boolean @default(false)
+  exportToWhatsappChannel   Boolean @default(false)
+  exportToTelegram          Boolean @default(false)
+  exportToGoogleDiscover    Boolean @default(false)
+  exportToGoogleMapsPost    Boolean @default(true)
+  exportToBingPlaces        Boolean @default(false)
+  exportToAppleMaps         Boolean @default(false)
+  exportToPigiaMe           Boolean @default(false)
+  exportToOlxKenya          Boolean @default(false)
+  exportToReddit            Boolean @default(false)
+  exportToLinkedInNewsletter Boolean @default(false)
+  exportToMedium            Boolean @default(false)
+  exportToNextdoor          Boolean @default(false)
+  exportToJiji              Boolean @default(false)
+  featuredThisWeek          Boolean @default(false)
+  weeklyViews               Int @default(0)
+  totalViews                Int @default(0)
+  lastExportedAt            DateTime?
+  aiDescriptionGenerated  Boolean                 @default(false)
+  aiGeneratedAt           DateTime?
+  catalogueImportQueue    CatalogueImportQueue?
+  keyFeatures             String[]                @default([])
+  adCopyVariations        AdCopyVariation[]
   catalogueItem            CatalogueItem?          @relation("CatalogueProductLink")
   externalModel            ExternalModel?
   inventory                Inventory[]
@@ -930,6 +951,8 @@ model Quote {
   cancellationReason String?
   cancellationNotes  String?
   cancelledByAdminId String?
+  aiDraft              Json?
+  aiDraftGeneratedAt   DateTime?
   assignedStaff      Staff?              @relation(fields: [assignedStaffId], references: [id])
   cancelledByAdmin   User?               @relation("QuoteCancelledByAdmin", fields: [cancelledByAdminId], references: [id])
   customer           User?               @relation(fields: [customerId], references: [id])
@@ -1522,6 +1545,8 @@ model AuditLog {
   category   String?
   targetId   String?
   targetType String?
+  details    Json?
+  severity   String?
   user       User?    @relation(fields: [userId], references: [id])
 
   @@index([userId])
@@ -1854,6 +1879,31 @@ model BusinessSettings {
   aiTelegramBot             Boolean   @default(false)
   aiVoiceTranscription      Boolean   @default(true)
   aiWeeklyTrendReport       Boolean   @default(true)
+  aiSocialGenerationEnabled Boolean   @default(true)
+  aiAdCopyEnabled           Boolean   @default(true)
+  aiQuoteDraftingEnabled    Boolean   @default(true)
+  aiSentimentAnalysisEnabled Boolean   @default(true)
+}
+
+model AdCopyVariation {
+  id              String   @id @default(cuid())
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  platform        String
+  variationIndex  Int
+  headline        String?
+  body            String?
+  description     String?
+  cta             String?
+  script          String?
+  isRefined       Boolean  @default(false)
+  isApproved      Boolean  @default(false)
+  usedInCampaign  Boolean  @default(false)
+  generatedAt     DateTime @default(now())
+  approvedAt      DateTime?
+  approvedBy      String?
+
+  @@index([productId])
 }
 
 model ApiKey {
@@ -1992,6 +2042,19 @@ model EmailTemplate {
   @@index([slug])
 }
 
+model WhatsAppTemplate {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String?
+  category    String?  @default("UTILITY")
+  bodyText    String
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+
+  @@index([slug])
+}
+
 model DatabaseGuard {
   id        String   @id
   project   String
@@ -2092,12 +2155,27 @@ model CatalogueItemMaterial {
 }
 
 model CatalogueImportQueue {
-  id            String       @id @default(cuid())
-  status        ImportStatus @default(PENDING)
-  sourceUrl     String?
-  stlStorageKey String?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id                  String       @id @default(cuid())
+  status              ImportStatus @default(PENDING)
+  sourceUrl           String?
+  stlStorageKey       String?
+  scrapedName         String?
+  scrapedDescription  String?
+  scrapedTags         String[]   @default([])
+  scrapedCategory     String?
+  scrapedImageUrls    String[]   @default([])
+  designerName        String?
+  licenseType         String?
+  downloadCount       Int?
+  likeCount           Int?
+  aiEnhancement       Json?
+  aiEnhancedAt        DateTime?
+  aiEnhancementStatus String?    @default("pending")
+  // pending | processing | complete | failed
+  productId           String?      @unique
+  product             Product?     @relation(fields: [productId], references: [id])
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
 
   @@index([status])
 }
@@ -3068,4 +3146,36 @@ enum WarrantyStatus {
   EXPIRED
   CLAIMED
   VOID
+}
+
+model SmsBroadcast {
+  id              String   @id @default(cuid())
+  broadcastDate   DateTime
+  smsText         String
+  recipientCount  Int
+  deliveredCount  Int      @default(0)
+  failedCount     Int      @default(0)
+  featuredProducts String[] @default([])
+  approvedBy      String?
+  sentAt          DateTime?
+  createdAt       DateTime @default(now())
+}
+
+model BlogPost {
+  id                String    @id @default(cuid())
+  title             String
+  slug              String    @unique
+  excerpt           String?
+  bodyHtml          String
+  metaDescription   String?
+  tags              String[]  @default([])
+  targetKeyword     String?
+  status            String    @default("DRAFT")
+  // DRAFT | PUBLISHED | ARCHIVED
+  aiGenerated       Boolean   @default(true)
+  mediumUrl         String?
+  linkedinPostUrl   String?
+  publishedAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 }

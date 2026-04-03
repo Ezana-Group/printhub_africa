@@ -80,7 +80,7 @@ function UrlImportSection() {
     setStatus("Fetching page...");
     
     try {
-      const res = await fetch("/api/admin/import/url", {
+      const res = await fetch("/api/admin/catalogue/import", {
         method: "POST",
         body: JSON.stringify({ url }),
       });
@@ -166,7 +166,7 @@ function UrlImportSection() {
               <CheckCircle className="w-5 h-5 text-green-500" />
               <p className="font-medium">Import successful!</p>
             </div>
-            <Link href={`/admin/catalogue/${result.id}/edit`} className="bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700">
+            <Link href={`/admin/catalogue/review/${result.id}`} className="bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700">
               Review Now
             </Link>
           </div>
@@ -223,7 +223,7 @@ function UrlImportSection() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <Link href={`/admin/catalogue/${item.id}/edit`} className="text-primary hover:underline flex items-center gap-1">
+                    <Link href={`/admin/catalogue/review/${item.id}`} className="text-primary hover:underline flex items-center gap-1">
                       <Eye className="w-4 h-4" /> Review
                     </Link>
                   </td>
@@ -652,7 +652,7 @@ function ImportQueueSection() {
               </td>
               <td className="px-4 py-3 text-muted-foreground">{format(new Date(item.importedAt), "MMM d, yyyy")}</td>
               <td className="px-4 py-3 text-right">
-                <Link href={`/admin/catalogue/${item.id}/edit`} className="inline-block bg-primary text-white px-3 py-1.5 rounded-md text-xs hover:bg-primary/90">
+                <Link href={`/admin/catalogue/review/${item.id}`} className="inline-block bg-primary text-white px-3 py-1.5 rounded-md text-xs hover:bg-primary/90">
                   Review
                 </Link>
               </td>

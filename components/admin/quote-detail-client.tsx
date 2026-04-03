@@ -37,6 +37,8 @@ export function QuoteDetailClient({
   customerEstimateHigh,
   deadlineHint,
   closedBy,
+  aiDraft,
+  aiDraftGeneratedAt,
 }: {
   quoteId: string;
   quoteNumber: string;
@@ -58,6 +60,8 @@ export function QuoteDetailClient({
   closedBy?: string | null;
   closedAt?: string | null;
   closedReason?: string | null;
+  aiDraft?: any;
+  aiDraftGeneratedAt?: string | null;
 }) {
   const isCustomerClosed = closedBy === "CUSTOMER";
   void quoteNumber;
@@ -70,6 +74,7 @@ export function QuoteDetailClient({
   const [internalNote, setInternalNote] = useState(adminNotes ?? "");
   const [deadlineValue, setDeadlineValue] = useState(deadline ? deadline.slice(0, 10) : "");
   const [saving, setSaving] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
   const [deadlineSaving, setDeadlineSaving] = useState(false);
   const [assignSaving, setAssignSaving] = useState(false);
   const [noteSaving, setNoteSaving] = useState(false);
@@ -78,6 +83,32 @@ export function QuoteDetailClient({
     setDeadlineValue(deadline ? deadline.slice(0, 10) : "");
   }, [deadline]);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const handleAiGenerate = async () => {
+    setAiLoading(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/admin/ai/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "GENERATE_QUOTE_DRAFT", quoteId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "AI generation failed");
+      setMessage({ type: "success", text: "AI drafting triggered! Please refresh in a few seconds." });
+    } catch (err) {
+      setMessage({ type: "error", text: err instanceof Error ? err.message : "AI generation failed" });
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const applyAiDraft = () => {
+    if (!aiDraft) return;
+    // aiDraft comes from n8n JSON output which has suggestedPrice and draft
+    if (aiDraft.suggestedPrice) setAmount(String(aiDraft.suggestedPrice));
+    if (aiDraft.draft) setBreakdown(aiDraft.draft);
+  };
 
   const currentIndex = PIPELINE.indexOf(status as (typeof PIPELINE)[number]);
   const nextStatus = currentIndex >= 0 && currentIndex < PIPELINE.length - 1 ? PIPELINE[currentIndex + 1] : null;
@@ -371,6 +402,73 @@ export function QuoteDetailClient({
         </CardContent>
       </Card>
       </div>
+
+      {/* AI Price Estimator & Smart Draft */}
+      {!isCustomerClosed && (
+        <Card className="border-indigo-200 bg-indigo-50/30">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-indigo-500 animate-pulse" />
+                <h2 className="font-semibold text-indigo-900">AI Estimator & Smart Draft</h2>
+              </div>
+              {aiDraftGeneratedAt && (
+                <span className="text-[10px] text-indigo-500 font-medium">
+                  Last draft: {new Date(aiDraftGeneratedAt).toLocaleTimeString()}
+                </span>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {aiDraft ? (
+              <div className="space-y-3">
+                <div className="p-3 bg-white border border-indigo-100 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                     <span className="text-xs font-bold text-indigo-600 uppercase tracking-tight">Suggested Quote</span>
+                     <span className="text-sm font-black text-indigo-900">KES {aiDraft.suggestedPrice?.toLocaleString() || "—"}</span>
+                  </div>
+                  <div className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap line-clamp-4 border-t pt-2">
+                    {aiDraft.draft || "No draft content generated."}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="border-indigo-200 text-indigo-700 bg-white hover:bg-indigo-50"
+                    onClick={applyAiDraft}
+                  >
+                    Apply Draft ↗
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="border-indigo-100"
+                    onClick={handleAiGenerate}
+                    disabled={aiLoading}
+                  >
+                    {aiLoading ? "Re-generating..." : "Regenerate"}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-2">
+                <p className="text-xs text-indigo-600 mb-3 italic">
+                  Generate a professional price estimate and breakdown draft based on project specs.
+                </p>
+                <Button 
+                  size="sm" 
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white w-full"
+                  onClick={handleAiGenerate}
+                  disabled={aiLoading}
+                >
+                  {aiLoading ? "Consulting AI Engine..." : "Generate AI High-Value Draft"}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Customer's price estimate */}
       <Card className="border-amber-200 bg-[#FFFBEB]">

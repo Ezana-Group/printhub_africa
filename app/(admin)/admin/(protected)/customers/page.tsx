@@ -61,6 +61,7 @@ export default async function AdminCustomersPage() {
     lastOrderAt: lastOrderByUserId[u.id] ?? null,
     isTopSpender: (totalSpentByUserId[u.id] ?? 0) >= top10PercentThreshold && top10PercentThreshold > 0,
     isCorporate: !!u.primaryCorporateAccount,
+    smsMarketingOptIn: u.smsMarketingOptIn,
   }));
 
   return (

@@ -66,11 +66,57 @@ function EventRow({
   );
 }
 
-export function NotificationSettingsClient() {
+export function NotificationSettingsClient({ initialSmsOptIn }: { initialSmsOptIn: boolean }) {
   const [saved, setSaved] = useState(false);
+  const [smsOptIn, setSmsOptIn] = useState(initialSmsOptIn);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleSmsToggle = async (val: boolean) => {
+    setIsUpdating(true);
+    try {
+      const res = await fetch("/api/user/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ smsMarketingOptIn: val }),
+      });
+      if (res.ok) {
+        setSmsOptIn(val);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
+      <SectionCard
+        title="AI-Powered Marketing"
+        description="Receive curated weekly trends and product spotlight via SMS."
+      >
+        <div className="flex items-center justify-between py-4">
+          <div className="space-y-1">
+            <p className="text-sm font-medium">Weekly AI Product Spotlight</p>
+            <p className="text-xs text-muted-foreground">Personalized picks based on your interests and Nairobi trends.</p>
+          </div>
+          <div className="flex items-center gap-3">
+             <span className={smsOptIn ? "text-indigo-600 font-bold text-xs" : "text-zinc-400 text-xs"}>
+               {smsOptIn ? "OPTED IN" : "DISABLED"}
+             </span>
+             <input 
+               type="checkbox" 
+               checked={smsOptIn} 
+               onChange={(e) => handleSmsToggle(e.target.checked)}
+               disabled={isUpdating}
+               className="w-10 h-5 rounded-full appearance-none bg-zinc-200 checked:bg-indigo-600 transition-all cursor-pointer relative after:content-[''] after:absolute after:top-1 after:left-1 after:bg-white after:rounded-full after:h-3 after:w-3 after:transition-all checked:after:translate-x-5"
+             />
+          </div>
+        </div>
+      </SectionCard>
+
       <SectionCard
         title="Order Updates"
         description="When to notify you about order status."

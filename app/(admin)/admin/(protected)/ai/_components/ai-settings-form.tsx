@@ -17,6 +17,10 @@ interface AiSettings {
   aiImageGenerator: string;
   aiElevenLabsCharUsed: number;
   aiElevenLabsCharLimit: number;
+  aiSocialGenerationEnabled: boolean;
+  aiAdCopyEnabled: boolean;
+  aiQuoteDraftingEnabled: boolean;
+  aiSentimentAnalysisEnabled: boolean;
 }
 
 interface Props {
@@ -173,6 +177,36 @@ export function AiSettingsForm({ settings }: Props) {
             label="Jiji.co.ke listings"
             description="Auto-post to Jiji when products are published (unofficial API — may break)"
             field="aiJijiEnabled"
+          />
+        </div>
+      </div>
+
+      {/* AI Automation Suite */}
+      <div>
+        <h3 className="text-sm font-semibold mb-3 text-indigo-600 uppercase tracking-wider flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-indigo-500 animate-pulse" />
+          AI Automation Suite (New)
+        </h3>
+        <div className="rounded-lg border border-indigo-100 bg-indigo-50/10 p-4 space-y-0">
+          <ToggleRow
+            label="AI Social Media Generation"
+            description="Automatic LinkedIn/Twitter/Instagram post drafting for new products"
+            field="aiSocialGenerationEnabled"
+          />
+          <ToggleRow
+            label="AI Strategic Ad Copy"
+            description="Multi-platform ad variations and promotional headlines"
+            field="aiAdCopyEnabled"
+          />
+          <ToggleRow
+            label="AI Intelligent Quote Drafting"
+            description="Automatic price estimation and response drafting for new leads"
+            field="aiQuoteDraftingEnabled"
+          />
+          <ToggleRow
+            label="AI Sentiment & Priority Analysis"
+            description="Analyze customer mood and prioritize urgent support tickets"
+            field="aiSentimentAnalysisEnabled"
           />
         </div>
       </div>

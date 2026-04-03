@@ -20,7 +20,7 @@ USER node
 
 # n8n environment variables
 ENV N8N_LISTEN_ADDRESS=0.0.0.0
-ENV N8N_PROTOCOL=http
+ENV N8N_PROTOCOL=https
 ENV NODE_ENV=production
 ENV N8N_METRICS=true
 ENV N8N_HEALTHCHECK_ACTIVE=true

@@ -45,6 +45,7 @@ interface ProductFormProps {
     metaTitle: string | null;
     metaDescription: string | null;
     tags?: string[];
+    featuredThisWeek: boolean;
   };
 }
 
@@ -56,7 +57,9 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const router = useRouter();
   const isEdit = !!product;
   const [loading, setLoading] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const [name, setName] = useState(product?.name ?? "");
   const [slug, setSlug] = useState(product?.slug ?? "");
@@ -82,6 +85,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const [colorsStr, setColorsStr] = useState((product?.colors ?? []).join(", "));
   const [isActive, setIsActive] = useState(product?.isActive ?? true);
   const [isFeatured, setIsFeatured] = useState(product?.isFeatured ?? false);
+  const [featuredThisWeek, setFeaturedThisWeek] = useState(product?.featuredThisWeek ?? false);
   const [metaTitle, setMetaTitle] = useState(product?.metaTitle ?? "");
   const [metaDescription, setMetaDescription] = useState(product?.metaDescription ?? "");
   const [tagsStr, setTagsStr] = useState((product?.tags ?? []).join(", "));
@@ -98,6 +102,31 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const handleNameChange = (v: string) => {
     setName(v);
     if (autoSlug) setSlug(slugify(v));
+  };
+
+  const handleAiGenerate = async (action: string) => {
+    if (!isEdit) {
+      setError("Please save the product first before generating AI content.");
+      return;
+    }
+    setAiLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch("/api/admin/ai/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, productId: product.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "AI generation failed");
+      setSuccess("AI generation triggered! Please refresh in a few seconds to see changes.");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "AI generation failed");
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -123,6 +152,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       colors,
       isActive,
       isFeatured,
+      featuredThisWeek,
       metaTitle: metaTitle || undefined,
       metaDescription: metaDescription || undefined,
       ...(images != null && { images }),
@@ -158,9 +188,9 @@ export function ProductForm({ categories, product }: ProductFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {error && (
-        <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
-          {error}
+      {(error || success) && (
+        <div className={`rounded-lg p-3 text-sm ${error ? "bg-destructive/10 text-destructive" : "bg-green-50 text-green-700 border border-green-200"}`}>
+          {error || success}
         </div>
       )}
       <Card>
@@ -399,10 +429,12 @@ export function ProductForm({ categories, product }: ProductFormProps) {
               <span className="text-sm font-medium">Visible on storefront</span>
               <span className="text-xs text-muted-foreground">(hide to remove from shop)</span>
             </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={isFeatured} onChange={(e) => setIsFeatured(e.target.checked)} />
-              <span className="text-sm font-medium">Featured</span>
-              <span className="text-xs text-muted-foreground">(show in Shop section on homepage)</span>
+            <label className="flex items-center gap-2 cursor-pointer border border-indigo-100 bg-indigo-50/30 p-2 rounded-md">
+              <input type="checkbox" checked={featuredThisWeek} onChange={(e) => setFeaturedThisWeek(e.target.checked)} />
+              <div className="flex flex-col">
+                <span className="text-sm font-bold text-indigo-700">Weekly AI Spotlight</span>
+                <span className="text-[10px] text-indigo-500 uppercase font-bold tracking-tight">SMS Broadcast Candidate</span>
+              </div>
             </label>
           </div>
           <p className="text-sm font-medium text-slate-700">Tags (shown on cards and homepage)</p>
@@ -443,6 +475,39 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             />
             <p className="text-xs text-muted-foreground mt-1">Comma-separated. Use the toggles above or type your own.</p>
           </div>
+
+          {isEdit && (
+            <div className="pt-4 border-t space-y-3">
+               <Label className="text-xs font-semibold uppercase text-muted-foreground tracking-wider font-mono">AI Content Engine</Label>
+               <div className="grid grid-cols-2 gap-3">
+                 <Button 
+                   type="button" 
+                   variant="outline" 
+                   size="sm" 
+                   className="w-full flex items-center justify-center gap-2 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+                   disabled={aiLoading}
+                   onClick={() => handleAiGenerate("GENERATE_DESCRIPTION")}
+                 >
+                   <div className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-ping" />
+                   {aiLoading ? "Thinking..." : "AI Description"}
+                 </Button>
+                 <Button 
+                   type="button" 
+                   variant="outline" 
+                   size="sm" 
+                   className="w-full flex items-center justify-center gap-2 border-pink-200 hover:bg-pink-50 hover:text-pink-700 transition-colors"
+                   disabled={aiLoading}
+                   onClick={() => handleAiGenerate("GENERATE_AD_COPY")}
+                 >
+                   <div className="h-1.5 w-1.5 rounded-full bg-pink-500 animate-ping" />
+                   {aiLoading ? "Strategizing..." : "AI Ad Copy"}
+                 </Button>
+               </div>
+               <p className="text-[10px] text-muted-foreground text-center italic">
+                 Generates professional descriptions, SEO tags and multi-platform ad variations.
+               </p>
+            </div>
+          )}
           <div>
             <Label htmlFor="metaTitle">Meta title</Label>
             <Input id="metaTitle" value={metaTitle} onChange={(e) => setMetaTitle(e.target.value)} className="mt-1" />

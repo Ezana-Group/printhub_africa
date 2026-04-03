@@ -6,9 +6,9 @@ import { AdminBreadcrumbs } from "@/components/admin/admin-breadcrumbs";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { EmailTemplatesTab } from "./_components/EmailTemplatesTab";
 import { WhatsAppTemplatesTab } from "./_components/WhatsAppTemplatesTab";
+import { PdfTemplatesTab } from "./_components/PdfTemplatesTab";
 import { NewTemplateDialog } from "./_components/new-template-dialog";
 import { Mail, MessageCircle, Search, FileText } from "lucide-react";
-import Link from "next/link";
 
 export default async function AdminTemplatesPage({
   searchParams,
@@ -23,6 +23,8 @@ export default async function AdminTemplatesPage({
     prisma.whatsAppTemplate.findMany({ orderBy: { slug: "asc" } }),
   ]);
 
+  const activeType = tab === "whatsapp" ? "whatsapp" : tab === "pdf" ? "pdf" : "email";
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <AdminBreadcrumbs
@@ -36,37 +38,40 @@ export default async function AdminTemplatesPage({
         <div>
           <h1 className="font-display text-3xl font-bold text-slate-900 tracking-tight">Templates</h1>
           <p className="text-slate-500 text-sm mt-1 max-w-2xl">
-            Manage automated communication templates for Email and WhatsApp. 
-            Use placeholders like <code className="text-orange-600 bg-orange-50 px-1 rounded">{"{{businessName}}"}</code> for dynamic data.
+            Manage automated communication templates for Email, WhatsApp, and PDF documents.{" "}
+            Use placeholders like{" "}
+            <code className="text-orange-600 bg-orange-50 px-1 rounded">{`{{businessName}}`}</code>{" "}
+            and <code className="text-orange-600 bg-orange-50 px-1 rounded">{`{{orderNumber}}`}</code> for dynamic data.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Link 
-            href="/components/pdf/InvoicePDF.tsx" 
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors shadow-sm"
-          >
-            <FileText className="h-4 w-4 text-orange-500" />
-            Invoice PDF (Dev)
-          </Link>
-          <NewTemplateDialog type={tab === "whatsapp" ? "whatsapp" : "email"} />
-        </div>
+        {/* Only show "New Template" for email and whatsapp — PDF templates are code-based */}
+        {activeType !== "pdf" && (
+          <NewTemplateDialog type={activeType as "email" | "whatsapp"} />
+        )}
       </div>
 
       <Tabs defaultValue={tab} className="w-full">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200">
           <TabsList className="border-none">
-            <TabsTrigger value="email" className="flex items-center gap-2 px-6">
+            <TabsTrigger value="email" className="flex items-center gap-2 px-5">
               <Mail className="h-4 w-4" />
-              Email Templates
-              <span className="ml-2 px-1.5 py-0.5 rounded-full bg-slate-100 text-[10px] text-slate-500 font-bold">
+              Email
+              <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-slate-100 text-[10px] text-slate-500 font-bold">
                 {emailTemplates.length}
               </span>
             </TabsTrigger>
-            <TabsTrigger value="whatsapp" className="flex items-center gap-2 px-6">
+            <TabsTrigger value="whatsapp" className="flex items-center gap-2 px-5">
               <MessageCircle className="h-4 w-4" />
-              WhatsApp Templates
-               <span className="ml-2 px-1.5 py-0.5 rounded-full bg-slate-100 text-[10px] text-slate-500 font-bold">
+              WhatsApp
+              <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-slate-100 text-[10px] text-slate-500 font-bold">
                 {whatsappTemplates.length}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="pdf" className="flex items-center gap-2 px-5">
+              <FileText className="h-4 w-4" />
+              PDF
+              <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-slate-100 text-[10px] text-slate-500 font-bold">
+                3
               </span>
             </TabsTrigger>
           </TabsList>
@@ -86,33 +91,15 @@ export default async function AdminTemplatesPage({
         <TabsContent value="email">
           <EmailTemplatesTab templates={emailTemplates as any} query={q.toLowerCase()} />
         </TabsContent>
-        
+
         <TabsContent value="whatsapp">
-           <WhatsAppTemplatesTab templates={whatsappTemplates as any} query={q.toLowerCase()} />
+          <WhatsAppTemplatesTab templates={whatsappTemplates as any} query={q.toLowerCase()} />
+        </TabsContent>
+
+        <TabsContent value="pdf">
+          <PdfTemplatesTab query={q.toLowerCase()} />
         </TabsContent>
       </Tabs>
-
-      <div className="rounded-xl bg-orange-50 border border-orange-100 p-6 flex items-start gap-4 mt-8">
-        <div className="p-2 rounded-lg bg-white shadow-sm">
-          <FileText className="h-6 w-6 text-orange-500" />
-        </div>
-        <div>
-          <h3 className="font-semibold text-orange-900">PDF Document Template</h3>
-          <p className="text-sm text-orange-700/80 mt-1 max-w-2xl">
-            The PDF invoice and quote generation uses the <code>@react-pdf/renderer</code> component 
-            located at <code>/components/pdf/InvoicePDF.tsx</code>. This template is hardcoded for 
-            high-fidelity rendering and legal compliance.
-          </p>
-          <div className="mt-4 flex gap-3">
-             <Link 
-              href="/admin/finance/invoices" 
-              className="text-sm font-bold text-orange-600 hover:text-orange-700 underline underline-offset-4"
-            >
-              View Generated Invoices
-            </Link>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

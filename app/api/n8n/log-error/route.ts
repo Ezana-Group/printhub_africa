@@ -15,18 +15,20 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { workflowName, errorMessage, payload } = body
 
-    await prisma.auditLog.create({
+    await (prisma.auditLog as any).create({
       data: {
         category: 'AUTOMATION',
         action: 'N8N_WORKFLOW_ERROR',
+        entity: 'Workflow',
+        entityId: workflowName,
         details: {
           workflowName,
           errorMessage,
           payload,
         },
-        // Optional: linking to user if applicable
-        userId: 'system-n8n', 
         severity: 'HIGH',
+        // Optional: linking to user if applicable
+        userId: null, // system event
       },
     })
 
