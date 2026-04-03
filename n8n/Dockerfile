@@ -1,46 +1,25 @@
-FROM n8nio/n8n:2.14.2
+FROM n8nio/n8n:latest
 
 USER root
 
-# Note: Base n8n 2.x images are 'hardened' and do not include a package manager (apk/apt-get).
-# System dependencies like ffmpeg are handled by the separate printhub-ffmpeg-service.
-# The internal n8n healthcheck is enabled via environment variables.
-
-# Create the data directory and set permissions
+# Minimal setup for the fresh install
+# Data storage is managed at /home/node/.n8n by default in n8n images
 RUN mkdir -p /home/node/.n8n && chown -R node:node /home/node/.n8n
 
-# Copy the workflows and other local files into a temporary folder
-# We'll use this if we need to pre-load or reference them.
+# Copy workflows (preserved) and entrypoint
 COPY --chown=node:node . /home/node/n8n-config/
-
-# Copy and setup entrypoint script
 COPY --chown=node:node docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
 USER node
 
-# n8n environment variables
-# Railway terminates TLS at the edge — the container must listen on HTTP.
+# Standard n8n environment variables for Railway
+ENV N8N_PORT=5678
 ENV N8N_LISTEN_ADDRESS=::
 ENV N8N_PROTOCOL=http
 ENV NODE_ENV=production
 ENV N8N_METRICS=true
 ENV N8N_HEALTHCHECK_ACTIVE=true
-ENV N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
 
-# Core structural variables (non-sensitive)
-ENV WEBHOOK_URL=https://n8n.printhub.africa
-ENV N8N_EDITOR_BASE_URL=https://n8n.printhub.africa
-ENV N8N_URL=https://n8n.printhub.africa
-
-# Default port (Railway overrides this via $PORT)
-EXPOSE 5678
-EXPOSE 8080
-
-# Use project-level storage
-ENV N8N_USER_FOLDER=/home/node/.n8n
-
-# Log level
-ENV N8N_LOG_LEVEL=info
-
+# Entrypoint handles initial DB check
 ENTRYPOINT ["/docker-entrypoint.sh"]
