@@ -11,7 +11,8 @@ const STAFF_OR_ADMIN = ["STAFF", "ADMIN", "SUPER_ADMIN"];
 const postSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   email: z.string().email().optional(),
-  phone: z.string().max(50).optional(),
+  personalEmail: z.string().email().nullable().optional(),
+  phone: z.string().max(50).nullable().optional(),
   position: z.string().max(200).optional(),
   departmentId: z.string().nullable().optional(),
 });
@@ -103,6 +104,7 @@ export async function POST(req: Request) {
       data: {
         ...(data.name != null && { name: data.name }),
         ...(emailToSave != null && { email: emailToSave }),
+        ...(data.personalEmail !== undefined && { personalEmail: data.personalEmail ?? null }),
         ...(data.phone !== undefined && { phone: data.phone ?? null }),
       },
     });
