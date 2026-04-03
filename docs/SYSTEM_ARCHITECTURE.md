@@ -53,6 +53,12 @@ flowchart TB
 
   subgraph "Automation (n8n on Railway)"
     Workflows[n8n Workflows]
+    FFmpeg[FFmpeg Service]
+  end
+
+  subgraph "AI Services"
+    OpenAI[OpenAI - GPT-4o Vision]
+    Claude[Anthropic - Claude 3.5]
   end
 
   subgraph "Core Libraries (lib/)"
@@ -85,6 +91,9 @@ flowchart TB
   Workflows --> Email
   Workflows --> WhatsApp
   Workflows --> Klaviyo
+  Workflows --> FFmpeg
+  Workflows --> OpenAI
+  Workflows --> Claude
   PrismaLib --> DB
   Auth --> DB
 ```
@@ -107,10 +116,12 @@ flowchart TB
 | **Email** | Resend |
 | **SMS** | Africa's Talking (2FA, notifications) |
 | **PDF** | @react-pdf/renderer (invoices, quote PDFs) |
-| **Search (optional)** | Algolia |
+| **AI / ML** | OpenAI (GPT-4o Vision), Anthropic (Claude 3.5 Sonnet) |
+| **Multimedia** | FFmpeg (Sidecar service for n8n) |
+| **Search** | Algolia (Optional) |
 | **Analytics / monitoring** | Railway monitoring, Sentry; Meta Pixel, TikTok Pixel, GTM, GA4, X, Snapchat |
 | **Automation** | **n8n** (Self-hosted on Railway) |
-| **Marketing Automation** | Klaviyo (Email), WhatsApp Business Cloud API |
+| **Marketing Automation** | Klaviyo (Email), WhatsApp Business Cloud API, Meta CAPI |
 | **Live chat (optional)** | Tawk.to |
 | **Content (optional)** | Sanity (env vars) |
 | **External ERP** | ERPNext (Docker; finance, inventory, HR) |
@@ -182,6 +193,11 @@ Printhub_Africa_ProdV1/
 │   └── business-public.ts
 ├── hooks/                  # e.g. useLFRates
 ├── store/                  # Zustand: checkout-store, cart
+├── n8n/                    # Automation infrastructure
+│   ├── workflows/          # JSON exports of core n8n flows
+│   ├── ffmpeg-service/     # Sidecar for media processing
+│   ├── railway.toml        # n8n-specific deployment config
+│   └── .env.example
 ├── prisma/
 │   ├── schema.prisma       # Full DB schema
 │   ├── seed.ts, seeds/
@@ -250,13 +266,18 @@ erDiagram
   Cart }o--o| User : "user"
   Wishlist }o--o| User : "user"
   Wishlist }o--o| Product : "product"
+
+  Product ||--o| CatalogueImportQueue : "import metadata"
+  Product ||--o{ AdCopyVariation : "ai copy"
+  Product }o--o{ ThreeDConsumable : "materials"
+  CatalogueItem ||--o{ CatalogueImportQueue : "source"
 ```
 
 ### 4.2 Users & Auth
 
 | Model | Description | Key Relations |
 |-------|-------------|---------------|
-| **User** | Core user: customer, staff, admin. Fields: name, **displayName**, email, **phone**, passwordHash, **role** (CUSTOMER, STAFF, ADMIN, SUPER_ADMIN), 2FA (totpSecret, twoFaMethod, otpCodeHash), **emailVerified** (DateTime), loyaltyPoints, stripeCustomerId, terms/marketing consent, isAnonymised. | → Account[], Session[], Address[], Order[], Quote[], Staff?, CorporateAccount? (primary), CorporateTeamMember[], SupportTicket[], AuditLog[], SavedAddress[], SavedMpesaNumber[], SavedCard[], LoyaltyAccount?, UserPermission[] |
+| **User** | Core user: customer, staff, admin. Fields: name, **displayName**, email, **phone**, passwordHash, **role** (CUSTOMER, STAFF, ADMIN, SUPER_ADMIN), 2FA, **loyaltyPoints**, **smsMarketingOptIn**, **marketingConsent**, **isAnonymised**. | → Account[], Session[], Address[], Order[], Quote[], Staff?, CorporateAccount? (primary contact), CorporateTeamMember[], SupportTicket[], AuditLog[], SavedAddress[], SavedMpesaNumber[], SavedCard[], LoyaltyAccount?, UserPermission[] |
 | **Account** | OAuth/linked accounts (NextAuth). | → User |
 | **Session** | NextAuth session. | → User |
 | **VerificationToken** | Email verification / magic link tokens. | — |
@@ -267,7 +288,7 @@ erDiagram
 | Model | Description | Key Relations |
 |-------|-------------|---------------|
 | **Category** | Tree (parentId), slug, sortOrder, isActive. | → Category[] (children), Product[] |
-| **Product** | name, slug, categoryId, **productType** (READYMADE_3D, LARGE_FORMAT, CUSTOM), basePrice, comparePrice, costPrice, sku, stock, images, variants. | → Category, ProductVariant[], ProductImage[], ProductReview[], OrderItem[], Wishlist[], Inventory[] |
+| **Product** | name, slug, categoryId, **productType**, basePrice, comparePrice, costPrice, sku, stock, images, **27 Social Platform Export Flags** (exportToGoogle, Meta, TikTok, etc.), **AI Content Flags** (aiDescriptionGenerated, aiGeneratedAt). | → Category, ProductVariant[], ProductImage[], ProductReview[], OrderItem[], Wishlist[], Inventory[], CatalogueImportQueue?, AdCopyVariation[] |
 | **ProductVariant** | name, sku, price, stock, attributes (JSON). | → Product, OrderItem[], Inventory[] |
 | **ProductImage** | url, storageKey, altText, sortOrder, isPrimary. | → Product |
 | **ProductReview** | rating, title, body, isVerified, isApproved. | → Product, User |
@@ -296,13 +317,14 @@ erDiagram
 | Model | Description | Key Relations |
 |-------|-------------|---------------|
 | **Order** | orderNumber, userId?, **status** (PENDING→DELIVERED/CANCELLED/REFUNDED), **type** (SHOP, LARGE_FORMAT, THREE_D_PRINT, QUOTE, POD, CUSTOM_PRINT), totals, paymentMethod, paymentStatus, pickupCode, corporateId?, corporatePOId?, isNetTerms, paymentLinkToken, etc. | → User?, OrderItem[], ShippingAddress?, Delivery?, Payment[], Refund[], Invoice[], OrderTimeline[], OrderTrackingEvent[], Cancellation?, PickupLocation?, Courier?, DeliveryZone?, CorporateAccount?, CorporatePO?, CorporateInvoice? |
-| **OrderItem** | productId?, variantId?, quantity, unitPrice, customizations, uploadedFileId?, instructions. | → Order, Product?, ProductVariant?, ProductionQueue[] |
+| **OrderItem** | productId?, variantId?, quantity, unitPrice, customizations, uploadedFileId?, instructions, **itemType** (PRINT_SERVICE, PRODUCT), **isDeposit**, **addInstallation**. | → Order, Product?, ProductVariant?, ProductionQueue[] |
 | **OrderTimeline** | status, message, updatedBy. | → Order |
 | **OrderTrackingEvent** | status, title, description, isPublic, location, courierRef. | → Order |
 | **ShippingAddress** | 1:1 per order (fullName, email, phone, street, city, county, deliveryMethod). | → Order |
 | **Delivery** | 1:1 per order when shipping: method (STANDARD/EXPRESS), status, assignedCourier, trackingNumber, proofPhotoKey. | → Order, DeliveryZone?, Courier? |
 | **Refund** | amount, reason, status; M-Pesa B2C fields. | → Order |
 | **Cancellation** | reason, cancelledBy. | → Order |
+| **AdCopyVariation** | AI-generated marketing copy (Hook, Body, CTA) for specific platforms. | → Product |
 
 ### 4.6 Payments
 
@@ -385,6 +407,8 @@ erDiagram
 | **FaqCategory**, **Faq** | FAQ. | — |
 | **LegalPage**, **LegalPageHistory** | Legal content and history. | — |
 | **CatalogueCategory**, **CatalogueDesigner**, **CatalogueItem**, **CatalogueItemPhoto**, **CatalogueItemMaterial**, **CatalogueImportQueue** | POD catalogue. | — |
+| **CatalogueImportQueue** | Metadata for AI-based catalogue ingestion (source URL, AI analysis status, recommended categories). | → Product?, CatalogueItem? |
+| **ExternalModel** | Reference to external 3D models (Printables/Thingiverse) used for POD. | → Product?, Category? |
 | **JobListing**, **JobApplication** | Careers. | JobListing → JobApplication[] |
 | **DeliveryZone**, **Courier**, **PickupLocation** | Logistics. | → Order, Delivery |
 | **LoyaltyAccount**, **LoyaltyTransaction**, **ReferralCode** | Loyalty and referrals. | → User |
@@ -413,6 +437,8 @@ All API routes live under `app/api/`. Protection is enforced by **middleware** a
 | **/api/admin/inventory/hardware** | Assets, maintenance, hardware items for calculator | inventory_edit |
 | **/api/admin/3d-consumables** | Filament, resin, and other 3D printer supplies | inventory_edit |
 | **/api/admin/machines** | Machine types and hourly rates for 3D printing | settings_manage |
+| **/api/admin/ai/generate-description** | Trigger AI description generation for products | products_edit |
+| **/api/admin/catalogue/import** | Trigger AI scraping and analysis for new models | catalogue_edit |
 | **/api/quotes/** | GET/POST quotes, upload, [id] GET/PATCH, [id]/pdf | Session for create/list; access by resource |
 | **/api/quote/** | submit (contact-style), materials | Public / session |
 | **/api/upload/** | presign (POST), confirm (POST), [id]/download | Session / context |
@@ -509,45 +535,43 @@ All API routes live under `app/api/`. Protection is enforced by **middleware** a
 2. **Uploads:** POST `/api/quotes/upload` (R2 presign/upload); files linked to quote.
 3. **Admin:** Assign staff, set quotedAmount, quoteBreakdown, quotePdfUrl; send PDF; status quoted → accepted/rejected.
 
-### 7.4 Catalogue & POD
-1. **Import:** Models can be imported via URL or API (Printables/Thingiverse style) into the `CatalogueImportQueue` via `/api/admin/catalogue/import`.
-2. **Review:** Admin reviews imported items in the queue, sets categories, and adjusts pricing/metadata.
-3. **Approval:** `/api/admin/import/[id]/approve` creates a `Product` with `isActive: true` (visible in storefront) and updates the source `ExternalModel` with the `productId`.
-4. **STL Management:** `/api/admin/catalogue/[id]/stl` handles manual upload/replacement and removal of 3D model files (STL, OBJ, 3MF, STEP) for approved catalogue items.
+### 7.4 Catalogue, POD & AI Enrichment
 
-### 7.5 Production
+1. **Import/Scrape:** Admin provides a URL (Printables/Thingiverse). `POST /api/admin/catalogue/import` triggers an n8n workflow.
+2. **AI Analysis:** n8n uses **GPT-4o Vision** to analyze images and **Claude 3.5** to parse specifications, generating a structured `CatalogueImportQueue` entry.
+3. **Review:** Admin reviews the AI-generated name, description, and suggested categories in the Admin Portal.
+4. **Approval:** `/api/admin/import/[id]/approve` creates a `Product` with `isActive: true` and saves AI-generated `AdCopyVariations` for social marketing.
+5. **STL Management:** `/api/admin/catalogue/[id]/stl` handles manual upload/replacement of 3D model files (STL, OBJ, 3MF, STEP) for approved items.
+
+### 7.5 Production & Inventory
 
 - **ProductionQueue:** Order items queued; status (Queued, In Progress, Printing, Quality Check, Done); assignedTo, machineId.
 - **PrinterAsset:** Maintenance logs, parts (MaintenancePartUsed), lifecycle.
 - **3D:** ThreeDConsumable movements; calculator uses materials, machine types, addons.
 - **Large-format:** LFPrinterSettings, LFBusinessSettings, LFStockItem; calculator uses mediums, lamination, finishing, design options, turnaround.
 
-### 7.4 Refunds
+### 7.6 Refunds & Cancellations
 
 - Admin creates Refund; **process-b2c** for M-Pesa B2C (lib/mpesa-b2c); callback `/api/payments/mpesa/b2c-callback`. Order paymentStatus REFUNDED; status REFUNDED where applicable.
 
-### 7.5 Corporate
+### 7.7 Corporate (B2B)
 
 - **Apply:** POST `/api/corporate/apply` → CorporateApplication; admin approve/reject.
 - **On approval:** CorporateAccount + CorporateTeamMember (OWNER); invite flow for team.
 - **Checkout:** GET `/api/account/corporate/checkout`; orders can attach corporateId, poReference, corporatePOId, isNetTerms; CorporateInvoice for billing.
 
-### 7.6 Abandoned Cart
+### 7.8 Marketing Automation & CAPI (100% Attribution)
+
+1. **Client Events:** `PixelTracker.tsx` tracks `ViewContent`, `AddToCart`, and `InitiateCheckout` on the browser.
+2. **Server Events (CAPI):** On successful payment (`CONFIRMED` status), `lib/marketing/conversions-api.ts` sends a server-side event to Meta and TikTok including hashed user data (email, phone, IP, User Agent).
+3. **Lifecycle:** n8n triggers:
+   - **WhatsApp (3h):** Abandoned cart recovery if checkout not completed.
+   - **WhatsApp (Post-Purchase):** Order confirmation and shipping updates.
+   - **Klaviyo:** Automated email flows for welcome, browse abandonment, and win-back.
+
+### 7.9 Abandoned Cart (Next.js Cron)
 
 - **Cron:** GET `/api/cron/abandoned-carts` (CRON_SECRET) → finds carts, sends recovery email (Resend); recoveryEmailSent1At / recoveryEmailSent2At; `/api/unsubscribe/abandoned-cart` for opt-out.
-- **Klaviyo:** High-conversion abandoned cart flows (1h/24h) and WhatsApp recovery (3h) are managed via `lib/marketing` triggers.
-
-### 7.7 Marketing & Growth
-
-1. **Product Feeds:**
-   - Universal JSON: `/api/products/feed`
-   - Google Merchant (XML): `/api/products/google`
-   - TikTok Catalog (JSON): `/api/products/tiktok`
-2. **Client-side Tracking:** `PixelTracker.tsx` conditionally loads scripts for Meta, TikTok, GTM, X, and Snap based on user consent stored in `printhub-cookie-consent`.
-3. **Server-side Conversions (CAPI):** Backend triggers in `lib/tracking.ts` send hashed user data to Meta and TikTok on successful payment to ensure 100% attribution accuracy.
-4. **Automated Communication:**
-   - **Klaviyo:** Handles e-commerce lifecycle emails.
-   - **WhatsApp Business API:** Sends transactional updates (confirmation, shipping) directly to customer phones.
 
 
 ---
@@ -567,12 +591,13 @@ All API routes live under `app/api/`. Protection is enforced by **middleware** a
 | **Stripe** | Cards, Apple/Google Pay, saved cards | NEXT_PUBLIC_STRIPE_*, STRIPE_*, STRIPE_WEBHOOK_SECRET | /api/payments/stripe/create-intent; BusinessSettings.stripeEnabled. |
 | **Google / Facebook / Apple OAuth** | Social login | GOOGLE_*, FACEBOOK_*, APPLE_* | NextAuth in lib/auth.ts. |
 | **Sentry** | Error tracking | NEXT_PUBLIC_SENTRY_DSN, SENTRY_* | instrumentation.ts. |
+| **OpenAI** | AI Vision (catalogue) | OPENAI_API_KEY | n8n workflows (GPT-4o Vision). |
+| **Anthropic** | AI Specifications (catalogue) | ANTHROPIC_API_KEY | n8n workflows (Claude 3.5). |
 | **Algolia** | Search | NEXT_PUBLIC_ALGOLIA_*, ALGOLIA_* | Optional; Admin → Settings → Integrations. |
 | **Meta** | Advertising & Tracking | NEXT_PUBLIC_META_*, META_ACCESS_TOKEN | PixelTracking.tsx, conversions-api.ts (CAPI). |
-| **TikTok** | Advertising & Tracking | NEXT_PUBLIC_TIKTOK_*, TIKTOK_EVENTS_API_TOKEN | tiktok-pixel, TikTok Events API. |
-| **Google** | Ads & Analytics | NEXT_PUBLIC_GTM_*, NEXT_PUBLIC_GA4_* | GTM tracking, GA4 events. |
-| **Klaviyo** | Email Marketing | KLAVIYO_API_KEY, NEXT_PUBLIC_KLAVIYO_* | Abandoned cart recovery, post-purchase flows. |
-| **WhatsApp** | Order Updates | WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN | Cloud API messaging for notifications. |
+| **TikTok** | Advertising & Tracking | NEXT_PUBLIC_TIKTOK_*, TIKTOK_EVENTS_API_TOKEN | tiktok-pixel, TikTok Events API (CAPI). |
+| **WhatsApp** | Order Updates | WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN | Cloud API messaging via n8n/lib. |
+| **FFmpeg** | Media Processing | — | Sidecar service for AI-generated media. |
 | **Tawk.to** | Live chat | NEXT_PUBLIC_TAWK_* | Optional; component. |
 | **VirusTotal** | Upload scanning | VIRUSTOTAL_API_KEY | Optional; post-upload. |
 | **ERPNext** | ERP (finance, inventory, HR) | ERPNEXT_* | Docker; scripts erpnext-setup, erpnext-migrate. |
@@ -585,11 +610,28 @@ Payment methods exposed at checkout: **GET /api/checkout/payment-methods** (mpes
 
 ## 9. Deployment & Environment
 
-- **Build:** `npm run build` runs `prisma generate` and `next build` (no DB at build time on Vercel).
-- **Migrations:** Run separately after deploy: `DATABASE_URL="..." npx prisma migrate deploy` (set DIRECT_URL for Neon).
-- **Env:** Copy `.env.local.example` to `.env.local`; see README and (if present) docs/DEPLOYMENT.md for full list.
-- **Default admin:** Seeded by `prisma/seed.ts` (change password in production); see docs/TEST_ACCOUNTS.md for roles if that doc exists.
-- **Currency & locale:** KES, 16% VAT, phone +254.
+### 9.1 Infrastructure Overview (Railway)
+
+The platform is deployed as a **multi-service project** on Railway to ensure scalability and isolation:
+
+1. **Next.js App (Service: `web`):**
+   - Core storefront, admin portal, and backend API.
+   - Connected to Neon (PostgreSQL) and Cloudflare R2.
+2. **n8n Automation (Service: `n8n`):**
+   - Self-hosted n8n instance for all asynchronous and AI-powered workflows.
+   - Connected to the same PostgreSQL (different database/schema) for persistence.
+   - Uses `n8n/railway.toml` for optimized healthchecks and startup.
+3. **FFmpeg Sidecar (Service: `ffmpeg-service`):**
+   - Express server providing an API for video/image manipulation.
+   - Used by n8n workflows for generating social media assets.
+
+### 9.2 Build & Runtime
+
+- **Build:** `npm run build` runs `prisma generate` and `next build`.
+- **Migrations:** Managed via `npx prisma migrate deploy` in the `web` service.
+- **Env:** See `.env.example` in both the root and `n8n/` directories for required keys.
+- **Default admin:** Seeded by `prisma/seed.ts`.
+- **Currency:** KES (Kenya Shillings), 16% VAT.
 
 ---
 

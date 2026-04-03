@@ -32,5 +32,6 @@ else
 fi
 
 # 3. Execute n8n
-echo "Starting n8n..."
+echo "Starting n8n on port $N8N_PORT..."
+echo "Healthcheck is active and expected at /healthz"
 exec n8n start

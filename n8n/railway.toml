@@ -6,10 +6,9 @@
   # Increase timeout significantly for n8n's cold start
   healthcheckTimeout = 600
   # Add initial delay to skip immediate checks while Postgres is connecting
-  healthcheckInitialDelay = 15
+  healthcheckInitialDelay = 30
   restartPolicyType = "ON_FAILURE"
   restartPolicyMaxRetries = 3
-  startCommand = "n8n start"
   numReplicas = 1
 
 # Note: healthcheckPort is handled by Railway detecting the dynamic $PORT
