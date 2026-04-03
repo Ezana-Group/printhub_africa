@@ -7,7 +7,7 @@
   # Increase timeout significantly for n8n's cold start
   healthcheckTimeout = 600
   # Add initial delay to skip immediate checks while initialization occurs
-  healthcheckInitialDelay = 45
+  healthcheckInitialDelay = 120
   restartPolicyType = "ON_FAILURE"
   restartPolicyMaxRetries = 3
   numReplicas = 1
