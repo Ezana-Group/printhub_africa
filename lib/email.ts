@@ -147,9 +147,10 @@ export async function sendVerificationEmail(email: string, token: string) {
   return sendWithTemplate("verification", email, context, defaultSubject, defaultHtml);
 }
 
-export async function sendPasswordResetEmail(email: string, token: string) {
+export async function sendPasswordResetEmail(email: string, token: string, baseUrlOverride?: string) {
   const { businessName, footer } = await getEmailBranding();
-  const url = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
+  const targetBaseUrl = baseUrlOverride || baseUrl;
+  const url = `${targetBaseUrl}/reset-password?token=${encodeURIComponent(token)}`;
   const context = { businessName, footer, resetUrl: url };
   const defaultSubject = `Reset your ${businessName} password`;
   const defaultHtml = `

@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { Truck, ShieldCheck, Award, Zap } from "lucide-react";
 

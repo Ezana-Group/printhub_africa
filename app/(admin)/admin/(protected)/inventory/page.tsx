@@ -3,6 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { InventoryTabs } from "@/components/admin/inventory-tabs";
 import { requireAdminSection } from "@/lib/admin-route-guard";
+import { serializeDecimal } from "@/lib/utils";
 
 export default async function AdminInventoryPage() {
   try {
@@ -191,11 +192,11 @@ export default async function AdminInventoryPage() {
       </div>
 
       <InventoryTabs
-        shopProducts={shopProductsSerialized}
-        lfStockItems={lfItemsSerialized}
-        machines={machinesSerialized}
-        consumables={consumablesSerialized}
-        hardwareItems={hardwareSerialized}
+        shopProducts={serializeDecimal(shopProductsSerialized)}
+        lfStockItems={serializeDecimal(lfItemsSerialized)}
+        machines={serializeDecimal(machinesSerialized)}
+        consumables={serializeDecimal(consumablesSerialized)}
+        hardwareItems={serializeDecimal(hardwareItems)}
         printerAssets={printerAssets.map((a: { id: string; name: string }) => ({ id: a.id, name: a.name }))}
       />
     </div>

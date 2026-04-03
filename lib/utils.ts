@@ -52,3 +52,36 @@ export function formatDescription(text: string | null | undefined): string {
   
   return text;
 }
+
+/**
+ * Recursively converts Prisma Decimal objects to numbers.
+ * This is required when passing objects from Server Components to Client Components
+ * because Next.js serialization does not support the Decimal.js object.
+ */
+export function serializeDecimal<T>(obj: T): T {
+  if (obj === null || obj === undefined) return obj;
+
+  // Handle Arrays
+  if (Array.isArray(obj)) {
+    return obj.map((item) => serializeDecimal(item)) as unknown as T;
+  }
+
+  // Handle Decimal.js objects (they usually have a "d" and "s" and "e" property or an isDecimal flag)
+  if (typeof obj === 'object' && (obj as any).d && (obj as any).s !== undefined && (obj as any).e !== undefined) {
+    return Number(obj) as unknown as T;
+  }
+
+  // Handle plain Objects
+  if (typeof obj === 'object' && obj.constructor === Object) {
+    const result: any = {};
+    for (const key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        result[key] = serializeDecimal((obj as any)[key]);
+      }
+    }
+    return result as T;
+  }
+
+  // Return primitives
+  return obj;
+}

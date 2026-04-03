@@ -1,9 +1,16 @@
+"use client";
+
 import Link from "next/link";
 import { WebGLShader } from "@/components/ui/web-gl-shader";
 import { LiquidButton } from "@/components/ui/liquid-glass-button";
+import { ShinyButton } from "@/components/ui/shiny-button";
 import { BusinessStats } from "@/components/stats/BusinessStats";
 
-export function Hero() {
+interface HeroProps {
+  heroImage?: any;
+}
+
+export function Hero({ heroImage }: HeroProps) {
   return (
     <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-black">
       <WebGLShader />
@@ -24,21 +31,18 @@ export function Hero() {
           From Eldoret to all of Kenya — banners, signage, vehicle wraps, and custom 3D prints.
         </p>
         <div className="mt-10 flex flex-wrap gap-6 justify-center items-center">
-          <LiquidButton
-            asChild
-            variant="stained"
-            size="xl"
-            className="text-white min-w-[200px]"
+          <ShinyButton
+            onClick={() => window.location.href = "/shop"}
+            className="min-w-[200px]"
           >
-            <Link href="/shop">Shop Now</Link>
-          </LiquidButton>
-          <LiquidButton
+            Shop Now
+          </ShinyButton>
+          <ShinyButton
             asChild
-            size="xl"
-            className="text-white border border-white/10 min-w-[200px]"
+            className="min-w-[200px]"
           >
             <Link href="/services">Explore Services</Link>
-          </LiquidButton>
+          </ShinyButton>
           <Link
             href="/get-a-quote"
             className="text-base font-semibold text-slate-300 hover:text-white transition-colors ml-2"
