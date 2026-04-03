@@ -1,13 +1,13 @@
+# ==============================================================================
+# n8n Dockerfile — FRESH INSTALL (v5.0)
+# ==============================================================================
 FROM n8nio/n8n:latest
 
 USER root
 
-# Minimal setup for the fresh install
-# Data storage is managed at /home/node/.n8n by default in n8n images
-RUN mkdir -p /home/node/.n8n && chown -R node:node /home/node/.n8n
+# Install any additional system dependencies if needed (optional)
+# RUN apk add --no-cache curl
 
-# Copy workflows (preserved) and entrypoint
-COPY --chown=node:node . /home/node/n8n-config/
 COPY --chown=node:node docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
@@ -21,5 +21,7 @@ ENV NODE_ENV=production
 ENV N8N_METRICS=true
 ENV N8N_HEALTHCHECK_ACTIVE=true
 
-# Entrypoint handles initial DB check
+# Core persistent folder
+ENV N8N_USER_FOLDER=/home/node/.n8n
+
 ENTRYPOINT ["/docker-entrypoint.sh"]
