@@ -36,45 +36,74 @@ fi
 # 3. Automated Workflow Import (One by One)
 if [ -d "/home/node/workflows" ]; then
     (
-        echo "Background Import: Starting monitor (PID $$)..."
-        echo "Background Import: Checking for JSON files in /home/node/workflows/..."
-        ls -la /home/node/workflows/*.json || echo "No JSON files found!"
-
-        echo "Background Import: Waiting for n8n to be healthy at http://localhost:$N8N_PORT..."
-        # Wait up to 5 minutes for n8n to start
-        MAX_WAIT=60
-        COUNT=0
-        until node -e "const http = require('http'); const req = http.get('http://localhost:' + process.env.N8N_PORT + '/healthz', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); req.on('error', () => process.exit(1));" || [ $COUNT -eq $MAX_WAIT ]; do
+        echo "=============================================================================="
+        echo "Background Import: MONITOR STARTING (PID $$)"
+        echo "Background Import: Checking for files in /home/node/workflows/..."
+        NUM_FILES=$(ls /home/node/workflows/*.json 2>/dev/null | wc -l)
+        echo "Background Import: Found $NUM_FILES JSON file(s)."
+        
+        echo "Background Import: Checking n8n health at http://localhost:$N8N_PORT/healthz..."
+        MAX_HEALTH_WAIT=60
+        HEALTH_COUNT=0
+        until node -e "const http = require('http'); const req = http.get('http://localhost:' + process.env.N8N_PORT + '/healthz', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); req.on('error', () => process.exit(1));" || [ $HEALTH_COUNT -eq $MAX_HEALTH_WAIT ]; do
+            echo "Background Import: n8n not healthy yet (Attempt $((HEALTH_COUNT + 1))/$MAX_HEALTH_WAIT)..."
             sleep 5
-            COUNT=$((COUNT + 1))
+            HEALTH_COUNT=$((HEALTH_COUNT + 1))
         done
 
-        if [ $COUNT -eq $MAX_WAIT ]; then
-            echo "Background Import ERROR: n8n did not become healthy in time."
-        else
-            echo "Background Import: n8n is ready. Waiting for first user to be created..."
-            # Wait for Moses (User 1) to be created in the UI
-            USER_READY=1
-            while [ $USER_READY -ne 0 ]; do
-                # Check if user with ID 1 exists
-                n8n user:get --id 1 > /dev/null 2>&1
-                USER_READY=$?
-                if [ $USER_READY -ne 0 ]; then
-                    echo "Background Import: Waiting for user ID 1 (Moses) to be created via UI..."
-                    sleep 10
-                fi
-            done
-
-            echo "Background Import: User 1 found. Starting sequential import..."
-            for f in /home/node/workflows/*.json; do
-                if [ -f "$f" ]; then
-                    echo "Background Import: Processing $f..."
-                    # In n8n v1+, we MUST specify --userId if user management is active
-                    n8n import:workflow --userId 1 --file "$f" && echo "Background Import: Success for $(basename "$f")" || echo "Background Import: FAILED for $(basename "$f")"
-                fi
-            done
-            echo "Background Import: All workflows processed."
+        if [ $HEALTH_COUNT -eq $MAX_HEALTH_WAIT ]; then
+            echo "Background Import FATAL ERROR: n8n failed healthcheck after 5 minutes."
+            exit 1
         fi
+
+        echo "Background Import: n8n is HEALTHY. Detecting Owner User ID..."
+        
+        # We wait until at least ONE user exists in the DB
+        USER_ID=""
+        MAX_USER_WAIT=600 # 10 minutes total for first-time setup
+        USER_COUNT=0
+        
+        while [ -z "$USER_ID" ] && [ $USER_COUNT -lt $MAX_USER_WAIT ]; do
+            # Try to get the ID of the first user (Owner)
+            USER_ID=$(n8n user:get --id 1 2>/dev/null | grep -o 'id: [0-9]*' | cut -d' ' -f2)
+            
+            if [ -z "$USER_ID" ]; then
+                # Fallback: check if ANY user exists (if ID isn't 1)
+                USER_ID=$(n8n user:list 2>/dev/null | grep -E "^\| [0-9]+" | head -1 | cut -d'|' -f2 | xoc -d ' ')
+            fi
+
+            if [ -z "$USER_ID" ]; then
+                echo "Background Import: WAITING for first user to be created in the UI (Moses)..."
+                sleep 15
+                USER_COUNT=$((USER_COUNT + 15))
+            fi
+        done
+
+        if [ -z "$USER_ID" ]; then
+            echo "Background Import TIMEOUT: No user created after 10 minutes. Skipping auto-import."
+            exit 0
+        fi
+
+        echo "Background Import: SUCCESS! Detected User ID: $USER_ID"
+        echo "Background Import: Starting sequential import..."
+        
+        for f in /home/node/workflows/*.json; do
+            if [ -f "$f" ]; then
+                FILENAME=$(basename "$f")
+                echo "Background Import: Importing $FILENAME using User $USER_ID..."
+                
+                # Use --userId flag for v1+ compatibility
+                if n8n import:workflow --userId "$USER_ID" --file "$f" > /tmp/import_log 2>&1; then
+                    echo "Background Import: SUCCESS for $FILENAME"
+                else
+                    echo "Background Import: FAILED for $FILENAME"
+                    cat /tmp/import_log
+                fi
+            fi
+        done
+        
+        echo "Background Import: COMPLETED. All blueprints processed."
+        echo "=============================================================================="
     ) &
 fi
 
