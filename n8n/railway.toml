@@ -2,7 +2,8 @@
   builder = "DOCKERFILE"
 
 [deploy]
-  healthcheckPath = "/healthz"
+  healthcheckPath = "/health"
+  healthcheckInterval = 10
   # Increase timeout significantly for n8n's cold start
   healthcheckTimeout = 600
   # Add initial delay to skip immediate checks while Postgres is connecting

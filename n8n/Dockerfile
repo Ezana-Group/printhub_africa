@@ -20,18 +20,22 @@ RUN chmod +x /docker-entrypoint.sh
 USER node
 
 # n8n environment variables
-# IMPORTANT: Railway terminates TLS at the edge — the container must listen on HTTP.
-# Setting N8N_PROTOCOL=https here would cause n8n to try to serve its own HTTPS
-# without certs, resulting in connection refused / 502 errors.
-ENV N8N_LISTEN_ADDRESS=0.0.0.0
+# Railway terminates TLS at the edge — the container must listen on HTTP.
+ENV N8N_LISTEN_ADDRESS=::
 ENV N8N_PROTOCOL=http
 ENV NODE_ENV=production
 ENV N8N_METRICS=true
 ENV N8N_HEALTHCHECK_ACTIVE=true
 ENV N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
 
-# Expose default port (Railway overrides this via $PORT env var at runtime)
+# Core structural variables (non-sensitive)
+ENV WEBHOOK_URL=https://n8n.printhub.africa
+ENV N8N_EDITOR_BASE_URL=https://n8n.printhub.africa
+ENV N8N_URL=https://n8n.printhub.africa
+
+# Default port (Railway overrides this via $PORT)
 EXPOSE 5678
+EXPOSE 8080
 
 # Use project-level storage
 ENV N8N_USER_FOLDER=/home/node/.n8n

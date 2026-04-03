@@ -13,8 +13,9 @@ else
     echo "Using default N8N_PORT: $N8N_PORT"
 fi
 
-# Ensure n8n listens on all interfaces
-export N8N_LISTEN_ADDRESS="0.0.0.0"
+# Ensure n8n listens on all interfaces (IPv6 capable)
+export N8N_LISTEN_ADDRESS="::"
+
 
 # 2. Database Synchronization
 # This ensures that n8n 2.x tables are created before importing workflows or starting the server.
