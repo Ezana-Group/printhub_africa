@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Clock, CheckCircle2, AlertCircle } from "lucide-react";
 
 interface OrderDetail {
   id: string;
@@ -49,7 +51,15 @@ interface OrderDetail {
   } | null;
   trackingEvents?: Array<{ status: string; title: string; description?: string | null; createdAt: string; isPublic?: boolean }>;
   invoices?: Array<{ id: string; invoiceNumber: string; issuedAt: string }>;
-  refunds?: Array<{ id: string; refundNumber?: string | null; amount: number; status: string; createdAt: string }>;
+  refunds?: Array<{ 
+    id: string; 
+    refundNumber?: string | null; 
+    amount: number; 
+    status: string; 
+    createdAt: string;
+    mpesaReceiptNo?: string | null;
+    rejectionReason?: string | null;
+  }>;
 }
 
 export default function OrderDetailPage() {
@@ -223,12 +233,61 @@ export default function OrderDetailPage() {
               </Button>
             )}
             {(order.refunds?.length ?? 0) > 0 && (
-              <div className="mt-4 p-3 rounded-xl border border-amber-200 bg-amber-50 text-sm">
-                <p className="font-medium text-amber-900">Refund status</p>
+              <div className="mt-6 space-y-4">
+                <p className="text-sm font-semibold text-slate-900 px-1">Refund Status</p>
                 {order.refunds!.map((r) => (
-                  <p key={r.id} className="text-amber-800 mt-0.5">
-                    {r.refundNumber ? `${r.refundNumber} · ` : ""}KES {r.amount.toLocaleString()} — {r.status}
-                  </p>
+                  <div key={r.id} className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4 shadow-sm transition-all hover:shadow-md">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">
+                          {r.refundNumber || "REFUND"}
+                        </span>
+                        <span className="text-lg font-bold text-slate-900">
+                          {formatPrice(r.amount)}
+                        </span>
+                      </div>
+                      <Badge 
+                        variant="outline" 
+                        className={`font-bold px-2.5 py-0.5 rounded-full ${
+                          r.status === "COMPLETED" ? "bg-green-100 text-green-800 border-green-200" :
+                          r.status === "FAILED" || r.status === "REJECTED" ? "bg-red-100 text-red-800 border-red-200" :
+                          "bg-amber-100 text-amber-900 border-amber-200"
+                        }`}
+                      >
+                        {r.status}
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-2 pt-2 border-t border-amber-100">
+                      <div className="flex items-center gap-2 text-xs text-slate-600">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>Created: {new Date(r.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      
+                      {r.status === "COMPLETED" && r.mpesaReceiptNo && (
+                        <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 p-2 rounded-lg border border-green-100">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>M-Pesa Receipt: <strong>{r.mpesaReceiptNo}</strong></span>
+                        </div>
+                      )}
+
+                      {r.status === "REJECTED" && (order as any).rejectionReason && (
+                        <div className="flex items-start gap-2 text-xs text-red-700 bg-red-50 p-2 rounded-lg border border-red-100">
+                          <AlertCircle className="w-3.5 h-3.5 mt-0.5" />
+                          <div>
+                            <p className="font-semibold">Refund Denied</p>
+                            <p>{(order as any).rejectionReason}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {r.status === "PENDING" && (
+                        <p className="text-[11px] text-amber-700 leading-relaxed italic">
+                          Our finance team is currently reviewing your request. This usually takes 1-2 business days.
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 ))}
               </div>
             )}

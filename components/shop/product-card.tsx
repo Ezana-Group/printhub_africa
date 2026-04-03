@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Heart, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useCartStore } from "@/store/cart-store";
 import type { CartItem } from "@/store/cart-store";
 
@@ -93,15 +94,22 @@ export function ProductCard({ id, name, slug, image, imagesCount, basePrice, com
             </span>
           ))}
         </div>
-        <Button
-          variant="secondary"
-          size="icon"
-          className="absolute right-2 top-2 rounded-full opacity-0 transition group-hover:opacity-100"
-          aria-label="Add to wishlist"
-        >
-          <Heart className="h-4 w-4" />
-        </Button>
-      </div>
+          <Button
+            variant="secondary"
+            size="icon"
+            className="absolute right-2 top-2 rounded-full opacity-0 transition group-hover:opacity-100"
+            aria-label="Add to wishlist"
+          >
+            <Heart className="h-4 w-4" />
+          </Button>
+          {(reviewCount ?? 0) > 5 && (
+            <div className="absolute left-2 bottom-2">
+              <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-none text-[10px] py-0 px-2 shadow-sm uppercase font-bold tracking-tighter">
+                Bestseller
+              </Badge>
+            </div>
+          )}
+        </div>
       <div className="mt-3">
         <h3 className="font-semibold text-slate-900 line-clamp-2">{name}</h3>
         {averageRating != null && averageRating > 0 && (
