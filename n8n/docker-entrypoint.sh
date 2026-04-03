@@ -40,7 +40,7 @@ if [ -d "/home/node/workflows" ]; then
         # Wait up to 5 minutes for n8n to start
         MAX_WAIT=60
         COUNT=0
-        until curl -s "http://localhost:$N8N_PORT/healthz" > /dev/null || [ $COUNT -eq $MAX_WAIT ]; do
+        until node -e "const http = require('http'); const req = http.get('http://localhost:' + process.env.N8N_PORT + '/healthz', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); req.on('error', () => process.exit(1));" || [ $COUNT -eq $MAX_WAIT ]; do
             sleep 5
             COUNT=$((COUNT + 1))
         done

@@ -5,8 +5,7 @@ FROM n8nio/n8n:latest
 
 USER root
 
-# Install curl for healthcheck waiting
-RUN apk add --no-cache curl
+# n8n base image includes Node.js, which we'll use for health checks
 
 COPY --chown=node:node docker-entrypoint.sh /docker-entrypoint.sh
 COPY --chown=node:node workflows/ /home/node/workflows/
