@@ -36,6 +36,10 @@ fi
 # 3. Automated Workflow Import (One by One)
 if [ -d "/home/node/workflows" ]; then
     (
+        echo "Background Import: Starting monitor (PID $$)..."
+        echo "Background Import: Checking for JSON files in /home/node/workflows/..."
+        ls -la /home/node/workflows/*.json || echo "No JSON files found!"
+
         echo "Background Import: Waiting for n8n to be healthy at http://localhost:$N8N_PORT..."
         # Wait up to 5 minutes for n8n to start
         MAX_WAIT=60
@@ -46,14 +50,27 @@ if [ -d "/home/node/workflows" ]; then
         done
 
         if [ $COUNT -eq $MAX_WAIT ]; then
-            echo "Background Import ERROR: n8n did not become healthy in time. Skipping import."
+            echo "Background Import ERROR: n8n did not become healthy in time."
         else
-            echo "Background Import: n8n is ready. Starting sequential import..."
-            # Import alphabetically (follows the order in N8N_INTEGRATION_GUIDE)
+            echo "Background Import: n8n is ready. Waiting for first user to be created..."
+            # Wait for Moses (User 1) to be created in the UI
+            USER_READY=1
+            while [ $USER_READY -ne 0 ]; do
+                # Check if user with ID 1 exists
+                n8n user:get --id 1 > /dev/null 2>&1
+                USER_READY=$?
+                if [ $USER_READY -ne 0 ]; then
+                    echo "Background Import: Waiting for user ID 1 (Moses) to be created via UI..."
+                    sleep 10
+                fi
+            done
+
+            echo "Background Import: User 1 found. Starting sequential import..."
             for f in /home/node/workflows/*.json; do
                 if [ -f "$f" ]; then
                     echo "Background Import: Processing $f..."
-                    n8n import:workflow --file "$f"
+                    # In n8n v1+, we MUST specify --userId if user management is active
+                    n8n import:workflow --userId 1 --file "$f" && echo "Background Import: Success for $(basename "$f")" || echo "Background Import: FAILED for $(basename "$f")"
                 fi
             done
             echo "Background Import: All workflows processed."
