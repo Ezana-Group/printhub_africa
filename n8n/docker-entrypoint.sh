@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # ==============================================================================
-# n8n Railway Entrypoint Script (v3.2 - Forced Migration & CSP Support)
+# n8n Railway Entrypoint Script (v3.3 - DB Ready Check & Debug Mode)
 # ==============================================================================
 
 # 1. Handle dynamic Railway PORT
@@ -16,28 +16,27 @@ fi
 # Ensure n8n listens on all interfaces (IPv6 capable)
 export N8N_LISTEN_ADDRESS="::"
 
-# 2. Database Connectivity & Migration
-# We MUST ensure the database is ready and migrations have run BEFORE starting the server.
-echo "Checking database connectivity..."
+# 2. Database Connectivity Check
+# Since the image is hardened (no nc), we use node to check the database connection.
+echo "Checking database connectivity to $DB_POSTGRESDB_HOST:$DB_POSTGRESDB_PORT..."
 MAX_RETRIES=10
 RETRY_COUNT=0
-until n8n db:migrate || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
-    echo "Database migration failed or database not reachable. Retrying in 5s ($((RETRY_COUNT + 1))/$MAX_RETRIES)..."
+until node -e "const net = require('net'); const client = net.createConnection({host: '$DB_POSTGRESDB_HOST', port: parseInt('$DB_POSTGRESDB_PORT') || 5432}, () => { client.end(); process.exit(0); }); client.on('error', () => process.exit(1)); setTimeout(() => process.exit(1), 2000);" || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+    echo "Database not reachable yet. Retrying in 5s ($((RETRY_COUNT + 1))/$MAX_RETRIES)..."
     sleep 5
     RETRY_COUNT=$((RETRY_COUNT + 1))
 done
 
 if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-    echo "CRITICAL: Database migration failed after $MAX_RETRIES attempts. Exiting."
-    exit 1
+    echo "CRITICAL: Database not reachable after $MAX_RETRIES attempts. Starting n8n anyway to catch internal errors..."
+else
+    echo "Database is reachable. Starting n8n (automatic migrations will run)..."
 fi
-echo "Database migration successful."
 
 # 3. Start n8n automated import in the background
-# We run this in the background after the main process has initialized or is starting.
 (
-    echo "Background process: Waiting 20s for n8n server to stabilize..."
-    sleep 20 
+    echo "Background process: Waiting 30s for n8n server to stabilize..."
+    sleep 30 
     
     if [ -d "/home/node/n8n-config/workflows" ]; then
         echo "Background process: Starting automated workflow import..."
