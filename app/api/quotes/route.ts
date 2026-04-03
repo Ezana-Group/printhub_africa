@@ -188,15 +188,28 @@ export async function POST(req: NextRequest) {
           targetRoles: ['STAFF', 'ADMIN']
         });
       })(),
-      // 3. n8n Master Trigger
+      // 3. n8n Master Trigger (with PDF)
       (async () => {
         const { n8n } = await import("@/lib/n8n");
+        let pdfBase64: string | undefined;
+        try {
+          const { generateQuotePdfBuffer } = await import("@/lib/quote-pdf");
+          const buffer = await generateQuotePdfBuffer(quote.id);
+          if (buffer) {
+            pdfBase64 = buffer.toString("base64");
+          }
+        } catch (err) {
+          console.error("Failed to generate quote PDF for n8n:", err);
+        }
+
         return n8n.quoteSubmitted({
           quoteId: quote.id,
           customerEmail: quote.customerEmail,
           customerName: quote.customerName,
           quoteType: typeDb,
-          reviewUrl: `${process.env.NEXT_PUBLIC_APP_URL}/admin/quotes/${quote.id}`
+          projectName: quote.projectName || undefined,
+          reviewUrl: `${process.env.NEXT_PUBLIC_APP_URL}/admin/quotes/${quote.id}`,
+          pdfBase64
         });
       })()
     ]).catch((err) => console.error("Quote triggers error:", err));

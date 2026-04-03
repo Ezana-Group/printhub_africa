@@ -29,7 +29,36 @@ export async function POST(
       existingModel = importQueue;
     }
 
-    // 1. Create Product
+    // 1. Resolve or Create Category
+    let categoryId = data.categoryId;
+    const existingCategory = await prisma.category.findFirst({
+      where: {
+        OR: [
+          { id: categoryId },
+          { name: { equals: categoryId, mode: 'insensitive' } }
+        ]
+      }
+    });
+
+    if (!existingCategory && categoryId) {
+      // Create new category on the fly
+      const newCat = await prisma.category.create({
+        data: {
+          name: categoryId,
+          slug: categoryId.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+          isActive: true
+        }
+      });
+      categoryId = newCat.id;
+    } else if (existingCategory) {
+      categoryId = existingCategory.id;
+    } else {
+      // Fallback
+      const defaultCat = await prisma.category.findFirst();
+      categoryId = defaultCat?.id || "";
+    }
+
+    // 2. Create Product
     const slug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     // Check slug uniqueness
     let finalSlug = slug;
@@ -44,7 +73,7 @@ export async function POST(
         slug: finalSlug,
         description: data.fullDescription || data.description,
         shortDescription: data.shortDescription,
-        categoryId: data.categoryId,
+        categoryId: categoryId,
         productType: "READYMADE_3D",
         images: data.imageUrls,
         basePrice: data.suggestedPriceMin || data.basePrice || 0,

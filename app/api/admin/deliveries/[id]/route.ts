@@ -40,7 +40,7 @@ export async function PATCH(
         order: {
           include: {
             shippingAddress: true,
-            user: { select: { email: true } },
+            user: { select: { name: true, email: true } },
           },
         },
       },
@@ -89,6 +89,11 @@ export async function PATCH(
       delivery.order.shippingAddress?.email ??
       (delivery.order.user?.email as string | undefined) ??
       null;
+    const customerName =
+      delivery.order.shippingAddress?.fullName ??
+      (delivery.order.user?.name as string | undefined) ??
+      "Customer";
+
     if (customerEmail) {
       try {
         if (status === "DISPATCHED") {
@@ -109,6 +114,41 @@ export async function PATCH(
       } catch (e) {
         console.error("Delivery notification email error:", e);
       }
+    }
+
+    // --- AUTOMATION: n8n Status Trigger ---
+    if (status) {
+      void (async () => {
+        try {
+          const { n8n } = await import("@/lib/n8n");
+          // Trigger staff alert for completion/failure
+          if (status === 'DELIVERED' || status === 'FAILED') {
+            await n8n.staffAlert({
+              type: 'PRODUCTION_DELAYED', // Using PRODUCTION_DELAYED as a generic status update bucket for now
+              title: `🚚 Delivery ${status}: #${delivery.order.orderNumber}`,
+              message: `Customer: ${customerName}\nStatus: ${status}${failureReason ? `\nReason: ${failureReason}` : ''}`,
+              urgency: status === 'FAILED' ? 'high' : 'low',
+              actionUrl: `${process.env.NEXT_PUBLIC_APP_URL}/admin/orders/${delivery.orderId}`,
+              targetRoles: ['STAFF', 'ADMIN']
+            });
+          }
+          
+          // Trigger global workflow (for WhatsApp/SMS)
+          await n8n.deliveryStatusChanged({
+            deliveryId: id,
+            orderId: delivery.orderId,
+            orderNumber: delivery.order.orderNumber,
+            status,
+            customerName,
+            customerEmail,
+            customerPhone: delivery.order.shippingAddress?.phone ?? undefined,
+            trackingNumber: trackingNumber ?? delivery.trackingNumber,
+            failureReason: failureReason ?? undefined
+          });
+        } catch (err) {
+          console.error("Failed to trigger n8n delivery alert:", err);
+        }
+      })();
     }
 
     return NextResponse.json({ success: true });

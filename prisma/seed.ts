@@ -661,16 +661,71 @@ async function main() {
   });
   console.log("Seed coupon WELCOME10 created");
 
-  // Kenya delivery zones (county rates: Uasin Gishu 200, Central 400, etc.)
+  // Kenya delivery zones (region-based with county coverage)
   const kenyaZones = [
-    { name: "Eldoret", county: "Uasin Gishu", counties: null, feeKes: 200, minDays: 1, maxDays: 2, sortOrder: 0 },
-    { name: "Central", county: null, counties: "Kiambu,Murang'a,Nyeri,Kirinyaga,Nyandarua", feeKes: 400, minDays: 2, maxDays: 4, sortOrder: 1 },
-    { name: "Coast", county: null, counties: "Mombasa,Kilifi,Kwale,Lamu,Taita-Taveta,Tana River", feeKes: 450, minDays: 3, maxDays: 5, sortOrder: 2 },
-    { name: "Eastern", county: null, counties: "Embu,Machakos,Makueni,Meru,Tharaka-Nithi,Kitui,Isiolo", feeKes: 450, minDays: 3, maxDays: 5, sortOrder: 3 },
-    { name: "Rift Valley", county: null, counties: "Nakuru,Eldoret,Uasin Gishu,Kericho,Bomet,Narok,Kajiado,Baringo", feeKes: 500, minDays: 3, maxDays: 6, sortOrder: 4 },
-    { name: "Western", county: null, counties: "Kakamega,Bungoma,Busia,Vihiga", feeKes: 500, minDays: 4, maxDays: 6, sortOrder: 5 },
-    { name: "Nyanza", county: null, counties: "Kisumu,Siaya,Kisii,Migori,Homa Bay,Nyamira", feeKes: 500, minDays: 4, maxDays: 6, sortOrder: 6 },
-    { name: "North Eastern", county: null, counties: "Garissa,Wajir,Mandera", feeKes: 600, minDays: 5, maxDays: 8, sortOrder: 7 },
+    {
+      name: "Eldoret (Home Base)",
+      county: "Uasin Gishu",
+      counties: "Uasin Gishu",
+      feeKes: 0,
+      minDays: 0,
+      maxDays: 1,
+      sortOrder: 1,
+    },
+    {
+      name: "Nairobi Metro",
+      county: "Nairobi",
+      counties: "Nairobi, Kiambu, Machakos, Kajiado",
+      feeKes: 350,
+      minDays: 1,
+      maxDays: 2,
+      sortOrder: 2,
+    },
+    {
+      name: "Western & Nyanza",
+      county: "Kisumu",
+      counties: "Kisumu, Kakamega, Bungoma, Busia, Vihiga, Siaya, Homa Bay, Migori, Kisii, Nyamira",
+      feeKes: 450,
+      minDays: 2,
+      maxDays: 3,
+      sortOrder: 3,
+    },
+    {
+      name: "Coast Region",
+      county: "Mombasa",
+      counties: "Mombasa, Kwale, Kilifi, Tana River, Lamu, Taita Taveta",
+      feeKes: 600,
+      minDays: 3,
+      maxDays: 5,
+      sortOrder: 4,
+    },
+    {
+      name: "Central & Mount Kenya",
+      county: "Nyeri",
+      counties: "Nyeri, Kirinyaga, Murang'a, Nyandarua, Meru, Tharaka-Nithi, Embu, Laikipia",
+      feeKes: 400,
+      minDays: 2,
+      maxDays: 3,
+      sortOrder: 5,
+    },
+    {
+      name: "Rift Valley (North & South)",
+      county: "Nakuru",
+      counties: "Nakuru, Kericho, Bomet, Nandi, Trans Nzoia, Elgeyo-Marakwet, West Pokot, Baringo, Samburu, Narok",
+      feeKes: 400,
+      minDays: 1,
+      maxDays: 3,
+      sortOrder: 6,
+    },
+    {
+      name: "Northern Kenya (Arid/Remote)",
+      county: "Garissa",
+      counties: "Garissa, Wajir, Mandera, Marsabit, Isiolo, Turkana",
+      feeKes: 1000,
+      minDays: 5,
+      maxDays: 10,
+      sortOrder: 7,
+    }
   ];
   for (const z of kenyaZones) {
     const existing = await prisma.deliveryZone.findFirst({

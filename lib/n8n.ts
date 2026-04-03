@@ -109,6 +109,9 @@ export const n8n = {
 
   catalogueImportEnhance: (payload: CatalogueImportPayload) =>
     triggerN8nWorkflow('enhance-catalogue-import', payload),
+
+  deliveryStatusChanged: (payload: DeliveryStatusPayload) =>
+    triggerN8nWorkflow('delivery-status-changed', payload),
 }
 
 // ... existing interfaces ...
@@ -189,8 +192,10 @@ export interface QuotePayload {
   customerEmail: string
   customerName: string
   quoteType: string
+  projectName?: string
   estimatedValue?: number
   reviewUrl: string
+  pdfBase64?: string // New: Base64 encoded Draft PDF
 }
 
 export interface QuoteReadyPayload {
@@ -293,4 +298,16 @@ export interface CorporateAppPayload {
   contactEmail: string
   contactName: string
   reviewUrl: string
+}
+
+export interface DeliveryStatusPayload {
+  deliveryId: string
+  orderId: string
+  orderNumber: string
+  status: string
+  customerName: string
+  customerEmail: string | null
+  customerPhone?: string
+  trackingNumber?: string | null
+  failureReason?: string
 }
