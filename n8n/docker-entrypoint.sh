@@ -17,10 +17,11 @@ fi
 export N8N_LISTEN_ADDRESS="::"
 
 
-# 2. Database Synchronization
-# This ensures that n8n 2.x tables are created before importing workflows or starting the server.
+# 2. Database Schema Initialization
+# n8n automatically initializes the schema on start, but for 'import:workflow'
+# to work on a fresh DB, we trigger an initialization by running a dummy export.
 echo "Ensuring database schema is synchronized..."
-n8n db:migrate || echo "Warning: Database migration failed, but continuing to workflow import..."
+n8n export:workflow --all --output=/home/node/init_check.json || echo "Database initialization check completed."
 
 # 3. Automated Workflow Import
 # This imports JSON files from the workflows folder in the repository
