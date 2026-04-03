@@ -33,8 +33,34 @@ else
     echo "Database is reachable. Starting n8n..."
 fi
 
-# 3. Execute n8n
-# Standard n8n start command. We no longer perform manual background imports.
-# This ensures a clean schema migration by n8n itself.
+# 3. Automated Workflow Import (One by One)
+if [ -d "/home/node/workflows" ]; then
+    (
+        echo "Background Import: Waiting for n8n to be healthy at http://localhost:$N8N_PORT..."
+        # Wait up to 5 minutes for n8n to start
+        MAX_WAIT=60
+        COUNT=0
+        until curl -s "http://localhost:$N8N_PORT/healthz" > /dev/null || [ $COUNT -eq $MAX_WAIT ]; do
+            sleep 5
+            COUNT=$((COUNT + 1))
+        done
+
+        if [ $COUNT -eq $MAX_WAIT ]; then
+            echo "Background Import ERROR: n8n did not become healthy in time. Skipping import."
+        else
+            echo "Background Import: n8n is ready. Starting sequential import..."
+            # Import alphabetically (follows the order in N8N_INTEGRATION_GUIDE)
+            for f in /home/node/workflows/*.json; do
+                if [ -f "$f" ]; then
+                    echo "Background Import: Processing $f..."
+                    n8n import:workflow --file "$f"
+                fi
+            done
+            echo "Background Import: All workflows processed."
+        fi
+    ) &
+fi
+
+# 4. Execute n8n
 echo "Starting n8n on port $N8N_PORT..."
 exec n8n start

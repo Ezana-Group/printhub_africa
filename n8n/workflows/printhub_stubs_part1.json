@@ -1,0 +1,377 @@
+[
+  {
+    "name": "3. PrintHub - Abandoned Cart Recovery (3-Stage Sequence)",
+    "nodes": [
+      {
+        "parameters": { "rule": { "interval": [{ "field": "cronExpression", "expression": "0 */2 * * *" }] } },
+        "name": "Schedule: Every 2 Hours",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [0, 300]
+      },
+      {
+        "parameters": {
+          "url": "https://admin.printhub.africa/api/n8n/get-abandoned-carts",
+          "method": "GET",
+          "authentication": "headerAuth",
+          "headerParameters": { "parameters": [{ "name": "x-printhub-signature", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" }] }
+        },
+        "name": "Fetch Abandoned Carts",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [200, 300]
+      },
+      {
+        "parameters": { "fieldToSplitOut": "data", "options": {} },
+        "name": "Split Into Carts",
+        "type": "n8n-nodes-base.splitOut",
+        "typeVersion": 1,
+        "position": [400, 300]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "number": [{ "value1": "={{ $json.reminderNumber }}", "operation": "equal", "value2": 2 }]
+          }
+        },
+        "name": "Is Stage 2?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 1,
+        "position": [600, 150]
+      },
+      {
+        "parameters": {
+          "url": "https://admin.printhub.africa/api/n8n/generate-coupon",
+          "method": "POST",
+          "authentication": "headerAuth",
+          "headerParameters": { "parameters": [{ "name": "x-printhub-signature", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" }] },
+          "bodyParametersJson": "={ \"customerId\": \"{{ $json.customerId }}\", \"discount\": 10, \"type\": \"percentage\", \"expiresInHours\": 48, \"source\": \"cart-recovery\" }"
+        },
+        "name": "Generate 10% Coupon",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [800, 50]
+      },
+      {
+        "parameters": {
+          "url": "https://api.resend.com/emails",
+          "method": "POST",
+          "authentication": "headerAuth",
+          "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.RESEND_API_KEY}}" }] },
+          "bodyParametersJson": "={ \"from\": \"PrintHub Africa <hello@printhub.africa>\", \"to\": \"{{ $json.customerEmail }}\", \"subject\": \"{{ $json.reminderNumber === 1 ? 'You left something behind! 🛒' : $json.reminderNumber === 2 ? 'Your 10% discount is waiting ⏰' : 'Last chance — your cart expires tonight 🔥' }}\", \"html\": \"<h2>Hi {{ $json.customerName.split(' ')[0] }}!</h2><p>{{ $json.reminderNumber === 1 ? 'You left some great items in your cart.' : $json.reminderNumber === 2 ? 'We saved your cart — and added a 10% discount code for you: <strong>' + $node['Generate 10% Coupon'].json.code + '</strong>. Use it at checkout!' : 'This is your final reminder. Your cart and discount expire soon.' }}</p><ul>{{ $json.items.map(i => '<li>' + i.name + ' — KES ' + i.price.toLocaleString() + '</li>').join('') }}</ul><p><strong>Cart Total: KES {{ $json.totalValue.toLocaleString() }}</strong></p><p><a href='{{ $json.cartUrl }}' style='background:#f97316;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;'>Complete My Order →</a></p><p style='color:#888;font-size:12px;'>PrintHub Africa · Nairobi, Kenya</p>\" }"
+        },
+        "name": "Resend: Recovery Email",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [1000, 300]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "string": [{ "value1": "={{ $json.customerPhone }}", "operation": "isNotEmpty" }],
+            "number": [{ "value1": "={{ $json.reminderNumber }}", "operation": "smallerEqual", "value2": 2 }]
+          }
+        },
+        "name": "Has Phone & Stage ≤ 2?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 1,
+        "position": [1200, 300]
+      },
+      {
+        "parameters": {
+          "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+          "method": "POST",
+          "authentication": "headerAuth",
+          "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}" }] },
+          "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{ $json.customerPhone }}\", \"type\": \"text\", \"text\": { \"body\": \"Hi {{ $json.customerName.split(' ')[0] }}! 👋 You left {{ $json.items.length }} item(s) in your PrintHub cart worth KES {{ $json.totalValue.toLocaleString() }}.{{ $json.reminderNumber === 2 ? ' Use code ' + $node['Generate 10% Coupon'].json.code + ' for 10% off!' : '' }} Complete your order: {{ $json.cartUrl }}\" } }"
+        },
+        "name": "WhatsApp: Cart Reminder",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [1400, 200]
+      },
+      {
+        "parameters": {
+          "url": "https://admin.printhub.africa/api/n8n/mark-alert-sent",
+          "method": "POST",
+          "authentication": "headerAuth",
+          "headerParameters": { "parameters": [{ "name": "x-printhub-signature", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" }] },
+          "bodyParametersJson": "={ \"alertId\": \"{{ $json.cartId }}\", \"type\": \"abandoned-cart-stage-{{ $json.reminderNumber }}\", \"urgency\": \"low\" }"
+        },
+        "name": "Mark Reminder Sent",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [1600, 300]
+      }
+    ],
+    "connections": {
+      "Schedule: Every 2 Hours": { "main": [[{ "node": "Fetch Abandoned Carts", "type": "main", "index": 0 }]] },
+      "Fetch Abandoned Carts": { "main": [[{ "node": "Split Into Carts", "type": "main", "index": 0 }]] },
+      "Split Into Carts": { "main": [[{ "node": "Is Stage 2?", "type": "main", "index": 0 }]] },
+      "Is Stage 2?": {
+        "main": [
+          [{ "node": "Generate 10% Coupon", "type": "main", "index": 0 }],
+          [{ "node": "Resend: Recovery Email", "type": "main", "index": 0 }]
+        ]
+      },
+      "Generate 10% Coupon": { "main": [[{ "node": "Resend: Recovery Email", "type": "main", "index": 0 }]] },
+      "Resend: Recovery Email": { "main": [[{ "node": "Has Phone & Stage ≤ 2?", "type": "main", "index": 0 }]] },
+      "Has Phone & Stage ≤ 2?": {
+        "main": [
+          [{ "node": "WhatsApp: Cart Reminder", "type": "main", "index": 0 }],
+          [{ "node": "Mark Reminder Sent", "type": "main", "index": 0 }]
+        ]
+      },
+      "WhatsApp: Cart Reminder": { "main": [[{ "node": "Mark Reminder Sent", "type": "main", "index": 0 }]] }
+    }
+  },
+  {
+    "name": "4. PrintHub - Staff Alert (Urgency-Based Dispatch)",
+    "nodes": [
+      {
+        "parameters": { "httpMethod": "POST", "path": "staff-alert", "options": { "rawBody": true } },
+        "name": "Webhook: Staff Alert",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [0, 300],
+        "webhookId": "staff-alert"
+      },
+      {
+        "parameters": { "jsCode": "const crypto = require('crypto');\nconst sig = $node['Webhook: Staff Alert'].json.headers['x-printhub-signature'];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node['Webhook: Staff Alert'].json.body)).digest('hex');\nif (sig !== hmac) throw new Error('Invalid signature');\nreturn $node['Webhook: Staff Alert'].json.body;" },
+        "name": "Verify Signature",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [200, 300]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "string": [{ "value1": "={{ $json.urgency }}", "operation": "regex", "value2": "CRITICAL|HIGH" }]
+          }
+        },
+        "name": "Is High/Critical?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 1,
+        "position": [400, 300]
+      },
+      {
+        "parameters": {
+          "url": "https://api.resend.com/emails",
+          "method": "POST",
+          "authentication": "headerAuth",
+          "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.RESEND_API_KEY}}" }] },
+          "bodyParametersJson": "={ \"from\": \"PrintHub Alerts <alerts@printhub.africa>\", \"to\": \"{{ $env.ADMIN_EMAIL }}\", \"subject\": \"[{{ $json.urgency }}] Staff Alert: {{ $json.alertType }}\", \"html\": \"<h2 style='color:{{ $json.urgency === 'CRITICAL' ? '#dc2626' : $json.urgency === 'HIGH' ? '#ea580c' : '#d97706' }}'>⚠️ {{ $json.urgency }} Alert</h2><p><strong>Type:</strong> {{ $json.alertType }}</p><p><strong>Message:</strong> {{ $json.message }}</p>{{ $json.orderId ? '<p><strong>Order:</strong> ' + $json.orderId + '</p>' : '' }}{{ $json.customerId ? '<p><strong>Customer:</strong> ' + $json.customerId + '</p>' : '' }}<p><a href='https://admin.printhub.africa/admin'>Open Admin Panel →</a></p><p style='color:#888;font-size:11px;'>{{ new Date().toLocaleString('en-GB', {timeZone:'Africa/Nairobi'}) }} EAT</p>\" }"
+        },
+        "name": "Email: Alert Admin",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [600, 200]
+      },
+      {
+        "parameters": {
+          "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+          "method": "POST",
+          "authentication": "headerAuth",
+          "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}" }] },
+          "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{ $env.BUSINESS_PHONE }}\", \"type\": \"text\", \"text\": { \"body\": \"🚨 {{ $json.urgency }} ALERT\\n\\nType: {{ $json.alertType }}\\n{{ $json.message }}{{ $json.orderId ? '\\nOrder: ' + $json.orderId : '' }}\\n\\nCheck admin panel immediately.\" } }"
+        },
+        "name": "WhatsApp: Alert",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [600, 400]
+      },
+      {
+        "parameters": {
+          "chatId": "={{ $env.TELEGRAM_CHANNEL_ID }}",
+          "text": "=🚨 *{{ $json.urgency }} STAFF ALERT*\n\n*Type:* {{ $json.alertType }}\n*Message:* {{ $json.message }}{{ $json.orderId ? '\n*Order:* ' + $json.orderId : '' }}\n\n_{{ new Date().toLocaleString('en-GB', {timeZone:'Africa/Nairobi'}) }} EAT_",
+          "additionalFields": { "parse_mode": "Markdown" }
+        },
+        "name": "Telegram: Alert",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1,
+        "position": [800, 300],
+        "credentials": { "telegramApi": { "id": "telegram-cred", "name": "Telegram" } }
+      },
+      {
+        "parameters": {
+          "url": "https://admin.printhub.africa/api/n8n/mark-alert-sent",
+          "method": "POST",
+          "authentication": "headerAuth",
+          "headerParameters": { "parameters": [{ "name": "x-printhub-signature", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" }] },
+          "bodyParametersJson": "={ \"alertId\": \"{{ $json.orderId || $json.customerId || 'system' }}\", \"type\": \"{{ $json.alertType }}\", \"urgency\": \"{{ $json.urgency }}\" }"
+        },
+        "name": "Mark Alert Sent",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [1000, 300]
+      }
+    ],
+    "connections": {
+      "Webhook: Staff Alert": { "main": [[{ "node": "Verify Signature", "type": "main", "index": 0 }]] },
+      "Verify Signature": { "main": [[{ "node": "Is High/Critical?", "type": "main", "index": 0 }]] },
+      "Is High/Critical?": {
+        "main": [
+          [{ "node": "Email: Alert Admin", "type": "main", "index": 0 }, { "node": "WhatsApp: Alert", "type": "main", "index": 0 }],
+          [{ "node": "Email: Alert Admin", "type": "main", "index": 0 }]
+        ]
+      },
+      "Email: Alert Admin": { "main": [[{ "node": "Telegram: Alert", "type": "main", "index": 0 }]] },
+      "WhatsApp: Alert": { "main": [[{ "node": "Telegram: Alert", "type": "main", "index": 0 }]] },
+      "Telegram: Alert": { "main": [[{ "node": "Mark Alert Sent", "type": "main", "index": 0 }]] }
+    }
+  },
+  {
+    "name": "5. PrintHub - Security Alert (Impossible Travel + Breaches)",
+    "nodes": [
+      {
+        "parameters": { "httpMethod": "POST", "path": "security-alert", "options": { "rawBody": true } },
+        "name": "Webhook: Security",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [0, 300],
+        "webhookId": "security-alert"
+      },
+      {
+        "parameters": { "jsCode": "const crypto = require('crypto');\nconst sig = $node['Webhook: Security'].json.headers['x-printhub-signature'];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node['Webhook: Security'].json.body)).digest('hex');\nif (sig !== hmac) throw new Error('Invalid signature');\nreturn $node['Webhook: Security'].json.body;" },
+        "name": "Verify Signature",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [200, 300]
+      },
+      {
+        "parameters": {
+          "url": "https://api.resend.com/emails",
+          "method": "POST",
+          "authentication": "headerAuth",
+          "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.RESEND_API_KEY}}" }] },
+          "bodyParametersJson": "={ \"from\": \"PrintHub Security <security@printhub.africa>\", \"to\": [\"{{ $env.ADMIN_EMAIL }}\", \"{{ $json.userEmail }}\"], \"subject\": \"🔐 Security Alert: {{ $json.alertType }} — {{ $json.userEmail }}\", \"html\": \"<h2 style='color:#dc2626'>🔐 Security Alert</h2><table style='border-collapse:collapse;width:100%'><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>Alert Type</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.alertType }}</td></tr><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>User</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.userEmail }}</td></tr><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>IP Address</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.ipAddress }}</td></tr><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>Location</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.location }}</td></tr>{{ $json.previousLocation ? '<tr><td style=\\'padding:8px;border:1px solid #e5e7eb\\'><strong>Previous Location</strong></td><td style=\\'padding:8px;border:1px solid #e5e7eb\\'>' + $json.previousLocation + '</td></tr>' : '' }}<tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>Device</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.userAgent }}</td></tr></table><p style='margin-top:16px'>If this was not you, please <a href='https://admin.printhub.africa/admin/security'>review active sessions immediately →</a></p>\" }"
+        },
+        "name": "Email: Security Alert",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [400, 150]
+      },
+      {
+        "parameters": {
+          "chatId": "={{ $env.TELEGRAM_CHANNEL_ID }}",
+          "text": "=🔐 *SECURITY ALERT*\n\n*Type:* {{ $json.alertType }}\n*User:* {{ $json.userEmail }}\n*IP:* {{ $json.ipAddress }}\n*Location:* {{ $json.location }}{{ $json.previousLocation ? '\n*Previous:* ' + $json.previousLocation : '' }}\n\n*Action required — check admin panel.*",
+          "additionalFields": { "parse_mode": "Markdown" }
+        },
+        "name": "Telegram: Security Alert",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1,
+        "position": [400, 350],
+        "credentials": { "telegramApi": { "id": "telegram-cred", "name": "Telegram" } }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "string": [{ "value1": "={{ $json.alertType }}", "operation": "contains", "value2": "IMPOSSIBLE_TRAVEL" }]
+          }
+        },
+        "name": "Is Impossible Travel?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 1,
+        "position": [600, 250]
+      },
+      {
+        "parameters": {
+          "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+          "method": "POST",
+          "authentication": "headerAuth",
+          "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}" }] },
+          "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{ $env.BUSINESS_PHONE }}\", \"type\": \"text\", \"text\": { \"body\": \"🔐 IMPOSSIBLE TRAVEL DETECTED\\n\\nUser: {{ $json.userEmail }}\\nFrom: {{ $json.previousLocation }}\\nTo: {{ $json.location }}\\nIP: {{ $json.ipAddress }}\\n\\nReview immediately: admin.printhub.africa/admin/security\" } }"
+        },
+        "name": "WhatsApp: Impossible Travel",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [800, 200]
+      }
+    ],
+    "connections": {
+      "Webhook: Security": { "main": [[{ "node": "Verify Signature", "type": "main", "index": 0 }]] },
+      "Verify Signature": { "main": [[{ "node": "Email: Security Alert", "type": "main", "index": 0 }, { "node": "Telegram: Security Alert", "type": "main", "index": 0 }]] },
+      "Email: Security Alert": { "main": [[{ "node": "Is Impossible Travel?", "type": "main", "index": 0 }]] },
+      "Telegram: Security Alert": { "main": [[{ "node": "Is Impossible Travel?", "type": "main", "index": 0 }]] },
+      "Is Impossible Travel?": { "main": [[{ "node": "WhatsApp: Impossible Travel", "type": "main", "index": 0 }], []] }
+    }
+  },
+  {
+    "name": "6. PrintHub - Low Stock Notify (Inventory Flow)",
+    "nodes": [
+      {
+        "parameters": { "httpMethod": "POST", "path": "low-stock", "options": { "rawBody": true } },
+        "name": "Webhook: Low Stock",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [0, 300],
+        "webhookId": "low-stock"
+      },
+      {
+        "parameters": { "jsCode": "const crypto = require('crypto');\nconst sig = $node['Webhook: Low Stock'].json.headers['x-printhub-signature'];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node['Webhook: Low Stock'].json.body)).digest('hex');\nif (sig !== hmac) throw new Error('Invalid signature');\nreturn $node['Webhook: Low Stock'].json.body;" },
+        "name": "Verify Signature",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [200, 300]
+      },
+      {
+        "parameters": {
+          "url": "https://admin.printhub.africa/api/n8n/stock-levels",
+          "method": "GET",
+          "authentication": "headerAuth",
+          "headerParameters": { "parameters": [{ "name": "x-printhub-signature", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" }] }
+        },
+        "name": "Get All Low Stock Items",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [400, 300]
+      },
+      {
+        "parameters": {
+          "url": "https://api.resend.com/emails",
+          "method": "POST",
+          "authentication": "headerAuth",
+          "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.RESEND_API_KEY}}" }] },
+          "bodyParametersJson": "={ \"from\": \"PrintHub Stock <stock@printhub.africa>\", \"to\": \"{{ $env.ADMIN_EMAIL }}\", \"subject\": \"⚠️ Low Stock Alert — {{ $node['Webhook: Low Stock'].json.body.productName || $json.items.length + ' items' }}\", \"html\": \"<h2>⚠️ Low Stock Alert</h2>{{ $json.items && $json.items.length > 0 ? '<table style=\\'border-collapse:collapse;width:100%\\'><tr><th style=\\'padding:8px;border:1px solid #e5e7eb;text-align:left\\'>Item</th><th style=\\'padding:8px;border:1px solid #e5e7eb;text-align:left\\'>Type</th><th style=\\'padding:8px;border:1px solid #e5e7eb;text-align:left\\'>Current</th><th style=\\'padding:8px;border:1px solid #e5e7eb;text-align:left\\'>Minimum</th></tr>' + $json.items.map(i => '<tr><td style=\\'padding:8px;border:1px solid #e5e7eb\\'>' + i.itemName + '</td><td style=\\'padding:8px;border:1px solid #e5e7eb\\'>' + i.itemType + '</td><td style=\\'padding:8px;border:1px solid #e5e7eb;color:#dc2626\\'><strong>' + i.currentStock + ' ' + i.unit + '</strong></td><td style=\\'padding:8px;border:1px solid #e5e7eb\\'>' + i.minimumStock + ' ' + i.unit + '</td></tr>').join('') + '</table>' : '<p>Item: ' + $node['Webhook: Low Stock'].json.body.productName + ' — Current: ' + $node['Webhook: Low Stock'].json.body.currentStock + '</p>' }}<p style='margin-top:16px'><a href='https://admin.printhub.africa/admin/inventory'>Manage Inventory →</a></p>\" }"
+        },
+        "name": "Email: Low Stock Report",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [600, 200]
+      },
+      {
+        "parameters": {
+          "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+          "method": "POST",
+          "authentication": "headerAuth",
+          "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}" }] },
+          "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{ $env.BUSINESS_PHONE }}\", \"type\": \"text\", \"text\": { \"body\": \"⚠️ LOW STOCK ALERT\\n\\n{{ $node['Get All Low Stock Items'].json.items ? $node['Get All Low Stock Items'].json.items.slice(0,5).map(i => '• ' + i.itemName + ': ' + i.currentStock + ' ' + i.unit + ' remaining').join('\\n') : $node['Webhook: Low Stock'].json.body.productName + ' is critically low.' }}\\n\\nReview inventory: admin.printhub.africa/admin/inventory\" } }"
+        },
+        "name": "WhatsApp: Stock Alert",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [600, 400]
+      },
+      {
+        "parameters": {
+          "url": "https://admin.printhub.africa/api/n8n/mark-alert-sent",
+          "method": "POST",
+          "authentication": "headerAuth",
+          "headerParameters": { "parameters": [{ "name": "x-printhub-signature", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" }] },
+          "bodyParametersJson": "={ \"alertId\": \"{{ $node['Webhook: Low Stock'].json.body.productId || 'inventory-batch' }}\", \"type\": \"low-stock\", \"urgency\": \"MEDIUM\" }"
+        },
+        "name": "Mark Alert Sent",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [800, 300]
+      }
+    ],
+    "connections": {
+      "Webhook: Low Stock": { "main": [[{ "node": "Verify Signature", "type": "main", "index": 0 }]] },
+      "Verify Signature": { "main": [[{ "node": "Get All Low Stock Items", "type": "main", "index": 0 }]] },
+      "Get All Low Stock Items": { "main": [[{ "node": "Email: Low Stock Report", "type": "main", "index": 0 }, { "node": "WhatsApp: Stock Alert", "type": "main", "index": 0 }]] },
+      "Email: Low Stock Report": { "main": [[{ "node": "Mark Alert Sent", "type": "main", "index": 0 }]] },
+      "WhatsApp: Stock Alert": { "main": [[{ "node": "Mark Alert Sent", "type": "main", "index": 0 }]] }
+    }
+  }
+]

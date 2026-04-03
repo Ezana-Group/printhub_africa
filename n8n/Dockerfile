@@ -5,10 +5,11 @@ FROM n8nio/n8n:latest
 
 USER root
 
-# Install any additional system dependencies if needed (optional)
-# RUN apk add --no-cache curl
+# Install curl for healthcheck waiting
+RUN apk add --no-cache curl
 
 COPY --chown=node:node docker-entrypoint.sh /docker-entrypoint.sh
+COPY --chown=node:node workflows/ /home/node/workflows/
 RUN chmod +x /docker-entrypoint.sh
 
 USER node
