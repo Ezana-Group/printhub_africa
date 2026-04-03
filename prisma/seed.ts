@@ -37,10 +37,14 @@ async function main() {
   const adminRawPassword = process.env.SUPER_ADMIN_PASSWORD || "Admin@Printhub2025!";
   const adminHash = await bcrypt.hash(adminRawPassword, 12);
 
-  // Super Admin (existing account – password unchanged if already present)
+  // Super Admin (ensures password and role are correct every time the seed runs)
   const admin = await prisma.user.upsert({
     where: { email: adminEmail },
-    update: {},
+    update: {
+      role: UserRole.SUPER_ADMIN,
+      passwordHash: adminHash,
+      status: "ACTIVE",
+    },
     create: {
       email: adminEmail,
       name: "PrintHub Super Admin",

@@ -29,6 +29,7 @@ export async function POST(req: Request) {
     }
 
     if (!["STAFF", "ADMIN", "SUPER_ADMIN"].includes(user.role)) {
+      console.warn(`[Admin Validation] Denied access to ${email} due to role: ${user.role}`);
       return NextResponse.json({ error: "This is a staff portal. Customer accounts must log in at printhub.africa." }, { status: 403 });
     }
 

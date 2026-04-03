@@ -46,13 +46,13 @@ export const authOptionsAdmin: NextAuthOptions = {
   },
   cookies: {
     sessionToken: {
-      name: "printhub.admin.session",
+      name: process.env.NODE_ENV === "production" ? "__Secure-printhub.admin.session" : "printhub.admin.session",
       options: {
         httpOnly: true,
-        sameSite: "strict",
+        sameSite: "lax", // Changed from strict to lax for easier cross-subdomain handoff if needed
         path: "/",
-        secure: true, // Always true for admin as per prompt "httpOnly: true, secure: true, sameSite: 'strict'"
-        domain: process.env.NEXT_PUBLIC_ADMIN_DOMAIN || (process.env.NODE_ENV === "production" ? "admin.printhub.africa" : "localhost"),
+        secure: process.env.NODE_ENV === "production",
+        domain: process.env.NODE_ENV === "production" ? ".printhub.africa" : "localhost", // Use . to allow subdomain sharing if needed
       },
     },
   },

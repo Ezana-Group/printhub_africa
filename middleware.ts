@@ -34,6 +34,7 @@ export async function middleware(request: NextRequest) {
 
     // Redirect to login if no session and not on auth pages
     if (!token && !isLoginPage && !isAuthApi) {
+      console.log(`[Middleware] No admin token for: ${pathname}. Domain: ${host}`);
       const loginUrl = new URL("/login", request.url);
       // If we're on localhost and the path is an admin path, we should use /admin/login
       if (host.includes('localhost') && pathname.startsWith('/admin')) {
