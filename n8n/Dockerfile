@@ -20,13 +20,18 @@ RUN chmod +x /docker-entrypoint.sh
 USER node
 
 # n8n environment variables
+# IMPORTANT: Railway terminates TLS at the edge — the container must listen on HTTP.
+# Setting N8N_PROTOCOL=https here would cause n8n to try to serve its own HTTPS
+# without certs, resulting in connection refused / 502 errors.
 ENV N8N_LISTEN_ADDRESS=0.0.0.0
-ENV N8N_PROTOCOL=https
+ENV N8N_PROTOCOL=http
 ENV NODE_ENV=production
 ENV N8N_METRICS=true
 ENV N8N_HEALTHCHECK_ACTIVE=true
-ENV N8N_HEALTHCHECK_HOST=localhost
 ENV N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
+
+# Expose default port (Railway overrides this via $PORT env var at runtime)
+EXPOSE 5678
 
 # Use project-level storage
 ENV N8N_USER_FOLDER=/home/node/.n8n
