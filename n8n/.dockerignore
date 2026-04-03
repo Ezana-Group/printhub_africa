@@ -1,6 +1,6 @@
 Dockerfile
 railway.toml
-docker-entrypoint.sh
+# docker-entrypoint.sh - REMOVED from ignore list (needed for COPY)
 .env
 .git
 node_modules
