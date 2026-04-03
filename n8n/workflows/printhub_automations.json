@@ -96,7 +96,7 @@
     "connections": {}
   },
   {
-    "name": "4. PrintHub - Staff Alert (Urgency-Based Dispatch)",
+    "name": "4. PrintHub - Staff Alert (WhatsApp + Telegram Dispatcher)",
     "nodes": [
       {
         "parameters": { "httpMethod": "POST", "path": "staff-alert", "options": { "rawBody": true } },
@@ -104,9 +104,31 @@
         "type": "n8n-nodes-base.webhook",
         "typeVersion": 1,
         "position": [100, 300]
+      },
+      {
+        "parameters": { "jsCode": "const crypto = require('crypto');\nconst sig = $node['Webhook: Staff Alert'].json.headers['x-printhub-signature'];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node['Webhook: Staff Alert'].json.body)).digest('hex');\nif (sig !== hmac) throw new Error('Invalid');\nreturn $node['Webhook: Staff Alert'].json.body;" },
+        "name": "Verify Internal Staff Sig",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [320, 300]
+      },
+      {
+        "parameters": { "chatId": "={{$env.TELEGRAM_STAFF_GROUP_ID}}", "text": "=🔔 *{{$json.title}}*\n\n{{$json.message}}\n\nUrgency: {{$json.urgency.toUpperCase()}}\nAction: {{$json.actionUrl}}", "additionalFields": { "parse_mode": "Markdown" } },
+        "name": "Telegram: Staff Group",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1,
+        "position": [540, 200],
+        "credentials": { "telegramApi": { "id": "telegram-staff", "name": "Telegram Staff" } }
+      },
+      {
+        "parameters": { "url": "=https://graph.facebook.com/v19.0/{{$env.WHATSAPP_PHONE_NUMBER_ID}}/messages", "method": "POST", "authentication": "headerAuth", "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}" }] }, "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{$env.STAFF_WHATSAPP_NUMBER}}\", \"type\": \"text\", \"text\": { \"body\": \"🔔 {{$json.title}}\\n\\n{{$json.message}}\\n\\nAction: {{$json.actionUrl}}\" } }" },
+        "name": "WhatsApp: Staff Alert",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [540, 400]
       }
     ],
-    "connections": {}
+    "connections": { "Webhook: Staff Alert": { "main": [[{ "node": "Verify Internal Staff Sig", "type": "main", "index": 0 }]] }, "Verify Internal Staff Sig": { "main": [[{ "node": "Telegram: Staff Group", "type": "main", "index": 0 }, { "node": "WhatsApp: Staff Alert", "type": "main", "index": 0 }]] } }
   },
   {
     "name": "5. PrintHub - Security Alert (Impossible Travel + Breaches)",
@@ -144,181 +166,9 @@
         "typeVersion": 1,
         "position": [100, 300],
         "webhookId": "product-social-sync"
-      },
-      {
-        "parameters": { "jsCode": "const crypto = require('crypto');\nconst sig = $node['Webhook: Product Published'].json.headers['x-printhub-signature'];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node['Webhook: Product Published'].json.body)).digest('hex');\nif (sig !== hmac) throw new Error('Invalid');\nreturn $node['Webhook: Product Published'].json.body;" },
-        "name": "Verify Signature",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 1,
-        "position": [320, 300]
-      },
-      {
-        "parameters": {
-          "url": "https://admin.printhub.africa/api/n8n/get-product-context",
-          "method": "GET",
-          "authentication": "headerAuth",
-          "headerParameters": { "parameters": [{ "name": "x-printhub-signature", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" }] },
-          "qs": [{ "name": "productId", "value": "={{ $json.productId }}" }, { "name": "includeAssets", "value": "true" }]
-        },
-        "name": "Get Product & Assets",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.1,
-        "position": [540, 300]
-      },
-      {
-        "parameters": { "jsCode": "const { exportFlags, mockups, videos, captions, name, slug, price, description } = $json;\nreturn [{\n  productId: $json.id,\n  productName: name,\n  productSlug: slug,\n  price,\n  description,\n  exportFlags,\n  mockups: mockups || [],\n  videos: videos || [],\n  captions: captions || { instagram: '', linkedin: '', tiktok: '', youtube_community: '' }\n}];" },
-        "name": "Normalise Context",
-        "type": "n8n-nodes-base.code",
-        "typeVersion": 1,
-        "position": [760, 300]
-      },
-      {
-        "parameters": {
-          "url": "=https://graph.facebook.com/v19.0/{{$env.INSTAGRAM_USER_ID}}/media",
-          "method": "POST",
-          "authentication": "headerAuth",
-          "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.META_ACCESS_TOKEN}}" }] },
-          "bodyParametersJson": "={ \"media_type\": \"IMAGE\", \"image_url\": \"{{ $json.mockups.find(m => m.platform === 'instagram' && m.isApproved)?.imageUrl || $json.mockups[0]?.imageUrl }}\", \"caption\": \"{{ $json.captions.instagram }}\" }"
-        },
-        "name": "Instagram Stories",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.1,
-        "position": [1000, -200]
-      },
-      {
-        "parameters": {
-          "url": "=https://graph.facebook.com/v19.0/{{$env.INSTAGRAM_USER_ID}}/media",
-          "method": "POST",
-          "authentication": "headerAuth",
-          "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.META_ACCESS_TOKEN}}" }] },
-          "bodyParametersJson": "={ \"media_type\": \"REELS\", \"video_url\": \"{{ $json.videos.find(v => v.platform === 'instagram_reels' && v.isApproved)?.videoUrl || $json.videos[0]?.videoUrl }}\", \"caption\": \"{{ $json.captions.instagram }}\", \"share_to_feed\": true }"
-        },
-        "name": "Instagram Reels",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.1,
-        "position": [1000, -50]
-      },
-      {
-        "parameters": {
-          "url": "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status",
-          "method": "POST",
-          "authentication": "oAuth2",
-          "bodyParametersJson": "={ \"snippet\": { \"title\": \"{{ $json.productName }} — PrintHub Africa #Shorts\", \"description\": \"{{ $json.captions.youtube_community }}\\n\\nShop: https://printhub.africa/shop/{{ $json.productSlug }}\\n#PrintHub #Nairobi #Kenya #3DPrinting #Printing #Shorts\", \"tags\": [\"PrintHub\", \"Nairobi\", \"Kenya\", \"3DPrinting\", \"Printing\", \"Shorts\"], \"categoryId\": \"26\", \"defaultLanguage\": \"en\" }, \"status\": { \"privacyStatus\": \"public\", \"selfDeclaredMadeForKids\": false } }"
-        },
-        "name": "YouTube Shorts",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.1,
-        "position": [1000, 100]
-      },
-      {
-        "parameters": {
-          "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
-          "method": "POST",
-          "authentication": "headerAuth",
-          "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}" }] },
-          "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"status@broadcast\", \"type\": \"image\", \"image\": { \"link\": \"{{ $json.mockups[0]?.imageUrl }}\", \"caption\": \"{{ $json.captions.instagram }}\" } }"
-        },
-        "name": "WhatsApp Status",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.1,
-        "position": [1000, 250]
-      },
-      {
-        "parameters": {
-          "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_CHANNEL_ID }}/messages",
-          "method": "POST",
-          "authentication": "headerAuth",
-          "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}" }] },
-          "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"type\": \"image\", \"image\": { \"link\": \"{{ $json.mockups[0]?.imageUrl }}\", \"caption\": \"New arrival: {{ $json.productName }}! Check it out at printhub.africa/shop/{{ $json.productSlug }}\" } }"
-        },
-        "name": "WhatsApp Channel",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.1,
-        "position": [1000, 400]
-      },
-      {
-        "parameters": {
-          "chatId": "={{ $env.TELEGRAM_CHANNEL_ID }}",
-          "file": "={{ $json.mockups[0]?.imageUrl }}",
-          "caption": "*{{ $json.productName }}*\n\n{{ $json.description.slice(0, 200) }}...\n\n💰 From KES {{ $json.price }}\n🛒 Order: printhub.africa/shop/{{ $json.productSlug }}\n📞 WhatsApp us for custom quotes",
-          "additionalFields": { "parse_mode": "Markdown" }
-        },
-        "name": "Telegram Channel",
-        "type": "n8n-nodes-base.telegram",
-        "typeVersion": 1,
-        "position": [1000, 550],
-        "credentials": { "telegramApi": { "id": "telegram-cred", "name": "Telegram" } }
-      },
-      {
-        "parameters": {
-          "url": "https://printhub.africa/api/n8n/update-discover-feed",
-          "method": "POST",
-          "authentication": "headerAuth",
-          "headerParameters": { "parameters": [{ "name": "x-printhub-signature", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" }] },
-          "bodyParametersJson": "={ \"productId\": \"{{ $json.productId }}\", \"productName\": \"{{ $json.productName }}\", \"imageUrl\": \"{{ $json.mockups[0]?.imageUrl }}\", \"description\": \"{{ $json.description }}\", \"url\": \"https://printhub.africa/shop/{{ $json.productSlug }}\" }"
-        },
-        "name": "Google Discover",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.1,
-        "position": [1000, 700]
-      },
-      {
-        "parameters": {
-          "url": "https://jiji.co.ke/api/listing_items",
-          "method": "POST",
-          "authentication": "headerAuth",
-          "headerParameters": { "parameters": [{ "name": "X-Jiji-Auth", "value": "={{ $node['Jiji Login'].json.token }}" }] },
-          "bodyParametersJson": "={ \"listing_item\": { \"title\": \"{{ $json.productName }} — PrintHub Africa\", \"description\": \"{{ $json.description }}\\n\\nOrder online: printhub.africa\\nWhatsApp: +254XXXXXXXXX\", \"price\": {{ $json.price }}, \"currency\": \"KES\", \"region_id\": 13, \"images\": [{ \"url\": \"{{ $json.mockups[0]?.imageUrl }}\" }] } }"
-        },
-        "name": "Jiji Listing",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.1,
-        "position": [1220, 850]
-      },
-      {
-        "parameters": {
-          "url": "https://jiji.co.ke/api/authentication/sign_in",
-          "method": "POST",
-          "bodyParametersJson": "={ \"user\": { \"email\": \"{{ $env.JIJI_EMAIL }}\", \"password\": \"{{ $env.JIJI_PASSWORD }}\" } }"
-        },
-        "name": "Jiji Login",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.1,
-        "position": [1000, 850]
-      },
-      {
-        "parameters": {
-          "url": "=https://{{$env.N8N_URL}}/webhook/ai-platform-expansion",
-          "method": "POST",
-          "authentication": "headerAuth",
-          "headerParameters": { "parameters": [{ "name": "x-printhub-signature", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" }] },
-          "bodyParametersJson": "={{ JSON.stringify($json) }}"
-        },
-        "name": "Trigger AI-11: Platform Expansion",
-        "type": "n8n-nodes-base.httpRequest",
-        "typeVersion": 4.1,
-        "position": [1220, 700]
       }
     ],
-    "connections": {
-      "Webhook: Product Published": { "main": [[{ "node": "Verify Signature", "type": "main", "index": 0 }]] },
-      "Verify Signature": { "main": [[{ "node": "Get Product & Assets", "type": "main", "index": 0 }]] },
-      "Get Product & Assets": { "main": [[{ "node": "Normalise Context", "type": "main", "index": 0 }]] },
-      "Normalise Context": {
-        "main": [[
-          { "node": "Instagram Stories", "type": "main", "index": 0 },
-          { "node": "Instagram Reels", "type": "main", "index": 0 },
-          { "node": "YouTube Shorts", "type": "main", "index": 0 },
-          { "node": "WhatsApp Status", "type": "main", "index": 0 },
-          { "node": "WhatsApp Channel", "type": "main", "index": 0 },
-          { "node": "Telegram Channel", "type": "main", "index": 0 },
-          { "node": "Google Discover", "type": "main", "index": 0 },
-          { "node": "Jiji Login", "type": "main", "index": 0 },
-          { "node": "Trigger AI-11: Platform Expansion", "type": "main", "index": 0 }
-        ]]
-      },
-      "Jiji Login": { "main": [[{ "node": "Jiji Listing", "type": "main", "index": 0 }]] }
-    }
+    "connections": {}
   },
   {
     "name": "8. PrintHub - Product Updated (Price/Stock Differential)",
@@ -347,7 +197,7 @@
     "connections": {}
   },
   {
-    "name": "10. PrintHub - Quote Submitted (Lead Flow)",
+    "name": "10. PrintHub - Quote Submitted (Lead Flow + PDF)",
     "nodes": [
       {
         "parameters": { "httpMethod": "POST", "path": "quote-submitted", "options": { "rawBody": true } },
@@ -364,23 +214,17 @@
         "position": [320, 300]
       },
       {
-        "parameters": {
-          "url": "=https://n8n.printhub.africa/webhook/ai-generate-quotedraft",
-          "method": "POST",
-          "authentication": "headerAuth",
-          "headerParameters": { "parameters": [{ "name": "x-printhub-signature", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" }] },
-          "bodyParametersJson": "={ \"quoteId\": \"{{ $json.id }}\" }"
-        },
-        "name": "Trigger AI: Quote Draft",
+        "parameters": { "url": "https://api.resend.com/emails", "method": "POST", "authentication": "headerAuth", "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.RESEND_API_KEY}}" }] }, "bodyParameters": { "parameters": [{ "name": "from", "value": "PrintHub Africa <quotes@printhub.africa>" }, { "name": "to", "value": "={{$json.customerEmail}}" }, { "name": "subject", "value": "=Quotation Request: {{$json.projectName || 'New Project'}}" }, { "name": "html", "value": "=<p>Hi {{$json.customerName}},</p><p>We have received your request. Attached is a summary draft.</p>" }] }, "attachments": [{ "name": "QuoteDraft.pdf", "data": "={{$json.pdfBase64}}" }] },
+        "name": "Email: Draft Quote",
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.1,
         "position": [540, 300]
       }
     ],
-    "connections": { "Webhook: Quote Submit": { "main": [[{ "node": "Verify Signature", "type": "main", "index": 0 }]] }, "Verify Signature": { "main": [[{ "node": "Trigger AI: Quote Draft", "type": "main", "index": 0 }]] } }
+    "connections": { "Webhook: Quote Submit": { "main": [[{ "node": "Verify Signature", "type": "main", "index": 0 }]] }, "Verify Signature": { "main": [[{ "node": "Email: Draft Quote", "type": "main", "index": 0 }]] } }
   },
   {
-    "name": "11. PrintHub - Quote Ready (PDF & Close)",
+    "name": "11. PrintHub - Quote Ready (Notification)",
     "nodes": [
       {
         "parameters": { "httpMethod": "POST", "path": "quote-ready", "options": { "rawBody": true } },
@@ -393,7 +237,7 @@
     "connections": {}
   },
   {
-    "name": "12. PrintHub - New Device Login (Admin Security)",
+    "name": "12. PrintHub - New Device Login (Security)",
     "nodes": [
       {
         "parameters": { "httpMethod": "POST", "path": "new-device-login", "options": { "rawBody": true } },
@@ -404,5 +248,32 @@
       }
     ],
     "connections": {}
+  },
+  {
+    "name": "13. PrintHub - Delivery Status Changed (Post-Dispatch Automation)",
+    "nodes": [
+      {
+        "parameters": { "httpMethod": "POST", "path": "delivery-status-changed", "options": { "rawBody": true } },
+        "name": "Webhook: Delivery Status",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [100, 300]
+      },
+      {
+        "parameters": { "jsCode": "const crypto = require('crypto');\nconst sig = $node['Webhook: Delivery Status'].json.headers['x-printhub-signature'];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node['Webhook: Delivery Status'].json.body)).digest('hex');\nif (sig !== hmac) throw new Error('Invalid');\nreturn $node['Webhook: Delivery Status'].json.body;" },
+        "name": "Verify Internal Sig",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [320, 300]
+      },
+      {
+        "parameters": { "url": "=https://graph.facebook.com/v19.0/{{$env.WHATSAPP_PHONE_NUMBER_ID}}/messages", "method": "POST", "authentication": "headerAuth", "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}" }] }, "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{$json.customerPhone}}\", \"type\": \"template\", \"template\": { \"name\": \"delivery_update\", \"language\": { \"code\": \"en\" }, \"components\": [ { \"type\": \"body\", \"parameters\": [ { \"type\": \"text\", \"text\": \"{{$json.customerName}}\" }, { \"type\": \"text\", \"text\": \"{{$json.orderNumber}}\" }, { \"type\": \"text\", \"text\": \"{{$json.status}}\" } ] } ] } }" },
+        "name": "WhatsApp: Delivery Update",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [540, 300]
+      }
+    ],
+    "connections": { "Webhook: Delivery Status": { "main": [[{ "node": "Verify Internal Sig", "type": "main", "index": 0 }]] }, "Verify Internal Sig": { "main": [[{ "node": "WhatsApp: Delivery Update", "type": "main", "index": 0 }]] } }
   }
 ]
