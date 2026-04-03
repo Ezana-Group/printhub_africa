@@ -3,7 +3,10 @@ FROM n8nio/n8n:2.14.2
 USER root
 
 # Install necessary system dependencies (curl for healthchecks, ffmpeg for media tasks)
-RUN apk add --no-cache curl ffmpeg
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create the data directory and set permissions
 RUN mkdir -p /home/node/.n8n && chown -R node:node /home/node/.n8n
