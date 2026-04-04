@@ -24,7 +24,7 @@
       "parameters": {
         "url": "https://printhub.africa/api/n8n/weekly-reset",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {

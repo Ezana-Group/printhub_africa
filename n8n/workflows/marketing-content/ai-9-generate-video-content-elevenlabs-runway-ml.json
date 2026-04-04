@@ -34,7 +34,7 @@
       "parameters": {
         "url": "https://api.anthropic.com/v1/messages",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -73,7 +73,7 @@
       "parameters": {
         "url": "=https://api.elevenlabs.io/v1/text-to-speech/{{$env.ELEVENLABS_VOICE_ID}}",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -103,7 +103,7 @@
       "parameters": {
         "url": "https://api.dev.runwayml.com/v1/image_to_video",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -145,7 +145,7 @@
       "parameters": {
         "url": "=https://api.dev.runwayml.com/v1/tasks/{{$node['Runway: Generate Video'].json.id}}",
         "method": "GET",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -180,7 +180,7 @@
       "parameters": {
         "url": "=https://{{ $env.FFMPEG_SERVICE_URL || 'printhub-ffmpeg.railway.app' }}/combine",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -203,7 +203,7 @@
       "parameters": {
         "url": "https://admin.printhub.africa/api/n8n/save-video-content",
         "method": "PATCH",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {

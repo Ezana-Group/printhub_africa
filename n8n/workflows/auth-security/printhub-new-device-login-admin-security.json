@@ -34,7 +34,7 @@
       "parameters": {
         "url": "https://api.resend.com/emails",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -99,7 +99,7 @@
       "parameters": {
         "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -122,7 +122,7 @@
       "parameters": {
         "url": "https://admin.printhub.africa/api/n8n/log-error",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {

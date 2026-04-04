@@ -46,7 +46,7 @@
       "parameters": {
         "url": "https://api.openai.com/v1/images/generations",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -69,7 +69,7 @@
       "parameters": {
         "url": "https://api.openai.com/v1/images/generations",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -92,7 +92,7 @@
       "parameters": {
         "url": "https://api.openai.com/v1/images/generations",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -115,7 +115,7 @@
       "parameters": {
         "url": "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -150,7 +150,7 @@
       "parameters": {
         "url": "https://admin.printhub.africa/api/n8n/upload-mockup-images",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -173,7 +173,7 @@
       "parameters": {
         "url": "https://admin.printhub.africa/api/n8n/save-mockup-urls",
         "method": "PATCH",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -196,7 +196,7 @@
       "parameters": {
         "url": "https://api.resend.com/emails",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {

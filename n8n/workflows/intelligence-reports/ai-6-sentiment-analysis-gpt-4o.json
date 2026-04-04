@@ -22,7 +22,7 @@
       "parameters": {
         "url": "https://api.openai.com/v1/chat/completions",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -45,7 +45,7 @@
       "parameters": {
         "url": "https://admin.printhub.africa/api/n8n/save-sentiment",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {

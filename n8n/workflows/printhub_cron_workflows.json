@@ -25,7 +25,7 @@
         "parameters": {
           "url": "https://admin.printhub.africa/api/n8n/get-abandoned-carts",
           "method": "GET",
-          "authentication": "headerAuth",
+          "authentication": "none",
           "headerParameters": {
             "parameters": [
               {
@@ -108,7 +108,7 @@
         "parameters": {
           "url": "https://admin.printhub.africa/api/n8n/stock-levels",
           "method": "GET",
-          "authentication": "headerAuth",
+          "authentication": "none",
           "headerParameters": {
             "parameters": [
               {
@@ -360,7 +360,7 @@
         "parameters": {
           "url": "https://admin.printhub.africa/api/n8n/cleanup-sessions",
           "method": "POST",
-          "authentication": "headerAuth",
+          "authentication": "none",
           "headerParameters": {
             "parameters": [
               {
@@ -579,7 +579,7 @@
         "parameters": {
           "url": "https://printhub.africa/api/n8n/weekly-reset",
           "method": "POST",
-          "authentication": "headerAuth",
+          "authentication": "none",
           "headerParameters": {
             "parameters": [
               {
@@ -638,7 +638,7 @@
         "parameters": {
           "url": "https://api.perplexity.ai/chat/completions",
           "method": "POST",
-          "authentication": "headerAuth",
+          "authentication": "none",
           "headerParameters": {
             "parameters": [
               {
@@ -661,7 +661,7 @@
         "parameters": {
           "url": "https://api.perplexity.ai/chat/completions",
           "method": "POST",
-          "authentication": "headerAuth",
+          "authentication": "none",
           "headerParameters": {
             "parameters": [
               {
@@ -684,7 +684,7 @@
         "parameters": {
           "url": "https://admin.printhub.africa/api/n8n/product-catalogue-summary",
           "method": "GET",
-          "authentication": "headerAuth",
+          "authentication": "none",
           "headerParameters": {
             "parameters": [
               {
@@ -732,7 +732,7 @@
         "parameters": {
           "url": "https://api.anthropic.com/v1/messages",
           "method": "POST",
-          "authentication": "headerAuth",
+          "authentication": "none",
           "headerParameters": {
             "parameters": [
               {
@@ -771,7 +771,7 @@
         "parameters": {
           "url": "https://admin.printhub.africa/api/n8n/save-content-calendar",
           "method": "POST",
-          "authentication": "headerAuth",
+          "authentication": "none",
           "headerParameters": {
             "parameters": [
               {
@@ -794,7 +794,7 @@
         "parameters": {
           "url": "https://api.resend.com/emails",
           "method": "POST",
-          "authentication": "headerAuth",
+          "authentication": "none",
           "headerParameters": {
             "parameters": [
               {
@@ -952,7 +952,7 @@
         "parameters": {
           "url": "https://admin.printhub.africa/api/n8n/business-data-export",
           "method": "GET",
-          "authentication": "headerAuth",
+          "authentication": "none",
           "headerParameters": {
             "parameters": [
               {
@@ -988,7 +988,7 @@
         "parameters": {
           "url": "https://api.anthropic.com/v1/messages",
           "method": "POST",
-          "authentication": "headerAuth",
+          "authentication": "none",
           "headerParameters": {
             "parameters": [
               {
@@ -1027,7 +1027,7 @@
         "parameters": {
           "url": "https://admin.printhub.africa/api/n8n/generate-insights-pdf",
           "method": "POST",
-          "authentication": "headerAuth",
+          "authentication": "none",
           "headerParameters": {
             "parameters": [
               {
@@ -1050,7 +1050,7 @@
         "parameters": {
           "url": "https://api.resend.com/emails",
           "method": "POST",
-          "authentication": "headerAuth",
+          "authentication": "none",
           "headerParameters": {
             "parameters": [
               {
@@ -1373,7 +1373,7 @@
         "parameters": {
           "url": "https://admin.printhub.africa/api/n8n/business-data-export",
           "method": "GET",
-          "authentication": "headerAuth",
+          "authentication": "none",
           "headerParameters": {
             "parameters": [
               {
@@ -1405,7 +1405,7 @@
         "parameters": {
           "url": "https://api.anthropic.com/v1/messages",
           "method": "POST",
-          "authentication": "headerAuth",
+          "authentication": "none",
           "headerParameters": {
             "parameters": [
               {
@@ -1432,7 +1432,7 @@
         "parameters": {
           "url": "https://api.resend.com/emails",
           "method": "POST",
-          "authentication": "headerAuth",
+          "authentication": "none",
           "headerParameters": {
             "parameters": [
               {

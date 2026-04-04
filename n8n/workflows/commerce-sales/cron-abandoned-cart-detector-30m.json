@@ -24,7 +24,7 @@
       "parameters": {
         "url": "https://admin.printhub.africa/api/n8n/get-abandoned-carts",
         "method": "GET",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {

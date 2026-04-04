@@ -75,7 +75,7 @@
       "parameters": {
         "url": "https://bingplaces.com/api/v1/business/posts",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -129,7 +129,7 @@
       "parameters": {
         "url": "=https://places-api.apple.com/v1/places/{{ $env.APPLE_PLACE_ID }}/showcards",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -185,7 +185,7 @@
       "parameters": {
         "url": "https://www.pigiame.co.ke/api/listings/create/",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -241,7 +241,7 @@
       "parameters": {
         "url": "https://api.olx.co.ke/api/v2/ads",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -283,7 +283,7 @@
       "parameters": {
         "url": "https://api.openai.com/v1/chat/completions",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -340,7 +340,7 @@
       "parameters": {
         "url": "https://api.anthropic.com/v1/messages",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -397,7 +397,7 @@
       "parameters": {
         "url": "https://api.medium.com/v1/users/{{$env.MEDIUM_USER_ID}}/posts",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {

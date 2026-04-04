@@ -47,7 +47,7 @@
       "parameters": {
         "method": "POST",
         "url": "https://api.openai.com/v1/chat/completions",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "bodyParametersUi": [
           {
             "name": "model",
@@ -76,7 +76,7 @@
       "parameters": {
         "method": "POST",
         "url": "https://api.anthropic.com/v1/messages",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParametersUi": [
           {
             "name": "x-api-key",

@@ -24,7 +24,7 @@
       "parameters": {
         "url": "https://admin.printhub.africa/api/n8n/get-abandoned-carts",
         "method": "GET",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -79,7 +79,7 @@
       "parameters": {
         "url": "https://admin.printhub.africa/api/n8n/generate-coupon",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -102,7 +102,7 @@
       "parameters": {
         "url": "https://api.resend.com/emails",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -151,7 +151,7 @@
       "parameters": {
         "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -174,7 +174,7 @@
       "parameters": {
         "url": "https://admin.printhub.africa/api/n8n/mark-alert-sent",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {

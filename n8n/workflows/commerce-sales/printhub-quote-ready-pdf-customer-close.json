@@ -34,7 +34,7 @@
       "parameters": {
         "url": "https://admin.printhub.africa/api/n8n/get-quote-context",
         "method": "GET",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -62,7 +62,7 @@
       "parameters": {
         "url": "https://admin.printhub.africa/api/n8n/generate-pdf",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -85,7 +85,7 @@
       "parameters": {
         "url": "https://admin.printhub.africa/api/n8n/get-template",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -108,7 +108,7 @@
       "parameters": {
         "url": "https://admin.printhub.africa/api/n8n/get-template",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -131,7 +131,7 @@
       "parameters": {
         "url": "https://api.resend.com/emails",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -154,7 +154,7 @@
       "parameters": {
         "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {

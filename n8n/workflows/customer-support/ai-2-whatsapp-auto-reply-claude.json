@@ -41,7 +41,7 @@
       "parameters": {
         "url": "=https://graph.facebook.com/v19.0/{{ $json.body.entry[0].changes[0].value.messages[0].audio.id }}",
         "method": "GET",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -63,7 +63,7 @@
       "parameters": {
         "url": "={{ $json.url }}",
         "method": "GET",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -92,7 +92,7 @@
       "parameters": {
         "url": "https://api.openai.com/v1/audio/transcriptions",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -117,7 +117,7 @@
       "parameters": {
         "url": "https://admin.printhub.africa/api/n8n/get-customer-context",
         "method": "GET",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -145,7 +145,7 @@
       "parameters": {
         "url": "https://api.anthropic.com/v1/messages",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -172,7 +172,7 @@
       "parameters": {
         "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -195,7 +195,7 @@
       "parameters": {
         "url": "https://admin.printhub.africa/api/n8n/log-ai-usage",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {

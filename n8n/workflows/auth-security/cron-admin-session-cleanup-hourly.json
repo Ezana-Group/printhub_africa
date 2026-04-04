@@ -23,7 +23,7 @@
       "parameters": {
         "url": "https://admin.printhub.africa/api/n8n/cleanup-sessions",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {

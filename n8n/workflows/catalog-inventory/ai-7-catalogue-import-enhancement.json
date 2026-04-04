@@ -48,21 +48,15 @@
       "parameters": {
         "method": "POST",
         "url": "https://api.openai.com/v1/chat/completions",
-        "authentication": "headerAuth",
-        "bodyParametersUi": [
+        "authentication": "none",
+        "headerParametersUi": [
           {
-            "name": "model",
-            "value": "={{$json[\"model\"]}}"
-          },
-          {
-            "name": "messages",
-            "value": "={{$json[\"messages\"]}}"
-          },
-          {
-            "name": "max_tokens",
-            "value": "={{$json[\"max_tokens\"]}}"
+            "name": "Authorization",
+            "value": "=Bearer {{$env.OPENAI_API_KEY}}"
           }
-        ]
+        ],
+        "jsonParameters": true,
+        "bodyParametersJson": "={ \"model\": \"{{$json[\\\"model\\\"]}}\", \"messages\": {{$json[\\\"messages\\\"]}}, \"max_tokens\": {{$json[\\\"max_tokens\\\"]}} }"
       },
       "id": "gpt-4o-vision",
       "name": "HTTP Request — GPT-4o Vision: Analyse model images",
@@ -77,7 +71,7 @@
       "parameters": {
         "method": "POST",
         "url": "https://api.anthropic.com/v1/messages",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParametersUi": [
           {
             "name": "x-api-key",
@@ -89,7 +83,7 @@
           }
         ],
         "jsonParameters": true,
-        "bodyParametersJson": "={\n  \"model\": \"claude-3-opus-20240229\",\n  \"max_tokens\": 2000,\n  \"system\": \"You are creating product listings for PrintHub Africa, a professional 3D printing service in Nairobi, Kenya. You are converting imported 3D model data into professional product listings for customers who want the model printed for them — they are BUYING a printed physical object, not downloading a file. Frame all descriptions from this perspective. British English. KES pricing context. Never mention STL files or downloading to customers.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Create a complete PrintHub Africa product listing from this imported 3D model data.\\n\\nSource platform: {{$node[\\\"webhook-trigger\\\"].json.body.platform}}\\nOriginal name: {{$node[\\\"webhook-trigger\\\"].json.body.originalName}}\\nOriginal description: {{$node[\\\"webhook-trigger\\\"].json.body.originalDescription}}\\nOriginal tags: {{$node[\\\"webhook-trigger\\\"].json.body.originalTags.join(', ')}}\\nOriginal category: {{$node[\\\"webhook-trigger\\\"].json.body.originalCategory}}\\nDesigner: {{$node[\\\"webhook-trigger\\\"].json.body.designerName}}\\nLicense: {{$node[\\\"webhook-trigger\\\"].json.body.licenseType}}\\nPopularity: {{$node[\\\"webhook-trigger\\\"].json.body.downloadCount}} downloads, {{$node[\\\"webhook-trigger\\\"].json.body.likeCount}} likes\\n\\nVisual analysis from AI: {{$node[\\\"HTTP Request — GPT-4o Vision: Analyse model images\\\"].json.choices[0].message.content}}\\n\\nGenerate a complete product listing. Return ONLY valid JSON: { ... as specified in prompt ... }\"\n    }\n  ]\n}"
+        "bodyParametersJson": "={\n  \"model\": \"claude-3-opus-20240229\",\n  \"max_tokens\": 2000,\n  \"system\": \"You are creating product listings for PrintHub Africa, a professional 3D printing service in Nairobi, Kenya. You are converting imported 3D model data into professional product listings for customers who want the model printed for them — they are BUYING a printed physical object, not downloading a file. Frame all descriptions from this perspective. British English. KES pricing context. Never mention STL files or downloading to customers.\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Create a complete PrintHub Africa product listing from this imported 3D model data.\\n\\nSource platform: {{$node[\\\"webhook-trigger\\\"].json.body.platform}}\\nOriginal name: {{$node[\\\"webhook-trigger\\\"].json.body.originalName}}\\nOriginal description: {{$node[\\\"webhook-trigger\\\"].json.body.originalDescription}}\\nOriginal tags: {{$node[\\\"webhook-trigger\\\"].json.body.originalTags.join(', ')}}\\nOriginal category: {{$node[\\\"webhook-trigger\\\"].json.body.originalCategory}}\\nDesigner: {{$node[\\\"webhook-trigger\\\"].json.body.designerName}}\\nLicense: {{$node[\\\"webhook-trigger\\\"].json.body.licenseType}}\\nPopularity: {{$node[\\\"webhook-trigger\\\"].json.body.downloadCount}} downloads, {{$node[\\\"webhook-trigger\\\"].json.body.likeCount}} likes\\n\\nVisual analysis from AI: {{$node[\\\"HTTP Request — GPT-4o Vision: Analyse model images\\\"].json.choices[0].message.content}}\\n\\nGenerate a complete product listing. Return ONLY valid JSON (product_name, description, short_description, features, category, tags, pricing_strategy, nairobi_3d_print_context).\"\n    }\n  ]\n}"
       },
       "id": "claude-generation",
       "name": "HTTP Request — Claude: Generate PrintHub Product Content",
@@ -104,14 +98,15 @@
       "parameters": {
         "method": "PATCH",
         "url": "https://printhub.africa/api/n8n/save-catalogue-enhancement",
-        "jsonParameters": true,
+        "authentication": "none",
         "headerParametersUi": [
           {
             "name": "x-printhub-signature",
             "value": "={{$env[\"N8N_WEBHOOK_SECRET\"]}}"
           }
         ],
-        "bodyParametersJson": "={\n  \"importId\": \"{{$node[\\\"webhook-trigger\\\"].json.body.importId}}\",\n  \"aiEnhancement\": {{JSON.stringify($node[\"claude-generation\"].json)}} \n}"
+        "jsonParameters": true,
+        "bodyParametersJson": "={\n  \"importId\": \"{{$node[\\\"webhook-trigger\\\"].json.body.importId}}\",\n  \"aiEnhancement\": {{$node[\\\"claude-generation\\\"].json}} \n}"
       },
       "id": "save-enhancement",
       "name": "HTTP Request — Save AI enhancement to PrintHub",
@@ -123,109 +118,73 @@
       ]
     },
     {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "none",
+        "headerParametersUi": [
+          {
+            "name": "Authorization",
+            "value": "=Bearer {{$env.OPENAI_API_KEY}}"
+          }
+        ],
+        "jsonParameters": true,
+        "bodyParametersJson": "={{ JSON.stringify({ model: 'gpt-4o', max_tokens: 1000, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: 'You are a social media copywriter for PrintHub Africa, a Nairobi printing company. British English. KES pricing.' }, { role: 'user', content: 'Generate social media captions based on the provided product analysis.' }] }) }}"
+      },
+      "id": "social-captions",
       "name": "GPT-4o: Generate Social Captions",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         1450,
         400
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.openai.com/v1/chat/completions",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Bearer {{$env.OPENAI_API_KEY}}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "body",
-              "value": "={{ JSON.stringify({ model: 'gpt-4o', max_tokens: 1000, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: 'You are a social media copywriter for PrintHub Africa, a Nairobi printing company. British English. KES pricing.' }, { role: 'user', content: 'Generate social media captions for this 3D printed product.\\nProduct name: ' + $node[\"HTTP Request — Claude: Generate PrintHub Product Content\"].json.content[0].text.includes('product_name') ? JSON.parse($node[\"HTTP Request — Claude: Generate PrintHub Product Content\"].json.content[0].text).product_name : $json.originalName + '\\nDescription: ' + $json.originalDescription + '\\n\\nReturn ONLY valid JSON: { instagram: \"caption max 150 words 5-10 hashtags\", facebook: \"caption max 100 words\", tiktok: \"caption max 80 words energetic\", linkedin: \"caption max 120 words B2B\", x: \"max 280 chars\", pinterest: \"descriptive keyword-rich\", snapchat: \"max 50 words punchy\", youtube_community: \"max 200 words\", google_business: \"max 300 words\" }' }] }) }}"
-            }
-          ]
-        }
-      }
+      ]
     },
     {
+      "parameters": {
+        "method": "POST",
+        "url": "https://printhub.africa/webhook/staff-alert",
+        "authentication": "none",
+        "headerParametersUi": [
+          {
+            "name": "x-printhub-signature",
+            "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+          }
+        ],
+        "jsonParameters": true,
+        "bodyParametersJson": "={ \"type\": \"SUPPORT_TICKET\", \"title\": \"AI Enhanced: ready for review\", \"message\": \"AI has generated product listing. Review and approve in admin catalogue.\", \"urgency\": \"low\", \"targetRoles\": [\"ADMIN\", \"SUPER_ADMIN\"] }"
+      },
+      "id": "staff-notify",
       "name": "Notify Staff: AI Enhancement Ready",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         1650,
         400
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "https://printhub.africa/webhook/staff-alert",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "x-printhub-signature",
-              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "body",
-              "value": "={{ JSON.stringify({ type: 'SUPPORT_TICKET', title: 'AI Enhanced: ' + $json.importId + ' ready for review', message: 'AI has generated product listing. Review and approve in admin catalogue.', urgency: 'low', actionUrl: 'https://admin.printhub.africa/catalogue/review/' + $json.importId, targetRoles: ['ADMIN', 'SUPER_ADMIN'] }) }}"
-            }
-          ]
-        }
-      }
+      ]
     },
     {
+      "parameters": {
+        "method": "POST",
+        "url": "https://printhub.africa/api/n8n/log",
+        "authentication": "none",
+        "headerParametersUi": [
+          {
+            "name": "x-printhub-signature",
+            "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+          }
+        ],
+        "jsonParameters": true,
+        "bodyParametersJson": "={ \"workflowName\": \"AI-7 Catalogue Enhancement\", \"action\": \"AI_CATALOGUE_ENHANCEMENT_COMPLETED\" }"
+      },
+      "id": "audit-log",
       "name": "AuditLog: Catalogue Enhancement Complete",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [
         1850,
         400
-      ],
-      "parameters": {
-        "method": "POST",
-        "url": "https://printhub.africa/api/n8n/log",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "x-printhub-signature",
-              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "body",
-              "value": "={{ JSON.stringify({ workflowName: 'AI-7 Catalogue Enhancement', action: 'AI_CATALOGUE_ENHANCEMENT_COMPLETED', details: { importId: $json.importId, platform: $json.platform } }) }}"
-            }
-          ]
-        }
-      }
+      ]
     }
   ],
   "connections": {
@@ -288,29 +247,29 @@
       "main": [
         [
           {
-            "node": "GPT-4o: Generate Social Captions",
+            "node": "social-captions",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "GPT-4o: Generate Social Captions": {
+    "social-captions": {
       "main": [
         [
           {
-            "node": "Notify Staff: AI Enhancement Ready",
+            "node": "staff-notify",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Notify Staff: AI Enhancement Ready": {
+    "staff-notify": {
       "main": [
         [
           {
-            "node": "AuditLog: Catalogue Enhancement Complete",
+            "node": "audit-log",
             "type": "main",
             "index": 0
           }

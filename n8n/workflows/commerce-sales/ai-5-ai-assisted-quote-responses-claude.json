@@ -22,7 +22,7 @@
       "parameters": {
         "url": "https://admin.printhub.africa/api/n8n/get-quote-context",
         "method": "GET",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -50,7 +50,7 @@
       "parameters": {
         "url": "https://api.anthropic.com/v1/messages",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -77,7 +77,7 @@
       "parameters": {
         "url": "https://admin.printhub.africa/api/n8n/save-quote-draft",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {

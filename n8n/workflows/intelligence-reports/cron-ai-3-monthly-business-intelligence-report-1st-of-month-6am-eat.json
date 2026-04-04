@@ -24,7 +24,7 @@
       "parameters": {
         "url": "https://admin.printhub.africa/api/n8n/business-data-export",
         "method": "GET",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -60,7 +60,7 @@
       "parameters": {
         "url": "https://api.anthropic.com/v1/messages",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -99,7 +99,7 @@
       "parameters": {
         "url": "https://admin.printhub.africa/api/n8n/generate-insights-pdf",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -122,7 +122,7 @@
       "parameters": {
         "url": "https://api.resend.com/emails",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {

@@ -34,7 +34,7 @@
       "parameters": {
         "url": "https://admin.printhub.africa/api/n8n/product-catalogue-summary",
         "method": "GET",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -68,7 +68,7 @@
       "parameters": {
         "url": "=https://graph.facebook.com/v19.0/{{ $env.META_CATALOG_ID }}/batch",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -91,7 +91,7 @@
       "parameters": {
         "url": "=https://business-api.tiktok.com/open_api/v1.3/catalog/product/upload/?catalog_id={{ $env.TIKTOK_CATALOG_ID }}",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
@@ -114,7 +114,7 @@
       "parameters": {
         "url": "https://api.resend.com/emails",
         "method": "POST",
-        "authentication": "headerAuth",
+        "authentication": "none",
         "headerParameters": {
           "parameters": [
             {

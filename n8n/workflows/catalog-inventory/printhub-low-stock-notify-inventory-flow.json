@@ -20,22 +20,21 @@
     },
     {
       "parameters": {
-        "url": "https://api.resend.com/emails",
         "method": "POST",
-        "authentication": "headerAuth",
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{$env.RESEND_API_KEY}}"
-            }
-          ]
-        },
+        "url": "https://api.resend.com/emails",
+        "authentication": "none",
+        "headerParametersUi": [
+          {
+            "name": "Authorization",
+            "value": "=Bearer {{$env.RESEND_API_KEY}}"
+          }
+        ],
+        "jsonParameters": true,
         "bodyParametersJson": "={ \"from\": \"Stock <stock@printhub.africa>\", \"to\": \"{{ $env.ADMIN_EMAIL }}\", \"subject\": \"⚠️ Low Stock Alert: {{ $json.productName }}\", \"html\": \"<p><strong>{{ $json.productName }}</strong> is low in stock ({{ $json.currentStock }} remaining).</p>\" }"
       },
       "name": "Email: Stock Alert",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
+      "typeVersion": 1,
       "position": [
         200,
         300

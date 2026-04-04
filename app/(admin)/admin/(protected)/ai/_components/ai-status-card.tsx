@@ -25,11 +25,15 @@ const SERVICE_LABELS: Record<string, { label: string; icon: string }> = {
 };
 
 function StatusBadge({ status }: { status: "healthy" | "degraded" | "down" }) {
-  const config = {
+  const config = ({
     healthy: { bg: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20", dot: "bg-emerald-500", label: "Operational" },
     degraded: { bg: "bg-amber-500/10 text-amber-600 border-amber-500/20", dot: "bg-amber-500 animate-pulse", label: "Degraded" },
     down: { bg: "bg-destructive/10 text-destructive border-destructive/20", dot: "bg-destructive animate-pulse", label: "Down" },
-  }[status];
+  } as Record<string, { bg: string; dot: string; label: string }>)[status] || { 
+    bg: "bg-muted text-muted-foreground border-muted-foreground/20", 
+    dot: "bg-muted-foreground", 
+    label: "Unknown" 
+  };
 
   return (
     <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full border ${config.bg}`}>

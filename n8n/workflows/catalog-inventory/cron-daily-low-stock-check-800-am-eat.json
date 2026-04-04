@@ -12,7 +12,7 @@
           "time": "08:00"
         }
       },
-      "name": "Schedule: 8AM",
+      "name": "Schedule Trigger",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1,
       "position": [
@@ -22,34 +22,25 @@
     },
     {
       "parameters": {
-        "url": "https://admin.printhub.africa/api/n8n/stock-levels",
         "method": "GET",
-        "authentication": "headerAuth",
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "x-printhub-signature",
-              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
-            }
-          ]
-        }
+        "url": "https://admin.printhub.africa/api/n8n/stock-levels",
+        "authentication": "none",
+        "headerParametersUi": [
+          {
+            "name": "x-printhub-signature",
+            "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+          }
+        ]
       },
       "name": "Pull Inventory Audit",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
+      "typeVersion": 1,
       "position": [
         320,
         300
       ]
     },
     {
-      "name": "Filter: Stock < 5",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
-      "position": [
-        540,
-        300
-      ],
       "parameters": {
         "conditions": {
           "number": [
@@ -60,89 +51,62 @@
             }
           ]
         }
-      }
+      },
+      "name": "Filter: Stock < 5",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        540,
+        300
+      ]
     },
     {
-      "name": "WhatsApp: Notify Staff",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [
-        760,
-        200
-      ],
       "parameters": {
         "method": "POST",
         "url": "=https://graph.facebook.com/v19.0/{{$env.WHATSAPP_PHONE_NUMBER_ID}}/messages",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "messaging_product",
-              "value": "whatsapp"
-            },
-            {
-              "name": "to",
-              "value": "={{$env.STAFF_WHATSAPP_NUMBER}}"
-            },
-            {
-              "name": "type",
-              "value": "text"
-            },
-            {
-              "name": "text",
-              "value": "={ \"body\": \"⚠️ LOW STOCK ALERT: \" + $json.name + \" (SKU: \" + $json.sku + \") has only \" + $json.stock + \" units left. Reorder soon!\" }"
-            }
-          ]
-        }
-      }
-    },
-    {
-      "name": "AuditLog: Low Stock Flagged",
+        "authentication": "none",
+        "headerParametersUi": [
+          {
+            "name": "Authorization",
+            "value": "=Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}"
+          }
+        ],
+        "jsonParameters": true,
+        "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{$env.STAFF_WHATSAPP_NUMBER}}\", \"type\": \"text\", \"text\": { \"body\": \"⚠️ LOW STOCK ALERT: \" + $json.name + \" (SKU: \" + $json.sku + \") has only \" + $json.stock + \" units left. Reorder soon!\" } }"
+      },
+      "name": "WhatsApp: Notify Staff",
       "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
+      "typeVersion": 1,
       "position": [
         760,
-        400
-      ],
+        200
+      ]
+    },
+    {
       "parameters": {
         "method": "POST",
         "url": "https://printhub.africa/api/n8n/log",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "x-printhub-signature",
-              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "action",
-              "value": "LOW_STOCK_ALERT"
-            },
-            {
-              "name": "details",
-              "value": "={{JSON.stringify($json)}}"
-            }
-          ]
-        }
-      }
+        "authentication": "none",
+        "headerParametersUi": [
+          {
+            "name": "x-printhub-signature",
+            "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+          }
+        ],
+        "jsonParameters": true,
+        "bodyParametersJson": "={ \"action\": \"LOW_STOCK_ALERT\", \"details\": {{JSON.stringify($json)}} }"
+      },
+      "name": "AuditLog: Low Stock Flagged",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        760,
+        400
+      ]
     }
   ],
   "connections": {
-    "Schedule: 8AM": {
+    "Schedule Trigger": {
       "main": [
         [
           {
@@ -177,7 +141,8 @@
             "type": "main",
             "index": 0
           }
-        ]
+        ],
+        []
       ]
     }
   }
