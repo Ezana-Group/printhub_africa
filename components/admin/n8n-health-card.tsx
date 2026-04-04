@@ -79,13 +79,14 @@ export function N8nHealthCard() {
                     : "Instance unreachable"}
               </span>
             </div>
-            <Link 
+            <a 
               href="/api/admin/n8n/sso" 
               target="_blank"
+              rel="noopener noreferrer"
               className="mt-2 block text-center py-1.5 text-xs font-medium bg-primary/5 hover:bg-primary/10 text-primary rounded-md transition-colors"
             >
               Open n8n Dashboard
-            </Link>
+            </a>
           </div>
         ) : (
           <p className="text-xs text-muted-foreground">Unable to fetch status</p>

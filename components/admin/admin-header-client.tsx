@@ -44,9 +44,14 @@ export function AdminHeaderClient({
           </a>
         )}
 
-        <Link href={process.env.NEXT_PUBLIC_APP_URL || "https://printhub.africa"} target="_blank" className="text-sm text-blue-600 hover:underline">
+        <a 
+          href={process.env.NEXT_PUBLIC_APP_URL || "https://printhub.africa"} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-sm text-blue-600 hover:underline mr-4"
+        >
           View site
-        </Link>
+        </a>
         <Button
           type="button"
           variant="ghost"
