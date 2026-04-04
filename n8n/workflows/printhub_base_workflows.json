@@ -774,7 +774,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "impossible-travel",
+          "path": "impossible-travel-legacy",
           "options": {
             "rawBody": true
           }
@@ -786,7 +786,7 @@
           0,
           300
         ],
-        "webhookId": "impossible-travel"
+        "webhookId": "impossible-travel-legacy"
       }
     ],
     "connections": {}

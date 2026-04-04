@@ -1,4 +1,7 @@
+import { Suspense } from "react";
 import { AdminAuthPage } from "@/components/auth/admin-auth-page";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Admin Login | PrintHub Africa",
@@ -6,5 +9,9 @@ export const metadata = {
 };
 
 export default function AdminLoginPage() {
-  return <AdminAuthPage />;
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <AdminAuthPage />
+    </Suspense>
+  );
 }
