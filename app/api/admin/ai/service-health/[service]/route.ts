@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { requireAdminApi } from "@/lib/admin-api-guard";
 
 export async function GET(req: Request, { params }: { params: { service: string } }) {
-  const session = await auth()
-  if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN')) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const auth = await requireAdminApi({ permission: "settings_view" });
+  if (auth instanceof NextResponse) return auth;
 
   const service = params.service.toLowerCase()
   const startTime = Date.now()

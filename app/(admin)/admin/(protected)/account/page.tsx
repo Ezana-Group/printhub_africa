@@ -81,6 +81,34 @@ export default function StaffAccountPage() {
     }
   };
 
+  const handleRevokeAll = async () => {
+    if (!confirm("Are you sure you want to log out from all other devices? This will keep your current session active.")) return;
+    
+    setLoading(true);
+    try {
+      // Assuming first session (idx 0) is current as highlighted in UI
+      const currentSessionId = sessions[0]?.id;
+      
+      const res = await fetch("/api/admin/sessions/revoke-others", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentSessionId }),
+      });
+      
+      if (res.ok) {
+        toast.success("All other sessions revoked");
+        fetchSessions();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Failed to revoke sessions");
+      }
+    } catch (err) {
+      toast.error("Error revoking sessions");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     if (passwordData.newPassword !== passwordData.confirmPassword) {
@@ -379,7 +407,19 @@ export default function StaffAccountPage() {
                   )}
                 </div>
               </CardContent>
-              <CardFooter className="bg-muted/30 border-t border-border mt-0 p-4">
+              <CardFooter className="bg-muted/30 border-t border-border mt-0 p-4 flex flex-col gap-4">
+                {sessions.length > 1 && (
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={handleRevokeAll}
+                    disabled={loading}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Revoke All Other Sessions
+                  </Button>
+                )}
                 <p className="text-[10px] text-center w-full text-muted-foreground">
                   If you see suspicious activity, change your password immediately.
                 </p>

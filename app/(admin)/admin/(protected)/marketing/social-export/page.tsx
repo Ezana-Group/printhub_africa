@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { Metadata } from "next";
 import { FeedStatusCard } from "./feed-status-card";
 import { ProductExportTable } from "./product-export-table";
+import { SyncFeedsButton } from "./sync-feeds-button";
 
 export const metadata: Metadata = {
   title: "Social Export - PrintHub Admin",
@@ -30,6 +31,26 @@ export default async function SocialExportPage() {
         exportToPinterest: true,
         exportToX: true,
         exportToGoogleBiz: true,
+        exportToSnapchat: true,
+        exportToYoutube: true,
+        exportToInstagramStories: true,
+        exportToInstagramReels: true,
+        exportToYoutubeShorts: true,
+        exportToWhatsappStatus: true,
+        exportToWhatsappChannel: true,
+        exportToTelegram: true,
+        exportToGoogleDiscover: true,
+        exportToGoogleMapsPost: true,
+        exportToBingPlaces: true,
+        exportToAppleMaps: true,
+        exportToPigiaMe: true,
+        exportToOlxKenya: true,
+        exportToReddit: true,
+        exportToLinkedInNewsletter: true,
+        exportToMedium: true,
+        exportToNextdoor: true,
+        exportToJiji: true,
+        featuredThisWeek: true,
         category: { select: { name: true } },
       },
       orderBy: { name: "asc" },
@@ -42,11 +63,14 @@ export default async function SocialExportPage() {
 
   return (
     <div className="p-6 space-y-8 max-w-[1400px] mx-auto">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-bold tracking-tight">Social Media Export</h1>
-        <p className="text-muted-foreground">
-          Manage your product feeds for Google, Meta, TikTok, and more.
-        </p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-3xl font-bold tracking-tight text-gradient">Social Media Export</h1>
+          <p className="text-muted-foreground">
+            Manage your product feeds for Google, Meta, TikTok, and more.
+          </p>
+        </div>
+        <SyncFeedsButton />
       </div>
 
       <FeedStatusCard />

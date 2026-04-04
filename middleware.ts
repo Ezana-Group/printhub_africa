@@ -29,6 +29,22 @@ export async function middleware(request: NextRequest) {
       cookieName: ADMIN_COOKIE 
     });
 
+    // --- CSRF/Origin Protection for Mutations ---
+    const isMutation = ["POST", "PUT", "PATCH", "DELETE"].includes(request.method);
+    if (isMutation) {
+      const origin = request.headers.get("origin");
+      const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL; // e.g. https://admin.printhub.africa
+      
+      // Strict check: origin must match adminUrl
+      if (isProduction && origin !== adminUrl) {
+        console.error(`[Security] CSRF/Origin mismatch. Method: ${request.method}, Path: ${pathname}, Origin: ${origin}, Expected: ${adminUrl}`);
+        return new NextResponse(JSON.stringify({ error: "CSRF Prevention: Invalid Origin" }), { 
+          status: 403, 
+          headers: { 'Content-Type': 'application/json' } 
+        });
+      }
+    }
+
     const isLoginPage = pathname === "/login" || pathname === "/admin/login";
     const isAuthApi = pathname.startsWith("/api/auth");
 

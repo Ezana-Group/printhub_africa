@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { requireAdminApi } from "@/lib/admin-api-guard";
 import { prisma } from '@/lib/prisma'
 import { n8n } from '@/lib/n8n'
 
 export async function POST(req: Request) {
-  const session = await auth()
-  if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN')) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const auth = await requireAdminApi({ permission: "marketing_edit" });
+  if (auth instanceof NextResponse) return auth;
+  const { session } = auth;
 
   try {
     const { productId, platforms } = await req.json()
@@ -36,6 +35,8 @@ export async function POST(req: Request) {
       data: {
         action: 'MANUAL_AD_COPY_GENERATION',
         category: 'MARKETING',
+        entity: 'Product',
+        entityId: productId,
         details: { productId, platforms },
         userId: session.user.id,
       },

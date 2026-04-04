@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { requireAdminApi } from "@/lib/admin-api-guard";
 import { prisma } from '@/lib/prisma'
 
 export async function GET(req: Request) {
-  const session = await auth()
-  if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN')) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const auth = await requireAdminApi({ permission: "marketing_view" });
+  if (auth instanceof NextResponse) return auth;
+  const { session } = auth;
 
   try {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
@@ -15,13 +14,13 @@ export async function GET(req: Request) {
     const sentimentLogs = await prisma.auditLog.findMany({
       where: {
         action: 'SENTIMENT_LOGGED',
-        createdAt: { gte: thirtyDaysAgo },
+        timestamp: { gte: thirtyDaysAgo },
       },
       select: {
-        createdAt: true,
+        timestamp: true,
         details: true,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { timestamp: 'desc' },
     })
 
     // Process logs to generate a summary
@@ -47,7 +46,7 @@ export async function GET(req: Request) {
           message: details.message,
           platform: details.platform,
           phone: details.phone,
-          date: log.createdAt,
+          date: log.timestamp,
         })
       }
     })

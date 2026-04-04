@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAdminApi } from "@/lib/admin-api-guard";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
-  const session = await auth();
-  if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const auth = await requireAdminApi({ permission: "settings_view" });
+  if (auth instanceof NextResponse) return auth;
+  const { session } = auth;
 
   try {
     const sessionId = params.id;
@@ -31,6 +30,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       data: {
         action: "ADMIN_SESSION_REVOKED",
         category: "SECURITY",
+        entity: "AdminSession",
+        entityId: sessionId,
         details: { sessionId, revokedBy: session.user.id },
         userId: existingSession.userId,
       },

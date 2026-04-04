@@ -49,10 +49,10 @@ export const authOptionsAdmin: NextAuthOptions = {
       name: process.env.NODE_ENV === "production" ? "__Secure-printhub.admin.session" : "printhub.admin.session",
       options: {
         httpOnly: true,
-        sameSite: "lax", // Changed from strict to lax for easier cross-subdomain handoff if needed
+        sameSite: "strict", // Tightened for enhanced CSRF protection
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        domain: process.env.NODE_ENV === "production" ? ".printhub.africa" : "localhost", // Use . to allow subdomain sharing if needed
+        domain: process.env.NODE_ENV === "production" ? ".printhub.africa" : "localhost",
       },
     },
   },
