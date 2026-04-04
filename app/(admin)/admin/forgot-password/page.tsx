@@ -48,7 +48,7 @@ export default function AdminForgotPasswordPage() {
 
       <div className="relative w-full max-w-md px-6 py-12 z-10">
         <div className="flex flex-col items-center mb-10 space-y-4">
-          <Link href="/admin/login">
+          <Link href="/login">
             <div className="h-16 w-16 bg-[#FF4D00] rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(255,77,0,0.3)] transform -rotate-3 hover:rotate-0 transition-transform duration-500">
                <ShieldCheck className="h-10 w-10 text-white" strokeWidth={1.5} />
             </div>
@@ -86,7 +86,7 @@ export default function AdminForgotPasswordPage() {
                   asChild 
                   className="w-full h-12 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl transition-all"
                 >
-                  <Link href="/admin/login">Return to Login</Link>
+                  <Link href="/login">Return to Login</Link>
                 </Button>
               </div>
             ) : (
@@ -132,7 +132,7 @@ export default function AdminForgotPasswordPage() {
                 
                 <div className="text-center mt-4">
                   <Link 
-                    href="/admin/login" 
+                    href="/login" 
                     className="text-[10px] uppercase tracking-widest text-zinc-500 hover:text-[#FF4D00] transition-colors"
                   >
                     ← Back to Login

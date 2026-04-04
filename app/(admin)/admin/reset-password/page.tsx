@@ -35,7 +35,7 @@ function AdminResetPasswordForm() {
         </CardHeader>
         <CardFooter>
           <Button asChild className="w-full h-11 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl transition-all">
-            <Link href="/admin/forgot-password">Request New Link</Link>
+            <Link href="/forgot-password">Request New Link</Link>
           </Button>
         </CardFooter>
       </Card>
@@ -75,7 +75,7 @@ function AdminResetPasswordForm() {
       
       // Auto redirect to login after a few seconds
       setTimeout(() => {
-        router.push("/admin/login");
+        router.push("/login");
       }, 3000);
     } catch (err) {
       setError("An unexpected error occurred.");
@@ -98,7 +98,7 @@ function AdminResetPasswordForm() {
         </CardHeader>
         <CardFooter>
           <Button asChild className="w-full h-12 bg-[#FF4D00] hover:bg-[#FF6622] text-white font-bold rounded-xl transition-all">
-            <Link href="/admin/login">Log In Now</Link>
+            <Link href="/login">Log In Now</Link>
           </Button>
         </CardFooter>
       </Card>
@@ -191,7 +191,7 @@ export default function AdminResetPasswordPage() {
 
       <div className="relative w-full max-w-md px-6 py-12 z-10">
         <div className="flex flex-col items-center mb-10 space-y-4">
-          <Link href="/admin/login">
+          <Link href="/login">
             <div className="h-16 w-16 bg-[#FF4D00] rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(255,77,0,0.3)] transform -rotate-3 hover:rotate-0 transition-transform duration-500">
                <ShieldCheck className="h-10 w-10 text-white" strokeWidth={1.5} />
             </div>

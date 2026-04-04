@@ -296,7 +296,7 @@ export function AdminAuthPage() {
                <p className="text-[10px] text-zinc-600 text-center leading-relaxed">
                   Access is monitored. Unauthorized attempts will be logged.
                </p>
-               <Link href="/admin/forgot-password" className="text-[10px] uppercase tracking-widest text-zinc-500 hover:text-white transition-colors">
+               <Link href="/forgot-password" className="text-[10px] uppercase tracking-widest text-zinc-500 hover:text-white transition-colors">
                  Forgot Password?
                </Link>
              </div>
