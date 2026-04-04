@@ -115,6 +115,24 @@ export const n8n = {
 
   productionFinished: (payload: ProductionFinishedPayload) =>
     triggerN8nWorkflow('production-finished', payload),
+
+  generateAdCopy: (payload: AdCopyPayload) =>
+    triggerN8nWorkflow('generate-ad-copy', payload),
+
+  generateProductDescription: (payload: ProductDescriptionPayload) =>
+    triggerN8nWorkflow('generate-product-description', payload),
+
+  generateMockups: (payload: MockupPayload) =>
+    triggerN8nWorkflow('generate-mockups', payload),
+
+  generateVideo: (payload: VideoPayload) =>
+    triggerN8nWorkflow('generate-video', payload),
+
+  sentimentAnalysis: (payload: SentimentPayload) =>
+    triggerN8nWorkflow('sentiment-analysis', payload),
+
+  generateSeoContent: (payload: SeoContentPayload) =>
+    triggerN8nWorkflow('generate-seo-content', payload),
 }
 
 export interface ProductionFinishedPayload {
@@ -125,7 +143,43 @@ export interface ProductionFinishedPayload {
   completedAt: string
 }
 
-// ... existing interfaces ...
+export interface AdCopyPayload {
+  productId: string
+  productName: string
+  platforms: string[]
+  context?: string
+}
+
+export interface ProductDescriptionPayload {
+  productId: string
+  productName: string
+  imageUrls: string[]
+  currentDescription?: string
+}
+
+export interface MockupPayload {
+  productId: string
+  productName: string
+  imageUrls: string[]
+  platforms: ('Instagram' | 'LinkedIn' | 'TikTok')[]
+}
+
+export interface VideoPayload {
+  productId: string
+  productName: string
+  description: string
+  imageUrls: string[]
+}
+
+export interface SentimentPayload {
+  messages: Array<{ id: string; text: string; sender: string }>
+}
+
+export interface SeoContentPayload {
+  topic?: string
+  keywords?: string[]
+  productContext?: boolean
+}
 
 export interface CatalogueImportPayload {
   importId: string
@@ -270,6 +324,23 @@ export interface ProductPublishedPayload {
     googleBusiness: boolean
     snapchat: boolean
     youtube: boolean
+    instagramStories: boolean
+    instagramReels: boolean
+    youtubeShorts: boolean
+    whatsappStatus: boolean
+    whatsappChannel: boolean
+    telegram: boolean
+    googleDiscover: boolean
+    googleMapsPost: boolean
+    bingPlaces: boolean
+    appleMaps: boolean
+    pigiaMe: boolean
+    olxKenya: boolean
+    reddit: boolean
+    linkedinNewsletter: boolean
+    medium: boolean
+    nextdoor: boolean
+    jiji: boolean
   }
 }
 

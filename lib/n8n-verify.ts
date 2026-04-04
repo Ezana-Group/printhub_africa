@@ -61,3 +61,21 @@ export async function n8nGuard(req: Request) {
   }
   return null
 }
+
+/**
+ * Verifies signatures for internal microservices (e.g. ffmpeg service).
+ */
+export function verifyInternalSignature(signature: string, body: string): boolean {
+  const secret = process.env.INTERNAL_SERVICE_SECRET || process.env.PRINTHUB_INTERNAL_SECRET
+  if (!secret || !signature) return false
+
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(body)
+    .digest('hex')
+
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expectedSignature)
+  )
+}

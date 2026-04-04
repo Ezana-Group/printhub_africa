@@ -196,104 +196,104 @@ model Category {
 }
 
 model Product {
-  id                       String                  @id @default(cuid())
-  name                     String
-  slug                     String                  @unique
-  description              String?
-  shortDescription         String?
-  categoryId               String
-  productType              ProductType
-  images                   String[]
-  basePrice                Decimal                 @db.Decimal(12, 2)
-  comparePrice             Decimal?                @db.Decimal(12, 2)
-  costPrice                Decimal?                @db.Decimal(12, 2)
-  sku                      String?                 @unique
-  stock                    Int?                    @default(0)
-  lowStockThreshold        Int                     @default(0)
-  minOrderQty              Int                     @default(1)
-  maxOrderQty              Int?
-  weight                   Decimal?                @db.Decimal(10, 3)
-  dimensions               Json?
-  materials                String[]
-  colors                   String[]
-  finishes                 String[]
-  isActive                 Boolean                 @default(true)
-  isFeatured               Boolean                 @default(false)
-  metaTitle                String?
-  metaDescription          String?
-  tags                     String[]
-  createdAt                DateTime                @default(now())
-  updatedAt                DateTime                @updatedAt
-  availability             ProductAvailability     @default(IN_STOCK)
-  brand                    String?
+  id                         String                  @id @default(cuid())
+  name                       String
+  slug                       String                  @unique
+  description                String?
+  shortDescription           String?
+  categoryId                 String
+  productType                ProductType
+  images                     String[]
+  basePrice                  Decimal                 @db.Decimal(12, 2)
+  comparePrice               Decimal?                @db.Decimal(12, 2)
+  costPrice                  Decimal?                @db.Decimal(12, 2)
+  sku                        String?                 @unique
+  stock                      Int?                    @default(0)
+  lowStockThreshold          Int                     @default(0)
+  minOrderQty                Int                     @default(1)
+  maxOrderQty                Int?
+  weight                     Decimal?                @db.Decimal(10, 3)
+  dimensions                 Json?
+  materials                  String[]
+  colors                     String[]
+  finishes                   String[]
+  isActive                   Boolean                 @default(true)
+  isFeatured                 Boolean                 @default(false)
+  metaTitle                  String?
+  metaDescription            String?
+  tags                       String[]
+  createdAt                  DateTime                @default(now())
+  updatedAt                  DateTime                @updatedAt
+  availability               ProductAvailability     @default(IN_STOCK)
+  brand                      String?
   /// Links back to the CatalogueItem this POD product was created from
-  catalogueItemId          String?                 @unique
-  compatibility            String?
+  catalogueItemId            String?                 @unique
+  compatibility              String?
   /// URL to a dimension diagram image shown as a tab in the gallery
-  dimensionDiagramUrl      String?
+  dimensionDiagramUrl        String?
   /// Approximate filament weight in grams
-  filamentWeightGrams      Float?
+  filamentWeightGrams        Float?
   /// True for Print-on-Demand products — no stock tracking
-  isPOD                    Boolean                 @default(false)
-  materialType             String?
-  printTimeEstimate        String?
+  isPOD                      Boolean                 @default(false)
+  materialType               String?
+  printTimeEstimate          String?
   /// Running count of units sold this calendar month (reset by monthly cron)
-  soldThisMonth            Int                     @default(0)
-  specifications           Json?
-  exportNotes              String?
+  soldThisMonth              Int                     @default(0)
+  specifications             Json?
+  exportNotes                String?
   /// Human-readable estimated print time, e.g. "4–6 hours"
-  exportToGoogle            Boolean @default(true)
-  exportToMeta              Boolean @default(true)
-  exportToTiktok            Boolean @default(true)
-  exportToLinkedIn          Boolean @default(false)
-  exportToPinterest         Boolean @default(false)
-  exportToX                 Boolean @default(false)
-  exportToGoogleBiz         Boolean @default(true)
-  exportToSnapchat          Boolean @default(false)
-  exportToYoutube           Boolean @default(false)
-  exportToInstagramStories  Boolean @default(false)
-  exportToInstagramReels    Boolean @default(false)
-  exportToYoutubeShorts     Boolean @default(false)
-  exportToWhatsappStatus    Boolean @default(false)
-  exportToWhatsappChannel   Boolean @default(false)
-  exportToTelegram          Boolean @default(false)
-  exportToGoogleDiscover    Boolean @default(false)
-  exportToGoogleMapsPost    Boolean @default(true)
-  exportToBingPlaces        Boolean @default(false)
-  exportToAppleMaps         Boolean @default(false)
-  exportToPigiaMe           Boolean @default(false)
-  exportToOlxKenya          Boolean @default(false)
-  exportToReddit            Boolean @default(false)
-  exportToLinkedInNewsletter Boolean @default(false)
-  exportToMedium            Boolean @default(false)
-  exportToNextdoor          Boolean @default(false)
-  exportToJiji              Boolean @default(false)
-  featuredThisWeek          Boolean @default(false)
-  weeklyViews               Int @default(0)
-  totalViews                Int @default(0)
-  lastExportedAt            DateTime?
-  aiDescriptionGenerated  Boolean                 @default(false)
-  aiGeneratedAt           DateTime?
-  catalogueImportQueue    CatalogueImportQueue?
-  keyFeatures             String[]                @default([])
-  adCopyVariations        AdCopyVariation[]
-  catalogueItem            CatalogueItem?          @relation("CatalogueProductLink")
-  externalModel            ExternalModel?
-  inventory                Inventory[]
-  orderItems               OrderItem[]
-  catalogueSourceItem      CatalogueItem?          @relation("CataloguePODSource", fields: [catalogueItemId], references: [id])
-  category                 Category                @relation(fields: [categoryId], references: [id])
-  filamentColors           ProductFilamentColor[]
-  productImages            ProductImage[]
-  mockups                  ProductMockup[]
-  printMaterials           ProductPrintMaterial[]
-  reviews                  ProductReview[]
-  variants                 ProductVariant[]
-  videos                   ProductVideo[]
-  shopStockMovements       ShopInventoryMovement[]
-  shopPOLines              ShopPurchaseOrderLine[]
-  stockNotifications       StockNotification[]
-  wishlists                Wishlist[]
+  exportToGoogle             Boolean                 @default(true)
+  exportToMeta               Boolean                 @default(true)
+  exportToTiktok             Boolean                 @default(true)
+  exportToLinkedIn           Boolean                 @default(false)
+  exportToPinterest          Boolean                 @default(false)
+  exportToX                  Boolean                 @default(false)
+  exportToGoogleBiz          Boolean                 @default(true)
+  exportToSnapchat           Boolean                 @default(false)
+  exportToYoutube            Boolean                 @default(false)
+  exportToInstagramStories   Boolean                 @default(false)
+  exportToInstagramReels     Boolean                 @default(false)
+  exportToYoutubeShorts      Boolean                 @default(false)
+  exportToWhatsappStatus     Boolean                 @default(false)
+  exportToWhatsappChannel    Boolean                 @default(false)
+  exportToTelegram           Boolean                 @default(false)
+  exportToGoogleDiscover     Boolean                 @default(false)
+  exportToGoogleMapsPost     Boolean                 @default(true)
+  exportToBingPlaces         Boolean                 @default(false)
+  exportToAppleMaps          Boolean                 @default(false)
+  exportToPigiaMe            Boolean                 @default(false)
+  exportToOlxKenya           Boolean                 @default(false)
+  exportToReddit             Boolean                 @default(false)
+  exportToLinkedInNewsletter Boolean                 @default(false)
+  exportToMedium             Boolean                 @default(false)
+  exportToNextdoor           Boolean                 @default(false)
+  exportToJiji               Boolean                 @default(false)
+  featuredThisWeek           Boolean                 @default(false)
+  weeklyViews                Int                     @default(0)
+  totalViews                 Int                     @default(0)
+  lastExportedAt             DateTime?
+  aiDescriptionGenerated     Boolean                 @default(false)
+  aiGeneratedAt              DateTime?
+  catalogueImportQueue       CatalogueImportQueue?
+  keyFeatures                String[]                @default([])
+  adCopyVariations           AdCopyVariation[]
+  catalogueItem              CatalogueItem?          @relation("CatalogueProductLink")
+  externalModel              ExternalModel?
+  inventory                  Inventory[]
+  orderItems                 OrderItem[]
+  catalogueSourceItem        CatalogueItem?          @relation("CataloguePODSource", fields: [catalogueItemId], references: [id])
+  category                   Category                @relation(fields: [categoryId], references: [id])
+  filamentColors             ProductFilamentColor[]
+  productImages              ProductImage[]
+  mockups                    ProductMockup[]
+  printMaterials             ProductPrintMaterial[]
+  reviews                    ProductReview[]
+  variants                   ProductVariant[]
+  videos                     ProductVideo[]
+  shopStockMovements         ShopInventoryMovement[]
+  shopPOLines                ShopPurchaseOrderLine[]
+  stockNotifications         StockNotification[]
+  wishlists                  Wishlist[]
 
   @@index([categoryId])
   @@index([slug])
@@ -954,8 +954,8 @@ model Quote {
   cancellationReason String?
   cancellationNotes  String?
   cancelledByAdminId String?
-  aiDraft              Json?
-  aiDraftGeneratedAt   DateTime?
+  aiDraft            Json?
+  aiDraftGeneratedAt DateTime?
   assignedStaff      Staff?              @relation(fields: [assignedStaffId], references: [id])
   cancelledByAdmin   User?               @relation("QuoteCancelledByAdmin", fields: [cancelledByAdminId], references: [id])
   customer           User?               @relation(fields: [customerId], references: [id])
@@ -1764,150 +1764,150 @@ model AuthPanelSlide {
 }
 
 model BusinessSettings {
-  id                        String    @id
-  businessName              String?
-  tradingName               String?
-  tagline                   String?
-  website                   String?
-  favicon                   String?
-  primaryPhone              String?
-  whatsapp                  String?
-  primaryEmail              String?
-  supportEmail              String?
-  financeEmail              String?
-  address1                  String?
-  address2                  String?
-  city                      String?
-  county                    String?
-  country                   String?
-  googleMapsUrl             String?
-  businessHours             String?
-  socialFacebook            String?
-  socialInstagram           String?
-  socialTwitter             String?
-  socialLinkedIn            String?
-  socialTikTok              String?
-  socialYouTube             String?
-  invoicePrefix             String?
-  invoiceNotes              String?
-  invoiceFooter             String?
-  vatOnInvoices             Boolean?
-  paymentTermsDays          Int?
-  mpesaEnabled              Boolean?
-  pesapalEnabled            Boolean?
-  flutterwaveEnabled        Boolean?
-  stripeEnabled             Boolean?
-  updatedAt                 DateTime  @updatedAt
-  logo                      String?
-  hoursHolidays             String?
-  hoursSaturday             String?
-  hoursSunday               String?
-  hoursWeekdays             String?
-  foundingDate              DateTime?
-  showStatsClients          Boolean   @default(false)
-  showStatsExperience       Boolean   @default(false)
-  showStatsMachines         Boolean   @default(false)
-  showStatsOrders           Boolean   @default(false)
-  showStatsStaff            Boolean   @default(false)
-  statsClientsThreshold     Int?      @default(500)
-  statsOrdersThreshold      Int?      @default(1000)
-  algoliaEnabled            Boolean?  @default(false)
-  apiSecretKey              String?
-  ga4MeasurementId          String?
-  hotjarSiteId              String?
-  ipAllowlist               Json?
-  passwordPolicy            Json?
-  rateLimitSettings         Json?
-  searchConsoleVerification String?
-  sentryDsn                 String?
-  sessionSettings           Json?
-  storageBucket             String?
-  storageCdnUrl             String?
-  storagePublicBucket       String?
-  twoFactorPolicy           Json?
-  adminAlertEmail           String?
-  adminAlertEvents          Json      @default("[]")
-  atApiKey                  String?
-  atSenderId                String?
-  atUsername                String?
-  bankTransferDetails       String?
-  bankTransferEnabled       Boolean   @default(false)
-  bankTransferThreshold     Float     @default(0)
-  canonicalDomain           String?
-  defaultOgImage            String?
-  developerMode             Boolean   @default(false)
-  emailFrom                 String?
-  emailFromName             String?
-  emailReplyTo              String?
-  googleSiteVerification    String?
-  guestCheckoutEnabled      Boolean   @default(true)
-  invoiceDueDays            Int       @default(30)
-  minimumOrderValue         Float     @default(0)
-  mpesaConsumerKey          String?
-  mpesaConsumerSecret       String?
-  mpesaEnvironment          String?   @default("sandbox")
-  mpesaPasskey              String?
-  mpesaPaybillNumber        String?
-  mpesaShortCode            String?
-  mpesaTillNumber           String?
-  paymentTimeoutMinutes     Int       @default(30)
-  pesapalConsumerKey        String?
-  pesapalConsumerSecret     String?
-  pesapalEnvironment        String?   @default("sandbox")
-  quotePrefix               String?   @default("PHUB-QT-")
-  resendApiKey              String?
-  robotsTxt                 String?
-  seoDefaultDescription     String?
-  seoDefaultTitle           String?
-  seoSiteName               String?
-  seoTagline                String?
-  sitemapIncludeCategories  Boolean   @default(true)
-  sitemapIncludePages       Boolean   @default(true)
-  sitemapIncludeProducts    Boolean   @default(true)
-  twitterCardType           String?   @default("summary_large_image")
-  twitterHandle             String?
-  whatsappFloatingButton    Boolean   @default(true)
-  whatsappNumber            String?
-  whatsappPrefilledMessage  String?
-  factoryResetExecuteAt     DateTime?
-  factoryResetInitiatedBy   String?
-  pendingFactoryReset       Boolean   @default(false)
-  aiAutoMockups             Boolean   @default(false)
-  aiAutoVideos              Boolean   @default(false)
-  aiCustomerReplyModel      String?   @default("claude-opus-4-6")
-  aiDescriptionModel        String?   @default("claude-opus-4-6")
-  aiElevenLabsCharLimit     Int?      @default(10000)
-  aiElevenLabsCharUsed      Int?      @default(0)
-  aiImageGenerator          String?   @default("both")
-  aiJijiEnabled             Boolean   @default(false)
-  aiMonthlyBusinessReport   Boolean   @default(true)
-  aiRequireApproval         Boolean   @default(true)
-  aiTelegramBot             Boolean   @default(false)
-  aiVoiceTranscription      Boolean   @default(true)
-  aiWeeklyTrendReport       Boolean   @default(true)
-  aiSocialGenerationEnabled Boolean   @default(true)
-  aiAdCopyEnabled           Boolean   @default(true)
-  aiQuoteDraftingEnabled    Boolean   @default(true)
+  id                         String    @id
+  businessName               String?
+  tradingName                String?
+  tagline                    String?
+  website                    String?
+  favicon                    String?
+  primaryPhone               String?
+  whatsapp                   String?
+  primaryEmail               String?
+  supportEmail               String?
+  financeEmail               String?
+  address1                   String?
+  address2                   String?
+  city                       String?
+  county                     String?
+  country                    String?
+  googleMapsUrl              String?
+  businessHours              String?
+  socialFacebook             String?
+  socialInstagram            String?
+  socialTwitter              String?
+  socialLinkedIn             String?
+  socialTikTok               String?
+  socialYouTube              String?
+  invoicePrefix              String?
+  invoiceNotes               String?
+  invoiceFooter              String?
+  vatOnInvoices              Boolean?
+  paymentTermsDays           Int?
+  mpesaEnabled               Boolean?
+  pesapalEnabled             Boolean?
+  flutterwaveEnabled         Boolean?
+  stripeEnabled              Boolean?
+  updatedAt                  DateTime  @updatedAt
+  logo                       String?
+  hoursHolidays              String?
+  hoursSaturday              String?
+  hoursSunday                String?
+  hoursWeekdays              String?
+  foundingDate               DateTime?
+  showStatsClients           Boolean   @default(false)
+  showStatsExperience        Boolean   @default(false)
+  showStatsMachines          Boolean   @default(false)
+  showStatsOrders            Boolean   @default(false)
+  showStatsStaff             Boolean   @default(false)
+  statsClientsThreshold      Int?      @default(500)
+  statsOrdersThreshold       Int?      @default(1000)
+  algoliaEnabled             Boolean?  @default(false)
+  apiSecretKey               String?
+  ga4MeasurementId           String?
+  hotjarSiteId               String?
+  ipAllowlist                Json?
+  passwordPolicy             Json?
+  rateLimitSettings          Json?
+  searchConsoleVerification  String?
+  sentryDsn                  String?
+  sessionSettings            Json?
+  storageBucket              String?
+  storageCdnUrl              String?
+  storagePublicBucket        String?
+  twoFactorPolicy            Json?
+  adminAlertEmail            String?
+  adminAlertEvents           Json      @default("[]")
+  atApiKey                   String?
+  atSenderId                 String?
+  atUsername                 String?
+  bankTransferDetails        String?
+  bankTransferEnabled        Boolean   @default(false)
+  bankTransferThreshold      Float     @default(0)
+  canonicalDomain            String?
+  defaultOgImage             String?
+  developerMode              Boolean   @default(false)
+  emailFrom                  String?
+  emailFromName              String?
+  emailReplyTo               String?
+  googleSiteVerification     String?
+  guestCheckoutEnabled       Boolean   @default(true)
+  invoiceDueDays             Int       @default(30)
+  minimumOrderValue          Float     @default(0)
+  mpesaConsumerKey           String?
+  mpesaConsumerSecret        String?
+  mpesaEnvironment           String?   @default("sandbox")
+  mpesaPasskey               String?
+  mpesaPaybillNumber         String?
+  mpesaShortCode             String?
+  mpesaTillNumber            String?
+  paymentTimeoutMinutes      Int       @default(30)
+  pesapalConsumerKey         String?
+  pesapalConsumerSecret      String?
+  pesapalEnvironment         String?   @default("sandbox")
+  quotePrefix                String?   @default("PHUB-QT-")
+  resendApiKey               String?
+  robotsTxt                  String?
+  seoDefaultDescription      String?
+  seoDefaultTitle            String?
+  seoSiteName                String?
+  seoTagline                 String?
+  sitemapIncludeCategories   Boolean   @default(true)
+  sitemapIncludePages        Boolean   @default(true)
+  sitemapIncludeProducts     Boolean   @default(true)
+  twitterCardType            String?   @default("summary_large_image")
+  twitterHandle              String?
+  whatsappFloatingButton     Boolean   @default(true)
+  whatsappNumber             String?
+  whatsappPrefilledMessage   String?
+  factoryResetExecuteAt      DateTime?
+  factoryResetInitiatedBy    String?
+  pendingFactoryReset        Boolean   @default(false)
+  aiAutoMockups              Boolean   @default(false)
+  aiAutoVideos               Boolean   @default(false)
+  aiCustomerReplyModel       String?   @default("claude-opus-4-6")
+  aiDescriptionModel         String?   @default("claude-opus-4-6")
+  aiElevenLabsCharLimit      Int?      @default(10000)
+  aiElevenLabsCharUsed       Int?      @default(0)
+  aiImageGenerator           String?   @default("both")
+  aiJijiEnabled              Boolean   @default(false)
+  aiMonthlyBusinessReport    Boolean   @default(true)
+  aiRequireApproval          Boolean   @default(true)
+  aiTelegramBot              Boolean   @default(false)
+  aiVoiceTranscription       Boolean   @default(true)
+  aiWeeklyTrendReport        Boolean   @default(true)
+  aiSocialGenerationEnabled  Boolean   @default(true)
+  aiAdCopyEnabled            Boolean   @default(true)
+  aiQuoteDraftingEnabled     Boolean   @default(true)
   aiSentimentAnalysisEnabled Boolean   @default(true)
 }
 
 model AdCopyVariation {
-  id              String   @id @default(cuid())
-  productId       String
-  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  platform        String
-  variationIndex  Int
-  headline        String?
-  body            String?
-  description     String?
-  cta             String?
-  script          String?
-  isRefined       Boolean  @default(false)
-  isApproved      Boolean  @default(false)
-  usedInCampaign  Boolean  @default(false)
-  generatedAt     DateTime @default(now())
-  approvedAt      DateTime?
-  approvedBy      String?
+  id             String    @id @default(cuid())
+  productId      String
+  product        Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  platform       String
+  variationIndex Int
+  headline       String?
+  body           String?
+  description    String?
+  cta            String?
+  script         String?
+  isRefined      Boolean   @default(false)
+  isApproved     Boolean   @default(false)
+  usedInCampaign Boolean   @default(false)
+  generatedAt    DateTime  @default(now())
+  approvedAt     DateTime?
+  approvedBy     String?
 
   @@index([productId])
 }
@@ -1953,11 +1953,11 @@ model ShippingSettings {
 }
 
 model LoyaltySettings {
-  id                String   @id
-  bonusRules        Json?
-  tiers             Json?
-  updatedAt         DateTime @updatedAt
-  enabled           Boolean? @default(true)
+  id                  String   @id
+  bonusRules          Json?
+  tiers               Json?
+  updatedAt           DateTime @updatedAt
+  enabled             Boolean? @default(true)
   kesPerPointSpent    Float?
   pointsPerKesSpent   Float?
   kesPerPointRedeemed Float?   @default(1)
@@ -2171,16 +2171,16 @@ model CatalogueImportQueue {
   stlStorageKey       String?
   scrapedName         String?
   scrapedDescription  String?
-  scrapedTags         String[]   @default([])
+  scrapedTags         String[]     @default([])
   scrapedCategory     String?
-  scrapedImageUrls    String[]   @default([])
+  scrapedImageUrls    String[]     @default([])
   designerName        String?
   licenseType         String?
   downloadCount       Int?
   likeCount           Int?
   aiEnhancement       Json?
   aiEnhancedAt        DateTime?
-  aiEnhancementStatus String?    @default("pending")
+  aiEnhancementStatus String?      @default("pending")
   // pending | processing | complete | failed
   productId           String?      @unique
   product             Product?     @relation(fields: [productId], references: [id])
@@ -3159,33 +3159,33 @@ enum WarrantyStatus {
 }
 
 model SmsBroadcast {
-  id              String   @id @default(cuid())
-  broadcastDate   DateTime
-  smsText         String
-  recipientCount  Int
-  deliveredCount  Int      @default(0)
-  failedCount     Int      @default(0)
-  featuredProducts String[] @default([])
-  approvedBy      String?
-  sentAt          DateTime?
-  createdAt       DateTime @default(now())
+  id               String    @id @default(cuid())
+  broadcastDate    DateTime
+  smsText          String
+  recipientCount   Int
+  deliveredCount   Int       @default(0)
+  failedCount      Int       @default(0)
+  featuredProducts String[]  @default([])
+  approvedBy       String?
+  sentAt           DateTime?
+  createdAt        DateTime  @default(now())
 }
 
 model BlogPost {
-  id                String    @id @default(cuid())
-  title             String
-  slug              String    @unique
-  excerpt           String?
-  bodyHtml          String
-  metaDescription   String?
-  tags              String[]  @default([])
-  targetKeyword     String?
-  status            String    @default("DRAFT")
+  id              String    @id @default(cuid())
+  title           String
+  slug            String    @unique
+  excerpt         String?
+  bodyHtml        String
+  metaDescription String?
+  tags            String[]  @default([])
+  targetKeyword   String?
+  status          String    @default("DRAFT")
   // DRAFT | PUBLISHED | ARCHIVED
-  aiGenerated       Boolean   @default(true)
-  mediumUrl         String?
-  linkedinPostUrl   String?
-  publishedAt       DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  aiGenerated     Boolean   @default(true)
+  mediumUrl       String?
+  linkedinPostUrl String?
+  publishedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 }

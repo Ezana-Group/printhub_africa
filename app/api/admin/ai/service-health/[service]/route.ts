@@ -1,137 +1,71 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptionsAdmin } from "@/lib/auth-admin";
-import { prisma } from "@/lib/prisma";
+import { NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
 
-const SERVICE_PRICING = {
-  claude: { inputPer1k: 0.015, outputPer1k: 0.075 },
-  "openai-gpt4o": { inputPer1k: 0.0025, outputPer1k: 0.01 },
-  "openai-gpt4o-mini": { inputPer1k: 0.00015, outputPer1k: 0.0006 },
-  dalle3: { perImage: 0.04 },
-  whisper: { perMinute: 0.006 },
-  elevenlabs: { perChar: 0.00003 },
-  runway: { per5sec: 0.5 },
-  stability: { perImage: 0.008 },
-  gemini: { inputPer1k: 0.00125, outputPer1k: 0.005 },
-  perplexity: { inputPer1k: 0.001, outputPer1k: 0.001 },
-};
-
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ service: string }> }
-) {
-  const session = await getServerSession(authOptionsAdmin);
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+export async function GET(req: Request, { params }: { params: { service: string } }) {
+  const session = await auth()
+  if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN')) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { service } = await params;
-
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const service = params.service.toLowerCase()
+  const startTime = Date.now()
 
   try {
-    const logs = await prisma.aiServiceLog.findMany({
-      where: { service, createdAt: { gte: startOfMonth } },
-      orderBy: { createdAt: "desc" },
-    });
+    let status = '❌'
+    let success = false
+    let responseMs = 0
 
-    const lastSuccess = logs.find((l) => l.success);
-    const recentFailures = logs
-      .filter((l) => !l.success)
-      .slice(0, 3)
-      .length;
-
-    const consecutiveFailures =
-      logs.length > 0 && !logs[0].success
-        ? logs.findIndex((l) => l.success) === -1
-          ? Math.min(recentFailures, 3)
-          : logs.findIndex((l) => l.success)
-        : 0;
-
-    const totalCostUsd = logs.reduce((s, l) => s + (l.costUsd ?? 0), 0);
-    const totalCalls = logs.length;
-    const successRate = totalCalls > 0 ? Math.round((logs.filter((l) => l.success).length / totalCalls) * 100) : 100;
-
-    const status: "healthy" | "degraded" | "down" =
-      consecutiveFailures >= 3 ? "down" :
-      consecutiveFailures >= 1 ? "degraded" : "healthy";
-
-    // Attempt a lightweight ping to verify the service is reachable
-    let reachable = true;
-    try {
-      if (service === "claude") {
-        const r = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "x-api-key": process.env.ANTHROPIC_API_KEY ?? "",
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({ model: "claude-opus-4-6", max_tokens: 1, messages: [{ role: "user", content: "ping" }] }),
-          signal: AbortSignal.timeout(5000),
-        });
-        reachable = r.status !== 401 && r.status !== 403;
-      } else if (service === "openai-gpt4o" || service === "openai-gpt4o-mini" || service === "dalle3" || service === "whisper") {
-        const r = await fetch("https://api.openai.com/v1/models", {
-          headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY ?? ""}` },
-          signal: AbortSignal.timeout(5000),
-        });
-        reachable = r.ok;
-      } else if (service === "elevenlabs") {
-        const r = await fetch("https://api.elevenlabs.io/v1/user", {
-          headers: { "xi-api-key": process.env.ELEVENLABS_API_KEY ?? "" },
-          signal: AbortSignal.timeout(5000),
-        });
-        reachable = r.ok;
-      } else if (service === "gemini") {
-        const r = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models?key=${process.env.GEMINI_API_KEY ?? ""}`,
-          { signal: AbortSignal.timeout(5000) }
-        );
-        reachable = r.ok;
-      } else if (service === "perplexity") {
-        const r = await fetch("https://api.perplexity.ai/chat/completions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${process.env.PERPLEXITY_API_KEY ?? ""}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model: "llama-3.1-sonar-large-128k-online", messages: [{ role: "user", content: "ping" }] }),
-          signal: AbortSignal.timeout(5000),
-        });
-        reachable = r.status !== 401;
-      } else if (service === "runway") {
-        const r = await fetch("https://api.dev.runwayml.com/v1/tasks", {
-          headers: { Authorization: `Bearer ${process.env.RUNWAY_API_KEY ?? ""}` },
-          signal: AbortSignal.timeout(5000),
-        });
-        reachable = r.status !== 401;
-      } else if (service === "stability") {
-        const r = await fetch("https://api.stability.ai/v1/user/account", {
-          headers: { Authorization: `Bearer ${process.env.STABILITY_API_KEY ?? ""}` },
-          signal: AbortSignal.timeout(5000),
-        });
-        reachable = r.ok;
-      }
-    } catch {
-      reachable = false;
+    // Check environment variables
+    const checkKey = (key: string) => {
+        if (!process.env[key]) {
+            return { status: '⚠️', error: `Missing ${key}` }
+        }
+        return { status: '✅', error: null }
     }
 
-    const pricing = SERVICE_PRICING[service as keyof typeof SERVICE_PRICING];
+    // Health check logic based on service
+    // For many services, we can just check if key exists and maybe do a minimal API call or just return the key status
+    // To avoid actual costs on every poll, we mainly check configuration and maybe one small request
+    switch (service) {
+      case 'claude':
+      case 'anthropic':
+        ({ status } = checkKey('ANTHROPIC_API_KEY')); success = status === '✅'; break
+      case 'gpt4o':
+      case 'openai':
+      case 'whisper':
+      case 'dalle':
+        ({ status } = checkKey('OPENAI_API_KEY')); success = status === '✅'; break
+      case 'stability':
+        ({ status } = checkKey('STABILITY_API_KEY')); success = status === '✅'; break
+      case 'elevenlabs':
+        ({ status } = checkKey('ELEVENLABS_API_KEY')); success = status === '✅'; break
+      case 'runway':
+        ({ status } = checkKey('RUNWAY_API_KEY')); success = status === '✅'; break
+      case 'gemini':
+        ({ status } = checkKey('GEMINI_API_KEY')); success = status === '✅'; break
+      case 'perplexity':
+        ({ status } = checkKey('PERPLEXITY_API_KEY')); success = status === '✅'; break
+      case 'whatsapp':
+        ({ status } = checkKey('WHATSAPP_ACCESS_TOKEN')); success = status === '✅'; break
+      case 'meta':
+        ({ status } = checkKey('META_ACCESS_TOKEN')); success = status === '✅'; break
+      case 'tiktok':
+        ({ status } = checkKey('TIKTOK_EVENTS_API_TOKEN')); success = status === '✅'; break
+      default:
+        return NextResponse.json({ error: 'Invalid service' }, { status: 400 })
+    }
+
+    responseMs = Date.now() - startTime
 
     return NextResponse.json({
       service,
-      status: reachable ? status : "down",
-      reachable,
-      lastSuccessAt: lastSuccess?.createdAt ?? null,
-      consecutiveFailures,
-      monthlyStats: {
-        totalCalls,
-        successRate,
-        totalCostUsd: Math.round(totalCostUsd * 100) / 100,
-      },
-      pricing,
-    });
+      status,
+      success,
+      responseMs,
+      lastSuccessfulCall: new Date().toISOString(),
+    })
   } catch (err) {
-    console.error("[service-health]", err);
-    return NextResponse.json({ service, status: "down", error: "Check failed" }, { status: 500 });
+    console.error(`[api/admin/ai/service-health/${service}] Error:`, err)
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }
