@@ -16,7 +16,7 @@ USER node
 # Standard n8n environment variables for Railway
 ENV N8N_PORT=5678
 ENV N8N_LISTEN_ADDRESS=::
-ENV N8N_PROTOCOL=http
+ENV N8N_PROTOCOL=https
 ENV NODE_ENV=production
 ENV N8N_METRICS=true
 ENV N8N_HEALTHCHECK_ACTIVE=true
