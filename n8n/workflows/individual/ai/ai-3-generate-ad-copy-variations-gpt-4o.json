@@ -4,7 +4,7 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "ai-generate-adcopy",
+        "path": "generate-ad-copy",
         "options": {
           "rawBody": true
         }
@@ -16,7 +16,7 @@
         200,
         300
       ],
-      "webhookId": "ai-generate-adcopy"
+      "webhookId": "generate-ad-copy"
     },
     {
       "parameters": {

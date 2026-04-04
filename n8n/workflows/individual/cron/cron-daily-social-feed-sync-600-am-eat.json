@@ -19,7 +19,87 @@
         100,
         300
       ]
+    },
+    {
+      "name": "HTTP: Trigger Sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        320,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://admin.printhub.africa/api/n8n/sync-catalog",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "AuditLog: Catalog Sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        540,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://printhub.africa/api/n8n/log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "CATALOG_SYNC_CRON"
+            },
+            {
+              "name": "details",
+              "value": "Daily automated sync performed"
+            }
+          ]
+        }
+      }
     }
   ],
-  "connections": {}
+  "connections": {
+    "Schedule: 6AM": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Trigger Sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP: Trigger Sync": {
+      "main": [
+        [
+          {
+            "node": "AuditLog: Catalog Sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
 }

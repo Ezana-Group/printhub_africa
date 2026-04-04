@@ -1,26 +1,28 @@
 {
-  "name": "AI-4 — Auto-Generate Product Descriptions (Claude)",
+  "name": "Cron AI-1 — Daily Sentiment Report (Claude)",
   "nodes": [
     {
       "parameters": {
-        "httpMethod": "POST",
-        "path": "generate-product-description",
-        "options": {
-          "rawBody": true
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6 * * *"
+            }
+          ]
         }
       },
-      "name": "Webhook: Generate Descriptions",
-      "type": "n8n-nodes-base.webhook",
+      "name": "Schedule: Daily 9AM EAT",
+      "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1,
       "position": [
         200,
         300
-      ],
-      "webhookId": "ai-generate-descriptions"
+      ]
     },
     {
       "parameters": {
-        "url": "https://admin.printhub.africa/api/n8n/get-product-context",
+        "url": "https://admin.printhub.africa/api/n8n/business-data-export",
         "method": "GET",
         "authentication": "headerAuth",
         "headerParameters": {
@@ -33,12 +35,16 @@
         },
         "qs": [
           {
-            "name": "productId",
-            "value": "={{ $json.productId }}"
+            "name": "type",
+            "value": "sentiment-summary"
+          },
+          {
+            "name": "days",
+            "value": "1"
           }
         ]
       },
-      "name": "Get Context",
+      "name": "Fetch Daily Sentiment",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
@@ -63,9 +69,9 @@
             }
           ]
         },
-        "bodyParametersJson": "={ \"model\": \"claude-opus-4-6\", \"max_tokens\": 1000, \"system\": \"You are the content and customer service AI for PrintHub Africa...\", \"messages\": [{ \"role\": \"user\", \"content\": \"Write a compelling, SEO-optimised product description for {{ $json.name }}. Include: 1. Main description (200 words), 2. Short description (50 words), 3. 5 Key Features as a list, 4. SEO meta title, 5. SEO meta description. Return valid JSON.\" }] }"
+        "bodyParametersJson": "={ \"model\": \"claude-opus-4-6\", \"max_tokens\": 1000, \"system\": \"You are the business intelligence analyst for PrintHub Africa...\", \"messages\": [{ \"role\": \"user\", \"content\": \"Summarise yesterday's customer sentiment data: {{ JSON.stringify($json) }}. Highlight any critical issues or very happy customers. Provide a concise 'Health of Customer Base' score out of 100.\" }] }"
       },
-      "name": "Claude: Write Descriptions",
+      "name": "Claude: Daily Summary",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
@@ -75,20 +81,20 @@
     },
     {
       "parameters": {
-        "url": "https://admin.printhub.africa/api/n8n/save-ai-content",
+        "url": "https://api.resend.com/emails",
         "method": "POST",
         "authentication": "headerAuth",
         "headerParameters": {
           "parameters": [
             {
-              "name": "x-printhub-signature",
-              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+              "name": "Authorization",
+              "value": "=Bearer {{$env.RESEND_API_KEY}}"
             }
           ]
         },
-        "bodyParametersJson": "={ \"productId\": \"{{ $node['Get Context'].json.id }}\", \"descriptions\": {{ $json.content[0].text }} }"
+        "bodyParametersJson": "={ \"from\": \"PrintHub AI <ai@printhub.africa>\", \"to\": \"{{$env.ADMIN_EMAIL}}\", \"subject\": \"Daily Customer Sentiment Report — {{ new Date().toLocaleDateString() }}\", \"html\": \"{{ $json.content[0].text }}\" }"
       },
-      "name": "Save Descriptions",
+      "name": "Email Daily Report",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
@@ -98,33 +104,33 @@
     }
   ],
   "connections": {
-    "Webhook: Generate Descriptions": {
+    "Schedule: Daily 9AM EAT": {
       "main": [
         [
           {
-            "node": "Get Context",
+            "node": "Fetch Daily Sentiment",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Get Context": {
+    "Fetch Daily Sentiment": {
       "main": [
         [
           {
-            "node": "Claude: Write Descriptions",
+            "node": "Claude: Daily Summary",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Claude: Write Descriptions": {
+    "Claude: Daily Summary": {
       "main": [
         [
           {
-            "node": "Save Descriptions",
+            "node": "Email Daily Report",
             "type": "main",
             "index": 0
           }

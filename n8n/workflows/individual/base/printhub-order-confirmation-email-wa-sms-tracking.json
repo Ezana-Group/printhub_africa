@@ -43,26 +43,7 @@
             }
           ]
         },
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "from",
-              "value": "PrintHub Africa <orders@printhub.africa>"
-            },
-            {
-              "name": "to",
-              "value": "={{$json.customerEmail}}"
-            },
-            {
-              "name": "subject",
-              "value": "=Order Confirmed: {{$json.orderNumber}}"
-            },
-            {
-              "name": "html",
-              "value": "=<p>Hi {{$json.customerName}}, your order {{$json.orderNumber}} (KES {{$json.total}}) is confirmed! We will notify you when it's dispatched.</p>"
-            }
-          ]
-        }
+        "bodyParametersJson": "={ \"from\": \"PrintHub Africa <orders@printhub.africa>\", \"to\": \"{{$json.customerEmail}}\", \"subject\": \"Order Confirmed: {{$json.orderNumber}}\", \"html\": \"<div style='font-family:sans-serif;max-width:600px;margin:0 auto'><h2>Order Confirmed!</h2><p>Hi {{$json.customerName}}, your order <strong>{{$json.orderNumber}}</strong> (KES {{$json.total}}) is confirmed! We will notify you when it's dispatched.</p><p><a href='https://printhub.africa/track/{{$json.orderNumber}}' style='background:#f97316;color:white;padding:10px 20px;border-radius:5px;text-decoration:none'>Track Your Order</a></p></div>\" }"
       },
       "name": "Resend: Email",
       "type": "n8n-nodes-base.httpRequest",

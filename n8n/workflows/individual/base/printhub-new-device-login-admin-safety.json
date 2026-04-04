@@ -1,0 +1,23 @@
+{
+  "name": "11. PrintHub - New Device Login (Admin Safety)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "new-device-login",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "name": "Webhook: New Login",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "new-device-login"
+    }
+  ],
+  "connections": {}
+}

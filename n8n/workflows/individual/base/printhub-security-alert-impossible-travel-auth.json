@@ -1,22 +1,22 @@
 {
-  "name": "6. PrintHub - Low Stock Notify (Inventory Flow)",
+  "name": "5. PrintHub - Security Alert (Impossible Travel + Auth)",
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "low-stock",
+        "path": "security-alert",
         "options": {
           "rawBody": true
         }
       },
-      "name": "Webhook: Low Stock",
+      "name": "Webhook: Security",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [
         0,
         300
       ],
-      "webhookId": "low-stock"
+      "webhookId": "security-alert"
     },
     {
       "parameters": {
@@ -31,9 +31,9 @@
             }
           ]
         },
-        "bodyParametersJson": "={ \"from\": \"Stock <stock@printhub.africa>\", \"to\": \"{{ $env.ADMIN_EMAIL }}\", \"subject\": \"⚠️ Low Stock Alert: {{ $json.productName }}\", \"html\": \"<p><strong>{{ $json.productName }}</strong> is low in stock ({{ $json.currentStock }} remaining).</p>\" }"
+        "bodyParametersJson": "={ \"from\": \"Security <security@printhub.africa>\", \"to\": \"{{ $env.ADMIN_EMAIL }}\", \"subject\": \"🔐 Security Alert: {{ $json.type }}\", \"html\": \"<p>A security event was detected: <strong>{{ $json.message }}</strong></p>\" }"
       },
-      "name": "Email: Stock Alert",
+      "name": "Email: Admin Alert",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
@@ -43,11 +43,11 @@
     }
   ],
   "connections": {
-    "Webhook: Low Stock": {
+    "Webhook: Security": {
       "main": [
         [
           {
-            "node": "Email: Stock Alert",
+            "node": "Email: Admin Alert",
             "type": "main",
             "index": 0
           }

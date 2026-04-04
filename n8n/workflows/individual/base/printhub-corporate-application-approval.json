@@ -1,0 +1,23 @@
+{
+  "name": "14. PrintHub - Corporate Application (Approval)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "corporate-app",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "name": "Webhook: Corporate",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "corporate-app"
+    }
+  ],
+  "connections": {}
+}

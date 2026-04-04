@@ -4,7 +4,7 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "ai-analyse-sentiment",
+        "path": "sentiment-analysis",
         "options": {
           "rawBody": true
         }
@@ -16,7 +16,7 @@
         200,
         300
       ],
-      "webhookId": "ai-analyse-sentiment"
+      "webhookId": "sentiment-analysis"
     },
     {
       "parameters": {

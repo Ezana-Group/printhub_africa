@@ -93,7 +93,7 @@ export const n8n = {
     triggerN8nWorkflow('low-stock', payload),
   
   productPublished: (payload: ProductPublishedPayload) =>
-    triggerN8nWorkflow('product-published', payload),
+    triggerN8nWorkflow('generate-social-posts', payload),
   
   productUpdated: (payload: ProductUpdatedPayload) =>
     triggerN8nWorkflow('product-updated', payload),
@@ -121,6 +121,9 @@ export const n8n = {
 
   generateProductDescription: (payload: ProductDescriptionPayload) =>
     triggerN8nWorkflow('generate-product-description', payload),
+
+  generateSocialPosts: (payload: ProductPublishedPayload) =>
+    triggerN8nWorkflow('generate-social-posts', payload),
 
   generateMockups: (payload: MockupPayload) =>
     triggerN8nWorkflow('generate-mockups', payload),

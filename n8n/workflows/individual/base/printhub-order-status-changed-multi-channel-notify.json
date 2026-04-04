@@ -15,7 +15,8 @@
       "position": [
         100,
         300
-      ]
+      ],
+      "webhookId": "order-status-changed"
     },
     {
       "parameters": {
@@ -61,26 +62,7 @@
             }
           ]
         },
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "from",
-              "value": "PrintHub Africa <shipping@printhub.africa>"
-            },
-            {
-              "name": "to",
-              "value": "={{$json.customerEmail}}"
-            },
-            {
-              "name": "subject",
-              "value": "=Your order {{$json.orderNumber}} is on its way!"
-            },
-            {
-              "name": "html",
-              "value": "=<p>Exciting news {{$json.customerName}}! Your order is dispatched. Tracking: {{$json.trackingNumber}}</p>"
-            }
-          ]
-        }
+        "bodyParametersJson": "={ \"from\": \"PrintHub Africa <shipping@printhub.africa>\", \"to\": \"{{$json.customerEmail}}\", \"subject\": \"Your order {{$json.orderNumber}} is on its way!\", \"html\": \"<p>Exciting news {{$json.customerName}}! Your order is dispatched. Tracking: {{$json.trackingNumber}}</p>\" }"
       },
       "name": "Email: Dispatched",
       "type": "n8n-nodes-base.httpRequest",

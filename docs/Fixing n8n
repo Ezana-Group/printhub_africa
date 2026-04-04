@@ -1,0 +1,1508 @@
+You are fixing and completing the n8n automation system for PrintHub Africa.
+The n8n instance is hosted on Railway at https://n8n.printhub.africa.
+The Next.js app is at https://printhub.africa and https://admin.printhub.africa.
+
+Read this entire prompt before doing anything.
+You are making targeted fixes only — do not rebuild what already works.
+
+---
+
+# CONTEXT — WHAT HAS ALREADY BEEN ANALYSED
+
+A full audit of the three workflow JSON files has been completed.
+The following issues were found and must be fixed in this prompt:
+
+1. Duplicate stub workflows in the base file
+2. Webhook path mismatches between Next.js and n8n
+3. Missing workflows (Payment Failed, Corporate Application,
+   Impossible Travel dedicated webhook)
+4. Incomplete workflows (SMS Broadcast, SEO Content Engine,
+   Daily Sentiment Report, stub crons)
+5. AI-7 unnamed and incomplete
+6. Zero error handling across all workflows
+7. Environment variables missing or incorrectly named
+
+---
+
+# PART 1 — ENVIRONMENT VARIABLES
+
+## 1.1 — Current .env File Issues to Fix
+
+The current n8n .env has these problems:
+
+### Fix 1: FFMPEG_SERVICE_URL missing https://
+```bash
+# WRONG (current):
+FFMPEG_SERVICE_URL="printhub-ffmpeg.railway.app"
+
+# CORRECT:
+FFMPEG_SERVICE_URL="https://printhub-ffmpeg.railway.app"
+```
+
+### Fix 2: Google variables wrong names
+```bash
+# REMOVE these two:
+GOOGLE_ACCOUNT_ID=""
+GOOGLE_LOCATION_ID=""
+
+# ADD these instead:
+GOOGLE_MAPS_PLACE_ID=""          # Google Business Profile Place ID
+                                  # Find: business.google.com → your listing URL
+GOOGLE_ADS_CUSTOMER_ID=""        # Google Ads account ID, no dashes
+GOOGLE_ADS_DEVELOPER_TOKEN=""    # Google Ads API Center
+GOOGLE_ADS_CLIENT_ID=""          # Google Cloud Console → OAuth client
+GOOGLE_ADS_CLIENT_SECRET=""
+GOOGLE_ADS_REFRESH_TOKEN=""      # OAuth2 playground
+GOOGLE_MERCHANT_ID=""            # Google Merchant Center ID
+YOUTUBE_CHANNEL_ID=""            # YouTube Studio → Settings → Channel
+```
+
+### Fix 3: COMBINE_SECRET must match PRINTHUB_INTERNAL_SECRET
+Both must be the same value. Generate once:
+```bash
+openssl rand -hex 32
+```
+Set output as BOTH variables.
+
+### Fix 4: Missing email config
+```bash
+FROM_EMAIL="hello@printhub.africa"
+FROM_NAME="PrintHub Africa"
+```
+
+### Fix 5: Missing Africa's Talking variables
+```bash
+AT_SENDER_ID=""                  # registered sender ID e.g. PRINTHUB
+SMS_BROADCAST_SENDER_ID=""       # same as AT_SENDER_ID
+```
+
+## 1.2 — Complete List of Variables to ADD
+
+These are entirely missing from the current file.
+Add every single one to the Railway n8n service Variables tab.
+
+### Security
+```bash
+PRINTHUB_INTERNAL_SECRET=""      # openssl rand -hex 32
+                                  # Must match INTERNAL_SERVICE_SECRET in Next.js
+                                  # Must match COMBINE_SECRET
+PRINTHUB_API_URL="https://printhub.africa"
+```
+
+### AI Configuration
+```bash
+AI_APPROVAL_EMAIL=""             # email for content approval requests
+AI_REQUIRE_APPROVAL="true"       # always start with true
+PRINTHUB_BRAND_VOICE="Professional, warm, Eldoret-based print shop. Kenyan audience. KES pricing. Friendly but expert."
+```
+
+### Meta Advertising
+```bash
+META_AD_ACCOUNT_ID=""            # act_XXXXXXXXX from Meta Ads Manager
+META_CATALOG_ID=""               # Meta Commerce Manager
+INSTAGRAM_USER_ID=""             # Meta Business Manager → Instagram Account
+WHATSAPP_CHANNEL_ID=""           # Meta Business → WhatsApp Channels
+```
+
+### TikTok
+```bash
+TIKTOK_EVENTS_API_TOKEN=""
+TIKTOK_AD_ACCOUNT_ID=""
+TIKTOK_CATALOG_ID=""
+```
+
+### X (Twitter)
+```bash
+X_API_KEY=""
+X_API_SECRET=""
+X_ACCESS_TOKEN=""
+X_ACCESS_TOKEN_SECRET=""
+X_AD_ACCOUNT_ID=""
+```
+
+### LinkedIn
+```bash
+LINKEDIN_CLIENT_ID=""
+LINKEDIN_CLIENT_SECRET=""
+LINKEDIN_ACCESS_TOKEN=""         # ⚠️ expires every 60 days
+LINKEDIN_AD_ACCOUNT_ID=""
+LINKEDIN_ORGANIZATION_ID=""      # numeric company page ID
+LINKEDIN_AUTHOR_URN=""           # urn:li:person:[your-linkedin-id]
+```
+
+### Pinterest
+```bash
+PINTEREST_ACCESS_TOKEN=""
+PINTEREST_AD_ACCOUNT_ID=""
+PINTEREST_CATALOG_ID=""
+```
+
+### Snapchat
+```bash
+SNAPCHAT_ACCESS_TOKEN=""
+SNAPCHAT_AD_ACCOUNT_ID=""
+SNAPCHAT_PIXEL_ID=""
+```
+
+### Medium & Reddit
+```bash
+MEDIUM_INTEGRATION_TOKEN=""      # medium.com → Settings → Integration Tokens
+MEDIUM_USER_ID=""                # GET api.medium.com/v1/me
+REDDIT_CLIENT_ID=""              # reddit.com/prefs/apps → script type
+REDDIT_CLIENT_SECRET=""
+REDDIT_USERNAME=""
+REDDIT_PASSWORD=""
+```
+
+### Apple Maps
+```bash
+APPLE_TEAM_ID=""                 # developer.apple.com → Membership
+APPLE_KEY_ID=""                  # Maps → Keys
+APPLE_PRIVATE_KEY=""             # .p8 contents base64 encoded
+```
+
+### Bing & Nextdoor
+```bash
+BING_MAPS_KEY=""                 # bingmapsportal.com
+NEXTDOOR_API_KEY=""              # leave empty if not yet approved
+```
+
+### Thingiverse
+```bash
+THINGIVERSE_TOKEN=""             # thingiverse.com/developers
+```
+
+### Slack
+```bash
+SLACK_WEBHOOK_URL=""             # api.slack.com → Incoming Webhooks
+```
+
+### Rate Limiting (optional)
+```bash
+UPSTASH_REDIS_REST_URL=""        # upstash.com — leave empty for in-memory
+UPSTASH_REDIS_REST_TOKEN=""
+```
+
+## 1.3 — Produce the Complete Corrected .env File
+
+Output the complete .env file combining:
+- All existing variables from the current file (keeping correct ones)
+- All fixes from Section 1.1
+- All new additions from Section 1.2
+
+Organise into clearly labelled sections.
+Every empty variable must have a comment explaining where to get the value.
+Never include actual secret values — placeholders only for new variables.
+Keep the existing filled values (N8N_ENCRYPTION_KEY, N8N_WEBHOOK_SECRET,
+DB_* variables) exactly as they are.
+
+---
+
+# PART 2 — WEBHOOK PATH FIXES
+
+## 2.1 — Paths That Must Change in n8n
+
+The following workflows have the wrong webhook path.
+Next.js sends to the correct path but n8n listens on a different one.
+These fail silently — no errors, just nothing happening.
+
+For each workflow below, open it in n8n, click the Webhook trigger node,
+change the path field to the correct value, save, re-activate.
+
+Also update the workflow JSON files to reflect the correct paths.
+
+| Workflow | Current Wrong Path | Correct Path |
+|----------|--------------------|-------------|
+| AI-2 WhatsApp Auto-Reply | `/whatsapp-incoming` | `/whatsapp-inbound` |
+| AI-3 Ad Copy Variations | `/ai-generate-adcopy` | `/generate-ad-copy` |
+| AI-4 Product Descriptions | `/ai-generate-descriptions` | `/generate-product-description` |
+| AI-6 Sentiment Analysis | `/ai-analyse-sentiment` | `/sentiment-analysis` |
+| AI-1 Social Posts | `/ai-generate-social` | `/generate-social-posts` |
+
+## 2.2 — Also Fix in lib/n8n.ts
+
+Confirm these trigger functions in lib/n8n.ts use the correct paths:
+```typescript
+generateAdCopy: (p) => triggerN8nWorkflow('generate-ad-copy', p),
+generateProductDescription: (p) => triggerN8nWorkflow('generate-product-description', p),
+sentimentAnalysis: (p) => triggerN8nWorkflow('sentiment-analysis', p),
+generateSeoContent: (p) => triggerN8nWorkflow('generate-seo-content', p),
+```
+
+If any of these differ in the actual lib/n8n.ts file, update them to match.
+The n8n webhook path is the source of truth.
+
+---
+
+# PART 3 — WORKFLOW FIXES (Incomplete Workflows)
+
+## 3.1 — Fix AI-7: Rename and Complete Catalogue Enhancement
+
+The first workflow in printhub_ai_workflows.json has no name.
+It handles `/enhance-catalogue-import` and has 6 nodes.
+It is missing 3 nodes and needs renaming.
+
+### Rename to:
+`AI-7 — Catalogue Import Enhancement`
+
+### Add these missing nodes after the existing Claude node:
+
+**Node 7 — GPT-4o: Generate Social Captions**
+```json
+{
+  "name": "GPT-4o: Generate Social Captions",
+  "type": "n8n-nodes-base.httpRequest",
+  "parameters": {
+    "method": "POST",
+    "url": "https://api.openai.com/v1/chat/completions",
+    "sendHeaders": true,
+    "headerParameters": {
+      "parameters": [
+        { "name": "Authorization", "value": "Bearer {{$env.OPENAI_API_KEY}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    "sendBody": true,
+    "bodyParameters": {
+      "parameters": [
+        {
+          "name": "body",
+          "value": "={{ JSON.stringify({ model: 'gpt-4o', max_tokens: 1000, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: 'You are a social media copywriter for PrintHub Africa, a Nairobi printing company. British English. KES pricing.' }, { role: 'user', content: 'Generate social media captions for this 3D printed product.\\nProduct name: ' + $node[\"HTTP Request — Claude: Generate PrintHub Product C\"].json.content[0].text.includes('product_name') ? JSON.parse($node[\"HTTP Request — Claude: Generate PrintHub Product C\"].json.content[0].text).product_name : $json.originalName + '\\nDescription: ' + $json.originalDescription + '\\n\\nReturn ONLY valid JSON: { instagram: \"caption max 150 words 5-10 hashtags\", facebook: \"caption max 100 words\", tiktok: \"caption max 80 words energetic\", linkedin: \"caption max 120 words B2B\", x: \"max 280 chars\", pinterest: \"descriptive keyword-rich\", snapchat: \"max 50 words punchy\", youtube_community: \"max 200 words\", google_business: \"max 300 words\" }' }] }) }}"
+        }
+      ]
+    }
+  }
+}
+```
+
+**Node 8 — Staff Notification**
+```json
+{
+  "name": "Notify Staff: AI Enhancement Ready",
+  "type": "n8n-nodes-base.httpRequest",
+  "parameters": {
+    "method": "POST",
+    "url": "https://printhub.africa/webhook/staff-alert",
+    "sendHeaders": true,
+    "headerParameters": {
+      "parameters": [
+        { "name": "x-printhub-signature", "value": "={{$env.N8N_WEBHOOK_SECRET}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    "sendBody": true,
+    "bodyParameters": {
+      "parameters": [
+        {
+          "name": "body",
+          "value": "={{ JSON.stringify({ type: 'SUPPORT_TICKET', title: 'AI Enhanced: ' + $json.importId + ' ready for review', message: 'AI has generated product listing. Review and approve in admin catalogue.', urgency: 'low', actionUrl: 'https://admin.printhub.africa/catalogue/review/' + $json.importId, targetRoles: ['ADMIN', 'SUPER_ADMIN'] }) }}"
+        }
+      ]
+    }
+  }
+}
+```
+
+**Node 9 — AuditLog**
+```json
+{
+  "name": "AuditLog: Catalogue Enhancement Complete",
+  "type": "n8n-nodes-base.httpRequest",
+  "parameters": {
+    "method": "POST",
+    "url": "https://printhub.africa/api/n8n/log",
+    "sendHeaders": true,
+    "headerParameters": {
+      "parameters": [
+        { "name": "x-printhub-signature", "value": "={{$env.N8N_WEBHOOK_SECRET}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    "sendBody": true,
+    "bodyParameters": {
+      "parameters": [
+        {
+          "name": "body",
+          "value": "={{ JSON.stringify({ workflowName: 'AI-7 Catalogue Enhancement', action: 'AI_CATALOGUE_ENHANCEMENT_COMPLETED', details: { importId: $json.importId, platform: $json.platform } }) }}"
+        }
+      ]
+    }
+  }
+}
+```
+
+---
+
+## 3.2 — Fix SMS Weekly Broadcast (AI-12)
+
+Current version has 5 nodes and is missing all the core logic.
+Rebuild completely. Currently in wrong file (base) — move to cron file.
+
+**Complete workflow JSON:**
+```json
+{
+  "name": "AI-12 — SMS Weekly Broadcast",
+  "nodes": [
+    {
+      "name": "Schedule: Friday 12PM EAT",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 9 * * 5" }]
+        }
+      },
+      "position": [0, 0]
+    },
+    {
+      "name": "Perplexity: Kenya Context This Week",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer {{$env.PERPLEXITY_API_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={\"model\":\"llama-3.1-sonar-large-128k-online\",\"messages\":[{\"role\":\"user\",\"content\":\"What is happening in Kenya this week relevant to a print shop? Upcoming events, holidays, sports, business seasons. What topics should a Nairobi business mention in SMS marketing this Friday? Keep response under 100 words.\"}],\"max_tokens\":150,\"search_recency_filter\":\"week\"}"
+          }]
+        }
+      },
+      "position": [200, 0]
+    },
+    {
+      "name": "Get Featured Products",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "GET",
+        "url": "https://printhub.africa/api/n8n/weekly-featured-products",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-printhub-signature", "value": "={{$env.N8N_WEBHOOK_SECRET}}" }
+          ]
+        }
+      },
+      "position": [400, 0]
+    },
+    {
+      "name": "GPT-4o Mini: Generate 3 SMS Variations",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer {{$env.OPENAI_API_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={{ JSON.stringify({ model: 'gpt-4o-mini', max_tokens: 300, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: 'Write SMS marketing for PrintHub Africa Nairobi. Max 155 chars each including URL. Never start with Dear Customer. British English. Direct and compelling.' }, { role: 'user', content: 'Write 3 SMS variations for this week.\\nProducts: ' + JSON.stringify($node[\"Get Featured Products\"].json) + '\\nKenya context: ' + $node[\"Perplexity: Kenya Context This Week\"].json.choices[0].message.content + '\\nURL: https://printhub.africa\\n\\nReturn JSON: { variations: [{ text: string, charCount: number }, ...], recommended: 0 }' }] }) }}"
+          }]
+        }
+      },
+      "position": [600, 0]
+    },
+    {
+      "name": "Validate: All Under 160 Chars",
+      "type": "n8n-nodes-base.code",
+      "parameters": {
+        "jsCode": "const data = JSON.parse($input.item.json.choices[0].message.content);\nconst variations = data.variations || [];\nconst valid = variations.filter(v => v.charCount <= 160);\nif (valid.length === 0) {\n  throw new Error('All SMS variations exceeded 160 characters. Regenerate.');\n}\nreturn [{ json: { variations: valid, recommended: data.recommended } }];"
+      },
+      "position": [800, 0]
+    },
+    {
+      "name": "Send Approval Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer {{$env.RESEND_API_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={{ JSON.stringify({ from: $env.FROM_EMAIL, to: $env.AI_APPROVAL_EMAIL, subject: 'PrintHub SMS Broadcast — Approve Before 4PM Today', html: '<h2>Weekly SMS Broadcast — Approval Required</h2><p>Select one variation to send to opted-in customers. Auto-skips if no response in 4 hours.</p>' + $json.variations.map((v, i) => '<div style=\"border:1px solid #ddd;padding:16px;margin:8px 0\"><strong>Variation ' + (i+1) + '</strong> (' + v.charCount + ' chars)<br><em>' + v.text + '</em><br><br><a href=\"https://printhub.africa/api/n8n/approve-sms-broadcast?variation=' + i + '&approved=true\" style=\"background:#000;color:#fff;padding:8px 16px;text-decoration:none\">Send This One</a></div>').join('') + '<br><a href=\"https://printhub.africa/api/n8n/approve-sms-broadcast?skip=true\">Skip this week</a>' }) }}"
+          }]
+        }
+      },
+      "position": [1000, 0]
+    },
+    {
+      "name": "Wait for Approval (4 Hours)",
+      "type": "n8n-nodes-base.wait",
+      "parameters": {
+        "resume": "webhook",
+        "options": { "webhookSuffix": "sms-approval" }
+      },
+      "position": [1200, 0]
+    },
+    {
+      "name": "Check: Skip or Proceed?",
+      "type": "n8n-nodes-base.if",
+      "parameters": {
+        "conditions": {
+          "boolean": [{ "value1": "={{$json.skip}}", "value2": true }]
+        }
+      },
+      "position": [1400, 0]
+    },
+    {
+      "name": "Get SMS Recipient List",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "GET",
+        "url": "https://printhub.africa/api/n8n/sms-broadcast-list",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-printhub-signature", "value": "={{$env.N8N_WEBHOOK_SECRET}}" }
+          ]
+        }
+      },
+      "position": [1600, 0]
+    },
+    {
+      "name": "Split Into Batches of 100",
+      "type": "n8n-nodes-base.splitInBatches",
+      "parameters": { "batchSize": 100 },
+      "position": [1800, 0]
+    },
+    {
+      "name": "Wait 2 Seconds Between Batches",
+      "type": "n8n-nodes-base.wait",
+      "parameters": { "amount": 2, "unit": "seconds" },
+      "position": [2000, 0]
+    },
+    {
+      "name": "Africa's Talking: Send Bulk SMS",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.africastalking.com/version1/messaging",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apiKey", "value": "={{$env.AT_API_KEY}}" },
+            { "name": "Accept", "value": "application/json" },
+            { "name": "Content-Type", "value": "application/x-www-form-urlencoded" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "username", "value": "={{$env.AT_USERNAME}}" },
+            { "name": "to", "value": "={{$json.phones.join(',')}}" },
+            { "name": "message", "value": "={{$node['Check: Skip or Proceed?'].json.approvedText}}" },
+            { "name": "from", "value": "={{$env.SMS_BROADCAST_SENDER_ID}}" },
+            { "name": "bulkSMSMode", "value": "1" }
+          ]
+        }
+      },
+      "position": [2200, 0]
+    },
+    {
+      "name": "Save Broadcast Record",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://printhub.africa/api/n8n/save-sms-broadcast",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-printhub-signature", "value": "={{$env.N8N_WEBHOOK_SECRET}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={{ JSON.stringify({ broadcastId: $execution.id, sentAt: new Date().toISOString(), smsText: $node['Check: Skip or Proceed?'].json.approvedText }) }}"
+          }]
+        }
+      },
+      "position": [2400, 0]
+    },
+    {
+      "name": "AuditLog: SMS Broadcast Sent",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://printhub.africa/api/n8n/log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-printhub-signature", "value": "={{$env.N8N_WEBHOOK_SECRET}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={{ JSON.stringify({ workflowName: 'AI-12 SMS Broadcast', action: 'SMS_BROADCAST_SENT', details: { broadcastId: $execution.id } }) }}"
+          }]
+        }
+      },
+      "position": [2600, 0]
+    }
+  ],
+  "connections": {
+    "Schedule: Friday 12PM EAT": { "main": [[{ "node": "Perplexity: Kenya Context This Week", "type": "main", "index": 0 }]] },
+    "Perplexity: Kenya Context This Week": { "main": [[{ "node": "Get Featured Products", "type": "main", "index": 0 }]] },
+    "Get Featured Products": { "main": [[{ "node": "GPT-4o Mini: Generate 3 SMS Variations", "type": "main", "index": 0 }]] },
+    "GPT-4o Mini: Generate 3 SMS Variations": { "main": [[{ "node": "Validate: All Under 160 Chars", "type": "main", "index": 0 }]] },
+    "Validate: All Under 160 Chars": { "main": [[{ "node": "Send Approval Email", "type": "main", "index": 0 }]] },
+    "Send Approval Email": { "main": [[{ "node": "Wait for Approval (4 Hours)", "type": "main", "index": 0 }]] },
+    "Wait for Approval (4 Hours)": { "main": [[{ "node": "Check: Skip or Proceed?", "type": "main", "index": 0 }]] },
+    "Check: Skip or Proceed?": { "main": [[{ "node": "Get SMS Recipient List", "type": "main", "index": 0 }], []] },
+    "Get SMS Recipient List": { "main": [[{ "node": "Split Into Batches of 100", "type": "main", "index": 0 }]] },
+    "Split Into Batches of 100": { "main": [[{ "node": "Wait 2 Seconds Between Batches", "type": "main", "index": 0 }]] },
+    "Wait 2 Seconds Between Batches": { "main": [[{ "node": "Africa's Talking: Send Bulk SMS", "type": "main", "index": 0 }]] },
+    "Africa's Talking: Send Bulk SMS": { "main": [[{ "node": "Save Broadcast Record", "type": "main", "index": 0 }]] },
+    "Save Broadcast Record": { "main": [[{ "node": "AuditLog: SMS Broadcast Sent", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "timezone": "Africa/Nairobi" }
+}
+```
+
+---
+
+## 3.3 — Fix AI-13: SEO Content Engine
+
+Current version has 4 nodes and is missing most of the logic.
+Rebuild completely. Move to cron file.
+
+**Complete workflow JSON:**
+```json
+{
+  "name": "AI-13 — Long-Form SEO Content Engine",
+  "nodes": [
+    {
+      "name": "Schedule: Wednesday 6AM EAT",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 3 * * 3" }]
+        }
+      },
+      "position": [0, 0]
+    },
+    {
+      "name": "Perplexity: SEO Keyword Research",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer {{$env.PERPLEXITY_API_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={\"model\":\"llama-3.1-sonar-large-128k-online\",\"messages\":[{\"role\":\"user\",\"content\":\"Research SEO opportunities for a Nairobi 3D printing and large format printing company. Find: 1. High-volume low-competition keywords in Kenya for printing services 2. Questions Kenyans ask about 3D printing and large format printing 3. Trending topics in African maker/design community 4. Seasonal content opportunities upcoming in Kenya. Return 5 content ideas with target keyword and content angle.\"}],\"max_tokens\":800,\"return_citations\":true,\"search_recency_filter\":\"month\"}"
+          }]
+        }
+      },
+      "position": [200, 0]
+    },
+    {
+      "name": "Perplexity: Social Trends Kenya",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer {{$env.PERPLEXITY_API_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={\"model\":\"llama-3.1-sonar-large-128k-online\",\"messages\":[{\"role\":\"user\",\"content\":\"What content formats and topics are trending this week on TikTok, Instagram and LinkedIn in Kenya and East Africa? What hashtags are trending? What should a Nairobi business be posting about right now?\"}],\"max_tokens\":400,\"search_recency_filter\":\"week\"}"
+          }]
+        }
+      },
+      "position": [200, 200]
+    },
+    {
+      "name": "Get Product Catalogue",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "GET",
+        "url": "https://printhub.africa/api/n8n/product-catalogue-summary",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-printhub-signature", "value": "={{$env.N8N_WEBHOOK_SECRET}}" }
+          ]
+        }
+      },
+      "position": [400, 0]
+    },
+    {
+      "name": "Gemini: Select Best Topic",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-goog-api-key", "value": "={{$env.GEMINI_API_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={{ JSON.stringify({ contents: [{ parts: [{ text: 'You are the marketing strategist for PrintHub Africa, a Nairobi printing company.\\n\\nSEO research: ' + $node['Perplexity: SEO Keyword Research'].json.choices[0].message.content + '\\n\\nSocial trends: ' + $node['Perplexity: Social Trends Kenya'].json.choices[0].message.content + '\\n\\nOur products: ' + JSON.stringify($node['Get Product Catalogue'].json) + '\\n\\nSelect the single best content topic to write about this week. Provide: target_keyword, article_title, article_outline (5 sections), word_count_target (1000-1500), seo_notes. Return as JSON.' }] }], generationConfig: { maxOutputTokens: 800 } }) }}"
+          }]
+        }
+      },
+      "position": [600, 0]
+    },
+    {
+      "name": "Claude: Write Full SEO Article",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{$env.ANTHROPIC_API_KEY}}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={{ JSON.stringify({ model: 'claude-opus-4-6', max_tokens: 4000, system: 'You are writing SEO-optimised blog content for PrintHub Africa, a Nairobi printing company. Articles must genuinely help the reader, include the target keyword naturally, be authoritative on printing topics, include Nairobi/Kenya context where relevant, use British English throughout, include a clear CTA to PrintHub services at the end. Target 1000-1500 words.', messages: [{ role: 'user', content: 'Write a complete SEO blog article based on this strategy: ' + $node['Gemini: Select Best Topic'].json.candidates[0].content.parts[0].text + '\\n\\nReturn ONLY valid JSON: { title: string, meta_description: string (max 160 chars), slug: string, body_html: string, excerpt: string (50 words), tags: string[], suggested_internal_links: [{anchor: string, path: string}] }' }] }) }}"
+          }]
+        }
+      },
+      "position": [800, 0]
+    },
+    {
+      "name": "Save Blog Draft",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://printhub.africa/api/n8n/save-blog-draft",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-printhub-signature", "value": "={{$env.N8N_WEBHOOK_SECRET}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={{ JSON.stringify({ article: JSON.parse($node['Claude: Write Full SEO Article'].json.content[0].text), targetKeyword: 'extracted-from-gemini', triggeredBy: 'cron' }) }}"
+          }]
+        }
+      },
+      "position": [1000, 0]
+    },
+    {
+      "name": "Medium: Cross-Post Article",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.medium.com/v1/users/{{$env.MEDIUM_USER_ID}}/posts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer {{$env.MEDIUM_INTEGRATION_TOKEN}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={{ JSON.stringify({ title: JSON.parse($node['Claude: Write Full SEO Article'].json.content[0].text).title, contentFormat: 'html', content: JSON.parse($node['Claude: Write Full SEO Article'].json.content[0].text).body_html, tags: JSON.parse($node['Claude: Write Full SEO Article'].json.content[0].text).tags, publishStatus: 'public', canonicalUrl: 'https://printhub.africa/blog/' + JSON.parse($node['Claude: Write Full SEO Article'].json.content[0].text).slug, notifyFollowers: true }) }}"
+          }]
+        }
+      },
+      "position": [1200, 0]
+    },
+    {
+      "name": "Email: Admin Approval Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer {{$env.RESEND_API_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={{ JSON.stringify({ from: $env.FROM_EMAIL, to: $env.AI_APPROVAL_EMAIL, subject: 'New SEO Article Draft Ready — ' + JSON.parse($node['Claude: Write Full SEO Article'].json.content[0].text).title, html: '<h2>New AI-Generated SEO Article</h2><p><strong>Title:</strong> ' + JSON.parse($node['Claude: Write Full SEO Article'].json.content[0].text).title + '</p><p><strong>Excerpt:</strong> ' + JSON.parse($node['Claude: Write Full SEO Article'].json.content[0].text).excerpt + '</p><p>Medium cross-post: published</p><br><a href=\"https://admin.printhub.africa/blog\" style=\"background:#000;color:#fff;padding:10px 20px;text-decoration:none\">Review & Publish on Site</a>' }) }}"
+          }]
+        }
+      },
+      "position": [1400, 0]
+    },
+    {
+      "name": "AuditLog: SEO Article Generated",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://printhub.africa/api/n8n/log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-printhub-signature", "value": "={{$env.N8N_WEBHOOK_SECRET}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={{ JSON.stringify({ workflowName: 'AI-13 SEO Content Engine', action: 'SEO_ARTICLE_GENERATED', details: { slug: JSON.parse($node['Claude: Write Full SEO Article'].json.content[0].text).slug } }) }}"
+          }]
+        }
+      },
+      "position": [1600, 0]
+    }
+  ],
+  "connections": {
+    "Schedule: Wednesday 6AM EAT": { "main": [[{ "node": "Perplexity: SEO Keyword Research", "type": "main", "index": 0 }, { "node": "Perplexity: Social Trends Kenya", "type": "main", "index": 0 }]] },
+    "Perplexity: SEO Keyword Research": { "main": [[{ "node": "Get Product Catalogue", "type": "main", "index": 0 }]] },
+    "Perplexity: Social Trends Kenya": { "main": [[{ "node": "Get Product Catalogue", "type": "main", "index": 0 }]] },
+    "Get Product Catalogue": { "main": [[{ "node": "Gemini: Select Best Topic", "type": "main", "index": 0 }]] },
+    "Gemini: Select Best Topic": { "main": [[{ "node": "Claude: Write Full SEO Article", "type": "main", "index": 0 }]] },
+    "Claude: Write Full SEO Article": { "main": [[{ "node": "Save Blog Draft", "type": "main", "index": 0 }]] },
+    "Save Blog Draft": { "main": [[{ "node": "Medium: Cross-Post Article", "type": "main", "index": 0 }]] },
+    "Medium: Cross-Post Article": { "main": [[{ "node": "Email: Admin Approval Request", "type": "main", "index": 0 }]] },
+    "Email: Admin Approval Request": { "main": [[{ "node": "AuditLog: SEO Article Generated", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "timezone": "Africa/Nairobi" }
+}
+```
+
+---
+
+## 3.4 — Fix Cron Daily Low Stock Check
+
+Add missing filter and trigger logic:
+
+**Nodes to add after the existing "Pull Inventory Audit" node:**
+```json
+{
+  "name": "Filter: Below Minimum Stock",
+  "type": "n8n-nodes-base.filter",
+  "parameters": {
+    "conditions": {
+      "number": [{ "value1": "={{$json.currentStock}}", "operation": "smallerEqual", "value2": "={{$json.minimumStock}}" }]
+    }
+  }
+},
+{
+  "name": "Any Low Stock Items?",
+  "type": "n8n-nodes-base.if",
+  "parameters": {
+    "conditions": {
+      "number": [{ "value1": "={{$items().length}}", "operation": "largerEqual", "value2": 1 }]
+    }
+  }
+},
+{
+  "name": "Trigger Low Stock Alert",
+  "type": "n8n-nodes-base.httpRequest",
+  "parameters": {
+    "method": "POST",
+    "url": "https://printhub.africa/webhook/low-stock",
+    "sendHeaders": true,
+    "headerParameters": {
+      "parameters": [
+        { "name": "x-printhub-signature", "value": "={{$env.N8N_WEBHOOK_SECRET}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    "sendBody": true,
+    "bodyParameters": {
+      "parameters": [{
+        "name": "body",
+        "value": "={{ JSON.stringify({ items: $items().map(item => item.json) }) }}"
+      }]
+    }
+  }
+},
+{
+  "name": "AuditLog: Stock Check Complete",
+  "type": "n8n-nodes-base.httpRequest",
+  "parameters": {
+    "method": "POST",
+    "url": "https://printhub.africa/api/n8n/log",
+    "sendHeaders": true,
+    "headerParameters": {
+      "parameters": [
+        { "name": "x-printhub-signature", "value": "={{$env.N8N_WEBHOOK_SECRET}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    "sendBody": true,
+    "bodyParameters": {
+      "parameters": [{
+        "name": "body",
+        "value": "={{ JSON.stringify({ workflowName: 'Cron Daily Low Stock', action: 'STOCK_CHECK_COMPLETE' }) }}"
+      }]
+    }
+  }
+}
+```
+
+---
+
+## 3.5 — Fix Cron Daily Social Feed Sync
+
+Replace the single Schedule Trigger node stub with:
+```json
+{
+  "nodes": [
+    {
+      "name": "Schedule: 6AM EAT Daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 3 * * *" }] }
+      }
+    },
+    {
+      "name": "Trigger Sync All Feeds",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://printhub.africa/webhook/sync-social-feeds",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-printhub-signature", "value": "={{$env.N8N_WEBHOOK_SECRET}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={\"triggeredBy\":\"daily-cron\"}"
+          }]
+        }
+      }
+    },
+    {
+      "name": "AuditLog",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://printhub.africa/api/n8n/log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-printhub-signature", "value": "={{$env.N8N_WEBHOOK_SECRET}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{ "name": "body", "value": "={\"workflowName\":\"Daily Social Feed Sync\",\"action\":\"DAILY_SYNC_TRIGGERED\"}" }]
+        }
+      }
+    }
+  ]
+}
+```
+
+---
+
+# PART 4 — NEW WORKFLOWS TO BUILD
+
+## 4.1 — Payment Failed Workflow
+
+**File:** Add to `printhub_base_workflows.json`
+```json
+{
+  "name": "14. PrintHub - Payment Failed (Recovery Flow)",
+  "nodes": [
+    {
+      "name": "Webhook: Payment Failed",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": { "path": "payment-failed", "httpMethod": "POST" },
+      "position": [0, 0]
+    },
+    {
+      "name": "Verify Signature",
+      "type": "n8n-nodes-base.code",
+      "parameters": {
+        "jsCode": "const sig = $input.item.json.headers['x-printhub-signature'];\nconst secret = $env.N8N_WEBHOOK_SECRET;\nif (!sig || sig !== secret) { throw new Error('Invalid signature'); }\nreturn $input.all();"
+      },
+      "position": [200, 0]
+    },
+    {
+      "name": "WhatsApp: Payment Failed Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{$env.WHATSAPP_PHONE_NUMBER_ID}}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $json.body.customerPhone, type: 'text', text: { body: 'Hi ' + $json.body.customerName + ', your payment of KES ' + $json.body.amount + ' for order #' + $json.body.orderId + ' did not go through. Retry here: ' + $json.body.retryUrl + '\\n\\nNeed help? WhatsApp us.' } }) }}"
+          }]
+        }
+      },
+      "position": [400, -100]
+    },
+    {
+      "name": "Email: Payment Failed",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer {{$env.RESEND_API_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={{ JSON.stringify({ from: $env.FROM_EMAIL, to: $json.body.customerEmail, subject: 'Payment unsuccessful — Order #' + $json.body.orderId, html: '<h2>Payment Unsuccessful</h2><p>Hi ' + $json.body.customerName + ',</p><p>Your payment of <strong>KES ' + $json.body.amount + '</strong> for order <strong>#' + $json.body.orderId + '</strong> was not completed.</p><p>Payment method: ' + $json.body.paymentMethod + '</p><br><a href=\"' + $json.body.retryUrl + '\" style=\"background:#000;color:#fff;padding:12px 24px;text-decoration:none;display:inline-block\">Retry Payment</a><br><br><p>If you need help, reply to this email or WhatsApp us.</p>' }) }}"
+          }]
+        }
+      },
+      "position": [400, 0]
+    },
+    {
+      "name": "Is M-Pesa?",
+      "type": "n8n-nodes-base.if",
+      "parameters": {
+        "conditions": {
+          "string": [{ "value1": "={{$json.body.paymentMethod}}", "operation": "contains", "value2": "mpesa" }]
+        }
+      },
+      "position": [400, 100]
+    },
+    {
+      "name": "Staff Alert: M-Pesa STK Failed",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://printhub.africa/webhook/staff-alert",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-printhub-signature", "value": "={{$env.N8N_WEBHOOK_SECRET}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={{ JSON.stringify({ type: 'PAYMENT_MANUAL', title: 'M-Pesa STK Failed — Manual follow-up needed', message: 'Order #' + $json.body.orderId + ' | Customer: ' + $json.body.customerName + ' | Amount: KES ' + $json.body.amount, urgency: 'medium', actionUrl: 'https://admin.printhub.africa/orders/' + $json.body.orderId, targetRoles: ['STAFF', 'ADMIN', 'SUPER_ADMIN'] }) }}"
+          }]
+        }
+      },
+      "position": [600, 100]
+    },
+    {
+      "name": "AuditLog: Payment Failed Handled",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://printhub.africa/api/n8n/log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-printhub-signature", "value": "={{$env.N8N_WEBHOOK_SECRET}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={{ JSON.stringify({ workflowName: 'Payment Failed', action: 'PAYMENT_FAILED_NOTIFICATIONS_SENT', details: { orderId: $json.body.orderId, paymentMethod: $json.body.paymentMethod, amount: $json.body.amount } }) }}"
+          }]
+        }
+      },
+      "position": [800, 0]
+    }
+  ],
+  "connections": {
+    "Webhook: Payment Failed": { "main": [[{ "node": "Verify Signature", "type": "main", "index": 0 }]] },
+    "Verify Signature": { "main": [[{ "node": "WhatsApp: Payment Failed Message", "type": "main", "index": 0 }, { "node": "Email: Payment Failed", "type": "main", "index": 0 }, { "node": "Is M-Pesa?", "type": "main", "index": 0 }]] },
+    "Is M-Pesa?": { "main": [[{ "node": "Staff Alert: M-Pesa STK Failed", "type": "main", "index": 0 }], []] },
+    "WhatsApp: Payment Failed Message": { "main": [[{ "node": "AuditLog: Payment Failed Handled", "type": "main", "index": 0 }]] },
+    "Email: Payment Failed": { "main": [[{ "node": "AuditLog: Payment Failed Handled", "type": "main", "index": 0 }]] },
+    "Staff Alert: M-Pesa STK Failed": { "main": [[{ "node": "AuditLog: Payment Failed Handled", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "timezone": "Africa/Nairobi" }
+}
+```
+
+---
+
+## 4.2 — Corporate Application Submitted Workflow
+
+**File:** Add to `printhub_base_workflows.json`
+```json
+{
+  "name": "15. PrintHub - Corporate Application Submitted",
+  "nodes": [
+    {
+      "name": "Webhook: Corporate Application",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": { "path": "corporate-application", "httpMethod": "POST" },
+      "position": [0, 0]
+    },
+    {
+      "name": "Verify Signature",
+      "type": "n8n-nodes-base.code",
+      "parameters": {
+        "jsCode": "const sig = $input.item.json.headers['x-printhub-signature'];\nif (!sig || sig !== $env.N8N_WEBHOOK_SECRET) { throw new Error('Invalid signature'); }\nreturn $input.all();"
+      },
+      "position": [200, 0]
+    },
+    {
+      "name": "Email: Confirm Application Received",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer {{$env.RESEND_API_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={{ JSON.stringify({ from: $env.FROM_EMAIL, to: $json.body.contactEmail, subject: 'Corporate Account Application Received — PrintHub Africa', html: '<h2>Application Received</h2><p>Dear ' + $json.body.contactName + ',</p><p>Thank you for applying for a PrintHub Africa corporate account for <strong>' + $json.body.companyName + '</strong>.</p><p>Our team will review your application and respond within 2 business days.</p><p>In the meantime, you can continue placing orders as a regular customer at <a href=\"https://printhub.africa\">printhub.africa</a>.</p><p>Warm regards,<br>PrintHub Africa Team</p>' }) }}"
+          }]
+        }
+      },
+      "position": [400, -100]
+    },
+    {
+      "name": "Email: Alert Admins",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer {{$env.RESEND_API_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={{ JSON.stringify({ from: $env.FROM_EMAIL, to: $env.ADMIN_EMAIL, subject: 'New Corporate Application: ' + $json.body.companyName, html: '<h2>New Corporate Account Application</h2><table><tr><td><strong>Company:</strong></td><td>' + $json.body.companyName + '</td></tr><tr><td><strong>Contact:</strong></td><td>' + $json.body.contactName + '</td></tr><tr><td><strong>Email:</strong></td><td>' + $json.body.contactEmail + '</td></tr></table><br><a href=\"' + $json.body.reviewUrl + '\" style=\"background:#000;color:#fff;padding:10px 20px;text-decoration:none\">Review Application</a>' }) }}"
+          }]
+        }
+      },
+      "position": [400, 0]
+    },
+    {
+      "name": "WhatsApp: Alert Staff",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{$env.WHATSAPP_PHONE_NUMBER_ID}}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $env.STAFF_WHATSAPP_NUMBER, type: 'text', text: { body: '📋 New Corporate Application\\nCompany: ' + $json.body.companyName + '\\nContact: ' + $json.body.contactName + '\\nEmail: ' + $json.body.contactEmail + '\\n\\nReview: ' + $json.body.reviewUrl } }) }}"
+          }]
+        }
+      },
+      "position": [400, 100]
+    },
+    {
+      "name": "AuditLog: Corporate Application Received",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://printhub.africa/api/n8n/log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-printhub-signature", "value": "={{$env.N8N_WEBHOOK_SECRET}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={{ JSON.stringify({ workflowName: 'Corporate Application', action: 'CORPORATE_APPLICATION_RECEIVED', details: { applicationId: $json.body.applicationId, companyName: $json.body.companyName } }) }}"
+          }]
+        }
+      },
+      "position": [600, 0]
+    }
+  ],
+  "connections": {
+    "Webhook: Corporate Application": { "main": [[{ "node": "Verify Signature", "type": "main", "index": 0 }]] },
+    "Verify Signature": { "main": [[{ "node": "Email: Confirm Application Received", "type": "main", "index": 0 }, { "node": "Email: Alert Admins", "type": "main", "index": 0 }, { "node": "WhatsApp: Alert Staff", "type": "main", "index": 0 }]] },
+    "Email: Confirm Application Received": { "main": [[{ "node": "AuditLog: Corporate Application Received", "type": "main", "index": 0 }]] },
+    "Email: Alert Admins": { "main": [[{ "node": "AuditLog: Corporate Application Received", "type": "main", "index": 0 }]] },
+    "WhatsApp: Alert Staff": { "main": [[{ "node": "AuditLog: Corporate Application Received", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "timezone": "Africa/Nairobi" }
+}
+```
+
+---
+
+## 4.3 — Impossible Travel Dedicated Webhook
+
+**File:** Add to `printhub_base_workflows.json`
+This is separate from the general security-alert workflow
+because impossible travel has unique logic: session revocation,
+geoIP display, and a bank-style alert format.
+```json
+{
+  "name": "16. PrintHub - Impossible Travel Detection",
+  "nodes": [
+    {
+      "name": "Webhook: Impossible Travel",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": { "path": "impossible-travel", "httpMethod": "POST" },
+      "position": [0, 0]
+    },
+    {
+      "name": "Verify Signature",
+      "type": "n8n-nodes-base.code",
+      "parameters": {
+        "jsCode": "const sig = $input.item.json.headers['x-printhub-signature'];\nif (!sig || sig !== $env.N8N_WEBHOOK_SECRET) { throw new Error('Invalid signature'); }\nreturn $input.all();"
+      },
+      "position": [200, 0]
+    },
+    {
+      "name": "Email: Alert SUPER_ADMIN",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer {{$env.RESEND_API_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={{ JSON.stringify({ from: $env.FROM_EMAIL, to: $env.SUPER_ADMIN_EMAIL, subject: '⚠️ SECURITY: Impossible Travel Detected — ' + $json.body.userName, html: '<h2 style=\"color:#cc0000\">⚠️ Impossible Travel Detected</h2><table style=\"border-collapse:collapse;width:100%\"><tr style=\"background:#f5f5f5\"><td style=\"padding:8px\"><strong>Staff member</strong></td><td style=\"padding:8px\">' + $json.body.userName + ' (' + $json.body.userEmail + ')</td></tr><tr><td style=\"padding:8px\"><strong>Previous login</strong></td><td style=\"padding:8px\">' + $json.body.previousCountry + ' — ' + $json.body.previousIp + '<br>' + $json.body.previousLoginAt + '</td></tr><tr style=\"background:#fff3cd\"><td style=\"padding:8px\"><strong>New login</strong></td><td style=\"padding:8px\">' + $json.body.newCountry + ' — ' + $json.body.newIp + '<br>' + $json.body.newLoginAt + '</td></tr></table><br><p>All other active sessions for this user have been revoked automatically.</p><a href=\"' + $json.body.adminProfileUrl + '\" style=\"background:#cc0000;color:#fff;padding:10px 20px;text-decoration:none\">View User Account</a>' }) }}"
+          }]
+        }
+      },
+      "position": [400, -100]
+    },
+    {
+      "name": "Email: Warn Affected Admin",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer {{$env.RESEND_API_KEY}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={{ JSON.stringify({ from: $env.FROM_EMAIL, to: $json.body.userEmail, subject: '⚠️ Security Alert: New login from ' + $json.body.newCountry + ' detected on your account', html: '<h2>Security Alert</h2><p>Hi ' + $json.body.userName + ',</p><p>We detected a login to your PrintHub Admin account from a new location:</p><ul><li><strong>Location:</strong> ' + $json.body.newCountry + ' (' + $json.body.newIp + ')</li><li><strong>Time:</strong> ' + $json.body.newLoginAt + '</li></ul><p>Your other active sessions have been ended as a precaution.</p><p>If this was you, simply log in again at <a href=\"https://admin.printhub.africa\">admin.printhub.africa</a>.</p><p>If this was NOT you, your account may be compromised. Contact your system administrator immediately.</p>' }) }}"
+          }]
+        }
+      },
+      "position": [400, 0]
+    },
+    {
+      "name": "SMS: Alert SUPER_ADMIN",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.africastalking.com/version1/messaging",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apiKey", "value": "={{$env.AT_API_KEY}}" },
+            { "name": "Content-Type", "value": "application/x-www-form-urlencoded" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            { "name": "username", "value": "={{$env.AT_USERNAME}}" },
+            { "name": "to", "value": "={{$env.STAFF_WHATSAPP_NUMBER}}" },
+            { "name": "message", "value": "=SECURITY ALERT: Impossible travel detected for {{$json.body.userName}}. Previous: {{$json.body.previousCountry}}. New: {{$json.body.newCountry}}. All sessions revoked. Check admin portal immediately." },
+            { "name": "from", "value": "={{$env.AT_SENDER_ID}}" }
+          ]
+        }
+      },
+      "position": [400, 100]
+    },
+    {
+      "name": "Slack: Security Channel",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.SLACK_WEBHOOK_URL}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Content-Type", "value": "application/json" }]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={{ JSON.stringify({ text: ':warning: *Impossible Travel Alert*\\n*User:* ' + $json.body.userName + '\\n*Previous:* ' + $json.body.previousCountry + ' (' + $json.body.previousIp + ')\\n*New:* ' + $json.body.newCountry + ' (' + $json.body.newIp + ')\\n*Action:* All sessions revoked\\n<' + $json.body.adminProfileUrl + '|View User>' }) }}"
+          }]
+        }
+      },
+      "position": [400, 200]
+    },
+    {
+      "name": "AuditLog: Impossible Travel",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "method": "POST",
+        "url": "https://printhub.africa/api/n8n/log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-printhub-signature", "value": "={{$env.N8N_WEBHOOK_SECRET}}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [{
+            "name": "body",
+            "value": "={{ JSON.stringify({ workflowName: 'Impossible Travel', action: 'IMPOSSIBLE_TRAVEL_DETECTED', details: { userId: $json.body.userId, previousCountry: $json.body.previousCountry, newCountry: $json.body.newCountry, previousIp: $json.body.previousIp, newIp: $json.body.newIp } }) }}"
+          }]
+        }
+      },
+      "position": [600, 0]
+    }
+  ],
+  "connections": {
+    "Webhook: Impossible Travel": { "main": [[{ "node": "Verify Signature", "type": "main", "index": 0 }]] },
+    "Verify Signature": { "main": [[{ "node": "Email: Alert SUPER_ADMIN", "type": "main", "index": 0 }, { "node": "Email: Warn Affected Admin", "type": "main", "index": 0 }, { "node": "SMS: Alert SUPER_ADMIN", "type": "main", "index": 0 }, { "node": "Slack: Security Channel", "type": "main", "index": 0 }]] },
+    "Email: Alert SUPER_ADMIN": { "main": [[{ "node": "AuditLog: Impossible Travel", "type": "main", "index": 0 }]] },
+    "Email: Warn Affected Admin": { "main": [[{ "node": "AuditLog: Impossible Travel", "type": "main", "index": 0 }]] },
+    "SMS: Alert SUPER_ADMIN": { "main": [[{ "node": "AuditLog: Impossible Travel", "type": "main", "index": 0 }]] },
+    "Slack: Security Channel": { "main": [[{ "node": "AuditLog: Impossible Travel", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "timezone": "Africa/Nairobi" }
+}
+```
+
+---
+
+# PART 5 — ERROR HANDLING (Add to Priority Workflows)
+
+Add error handling to these workflows in priority order.
+For each HTTP Request node, set "On Error" to continue
+and add an error output connection to an error handler node.
+
+**Standard error handler node to add to every workflow:**
+```json
+{
+  "name": "Error Handler",
+  "type": "n8n-nodes-base.httpRequest",
+  "parameters": {
+    "method": "POST",
+    "url": "https://printhub.africa/api/n8n/log-error",
+    "sendHeaders": true,
+    "headerParameters": {
+      "parameters": [
+        { "name": "x-printhub-signature", "value": "={{$env.N8N_WEBHOOK_SECRET}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ]
+    },
+    "sendBody": true,
+    "bodyParameters": {
+      "parameters": [{
+        "name": "body",
+        "value": "={{ JSON.stringify({ workflowName: $workflow.name, errorMessage: $json.message || 'Unknown error', node: $json.node || 'Unknown node', executionId: $execution.id }) }}"
+      }]
+    }
+  }
+}
+```
+
+**Add this error handler to these workflows first:**
+1. AI-2 WhatsApp Auto-Reply
+2. Order Confirmation (Workflow 1)
+3. AI-8 Lifestyle Mockups (critical — DALL-E URLs expire)
+4. AI-9 Video Generation
+5. Security Alert (Workflow 5)
+6. All new workflows from Part 4
+
+---
+
+# PART 6 — DELIVERABLES
+
+Produce all of these. Do not skip any.
+
+## 6.1 — Updated .env File
+Complete corrected .env file with:
+- All existing values preserved
+- All fixes from Section 1.1 applied
+- All new variables from Section 1.2 added
+- Clear section labels and comments
+
+## 6.2 — Updated Workflow JSON Files
+Three updated JSON files ready to import into n8n:
+
+**printhub_base_workflows.json** — updated to include:
+- Stub workflows removed (8 deletions)
+- Workflow 14: Payment Failed (new)
+- Workflow 15: Corporate Application (new)
+- Workflow 16: Impossible Travel (new)
+- AI-12 SMS Broadcast removed (moved to cron file)
+- AI-13 SEO Engine removed (moved to cron file)
+
+**printhub_ai_workflows.json** — updated to include:
+- AI-7 renamed from Unnamed and completed (3 new nodes)
+- Webhook path fixes applied to AI-2, AI-3, AI-4, AI-6
+- Error handler nodes added to AI-2 and AI-8
+
+**printhub_cron_workflows.json** — updated to include:
+- AI-12 SMS Broadcast (moved from base, rebuilt)
+- AI-13 SEO Content Engine (moved from base, rebuilt)
+- Cron AI-1 Daily Sentiment Report (moved from AI file)
+- Daily Low Stock Check fixed (filter + trigger nodes added)
+- Daily Social Feed Sync fixed (HTTP request node added)
+
+## 6.3 — lib/n8n.ts Update
+Confirm or update these function paths:
+```typescript
+generateAdCopy: (p) => triggerN8nWorkflow('generate-ad-copy', p),
+generateProductDescription: (p) =>
+  triggerN8nWorkflow('generate-product-description', p),
+sentimentAnalysis: (p) => triggerN8nWorkflow('sentiment-analysis', p),
+generateSeoContent: (p) => triggerN8nWorkflow('generate-seo-content', p),
+```
+
+## 6.4 — Post-Import Checklist
+Produce a checklist specifically for after importing the new files:
+
+- [ ] Delete 8 stub workflows (list them by name)
+- [ ] Activate all 37 workflows
+- [ ] Verify all webhook nodes are in Production mode
+- [ ] Fix any credential assignments on new workflows
+- [ ] Test Payment Failed: POST to /webhook/payment-failed
+      with test payload, verify WhatsApp + email received
+- [ ] Test Corporate Application: POST to /webhook/corporate-application
+      verify customer email + admin alert received
+- [ ] Test Impossible Travel: POST to /webhook/impossible-travel
+      verify SUPER_ADMIN gets email + SMS
+- [ ] Test AI-12 SMS: trigger manually, verify approval email
+      with 3 variations, all under 160 chars
+- [ ] Test AI-13 SEO: trigger manually, verify blog draft
+      created in admin, Medium cross-post published
+- [ ] Verify no duplicate webhook paths exist (n8n will show
+      a warning if two active workflows share a path)
+
+---
+
+# CRITICAL CONSTRAINTS
+
+1. Never remove or modify working workflows that are not
+   listed in this prompt as needing changes.
+2. All new workflows set active: false — admin activates
+   manually after reviewing.
+3. Blog posts NEVER auto-publish — always status DRAFT.
+4. SMS variations hard-rejected if over 160 characters.
+5. canonicalUrl on Medium always points to printhub.africa.
+6. All webhook nodes must be in Production mode after activation.
+7. DALL-E R2 upload must have zero Wait nodes before it.
+8. All new workflows use Africa/Nairobi timezone in settings.
+9. British English in all AI prompts and email content.
+10. PRINTHUB_INTERNAL_SECRET and COMBINE_SECRET must be
+    the same value — generate once and use everywhere.

@@ -1,0 +1,201 @@
+{
+  "name": "AI-12 — SMS Weekly Broadcast",
+  "nodes": [
+    {
+      "name": "Schedule: Sunday 7PM EAT",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 19 * * 0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Fetch Top Deals",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        320,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "https://printhub.africa/api/n8n/get-weekly-deals",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GPT-4o: Format SMS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        540,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.OPENAI_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "body",
+              "value": "={{ JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: 'You are a marketing specialist for PrintHub Africa. Write a single SMS (max 160 chars) highlighting these deals. Use professional marketing tone.' }, { role: 'user', content: 'Deals: ' + JSON.stringify($json) }] }) }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Africa's Talking: Send Broadcast",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        760,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.africastalking.com/version1/messaging",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apiKey",
+              "value": "={{$env.AT_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "username",
+              "value": "={{$env.AT_USERNAME}}"
+            },
+            {
+              "name": "to",
+              "value": "={{$env.MARKETING_SMS_LIST}}"
+            },
+            {
+              "name": "message",
+              "value": "={{$json.choices[0].message.content}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "AuditLog: SMS Broadcast",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        980,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://printhub.africa/api/n8n/log",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "WEEKLY_SMS_BROADCAST"
+            },
+            {
+              "name": "details",
+              "value": "Broadcast sent to marketing list"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule: Sunday 7PM EAT": {
+      "main": [
+        [
+          {
+            "node": "Fetch Top Deals",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Top Deals": {
+      "main": [
+        [
+          {
+            "node": "GPT-4o: Format SMS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o: Format SMS": {
+      "main": [
+        [
+          {
+            "node": "Africa's Talking: Send Broadcast",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Africa's Talking: Send Broadcast": {
+      "main": [
+        [
+          {
+            "node": "AuditLog: SMS Broadcast",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

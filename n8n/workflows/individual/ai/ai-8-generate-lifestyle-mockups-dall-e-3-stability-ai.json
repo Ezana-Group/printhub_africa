@@ -214,6 +214,41 @@
         1740,
         400
       ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://printhub.africa/api/n8n/log-error",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "body",
+              "value": "={{ JSON.stringify({ workflowName: 'AI-8 Lifestyle Mockups', errorMessage: $json.message || 'Unknown error', node: $json.node || 'Unknown node', executionId: $execution.id }) }}"
+            }
+          ]
+        }
+      },
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1740,
+        600
+      ]
     }
   ],
   "connections": {
@@ -329,6 +364,15 @@
             "index": 0
           }
         ]
+      ],
+      "error": [
+        [
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Save Mockup URLs to DB": {
@@ -336,6 +380,15 @@
         [
           {
             "node": "Email Admin: Mockups Ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "error": [
+        [
+          {
+            "node": "Error Handler",
             "type": "main",
             "index": 0
           }

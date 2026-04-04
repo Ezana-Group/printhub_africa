@@ -4,7 +4,7 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "ai-generate-social",
+        "path": "generate-social-posts",
         "options": {
           "rawBody": true
         }
@@ -16,7 +16,7 @@
         200,
         300
       ],
-      "webhookId": "ai-generate-social"
+      "webhookId": "generate-social-posts"
     },
     {
       "parameters": {
