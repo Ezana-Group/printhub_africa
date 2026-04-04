@@ -157,12 +157,18 @@ export function SecuritySettingsClient() {
   }
 
   const {
-    passwordPolicy = { minLength: 8, requireUppercase: true, requireNumbers: true, requireSpecialChars: false, passwordExpiry: "Never", preventReuseOf: 5 },
+    passwordPolicy = { minLength: 12, requireUppercase: true, requireNumbers: true, requireSpecialChars: true, passwordExpiry: "Never", preventReuseOf: 5 },
     twoFactorPolicy = { superAdmin: "Enforced", admin: "Enforced", staff: "Recommended", customer: "Optional" },
     sessionSettings = { adminTimeoutHours: 4, customerTimeoutDays: 30, concurrentAdminMax: 3 },
     ipAllowlist = { enabled: false, ips: [] },
     rateLimitSettings = { loginMaxAttempts: 5, loginLockoutMinutes: 15, apiLimitPerMinute: 100, checkoutLimitPer10Min: 10, restrictMpesaIps: false },
-  } = settings || {};
+  } = {
+    passwordPolicy: settings?.passwordPolicy ?? undefined,
+    twoFactorPolicy: settings?.twoFactorPolicy ?? undefined,
+    sessionSettings: settings?.sessionSettings ?? undefined,
+    ipAllowlist: settings?.ipAllowlist ?? undefined,
+    rateLimitSettings: settings?.rateLimitSettings ?? undefined,
+  };
 
   return (
     <div className="space-y-6">

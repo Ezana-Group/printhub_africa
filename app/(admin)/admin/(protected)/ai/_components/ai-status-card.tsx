@@ -76,7 +76,7 @@ function ServiceCard({ serviceKey }: { serviceKey: string }) {
         </div>
         {data && (
           <span className="text-xs text-muted-foreground font-mono">
-            ${data.monthlyStats.totalCostUsd.toFixed(2)}/mo
+            ${(data.monthlyStats?.totalCostUsd ?? 0).toFixed(2)}/mo
           </span>
         )}
       </div>
@@ -85,11 +85,11 @@ function ServiceCard({ serviceKey }: { serviceKey: string }) {
         <div className="grid grid-cols-3 gap-2 text-center">
           <div>
             <p className="text-xs text-muted-foreground">Calls</p>
-            <p className="text-sm font-semibold">{data.monthlyStats.totalCalls}</p>
+            <p className="text-sm font-semibold">{data.monthlyStats?.totalCalls ?? 0}</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Success</p>
-            <p className="text-sm font-semibold">{data.monthlyStats.successRate}%</p>
+            <p className="text-sm font-semibold">{data.monthlyStats?.successRate ?? 0}%</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Failures</p>
