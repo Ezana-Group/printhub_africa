@@ -3,7 +3,7 @@
 **Product:** PrintHub — Large-format printing & 3D printing for Nairobi and Kenya  
 **Company:** Ezana Group  
 **Repository:** Printhub_Africa_ProdV1  
-**Last updated:** March 21, 2026
+**Last updated:** April 4, 2026
 
 ---
 
@@ -32,10 +32,13 @@ PrintHub is a **full-stack e-commerce and print-services platform** for:
 
 ### Architecture Summary
 
-- **Single application:** Next.js 15 (App Router) monorepo — one codebase for web frontend and API (no separate mobile app).
-- **Backend:** Next.js API Routes (running on Railway).
-- **Database:** PostgreSQL via Prisma ORM (Neon in production).
-- **Deployment:** Railway-oriented; local Docker for database and optional ERPNext.
+- **Split-domain Application:** Next.js 15 (App Router) monorepo serving two distinct user experiences:
+  - **Main Storefront (`CUSTOMER`):** Customer-facing Shop, Services, Account, and B2B portal.
+  - **Admin Portal (`STAFF/ADMIN`):** Hardened internal control centre with restricted access, hosted on a separate `admin.*` subdomain.
+- **Backend:** Next.js API Routes (running on Railway) with split authentication middleware for customers and staff.
+- **Database:** PostgreSQL via Prisma ORM (Neon in production; Railway Redis for rate-limiting).
+- **Automation:** Comprehensive n8n infrastructure for marketing, security, and AI-powered operations (34 workflows).
+- **Deployment:** Multi-service Railway architecture: `web`, `n8n`, and `ffmpeg-service`.
 
 ### High-Level Architecture Diagram
 
@@ -110,21 +113,21 @@ flowchart TB
 | **State** | Zustand (cart, checkout) |
 | **Backend** | Next.js API Routes (Railway) |
 | **ORM / DB** | Prisma 7, PostgreSQL (Neon) |
-| **Auth** | NextAuth.js 4 (JWT, Prisma adapter) |
+| **Auth** | NextAuth.js 4 (**Split Strategy**: `auth-customer.ts` + `auth-admin.ts`) |
+| **Security** | Upstash Redis (Rate-limiting), Geographic IP Detection, Impossible Travel Checks |
 | **Payments** | M-Pesa (Daraja), Pesapal, Flutterwave, Stripe |
 | **File storage** | Cloudflare R2 (S3-compatible); fallback AWS S3 |
 | **Email** | Resend |
 | **SMS** | Africa's Talking (2FA, notifications) |
 | **PDF** | @react-pdf/renderer (invoices, quote PDFs) |
-| **AI / ML** | OpenAI (GPT-4o Vision), Anthropic (Claude 3.5 Sonnet) |
-| **Multimedia** | FFmpeg (Sidecar service for n8n) |
+| **AI / ML** | OpenAI (GPT-4o Vision), Anthropic (Claude 3.5), Gemini (Flash), StabilityAI (Mockups), ElevenLabs (Vocal) |
+| **Multimedia** | FFmpeg (Sidecar service for n8n; audio/video automation) |
 | **Search** | Algolia (Optional) |
-| **Analytics / monitoring** | Railway monitoring, Sentry; Meta Pixel, TikTok Pixel, GTM, GA4, X, Snapchat |
-| **Automation** | **n8n** (Self-hosted on Railway) |
-| **Marketing Automation** | Klaviyo (Email), WhatsApp Business Cloud API, Meta CAPI |
-| **Live chat (optional)** | Tawk.to |
-| **Content (optional)** | Sanity (env vars) |
-| **External ERP** | ERPNext (Docker; finance, inventory, HR) |
+| **Monitoring** | Sentry (Full-stack), Railway Metrics |
+| **Automation** | **n8n** (Self-hosted on Railway - 34 production-ready workflows) |
+| **Marketing** | Klaviyo (Email), WhatsApp Cloud API, Meta/TikTok CAPI |
+| **Inventory** | Handled in-database with ERPNext sync scripts |
+| **External ERP** | ERPNext (Optional/Docker; finance, inventory) |
 
 ---
 
@@ -180,9 +183,12 @@ Printhub_Africa_ProdV1/
 │   └── ...
 ├── lib/                    # Core services and utilities
 │   ├── prisma.ts
-│   ├── auth.ts             # NextAuth config
+│   ├── auth-customer.ts, auth-admin.ts # Split auth strategy
+│   ├── geo-detection.ts, impossible-travel.ts # Security layers
+│   ├── rate-limit.ts, rate-limit-wrapper.ts
 │   ├── email.ts, sms.ts
 │   ├── s3.ts, r2.ts
+│   ├── n8n.ts, n8n-verify.ts   # n8n Integration & Security
 │   ├── mpesa.ts, pesapal.ts, stripe/
 │   ├── cart-calculations.ts, order-utils.ts, tracking.ts, production-queue.ts
 │   ├── marketing/          # event-tracker.ts (client), conversions-api.ts (CAPI), klaviyo.ts, whatsapp.ts
@@ -194,7 +200,10 @@ Printhub_Africa_ProdV1/
 ├── hooks/                  # e.g. useLFRates
 ├── store/                  # Zustand: checkout-store, cart
 ├── n8n/                    # Automation infrastructure
-│   ├── workflows/          # JSON exports of core n8n flows
+│   ├── workflows/          # JSON groups (Base, AI, Cron)
+│   │   ├── printhub_base_workflows.json
+│   │   ├── printhub_ai_workflows.json
+│   │   └── printhub_cron_workflows.json
 │   ├── ffmpeg-service/     # Sidecar for media processing
 │   ├── railway.toml        # n8n-specific deployment config
 │   └── .env.example
@@ -279,7 +288,9 @@ erDiagram
 |-------|-------------|---------------|
 | **User** | Core user: customer, staff, admin. Fields: name, **displayName**, email, **phone**, passwordHash, **role** (CUSTOMER, STAFF, ADMIN, SUPER_ADMIN), 2FA, **loyaltyPoints**, **smsMarketingOptIn**, **marketingConsent**, **isAnonymised**. | → Account[], Session[], Address[], Order[], Quote[], Staff?, CorporateAccount? (primary contact), CorporateTeamMember[], SupportTicket[], AuditLog[], SavedAddress[], SavedMpesaNumber[], SavedCard[], LoyaltyAccount?, UserPermission[] |
 | **Account** | OAuth/linked accounts (NextAuth). | → User |
-| **Session** | NextAuth session. | → User |
+| **Session** | NextAuth customer session. | → User |
+| **AdminSession** | Hardened staff session with IP, UserAgent, and **Geo-location** (City/Country) tracking. | → User |
+| **KnownAdminDevice** | Trusted device fingerprints for multi-factor admin security. | → User |
 | **VerificationToken** | Email verification / magic link tokens. | — |
 | **Address** | User address (label, street, city, county, etc.). | → User |
 
@@ -288,9 +299,11 @@ erDiagram
 | Model | Description | Key Relations |
 |-------|-------------|---------------|
 | **Category** | Tree (parentId), slug, sortOrder, isActive. | → Category[] (children), Product[] |
-| **Product** | name, slug, categoryId, **productType**, basePrice, comparePrice, costPrice, sku, stock, images, **27 Social Platform Export Flags** (exportToGoogle, Meta, TikTok, etc.), **AI Content Flags** (aiDescriptionGenerated, aiGeneratedAt). | → Category, ProductVariant[], ProductImage[], ProductReview[], OrderItem[], Wishlist[], Inventory[], CatalogueImportQueue?, AdCopyVariation[] |
+| **Product** | name, slug, categoryId, **productType**, basePrice, comparePrice, costPrice, sku, stock, images, **27 Social Platform Export Flags** (Google, Meta, TikTok, LinkedIn, Pinterest, X, Snapchat, Youtube, etc.), **AI Content Flags** (aiDescriptionGenerated, aiGeneratedAt). | → Category, ProductVariant[], ProductImage[], ProductReview[], OrderItem[], Wishlist[], Inventory[], CatalogueImportQueue?, AdCopyVariation[], ProductMockup[], ProductVideo[] |
 | **ProductVariant** | name, sku, price, stock, attributes (JSON). | → Product, OrderItem[], Inventory[] |
 | **ProductImage** | url, storageKey, altText, sortOrder, isPrimary. | → Product |
+| **ProductMockup** | AI-generated lifestyle images (DALL-E 3 / Stability AI). | → Product |
+| **ProductVideo** | AI-generated marketing videos for social platforms. | → Product |
 | **ProductReview** | rating, title, body, isVerified, isApproved. | → Product, User |
 | **Wishlist** | User–Product link. | → User, Product |
 
@@ -405,8 +418,8 @@ erDiagram
 | **Notification**, **UserNotificationPrefs** | In-app notifications and preferences. | → User |
 | **SupportTicket**, **TicketMessage** | Customer support. | → User |
 | **FaqCategory**, **Faq** | FAQ. | — |
-| **LegalPage**, **LegalPageHistory** | Legal content and history. | — |
-| **CatalogueCategory**, **CatalogueDesigner**, **CatalogueItem**, **CatalogueItemPhoto**, **CatalogueItemMaterial**, **CatalogueImportQueue** | POD catalogue. | — |
+| **BlogPost** | AI-generated SEO articles with Medium/LinkedIn sync. | — |
+| **SmsBroadcast** | Bulk marketing SMS campaigns with product tracking. | — |
 | **CatalogueImportQueue** | Metadata for AI-based catalogue ingestion (source URL, AI analysis status, recommended categories). | → Product?, CatalogueItem? |
 | **ExternalModel** | Reference to external 3D models (Printables/Thingiverse) used for POD. | → Product?, Category? |
 | **JobListing**, **JobApplication** | Careers. | JobListing → JobApplication[] |
@@ -424,30 +437,21 @@ All API routes live under `app/api/`. Protection is enforced by **middleware** a
 
 | Prefix | Purpose | Auth |
 |--------|---------|------|
-| **/api/auth/** | register, verify-email, resend-verification, forgot-password, send-2fa-code, validate-login, magic (POST link) | Public / session |
-| **/api/account/** | profile, settings (addresses, avatar, payment-methods, loyalty, referral, notifications, security, corporate), quotes, support/tickets, uploads, data/export, data/delete, refunds | Session required |
-| **/api/user/** | **complete-profile** (POST), **verify-email** (demo, resend, change) | Session required |
-| **/api/checkout/** | cart (PATCH), payment-methods (GET) | Optional session |
-| **/api/orders/** | POST create, GET list; [id]: confirmation, invoice, payment-status | Session for list; order access for [id] |
-| **/api/payments/** | mpesa (stkpush, callback, b2c-callback, status), pesapal (initiate, callback), flutterwave (initiate), stripe (create-intent), manual (POST), pickup (confirm) | Mixed (callbacks public with validation) |
-| **/api/admin/** | Full admin: orders, quotes, deliveries, production-queue, refunds, products, categories, reviews, customers, finance, inventory, catalogue, coupons, staff, corporate, careers, support, content, settings, reports | STAFF/ADMIN/SUPER_ADMIN + permission checks |
-| **/api/admin/channels** | View status of marketing feeds and pixel configurations | STAFF/ADMIN roles |
-| **/api/admin/stats** | Dashboard statistics and analytical summaries | STAFF/ADMIN roles |
-| **/api/admin/catalogue/[id]/stl** | POST/DELETE STL files for catalogue items | catalogue_edit |
-| **/api/admin/inventory/hardware** | Assets, maintenance, hardware items for calculator | inventory_edit |
-| **/api/admin/3d-consumables** | Filament, resin, and other 3D printer supplies | inventory_edit |
-| **/api/admin/machines** | Machine types and hourly rates for 3D printing | settings_manage |
-| **/api/admin/ai/generate-description** | Trigger AI description generation for products | products_edit |
-| **/api/admin/catalogue/import** | Trigger AI scraping and analysis for new models | catalogue_edit |
-| **/api/quotes/** | GET/POST quotes, upload, [id] GET/PATCH, [id]/pdf | Session for create/list; access by resource |
-| **/api/quote/** | submit (contact-style), materials | Public / session |
-| **/api/upload/** | presign (POST), confirm (POST), [id]/download | Session / context |
-| **/api/branding/favicon** | Dynamic favicon with fallback and database caching | Public |
-| **/api/invoices/[id]** | download, send | Order/invoice access |
-| **/api/shipping/** | fee, pickup-locations, courier-locations | Public / session |
+| **/api/auth/customer/** | CUSTOMER login, register, OAuth, magic link, verify-email. Uses `printhub.customer.session`. | Public / Session |
+| **/api/auth/admin/** | STAFF/ADMIN login, 2FA, 2FA-verify. Uses `printhub.admin.session`. No OAuth. | Public / Admin Session |
+| **/api/n8n/** | **Inbound Automation**: Save AdCopy, update descriptions, upload mockups, save video, log audit events, etc. | HMAC Signature required |
+| **/api/account/** | profile, settings, addresses, payment-methods, loyalty, support, corporate, refunds | Customer Session |
+| **/api/user/** | complete-profile, verify-email (demo/resend) | Customer Session |
+| **/api/checkout/** | cart, payment-methods | Optional session |
+| **/api/orders/** | create, list, status, invoice | Session/Access |
+| **/api/payments/** | mpesa, pesapal, flutterwave, stripe (STK, callbacks, IPNs) | Mixed (Callbacks: public+verify) |
+| **/api/admin/** | Full admin: orders, quotes, production, products, finance, inventory, staff, settings | Admin Session + Permissions |
+| **/api/quotes/** | GET/POST quotes, upload, [id] GET/PATCH, PDF | Session/Access |
+| **/api/upload/** | presign, confirm, download | Session / Context |
+| **/api/branding/favicon** | Dynamic favicon with database caching | Public |
+| **/api/shipping/** | fee, pickup-locations, courier-locations | Public |
 | **/api/calculator/** | rates (large-format, 3d-print) | Public |
-| **/api/finance/calculator-config** | Config for calculator | Admin / public depending on route |
-| **/api/catalogue/** | list, categories, featured, [slug] | Public allowed |
+| **/api/catalogue/** | list, categories, featured, [slug] | Public |
 | **/api/corporate/** | apply, application/status, account/checkout | apply public; rest session + corporate |
 | **/api/careers/** | list, [slug] GET, [slug]/apply POST | Public |
 | **/api/contact** | POST (SupportTicket + email) | Public |
@@ -470,31 +474,36 @@ All API routes live under `app/api/`. Protection is enforced by **middleware** a
 
 ## 6. Authentication & Authorization
 
-### 6.1 Authentication
+### 6.1 Split-Authentication Strategy
 
-- **NextAuth.js 4** with **JWT** strategy; **Prisma adapter** for Account, Session, User.
-- **Providers:** Credentials (email/password), Google, Facebook, Apple, **Email (Magic Link via Resend)**.
-- **Onboarding & Completion:**
-  - **Profile Completion Gate:** Mandatory interceptor modal for users missing `name` or `phone` (common for social sign-ins).
-  - **Email Verification System:** Mandatory for `CUSTOMER` role. Enforced via a persistent warning banner and profile field locking until `emailVerified` is set.
-  - **Verification Bypass:** Users with `STAFF`, `ADMIN`, or `SUPER_ADMIN` roles bypass verification requirements for immediate platform access.
-- **Credentials:** bcrypt password check; optional 2FA (TOTP via otplib, or email/SMS one-time code). Lockout after 5 failed attempts (15 min). Staff invite status (INVITE_PENDING/DEACTIVATED) respected.
-- **Session:** 30-day maxAge; JWT includes id, role, permissions (STAFF), isCorporate, corporateId, corporateRole, corporateTier, **emailVerified**, **displayName**, **phone**.
-- **Staff permissions:** Cached in memory (5 min TTL); invalidated when admin changes staff.
+The system uses two isolated NextAuth configurations to decouple customer and administrative access:
 
-### 6.2 Authorization (Roles & Permissions)
+1.  **Customer Auth (`lib/auth-customer.ts`):**
+    *   **Purpose:** Storefront, account management, and B2B portal.
+    *   **Providers:** Credentials, Google, Facebook, Apple, and Email Magic Links.
+    *   *CSRF Domain:* Restricted to the main application domain (`printhub.africa`).
+    *   *Cookie:* `printhub.customer.session`.
 
-- **Roles:** CUSTOMER, STAFF, ADMIN, SUPER_ADMIN.
-- **Middleware:**
-  - `/admin/*`: must be STAFF, ADMIN, or SUPER_ADMIN.
-  - `/account/*`: must be signed in.
-  - `/corporate/*` (except apply/invite): must be signed in and have active corporate membership.
-  - `/api/admin/*`: same admin roles; 401 if not.
-  - `/api/account/*`, `/api/corporate/*`: 401 if no session.
-- **Admin pages:** `requireAdminSection(sectionPath)` (lib/admin-route-guard) → redirect to /login or /admin/access-denied.
-- **Admin API:** `requireAdminApi(context)` (lib/admin-api-guard) with **PermissionKey** (e.g. orders_view, orders_edit, products_view, products_edit, finance_view, finance_edit, inventory_view, inventory_edit, staff_manage, settings_manage). Route–permission map in lib/admin-permissions. ADMIN/SUPER_ADMIN bypass; STAFF checked via hasPermission / hasFinanceAccess.
+2.  **Admin Auth (`lib/auth-admin.ts`):**
+    *   **Purpose:** Hardened administrative access via `admin.printhub.africa` subdomain.
+    *   **Providers:** Credentials only (no social login allowed for staff).
+    *   *Security Features:* 2FA enforcement, device fingerprinting, and session logging in the `AdminSession` table.
+    *   *Cookie:* `printhub.admin.session` (HttpOnly, Secure, SameSite=Strict).
 
-### 6.3 Security
+### 6.2 Security Infrastructure
+
+*   **Subdomain Isolation:** `middleware.ts` enforces that administrative routes are only accessible via the `admin.*` subdomain. Unauthorized access from the main domain results in a 404 or redirect.
+*   **Geographic Security (`lib/geo-detection.ts`):** Every admin login attempt is cross-referenced with `ip-api.com` to capture City and Country.
+*   **Impossible Travel (`lib/impossible-travel.ts`):** Logic to detect logins from geographically distant locations within an impossible timeframe. Triggers automatic session revocation and `SUPER_ADMIN` alerts via n8n.
+*   **Rate Limiting (`lib/rate-limit.ts`):** Enforced via Upstash Redis. Keyed by IP and Action (e.g., login, refunds, bulk updates).
+*   **HMAC Webhook Verification:** All inbound requests from n8n are verified using `lib/n8n-verify.ts`, checking an HMAC-SHA256 signature against the request body and a 5-minute timestamp window.
+
+### 6.3 Authorization (Roles & Permissions)
+
+*   **Roles:** `CUSTOMER`, `STAFF`, `ADMIN`, `SUPER_ADMIN`.
+*   **Granular Permissions:** `STAFF` users are assigned specific `PermissionKey`s (e.g., `orders_edit`, `finance_view`). These are checked via `requireAdminApi` and `requireAdminSection`.
+*   **Session Expansion:** JWTs include `permissions`, `isCorporate`, `corporateId`, and `emailVerified` status to minimize database hits during route resolution.
+*   **Bypass Logic:** `STAFF` and above bypass certain customer-facing restrictions (like email verification gates) for internal efficiency.
 
 - **CSRF-style:** Mutation requests (POST/PUT/PATCH/DELETE) to `/api/*` check `Origin` against allowed origins (request host, NEXT_PUBLIC_APP_URL, NEXTAUTH_URL, localhost).
 - **Cron:** `/api/cron/*` secured with CRON_SECRET.
@@ -537,11 +546,11 @@ All API routes live under `app/api/`. Protection is enforced by **middleware** a
 
 ### 7.4 Catalogue, POD & AI Enrichment
 
-1. **Import/Scrape:** Admin provides a URL (Printables/Thingiverse). `POST /api/admin/catalogue/import` triggers an n8n workflow.
+1. **Import/Scrape:** Admin provides a URL (Printables/Thingiverse). `POST /api/admin/catalogue/import` triggers the **AI-7 Catalogue Import** n8n workflow.
 2. **AI Analysis:** n8n uses **GPT-4o Vision** to analyze images and **Claude 3.5** to parse specifications, generating a structured `CatalogueImportQueue` entry.
 3. **Review:** Admin reviews the AI-generated name, description, and suggested categories in the Admin Portal.
-4. **Approval:** `/api/admin/import/[id]/approve` creates a `Product` with `isActive: true` and saves AI-generated `AdCopyVariations` for social marketing.
-5. **STL Management:** `/api/admin/catalogue/[id]/stl` handles manual upload/replacement of 3D model files (STL, OBJ, 3MF, STEP) for approved items.
+4. **Approval:** `/api/admin/import/[id]/approve` creates a `Product` and triggers **AI-3 Ad Copy Generation** for all **27 Social Platforms**.
+5. **STL Management:** `/api/admin/catalogue/[id]/stl` handles manual upload/replacement of 3D model files for approved items.
 
 ### 7.5 Production & Inventory
 
@@ -563,15 +572,24 @@ All API routes live under `app/api/`. Protection is enforced by **middleware** a
 ### 7.8 Marketing Automation & CAPI (100% Attribution)
 
 1. **Client Events:** `PixelTracker.tsx` tracks `ViewContent`, `AddToCart`, and `InitiateCheckout` on the browser.
-2. **Server Events (CAPI):** On successful payment (`CONFIRMED` status), `lib/marketing/conversions-api.ts` sends a server-side event to Meta and TikTok including hashed user data (email, phone, IP, User Agent).
-3. **Lifecycle:** n8n triggers:
-   - **WhatsApp (3h):** Abandoned cart recovery if checkout not completed.
-   - **WhatsApp (Post-Purchase):** Order confirmation and shipping updates.
-   - **Klaviyo:** Automated email flows for welcome, browse abandonment, and win-back.
+2. **Server Events (CAPI):** On successful payment (`CONFIRMED` status), `lib/marketing/conversions-api.ts` sends a server-side event to Meta and TikTok including hashed user data.
+3. **Lifecycle Automation (n8n):**
+    *   **WhatsApp (3h):** Abandoned cart recovery if checkout not completed.
+    *   **WhatsApp (Post-Purchase):** Order confirmation and shipping updates.
+    *   **Klaviyo:** Automated email flows for welcome, browse abandonment, and win-back.
+    *   **Social Sync:** Bulk export of product feeds to 27 platforms (Google, Meta, TikTok, etc.).
 
-### 7.9 Abandoned Cart (Next.js Cron)
+### 7.9 Security Monitoring & Auditing
+
+1. **Geo-Verification:** Every staff login triggers `lib/geo-detection.ts`.
+2. **Impossible Travel:** `lib/impossible-travel.ts` checks the distance from the last known `AdminSession`.
+3. **Response:** If suspicious, system revokes other sessions and triggers an n8n **Security Alert** to `SUPER_ADMIN`.
+4. **Audit Logging:** Every administrative mutation is recorded in `AuditLog` with `before/after` snapshots.
+
+### 7.10 Abandoned Cart (Next.js Cron)
 
 - **Cron:** GET `/api/cron/abandoned-carts` (CRON_SECRET) → finds carts, sends recovery email (Resend); recoveryEmailSent1At / recoveryEmailSent2At; `/api/unsubscribe/abandoned-cart` for opt-out.
+- **n8n Fallback:** The **Abandoned Cart Detector** cron in n8n serves as a secondary recovery layer via WhatsApp.
 
 
 ---
@@ -582,22 +600,22 @@ All API routes live under `app/api/`. Protection is enforced by **middleware** a
 |--------|--------|--------------|--------|
 | **PostgreSQL** | Primary DB | DATABASE_URL, DIRECT_URL | Prisma; migrations, seed. |
 | **Cloudflare R2** | File storage | R2_* (endpoint, keys, buckets, public URL) | lib/r2.ts, lib/s3.ts; presign/confirm; quote files, product/catalogue images, invoices. |
-| **AWS S3** | Fallback storage | AWS_* | lib/s3.ts when R2 not set. |
+| **Upstash Redis** | Rate limiting / Caching | UPSTASH_REDIS_* | lib/rate-limit.ts; API protection. |
 | **Resend** | Email | RESEND_API_KEY, FROM_EMAIL, FROM_NAME | lib/email.ts: verification, password reset, 2FA, order/quote/ticket/refund/cancel, abandoned cart, invoice. |
 | **Africa's Talking** | SMS | AT_* | lib/sms.ts: 2FA SMS, test SMS. |
-| **M-Pesa (Daraja)** | STK push, B2C refunds | MPESA_* (consumer key/secret, shortcode, passkey, callbacks; B2C initiator/security/queue) | lib/mpesa.ts; /api/payments/mpesa/*. |
+| **M-Pesa (Daraja)** | STK push, B2C refunds | MPESA_* | lib/mpesa.ts; /api/payments/mpesa/*. |
 | **Pesapal** | Card/redirect | PESAPAL_* | lib/pesapal.ts; /api/payments/pesapal/*. |
 | **Flutterwave** | Card/redirect | FLUTTERWAVE_* | /api/payments/flutterwave/initiate. |
-| **Stripe** | Cards, Apple/Google Pay, saved cards | NEXT_PUBLIC_STRIPE_*, STRIPE_*, STRIPE_WEBHOOK_SECRET | /api/payments/stripe/create-intent; BusinessSettings.stripeEnabled. |
-| **Google / Facebook / Apple OAuth** | Social login | GOOGLE_*, FACEBOOK_*, APPLE_* | NextAuth in lib/auth.ts. |
-| **Sentry** | Error tracking | NEXT_PUBLIC_SENTRY_DSN, SENTRY_* | instrumentation.ts. |
-| **OpenAI** | AI Vision (catalogue) | OPENAI_API_KEY | n8n workflows (GPT-4o Vision). |
-| **Anthropic** | AI Specifications (catalogue) | ANTHROPIC_API_KEY | n8n workflows (Claude 3.5). |
-| **Algolia** | Search | NEXT_PUBLIC_ALGOLIA_*, ALGOLIA_* | Optional; Admin → Settings → Integrations. |
-| **Meta** | Advertising & Tracking | NEXT_PUBLIC_META_*, META_ACCESS_TOKEN | PixelTracking.tsx, conversions-api.ts (CAPI). |
-| **TikTok** | Advertising & Tracking | NEXT_PUBLIC_TIKTOK_*, TIKTOK_EVENTS_API_TOKEN | tiktok-pixel, TikTok Events API (CAPI). |
-| **WhatsApp** | Order Updates | WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_ACCESS_TOKEN | Cloud API messaging via n8n/lib. |
-| **FFmpeg** | Media Processing | — | Sidecar service for AI-generated media. |
+| **Stripe** | Cards, Apple/Google Pay | STRIPE_* | /api/payments/stripe/create-intent. |
+| **OpenAI** | AI Vision / GPT-4o | OPENAI_API_KEY | n8n: Catalogue Vision (GPT-4o). |
+| **Anthropic** | AI Parsing / Claude | ANTHROPIC_API_KEY | n8n: Specification Parsing (Claude 3.5). |
+| **Gemini** | Fast AI Analysis | GEMINI_API_KEY | n8n: Fast sentiment & summaries. |
+| **StabilityAI** | Image Generation | STABILITY_API_KEY | n8n: Product mockup generation. |
+| **ElevenLabs** | Voice Synthesis | ELEVENLABS_API_KEY | n8n: Voice notes for WhatsApp auto-reply. |
+| **Meta / TikTok** | Advertising & Tracking (CAPI) | META_*, TIKTOK_* | conversions-api.ts, TikTok Events API. |
+| **WhatsApp** | Order Updates & Marketing | WHATSAPP_* | Cloud API messaging via n8n. |
+| **FFmpeg** | Media Processing Sidecar | — | Express service for video automation. |
+| **Sentry** | Error tracking | SENTRY_* | instrumentation.ts. |
 | **Tawk.to** | Live chat | NEXT_PUBLIC_TAWK_* | Optional; component. |
 | **VirusTotal** | Upload scanning | VIRUSTOTAL_API_KEY | Optional; post-upload. |
 | **ERPNext** | ERP (finance, inventory, HR) | ERPNEXT_* | Docker; scripts erpnext-setup, erpnext-migrate. |
@@ -616,10 +634,11 @@ The platform is deployed as a **multi-service project** on Railway to ensure sca
 
 1. **Next.js App (Service: `web`):**
    - Core storefront, admin portal, and backend API.
+   - **Subdomain Routing:** Enforced by middleware for `admin.*` isolation.
    - Connected to Neon (PostgreSQL) and Cloudflare R2.
 2. **n8n Automation (Service: `n8n`):**
    - Self-hosted n8n instance for all asynchronous and AI-powered workflows.
-   - Connected to the same PostgreSQL (different database/schema) for persistence.
+   - **Isolation:** Uses a dedicated schema/database for n8n internal data to prevent collision with application data.
    - Uses `n8n/railway.toml` for optimized healthchecks and startup.
 3. **FFmpeg Sidecar (Service: `ffmpeg-service`):**
    - Express server providing an API for video/image manipulation.
@@ -637,9 +656,11 @@ The platform is deployed as a **multi-service project** on Railway to ensure sca
 
 ## Related Documentation
 
-- **README.md** — Getting started, scripts, project structure, ERPNext, deploy summary.
-- **docs/DEPLOYMENT.md** — Referenced for full deployment (Vercel, Neon, R2, Resend, M-Pesa, OAuth, migrations, env).
-- **docs/TEST_ACCOUNTS.md** — Referenced for roles and test accounts.
-- **docs/R2_CORS.md** — Referenced for R2 CORS (browser uploads).
+- **README.md** — Getting started, scripts, and project structure.
+- **docs/RAILWAY_SETUP.md** — Detailed instructions for Railway multi-service provisioning.
+- **docs/N8N_INTEGRATION_GUIDE.md** — Guide for managing the 34 automation workflows.
+- **docs/TEST_ACCOUNTS.md** — Roles and test accounts for staging.
+- **docs/R2_CORS.md** — R2 CORS configuration for browser uploads.
+- **Automation Folder/SYSTEM_AUDIT.md** — Complete system remediation and audit status.
 
 *End of System Architecture document.*
