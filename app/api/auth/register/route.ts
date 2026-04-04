@@ -16,6 +16,7 @@ const schema = z
     lastName: z.string().min(1, "Last name is required").max(100),
     acceptTerms: z.literal(true).optional(), 
     marketingConsent: z.boolean().optional().default(false),
+    referralCode: z.string().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Password and confirm password do not match.",
@@ -27,7 +28,8 @@ const REGISTER_WINDOW_MS = 60 * 1000;
 
 export async function POST(req: Request) {
   const ip = getRateLimitClientIp(req) ?? "unknown";
-  if (!(await rateLimit(`register:${ip}`, REGISTER_LIMIT, REGISTER_WINDOW_MS)).ok) {
+  const { success } = await rateLimit(`register:${ip}`, { limit: REGISTER_LIMIT, windowMs: REGISTER_WINDOW_MS });
+  if (!success) {
     return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   }
   try {
@@ -39,7 +41,7 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    const { email, password, firstName, lastName, marketingConsent = false } = parsed.data;
+    const { email, password, firstName, lastName, marketingConsent = false, referralCode } = parsed.data;
 
     // Password Policy Validation
     const policy = await getPasswordPolicy();
@@ -74,6 +76,15 @@ export async function POST(req: Request) {
         marketingConsentAt: marketingConsent ? now : null,
       },
     });
+
+    if (referralCode) {
+      try {
+        const { linkReferrer } = await import("@/lib/referrals");
+        await linkReferrer(user.id, referralCode);
+      } catch (e) {
+        console.error("Link referrer error during registration:", e);
+      }
+    }
 
     const token = generateToken();
     await prisma.verificationToken.upsert({

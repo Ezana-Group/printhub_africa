@@ -20,13 +20,25 @@ export async function GET(req: Request) {
     return NextResponse.json({ products: [] });
   }
 
+  let productIds: string[] = [];
+  try {
+    const searchResults = await prisma.$queryRaw<{ id: string }[]>`
+      SELECT id FROM "Product"
+      WHERE tsv @@ websearch_to_tsquery('english', ${q})
+      AND "isActive" = true
+      ORDER BY ts_rank(tsv, websearch_to_tsquery('english', ${q})) DESC
+      LIMIT 100
+    `;
+    productIds = searchResults.map((r) => r.id);
+  } catch (err) {
+    console.error("Admin FTS error:", err);
+    // Fallback logic could go here, but FTS should be reliable
+  }
+
   const products = await prisma.product.findMany({
     where: {
+      id: { in: productIds.length > 0 ? productIds : ["___none___"] },
       isActive: true,
-      OR: [
-        { name: { contains: q, mode: "insensitive" } },
-        { description: { contains: q, mode: "insensitive" } },
-      ],
     },
     select: {
       id: true,

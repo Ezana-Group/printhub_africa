@@ -112,6 +112,16 @@ async function _POST(req: Request) {
     } catch (e) {
       console.error("Production queue add on M-Pesa callback:", e);
     }
+    try {
+      const { awardLoyaltyPoints } = await import("@/lib/loyalty");
+      await awardLoyaltyPoints(mpesa.payment.orderId);
+      
+      const { awardReferralPoints } = await import("@/lib/referrals");
+      const order = await prisma.order.findUnique({ where: { id: mpesa.payment.orderId }, select: { userId: true } });
+      if (order?.userId) await awardReferralPoints(order.userId, mpesa.payment.orderId);
+    } catch (e) {
+      console.error("Loyalty points award on M-Pesa callback:", e);
+    }
     
     // Trigger marketing and tracking events
     void createTrackingEvent(mpesa.payment.orderId, "CONFIRMED", {

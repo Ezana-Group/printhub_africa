@@ -72,10 +72,56 @@ export async function PATCH(
   if (parsed.data.machineId !== undefined) update.machineId = parsed.data.machineId;
   if (parsed.data.notes !== undefined) update.notes = parsed.data.notes;
 
+  // Fetch current item to see if status is changing to Done
+  const oldItem = await prisma.productionQueue.findUnique({
+    where: { id },
+  });
+
   const item = await prisma.productionQueue.update({
     where: { id },
     data: update,
+    include: { orderItem: { include: { order: true, product: { select: { name: true } } } } }
   });
+
+  // LOGIC: If status changed to DONE, trigger notifications and update machine
+  if (parsed.data.status === "Done" && oldItem?.status !== "Done") {
+    const productName = item.orderItem.product?.name || "Premium Print Item";
+    
+    // 1. Create Order Tracking Event
+    await prisma.orderTrackingEvent.create({
+      data: {
+        orderId: item.orderId,
+        status: "PRODUCED",
+        title: "Production Completed",
+        description: `${productName} has been finished and passed quality check.`,
+        isPublic: true,
+      }
+    });
+
+    // 2. Increment machine hours (if machine was assigned and we have timing)
+    if (item.machineId && item.startedAt && item.completedAt) {
+      const diffHrs = (item.completedAt.getTime() - item.startedAt.getTime()) / (1000 * 60 * 60);
+      if (diffHrs > 0) {
+        await prisma.printerAsset.update({
+          where: { id: item.machineId },
+          data: { hoursUsedTotal: { increment: diffHrs } }
+        }).catch(err => console.error("Failed to update machine hours:", err));
+      }
+    }
+
+    // 3. Trigger n8n Logistics Alert
+    const { n8n } = await import("@/lib/n8n");
+    if (n8n.productionFinished) {
+      n8n.productionFinished({
+        orderId: item.orderId,
+        orderNumber: item.orderItem.order.orderNumber,
+        productName,
+        quantity: item.orderItem.quantity,
+        completedAt: item.completedAt?.toISOString() || new Date().toISOString(),
+      }).catch(err => console.error("n8n productionFinished trigger failed:", err));
+    }
+  }
+
   return NextResponse.json({
     id: item.id,
     status: item.status,

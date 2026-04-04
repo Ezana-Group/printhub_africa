@@ -77,6 +77,16 @@ async function _POST(req: NextRequest) {
         console.error("Stock decrement on PesaPal callback:", e);
       }
 
+      try {
+        const { awardLoyaltyPoints } = await import("@/lib/loyalty");
+        await awardLoyaltyPoints(order.id);
+        
+        const { awardReferralPoints } = await import("@/lib/referrals");
+        if (order.userId) await awardReferralPoints(order.userId, order.id);
+      } catch (e) {
+        console.error("Loyalty points award on PesaPal callback:", e);
+      }
+      
       // Trigger marketing and tracking events
       void createTrackingEvent(order.id, "CONFIRMED", {
         userData: {

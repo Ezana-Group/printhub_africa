@@ -157,6 +157,9 @@ export default function CheckoutPage() {
     paymentTerms: string;
     canUseNetTerms: boolean;
   } | null>(null);
+  const [loyalty, setLoyalty] = useState<{ points: number; tier: string; kesValue: number } | null>(null);
+  const [redeemedPoints, setRedeemedPoints] = useState(0);
+  const [useLoyalty, setUseLoyalty] = useState(false);
 
   const shippingFee =
     delivery.method === "PICKUP"
@@ -175,12 +178,12 @@ export default function CheckoutPage() {
     ? Math.round(baseTotals.subtotalInclVat * (corporate.discountPercent / 100))
     : 0;
   const totals =
-    corporateDiscountKes === 0
+    corporateDiscountKes === 0 && !useLoyalty
       ? baseTotals
       : calculateCartTotals(
           items.map((i) => ({ unitPrice: i.unitPrice, quantity: i.quantity })),
           shippingFee,
-          couponDiscount + corporateDiscountKes
+          couponDiscount + corporateDiscountKes + (useLoyalty ? (loyalty?.kesValue ?? 0) : 0)
         );
 
   useEffect(() => {
@@ -447,7 +450,8 @@ export default function CheckoutPage() {
     deliveryZoneId: !isPickup ? (delivery.deliveryZoneId ?? undefined) : undefined,
     estimatedDelivery: !isPickup && delivery.estimatedDelivery ? delivery.estimatedDelivery : undefined,
     shippingCost: shippingFee,
-    discount: couponDiscount,
+    discount: totals.discountKes,
+    loyaltyPoints: useLoyalty ? loyalty?.points : 0,
   });
 
   const createOrder = async (): Promise<{ id: string; orderNumber: string } | null> => {
@@ -1274,8 +1278,36 @@ export default function CheckoutPage() {
                       onChange={(e) => setTermsAccepted(e.target.checked)}
                       className="rounded border-input"
                     />
-                    <Label htmlFor="terms-step3">I agree to the Terms of Service and Refund Policy *</Label>
+                  <Label htmlFor="terms-step3">I agree to the Terms of Service and Refund Policy *</Label>
                   </div>
+
+                  {loyalty && loyalty.points > 0 && (
+                    <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-primary">
+                          <Smartphone className="h-5 w-5" />
+                          <span className="font-semibold">Loyalty Rewards</span>
+                        </div>
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                          {loyalty.tier}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <p className="text-muted-foreground">Available: <span className="font-medium text-foreground">{loyalty.points} points</span></p>
+                        <p className="text-muted-foreground">Worth: <span className="font-medium text-foreground">{formatPrice(loyalty.kesValue)}</span></p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setUseLoyalty(!useLoyalty)}
+                        className={`w-full py-2 px-4 rounded-lg border-2 transition-all flex items-center justify-between ${useLoyalty ? "border-primary bg-primary text-white" : "border-primary/30 text-primary hover:bg-primary/5"}`}
+                      >
+                        <span className="text-sm font-medium">{useLoyalty ? "Applied to Order" : "Apply Points to Order"}</span>
+                        {useLoyalty ? <Loader2 className="h-4 w-4 animate-spin" /> : <span>-{loyalty.points} pts</span>}
+                      </button>
+                      <p className="text-[10px] text-muted-foreground text-center">Points will be deducted upon successful order placement.</p>
+                    </div>
+                  )}
+
                   <div className="flex gap-2 pt-2">
                     <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
                       ← Back

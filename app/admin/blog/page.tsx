@@ -58,8 +58,13 @@ export default function BlogAdminPage() {
           </h1>
           <p className="text-zinc-400 mt-2 text-lg">Manage AI-generated articles and SEO performance.</p>
         </div>
-        <Button className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-lg shadow-indigo-500/20 px-6 py-6 h-auto text-lg transition-all active:scale-95">
-          <PenSquare className="mr-2 h-5 w-5" /> Write New Post
+        <Button 
+          className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-lg shadow-indigo-500/20 px-6 py-6 h-auto text-lg transition-all active:scale-95"
+          asChild
+        >
+          <Link href="/admin/blog/new">
+            <PenSquare className="mr-2 h-5 w-5" /> Write New Post
+          </Link>
         </Button>
       </div>
 
@@ -156,11 +161,15 @@ export default function BlogAdminPage() {
                 </TableCell>
                 <TableCell className="text-right pr-8">
                   <div className="flex justify-end gap-2">
-                    <Button variant="ghost" size="icon" className="hover:bg-zinc-800 hover:text-white transition-colors">
-                      <Eye className="w-5 h-5" />
+                    <Button variant="ghost" size="icon" className="hover:bg-zinc-800 hover:text-white transition-colors" asChild>
+                      <Link href={`/blog/${post.slug}`} target="_blank">
+                        <Eye className="w-5 h-5" />
+                      </Link>
                     </Button>
-                    <Button variant="ghost" size="icon" className="hover:bg-zinc-800 hover:text-yellow-400 transition-colors">
-                      <PenSquare className="w-5 h-5" />
+                    <Button variant="ghost" size="icon" className="hover:bg-zinc-800 hover:text-yellow-400 transition-colors" asChild>
+                      <Link href={`/admin/blog/${post.id}`}>
+                        <PenSquare className="w-5 h-5" />
+                      </Link>
                     </Button>
                     {post.status === "DRAFT" && (
                       <Button 

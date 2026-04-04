@@ -14,8 +14,8 @@ import { decrementStockForOrder } from "@/lib/stock";
 
 export async function GET(req: NextRequest) {
   const ip = getRateLimitClientIp(req) ?? "unknown";
-  const { ok } = await rateLimit(`pesapal-status:${ip}`, 20, 60 * 1000);
-  if (!ok) {
+  const { success } = await rateLimit(`pesapal-status:${ip}`, { limit: 20, windowMs: 60 * 1000 });
+  if (!success) {
     return NextResponse.json(
       { error: "Too many requests. Try again later." },
       { status: 429 }
@@ -100,6 +100,15 @@ export async function GET(req: NextRequest) {
         await decrementStockForOrder(order.id);
       } catch (e) {
         console.error("Stock decrement on PesaPal status:", e);
+      }
+      try {
+        const { awardLoyaltyPoints } = await import("@/lib/loyalty");
+        await awardLoyaltyPoints(order.id);
+        
+        const { awardReferralPoints } = await import("@/lib/referrals");
+        if (order.userId) await awardReferralPoints(order.userId, order.id);
+      } catch (e) {
+        console.error("Loyalty points award on PesaPal status:", e);
       }
       return NextResponse.json({ status: "CONFIRMED", orderId: order.id });
     }

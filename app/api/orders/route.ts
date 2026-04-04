@@ -42,6 +42,7 @@ const createOrderSchema = z.object({
   corporateId: z.string().optional(),
   isNetTerms: z.boolean().optional(),
   poReference: z.string().max(200).optional(),
+  loyaltyPoints: z.number().min(0).optional(),
 });
 
 export async function POST(req: Request) {
@@ -60,10 +61,37 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
-  const { items, shippingAddress: reqAddress, shippingCost: reqShipping = 0, discount: reqDiscount = 0, notes, pickupLocationId, preferredCourierId, deliveryNotes, deliveryZoneId: reqDeliveryZoneId, estimatedDelivery: reqEstimatedDelivery, cartId: reqCartId, corporateId: reqCorporateId, isNetTerms: reqIsNetTerms, poReference: reqPoReference } = parsed.data;
+  const { 
+    items, 
+    shippingAddress: reqAddress, 
+    shippingCost: reqShipping = 0, 
+    discount: reqDiscount = 0, 
+    notes, 
+    pickupLocationId, 
+    preferredCourierId, 
+    deliveryNotes, 
+    deliveryZoneId: reqDeliveryZoneId, 
+    estimatedDelivery: reqEstimatedDelivery, 
+    cartId: reqCartId, 
+    corporateId: reqCorporateId, 
+    isNetTerms: reqIsNetTerms, 
+    poReference: reqPoReference,
+    loyaltyPoints: reqLoyaltyPoints = 0
+  } = parsed.data;
+
   const isPickup = reqAddress.deliveryMethod?.toLowerCase() === "pickup";
   const isShipping = !isPickup && (reqAddress.deliveryMethod === "Standard" || reqAddress.deliveryMethod === "Express");
   const deliveryMethod = reqAddress.deliveryMethod === "Express" ? "EXPRESS" : "STANDARD";
+
+  let loyaltyDiscountKes = 0;
+  if (reqLoyaltyPoints > 0 && session?.user?.id) {
+    try {
+      const config = await prisma.loyaltySettings.findUnique({ where: { id: "default" } });
+      loyaltyDiscountKes = Math.floor(reqLoyaltyPoints * (config?.kesPerPointRedeemed ?? 1));
+    } catch (e) {
+      console.error("Loyalty config fetch error on order create:", e);
+    }
+  }
 
   let orderCourierId: string | null = null;
   if (preferredCourierId && !isPickup) {
@@ -88,59 +116,37 @@ export async function POST(req: Request) {
     }
   }
 
-  // Re-validate stock before creating order (Inventory when present, else Product/Variant)
+  // Re-validate stock before creating order
   for (const item of items) {
     if (!item.productId) continue;
     const inv = await prisma.inventory.findFirst({
-      where: {
-        productId: item.productId,
-        productVariantId: item.variantId ?? null,
-      },
+      where: { productId: item.productId, productVariantId: item.variantId ?? null },
     });
     if (inv) {
       const available = inv.quantity - inv.reservedQuantity;
       if (item.quantity > available) {
-        return NextResponse.json(
-          { error: `Insufficient stock for one or more items. Maximum available: ${available}.` },
-          { status: 409 }
-        );
+        return NextResponse.json({ error: `Insufficient stock for one or more items. Max: ${available}.` }, { status: 409 });
       }
       continue;
     }
-    let stock: number;
+    let stock = 0;
     if (item.variantId) {
-      const variant = await prisma.productVariant.findUnique({
-        where: { id: item.variantId },
-        select: { stock: true },
-      });
-      if (!variant) {
-        return NextResponse.json({ error: "One or more items are no longer available." }, { status: 400 });
-      }
-      stock = variant.stock;
+      const variant = await prisma.productVariant.findUnique({ where: { id: item.variantId }, select: { stock: true } });
+      stock = variant?.stock ?? 0;
     } else {
-      const product = await prisma.product.findUnique({
-        where: { id: item.productId },
-        select: { stock: true },
-      });
-      if (!product) {
-        return NextResponse.json({ error: "One or more products are no longer available." }, { status: 400 });
-      }
-      stock = product.stock ?? 0;
+      const product = await prisma.product.findUnique({ where: { id: item.productId }, select: { stock: true } });
+      stock = product?.stock ?? 0;
     }
     if (item.quantity > stock) {
-      return NextResponse.json(
-        { error: `Insufficient stock for one or more items. Maximum available: ${stock}.` },
-        { status: 409 }
-      );
+      return NextResponse.json({ error: `Insufficient stock. Max: ${stock}.` }, { status: 409 });
     }
   }
 
-  // Corporate: validate membership and apply discount
+  // Corporate & Loyalty Discounts
   let orderCorporateId: string | null = null;
   let orderIsNetTerms = false;
   let orderPoReference: string | null = null;
-  const orderPlacedBy: string | null = session?.user?.id ?? null;
-  let effectiveDiscount = reqDiscount;
+  let effectiveDiscount = reqDiscount + loyaltyDiscountKes;
 
   if (reqCorporateId && session?.user?.id) {
     const membership = await prisma.corporateTeamMember.findFirst({
@@ -150,7 +156,7 @@ export async function POST(req: Request) {
         isActive: true,
         corporate: { status: "APPROVED" },
       },
-      include: { corporate: { select: { id: true, discountPercent: true, paymentTerms: true } } },
+      include: { corporate: { select: { id: true, discountPercent: true } } },
     });
     if (membership?.corporate) {
       orderCorporateId = membership.corporate.id;
@@ -158,20 +164,15 @@ export async function POST(req: Request) {
       orderPoReference = (reqPoReference?.trim() || null) ?? null;
       const subtotalBeforeCorporate = items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
       const corporateDiscountKes = Math.round(subtotalBeforeCorporate * (membership.corporate.discountPercent / 100));
-      effectiveDiscount = reqDiscount + corporateDiscountKes;
+      effectiveDiscount += corporateDiscountKes;
     }
   }
 
-  // Prices are VAT-inclusive — use same calculation as cart/checkout
   const { subtotalInclVat, vatAmount, total } = calculateCartTotals(
     items.map((i) => ({ unitPrice: i.unitPrice, quantity: i.quantity })),
     reqShipping,
     effectiveDiscount
   );
-  const subtotal = subtotalInclVat;
-  const tax = vatAmount;
-  const shippingCost = reqShipping;
-  const discount = effectiveDiscount;
 
   const hasPOD = items.some((i) => i.catalogueItemId);
   const orderType = hasPOD ? "POD" : "SHOP";
@@ -179,23 +180,15 @@ export async function POST(req: Request) {
   try {
     orderNumber = await ensureUniqueOrderNumber(orderType);
   } catch (e) {
-    console.error("Order number generation error:", e);
-    return NextResponse.json(
-      { error: "Unable to generate order number. Please try again." },
-      { status: 500 }
-    );
+    console.error("Order number error:", e);
+    return NextResponse.json({ error: "Failed to generate order number" }, { status: 500 });
   }
 
   let orderEstimatedDelivery: Date | undefined;
   if (reqEstimatedDelivery) {
-    try {
-      orderEstimatedDelivery = new Date(reqEstimatedDelivery);
-    } catch {
-      // ignore invalid date
-    }
+    try { orderEstimatedDelivery = new Date(reqEstimatedDelivery); } catch {}
   }
 
-  // Resolve delivery zone when shipping (for display and delivery record)
   let orderDeliveryZoneId: string | null = null;
   if (isShipping && reqDeliveryZoneId) {
     const zone = await prisma.deliveryZone.findFirst({ where: { id: reqDeliveryZoneId, isActive: true } });
@@ -210,12 +203,16 @@ export async function POST(req: Request) {
       );
       if (!reserve.ok) throw new Error(reserve.error);
 
-      // Increment soldThisMonth for each product
+      if (reqLoyaltyPoints > 0 && session?.user?.id) {
+        const { redeemLoyaltyPoints } = await import("@/lib/loyalty");
+        const res = await redeemLoyaltyPoints(session.user.id, reqLoyaltyPoints, orderNumber);
+        if (!res.ok) throw new Error(res.error ?? "Loyalty points redemption failed");
+      }
+
       for (const item of items) {
         if (item.productId) {
           await tx.product.update({
             where: { id: item.productId },
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             data: { soldThisMonth: { increment: item.quantity } } as any,
           });
         }
@@ -227,10 +224,10 @@ export async function POST(req: Request) {
           userId: session?.user?.id ?? null,
           status: "PENDING",
           type: orderType,
-          subtotal,
-          tax,
-          shippingCost,
-          discount,
+          subtotal: subtotalInclVat,
+          tax: vatAmount,
+          shippingCost: reqShipping,
+          discount: effectiveDiscount,
           total,
           currency: "KES",
           notes: [notes, deliveryNotes].filter(Boolean).join(" — ") || undefined,
@@ -241,7 +238,7 @@ export async function POST(req: Request) {
           corporateId: orderCorporateId ?? undefined,
           isNetTerms: orderIsNetTerms || undefined,
           poReference: orderPoReference ?? undefined,
-          placedBy: orderPlacedBy ?? undefined,
+          placedBy: session?.user?.id ?? undefined,
           items: {
             create: items.map((i) => ({
               productId: i.productId ?? null,
@@ -252,9 +249,7 @@ export async function POST(req: Request) {
               instructions: i.instructions ?? undefined,
             })),
           },
-          shippingAddress: {
-            create: shippingAddress,
-          },
+          shippingAddress: { create: shippingAddress },
           ...(isShipping && {
             delivery: {
               create: {
@@ -267,87 +262,27 @@ export async function POST(req: Request) {
             },
           }),
         },
-        include: {
-          items: true,
-          shippingAddress: true,
-          delivery: true,
-        },
+        include: { items: true, shippingAddress: true, delivery: true },
       });
     });
 
     await createTrackingEvent(order.id, "PENDING");
 
     if (reqCartId) {
-      try {
-        await prisma.cart.updateMany({
-          where: { id: reqCartId, convertedAt: null },
-          data: { convertedAt: new Date() },
-        });
-      } catch {
-        // non-fatal
-      }
-    }
-
-    // Save shipping address to user's profile (SavedAddress) when logged in and delivery is not pickup
-    const isPickupDelivery = reqAddress.deliveryMethod?.toLowerCase() === "pickup";
-    if (session?.user?.id && !isPickupDelivery && order.shippingAddress) {
-      try {
-        const count = await prisma.savedAddress.count({ where: { userId: session.user.id } });
-        if (count < 5) {
-          const line1 = (order.shippingAddress.street ?? "").trim();
-          const city = (order.shippingAddress.city ?? "").trim();
-          const county = (order.shippingAddress.county ?? "").trim();
-          if (line1 && city && county) {
-            const existing = await prisma.savedAddress.findFirst({
-              where: {
-                userId: session.user.id,
-                line1,
-                city,
-                county,
-              },
-            });
-            if (!existing) {
-              await prisma.savedAddress.create({
-                data: {
-                  userId: session.user.id,
-                  label: "Home",
-                  recipientName: order.shippingAddress.fullName?.trim() || undefined,
-                  phone: order.shippingAddress.phone?.trim() || undefined,
-                  line1,
-                  line2: undefined,
-                  city,
-                  county,
-                  isDefault: count === 0,
-                },
-              });
-            }
-          }
-        }
-      } catch (e) {
-        console.error("Save address to profile:", e);
-        // non-fatal
-      }
+      try { await prisma.cart.updateMany({ where: { id: reqCartId, convertedAt: null }, data: { convertedAt: new Date() } }); } catch {}
     }
 
     return NextResponse.json({ order });
   } catch (e) {
     console.error("Order create error:", e);
-    const msg = e instanceof Error ? e.message : "";
-    if (msg.includes("Insufficient stock")) {
-      return NextResponse.json({ error: msg }, { status: 409 });
-    }
-    return NextResponse.json(
-      { error: "Failed to create order. Please try again." },
-      { status: 500 }
-    );
+    const msg = e instanceof Error ? e.message : "Failed to create order";
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
 
 export async function GET() {
   const session = await getServerSession(authOptionsCustomer);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const orders = await prisma.order.findMany({
       where: { userId: session.user.id },

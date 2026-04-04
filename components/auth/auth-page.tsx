@@ -162,10 +162,17 @@ export function AuthPage({
   const [registerPassword, setRegisterPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
-  const [marketingConsent, setMarketingConsent] = useState(false);
   const [registerLoading, setRegisterLoading] = useState(false);
   const [registerError, setRegisterError] = useState("");
   const [registerSuccess, setRegisterSuccess] = useState(false);
+  const [referralCode, setReferralCode] = useState("");
+  const [marketingConsent, setMarketingConsent] = useState(false);
+
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) setReferralCode(ref);
+  }, [searchParams]);
 
   const passwordsMatch = registerPassword === confirmPassword;
   const confirmPasswordTouched = confirmPassword.length > 0;
@@ -231,6 +238,7 @@ export function AuthPage({
           lastName: lastName.trim(),
           acceptTerms: true,
           marketingConsent,
+          referralCode: referralCode.trim() || undefined,
         }),
       });
       const data = await res.json();
@@ -603,6 +611,24 @@ export function AuthPage({
                         style={{ outline: "none", boxShadow: "0 0 0 0 transparent" }}
                       />
                     </div>
+
+                    <div className="space-y-2">
+                       <Label
+                         htmlFor="referralCode"
+                         className="text-[12px] font-medium tracking-[0.03em] uppercase text-muted-foreground"
+                       >
+                         Referral Code (Optional)
+                       </Label>
+                       <Input
+                         id="referralCode"
+                         type="text"
+                         placeholder="e.g. PRINT-123"
+                         value={referralCode}
+                         onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                         className="h-10 rounded-lg border border-border/70 bg-white text-sm focus-visible:ring-offset-0 focus-visible:ring-[1.5px]"
+                         style={{ outline: "none", boxShadow: "0 0 0 0 transparent" }}
+                       />
+                     </div>
 
                     <div className="space-y-2">
                       <Label

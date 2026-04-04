@@ -112,6 +112,17 @@ export const n8n = {
 
   deliveryStatusChanged: (payload: DeliveryStatusPayload) =>
     triggerN8nWorkflow('delivery-status-changed', payload),
+
+  productionFinished: (payload: ProductionFinishedPayload) =>
+    triggerN8nWorkflow('production-finished', payload),
+}
+
+export interface ProductionFinishedPayload {
+  orderId: string
+  orderNumber: string | null
+  productName: string
+  quantity: number
+  completedAt: string
 }
 
 // ... existing interfaces ...

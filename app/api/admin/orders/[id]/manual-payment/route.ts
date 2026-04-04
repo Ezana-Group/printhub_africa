@@ -63,6 +63,16 @@ export async function POST(
   } catch (e) {
     console.error("Stock decrement on manual-payment:", e);
   }
+  try {
+    const { awardLoyaltyPoints } = await import("@/lib/loyalty");
+    await awardLoyaltyPoints(id);
+    
+    const { awardReferralPoints } = await import("@/lib/referrals");
+    const order = await prisma.order.findUnique({ where: { id }, select: { userId: true } });
+    if (order?.userId) await awardReferralPoints(order.userId, id);
+  } catch (e) {
+    console.error("Loyalty points award on manual-payment:", e);
+  }
 
   return NextResponse.json({ success: true });
 }

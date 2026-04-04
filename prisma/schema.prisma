@@ -48,6 +48,9 @@ model User {
   passwordExpired          Boolean                    @default(false)
   passwordHistory          String[]                   @default([])
   lastLoginIp              String?
+  referredById             String?
+  referredBy               User?                      @relation("UserReferrals", fields: [referredById], references: [id])
+  referrals                User[]                     @relation("UserReferrals")
   accounts                 Account[]
   addresses                Address[]
   adminSessions            AdminSession[]
@@ -1112,6 +1115,9 @@ model CorporateAccount {
   suspendedAt           DateTime?
   suspendedReason       String?
   estimatedMonthlySpend String?
+  logoImageUrl          String?
+  brandGuidelineUrl     String?
+  brandNotes            String?
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   bulkQuotes            BulkQuote[]
@@ -1952,13 +1958,17 @@ model LoyaltySettings {
   tiers             Json?
   updatedAt         DateTime @updatedAt
   enabled           Boolean? @default(true)
-  kesPerPointSpent  Float?
-  pointsPerKesSpent Float?
+  kesPerPointSpent    Float?
+  pointsPerKesSpent   Float?
+  kesPerPointRedeemed Float?   @default(1)
 }
 
 model ReferralSettings {
-  id        String   @id
-  updatedAt DateTime @updatedAt
+  id                  String   @id
+  enabled             Boolean? @default(true)
+  pointsPerReferral   Int?     @default(500)
+  refereeDiscountCode String?  @default("WELCOME10")
+  updatedAt           DateTime @updatedAt
 }
 
 model DiscountSettings {

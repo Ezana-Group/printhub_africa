@@ -60,10 +60,30 @@ export async function GET(req: NextRequest) {
     if (featuredOnly) where.isFeatured = true;
     if (tag) where.tags = { has: tag };
     if (q) {
-      where.OR = [
-        { name: { contains: q, mode: "insensitive" } },
-        { shortDescription: { contains: q, mode: "insensitive" } },
-      ];
+      // Use PostgreSQL Full-text Search for ranking and performance
+      try {
+        const searchResults = await prisma.$queryRaw<{ id: string }[]>`
+          SELECT id FROM "CatalogueItem"
+          WHERE tsv @@ websearch_to_tsquery('english', ${q})
+          AND status = 'LIVE'
+          ORDER BY ts_rank(tsv, websearch_to_tsquery('english', ${q})) DESC
+          LIMIT 1000
+        `;
+        const ids = searchResults.map((r) => r.id);
+        if (ids.length > 0) {
+          (where as any).id = { in: ids };
+        } else {
+          // If no FTS matches, ensure the query returns empty
+          (where as any).id = { in: ["___none___"] };
+        }
+      } catch (err) {
+        console.error("FTS search error:", err);
+        // Fallback to basic search if FTS fails (redundancy)
+        where.OR = [
+          { name: { contains: q, mode: "insensitive" } },
+          { shortDescription: { contains: q, mode: "insensitive" } },
+        ];
+      }
     }
     if (material) {
       where.availableMaterials = { some: { materialCode: material, isAvailable: true } };
