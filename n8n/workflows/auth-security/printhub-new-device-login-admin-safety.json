@@ -4,7 +4,7 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "new-device-login",
+        "path": "new-device-login-v1",
         "options": {
           "rawBody": true
         }
@@ -16,7 +16,7 @@
         0,
         300
       ],
-      "webhookId": "new-device-login"
+      "webhookId": "new-device-login-v1"
     }
   ],
   "connections": {}

@@ -4,7 +4,7 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "quote-submitted",
+        "path": "quote-submitted-v1",
         "options": {
           "rawBody": true
         }
@@ -16,7 +16,7 @@
         0,
         300
       ],
-      "webhookId": "quote-submitted"
+      "webhookId": "quote-submitted-v1"
     }
   ],
   "connections": {}

@@ -5,7 +5,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "order-confirmed",
+          "path": "order-confirmed-legacy",
           "options": {
             "rawBody": true
           }
@@ -17,7 +17,7 @@
           100,
           300
         ],
-        "webhookId": "order-confirmed"
+        "webhookId": "order-confirmed-legacy"
       },
       {
         "parameters": {
@@ -176,7 +176,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "order-status-changed",
+          "path": "order-status-changed-legacy",
           "options": {
             "rawBody": true
           }
@@ -188,7 +188,7 @@
           100,
           300
         ],
-        "webhookId": "order-status-changed"
+        "webhookId": "order-status-changed-legacy"
       },
       {
         "parameters": {
@@ -287,7 +287,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "cart-abandoned",
+          "path": "cart-abandoned-legacy",
           "options": {
             "rawBody": true
           }
@@ -299,7 +299,7 @@
           0,
           300
         ],
-        "webhookId": "cart-abandoned"
+        "webhookId": "cart-abandoned-legacy"
       },
       {
         "parameters": {
@@ -369,7 +369,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "staff-alert",
+          "path": "staff-alert-legacy",
           "options": {
             "rawBody": true
           }
@@ -381,7 +381,7 @@
           0,
           300
         ],
-        "webhookId": "staff-alert"
+        "webhookId": "staff-alert-legacy"
       },
       {
         "parameters": {
@@ -451,7 +451,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "security-alert",
+          "path": "security-alert-legacy",
           "options": {
             "rawBody": true
           }
@@ -463,7 +463,7 @@
           0,
           300
         ],
-        "webhookId": "security-alert"
+        "webhookId": "security-alert-legacy"
       },
       {
         "parameters": {
@@ -509,7 +509,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "low-stock",
+          "path": "low-stock-legacy",
           "options": {
             "rawBody": true
           }
@@ -521,7 +521,7 @@
           0,
           300
         ],
-        "webhookId": "low-stock"
+        "webhookId": "low-stock-legacy"
       },
       {
         "parameters": {
@@ -567,7 +567,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "sync-catalog",
+          "path": "sync-catalog-legacy",
           "options": {
             "rawBody": true
           }
@@ -579,7 +579,7 @@
           0,
           300
         ],
-        "webhookId": "sync-catalog"
+        "webhookId": "sync-catalog-legacy"
       }
     ],
     "connections": {}
@@ -590,7 +590,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "product-updated",
+          "path": "product-updated-legacy",
           "options": {
             "rawBody": true
           }
@@ -602,7 +602,7 @@
           0,
           300
         ],
-        "webhookId": "product-updated"
+        "webhookId": "product-updated-legacy"
       }
     ],
     "connections": {}
@@ -613,7 +613,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "quote-submitted",
+          "path": "quote-submitted-legacy",
           "options": {
             "rawBody": true
           }
@@ -625,7 +625,7 @@
           0,
           300
         ],
-        "webhookId": "quote-submitted"
+        "webhookId": "quote-submitted-legacy"
       }
     ],
     "connections": {}
@@ -636,7 +636,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "quote-ready",
+          "path": "quote-ready-legacy",
           "options": {
             "rawBody": true
           }
@@ -648,7 +648,7 @@
           0,
           300
         ],
-        "webhookId": "quote-ready"
+        "webhookId": "quote-ready-legacy"
       }
     ],
     "connections": {}
@@ -659,7 +659,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "new-device-login",
+          "path": "new-device-login-legacy",
           "options": {
             "rawBody": true
           }
@@ -671,7 +671,7 @@
           0,
           300
         ],
-        "webhookId": "new-device-login"
+        "webhookId": "new-device-login-legacy"
       }
     ],
     "connections": {}
@@ -682,7 +682,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "delivery-update",
+          "path": "delivery-update-legacy",
           "options": {
             "rawBody": true
           }
@@ -694,7 +694,7 @@
           0,
           300
         ],
-        "webhookId": "delivery-update"
+        "webhookId": "delivery-update-legacy"
       }
     ],
     "connections": {}
@@ -705,7 +705,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "payment-failed",
+          "path": "payment-failed-legacy",
           "options": {
             "rawBody": true
           }
@@ -717,7 +717,7 @@
           0,
           300
         ],
-        "webhookId": "payment-failed"
+        "webhookId": "payment-failed-legacy"
       }
     ],
     "connections": {}
@@ -728,7 +728,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "corporate-app",
+          "path": "corporate-app-legacy",
           "options": {
             "rawBody": true
           }
@@ -740,7 +740,7 @@
           0,
           300
         ],
-        "webhookId": "corporate-app"
+        "webhookId": "corporate-app-legacy"
       }
     ],
     "connections": {}
@@ -751,7 +751,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "lead-magnet",
+          "path": "lead-magnet-legacy",
           "options": {
             "rawBody": true
           }
@@ -763,7 +763,7 @@
           0,
           300
         ],
-        "webhookId": "lead-magnet"
+        "webhookId": "lead-magnet-legacy"
       }
     ],
     "connections": {}

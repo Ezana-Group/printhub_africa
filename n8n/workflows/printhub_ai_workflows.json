@@ -5,7 +5,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "enhance-catalogue-import",
+          "path": "enhance-catalogue-import-legacy",
           "options": {
             "rawBody": true
           }
@@ -308,7 +308,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "generate-social-posts",
+          "path": "generate-social-posts-legacy",
           "options": {
             "rawBody": true
           }
@@ -320,7 +320,7 @@
           200,
           300
         ],
-        "webhookId": "generate-social-posts"
+        "webhookId": "generate-social-posts-legacy"
       },
       {
         "parameters": {
@@ -462,7 +462,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "whatsapp-inbound",
+          "path": "whatsapp-inbound-legacy",
           "options": {
             "rawBody": true
           }
@@ -474,7 +474,7 @@
           100,
           300
         ],
-        "webhookId": "whatsapp-inbound"
+        "webhookId": "whatsapp-inbound-legacy"
       },
       {
         "parameters": {
@@ -830,7 +830,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "generate-ad-copy",
+          "path": "generate-ad-copy-legacy",
           "options": {
             "rawBody": true
           }
@@ -842,7 +842,7 @@
           200,
           300
         ],
-        "webhookId": "generate-ad-copy"
+        "webhookId": "generate-ad-copy-legacy"
       },
       {
         "parameters": {
@@ -961,7 +961,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "generate-product-description",
+          "path": "generate-product-description-legacy",
           "options": {
             "rawBody": true
           }
@@ -1096,7 +1096,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "ai-generate-quotedraft",
+          "path": "ai-generate-quotedraft-legacy",
           "options": {
             "rawBody": true
           }
@@ -1108,7 +1108,7 @@
           200,
           300
         ],
-        "webhookId": "ai-generate-quotedraft"
+        "webhookId": "ai-generate-quotedraft-legacy"
       },
       {
         "parameters": {
@@ -1231,7 +1231,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "sentiment-analysis",
+          "path": "sentiment-analysis-legacy",
           "options": {
             "rawBody": true
           }
@@ -1243,7 +1243,7 @@
           200,
           300
         ],
-        "webhookId": "sentiment-analysis"
+        "webhookId": "sentiment-analysis-legacy"
       },
       {
         "parameters": {
@@ -1324,7 +1324,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "generate-mockups",
+          "path": "generate-mockups-legacy",
           "options": {
             "rawBody": true
           }
@@ -1336,7 +1336,7 @@
           200,
           300
         ],
-        "webhookId": "generate-mockups"
+        "webhookId": "generate-mockups-legacy"
       },
       {
         "parameters": {
@@ -1714,7 +1714,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "generate-video",
+          "path": "generate-video-legacy",
           "options": {
             "rawBody": true
           }
@@ -1726,7 +1726,7 @@
           200,
           300
         ],
-        "webhookId": "generate-video"
+        "webhookId": "generate-video-legacy"
       },
       {
         "parameters": {
@@ -2367,7 +2367,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "ai-platform-expansion",
+          "path": "ai-platform-expansion-legacy",
           "options": {
             "rawBody": true
           }
@@ -2379,7 +2379,7 @@
           0,
           500
         ],
-        "webhookId": "ai-platform-expansion"
+        "webhookId": "ai-platform-expansion-legacy"
       },
       {
         "parameters": {

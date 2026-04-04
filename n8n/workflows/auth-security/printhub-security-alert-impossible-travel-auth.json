@@ -4,7 +4,7 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "security-alert",
+        "path": "security-alert-auth-only",
         "options": {
           "rawBody": true
         }
@@ -16,7 +16,7 @@
         0,
         300
       ],
-      "webhookId": "security-alert"
+      "webhookId": "security-alert-auth-only"
     },
     {
       "parameters": {

@@ -4,7 +4,7 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "new-device-login",
+        "path": "new-device-login-v2",
         "options": {
           "rawBody": true
         }

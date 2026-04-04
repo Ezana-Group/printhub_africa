@@ -4,7 +4,7 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "product-updated",
+        "path": "product-updated-v1",
         "options": {
           "rawBody": true
         }
@@ -16,7 +16,7 @@
         0,
         300
       ],
-      "webhookId": "product-updated"
+      "webhookId": "product-updated-v1"
     }
   ],
   "connections": {}
