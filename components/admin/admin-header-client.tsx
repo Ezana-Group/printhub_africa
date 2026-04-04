@@ -33,14 +33,15 @@ export function AdminHeaderClient({
         </Link>
         
         {isAdmin && (
-          <Link 
+          <a 
             href="/api/admin/n8n/sso" 
             target="_blank"
+            rel="noopener noreferrer"
             className="flex items-center gap-1.5 text-sm text-primary hover:text-primary-hover font-medium mr-2"
           >
             <Zap className="h-3.5 w-3.5" />
             Automations
-          </Link>
+          </a>
         )}
 
         <Link href={process.env.NEXT_PUBLIC_APP_URL || "https://printhub.africa"} target="_blank" className="text-sm text-blue-600 hover:underline">
@@ -50,7 +51,10 @@ export function AdminHeaderClient({
           type="button"
           variant="ghost"
           size="sm"
-          onClick={() => signOut({ callbackUrl: "/admin/login", redirect: true })}
+          onClick={async () => {
+            const data = await signOut({ callbackUrl: "/admin/login", redirect: false });
+            window.location.href = data.url || "/admin/login";
+          }}
           className="text-muted-foreground hover:text-foreground"
         >
           <LogOut className="h-4 w-4 mr-1.5" />

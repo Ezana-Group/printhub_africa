@@ -37,7 +37,8 @@ export async function GET(req: NextRequest) {
       N8N_ENCRYPTION_KEY
     );
 
-    const redirectUrl = `${N8N_URL}/sso/jwt?token=${token}&returnUrl=/workflows`;
+    // Redirect to n8n root dashboard (SSO /sso/jwt is not natively supported by n8n community)
+    const redirectUrl = `${N8N_URL}`;
     return NextResponse.redirect(redirectUrl);
   } catch (err) {
     console.error("[n8n-sso] SSO error:", err);

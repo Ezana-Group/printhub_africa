@@ -162,6 +162,28 @@ export function AdminNav({
                   (basePath !== "/admin/dashboard" && pathname.startsWith(basePath + "/"));
                 const showQuotesBadge = item.badge === "quotes" && newQuotesCount > 0;
                 const showApprovalBadge = item.badge === "approval" && pendingApprovalCount > 0;
+                const isExternal = item.href.startsWith("/api/admin/n8n");
+                
+                if (isExternal) {
+                  return (
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                        isActive
+                          ? "bg-primary/10 text-primary font-medium border-l-2 border-primary -ml-px pl-[11px]"
+                          : "hover:bg-muted text-foreground hover:text-primary"
+                      )}
+                    >
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      <span>{item.label}</span>
+                    </a>
+                  );
+                }
+
                 return (
                   <Link
                     key={item.href}

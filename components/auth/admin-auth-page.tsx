@@ -59,7 +59,7 @@ export function AdminAuthPage() {
         toast.success(`Welcome back!`, {
           description: `Last login: ${new Date(lastLoginAt).toLocaleString()} from ${lastLoginIp || 'unknown IP'}`,
         });
-        router.push("/admin");
+        router.push("/admin/dashboard");
       }
     }
   }, [session, router]);
@@ -115,7 +115,7 @@ export function AdminAuthPage() {
         password,
         totpCode,
         redirect: false,
-        callbackUrl: "/admin",
+        callbackUrl: "/admin/dashboard",
       });
 
       if (result?.error) {
@@ -128,7 +128,7 @@ export function AdminAuthPage() {
         setTimeout(() => {
           if (loading) {
             setLoading(false);
-            router.push("/admin");
+            router.push("/admin/dashboard");
           }
         }, 5000);
       } else {

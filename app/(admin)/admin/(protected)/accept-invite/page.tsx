@@ -14,7 +14,7 @@ export default async function AcceptInvitePage({
   try {
 
   const session = await getServerSession(authOptionsAdmin);
-  if (session?.user) redirect("/admin");
+  if (session?.user) redirect("/admin/dashboard");
   const { token, id } = await searchParams;
   if (!token || !id) {
     return (

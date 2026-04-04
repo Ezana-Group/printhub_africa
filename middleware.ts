@@ -69,11 +69,11 @@ export async function middleware(request: NextRequest) {
 
     // Internal Rewrite for admin subdomain: admin.printhub.africa/orders -> /admin/orders
     // Special case: /login -> /admin/login
-    if (host.startsWith('admin.') && !pathname.startsWith("/admin") && !pathname.startsWith("/api")) {
+    if (host.startsWith('admin.') && (!pathname.startsWith("/admin") || pathname === "/admin") && !pathname.startsWith("/api")) {
       const url = request.nextUrl.clone();
       if (pathname === "/login") {
         url.pathname = "/admin/login";
-      } else if (pathname === "/") {
+      } else if (pathname === "/" || pathname === "/admin") {
         url.pathname = "/admin/dashboard";
       } else {
         url.pathname = `/admin${pathname}`;
