@@ -1,0 +1,22 @@
+{
+  "name": "11. PrintHub - Quote Ready (Notification)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "quote-ready",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "name": "Webhook: Quote Ready",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ]
+    }
+  ],
+  "connections": {}
+}

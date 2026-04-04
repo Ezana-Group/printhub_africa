@@ -1,0 +1,107 @@
+{
+  "name": "4. PrintHub - Staff Alert (WhatsApp + Telegram Dispatcher)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "staff-alert",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "name": "Webhook: Staff Alert",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst sig = $node['Webhook: Staff Alert'].json.headers['x-printhub-signature'];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node['Webhook: Staff Alert'].json.body)).digest('hex');\nif (sig !== hmac) throw new Error('Invalid');\nreturn $node['Webhook: Staff Alert'].json.body;"
+      },
+      "name": "Verify Internal Staff Sig",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$env.TELEGRAM_STAFF_GROUP_ID}}",
+        "text": "=🔔 *{{$json.title}}*\n\n{{$json.message}}\n\nUrgency: {{$json.urgency.toUpperCase()}}\nAction: {{$json.actionUrl}}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Telegram: Staff Group",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        540,
+        200
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-staff",
+          "name": "Telegram Staff"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://graph.facebook.com/v19.0/{{$env.WHATSAPP_PHONE_NUMBER_ID}}/messages",
+        "method": "POST",
+        "authentication": "headerAuth",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{$env.STAFF_WHATSAPP_NUMBER}}\", \"type\": \"text\", \"text\": { \"body\": \"🔔 {{$json.title}}\\n\\n{{$json.message}}\\n\\nAction: {{$json.actionUrl}}\" } }"
+      },
+      "name": "WhatsApp: Staff Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        540,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: Staff Alert": {
+      "main": [
+        [
+          {
+            "node": "Verify Internal Staff Sig",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Internal Staff Sig": {
+      "main": [
+        [
+          {
+            "node": "Telegram: Staff Group",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "WhatsApp: Staff Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

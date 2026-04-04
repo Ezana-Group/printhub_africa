@@ -1,0 +1,131 @@
+{
+  "name": "AI-3 — Generate Ad Copy Variations (GPT-4o)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-generate-adcopy",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "name": "Webhook: Generate Ad Copy",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ],
+      "webhookId": "ai-generate-adcopy"
+    },
+    {
+      "parameters": {
+        "url": "https://admin.printhub.africa/api/n8n/get-product-context",
+        "method": "GET",
+        "authentication": "headerAuth",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "qs": [
+          {
+            "name": "productId",
+            "value": "={{ $json.productId }}"
+          }
+        ]
+      },
+      "name": "Get Product Details",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "authentication": "headerAuth",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.OPENAI_API_KEY}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"model\": \"gpt-4o\", \"messages\": [{ \"role\": \"system\", \"content\": \"You are a social media and advertising copywriter for PrintHub Africa...\" }, { \"role\": \"user\", \"content\": \"Generate 3 ad copy variations for {{ $json.name }}. Target: Meta Ads and Google Search. Return JSON array of objects: [{ 'platform': 'meta', 'headline': '...', 'body': '...', 'cta': '...' }]\" }] }"
+      },
+      "name": "GPT-4o: Generate Ad Copy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://admin.printhub.africa/api/n8n/save-ai-content",
+        "method": "POST",
+        "authentication": "headerAuth",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"productId\": \"{{ $node['Get Product Details'].json.id }}\", \"adCopyVariations\": {{ $json.choices[0].message.content }} }"
+      },
+      "name": "Save Ad Variations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        860,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: Generate Ad Copy": {
+      "main": [
+        [
+          {
+            "node": "Get Product Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Product Details": {
+      "main": [
+        [
+          {
+            "node": "GPT-4o: Generate Ad Copy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o: Generate Ad Copy": {
+      "main": [
+        [
+          {
+            "node": "Save Ad Variations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

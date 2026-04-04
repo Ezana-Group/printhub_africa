@@ -1,0 +1,25 @@
+{
+  "name": "3. Cron - Daily Social Feed Sync (6:00 AM EAT)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days"
+            }
+          ],
+          "time": "06:00"
+        }
+      },
+      "name": "Schedule: 6AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ]
+    }
+  ],
+  "connections": {}
+}

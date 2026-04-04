@@ -1,0 +1,339 @@
+{
+  "name": "AI-9 — Generate Video Content (ElevenLabs + Runway ML)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-video",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "name": "Webhook: Generate Video",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ],
+      "webhookId": "generate-video"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst sig = $node['Webhook: Generate Video'].json.headers['x-printhub-signature'];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node['Webhook: Generate Video'].json.body)).digest('hex');\nif (sig !== hmac) throw new Error('Invalid signature');\nreturn $node['Webhook: Generate Video'].json.body;"
+      },
+      "name": "Verify Signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.anthropic.com/v1/messages",
+        "method": "POST",
+        "authentication": "headerAuth",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"model\": \"claude-opus-4-6\", \"max_tokens\": 400, \"system\": \"You are the content and customer service AI for PrintHub Africa, a professional large-format and 3D printing company based in Nairobi, Kenya. Your tone is warm, professional, and expert. You understand the Kenyan market. Prices are always in KES. You never promise specific delivery times unless given them explicitly. You never invent product specs. When writing for customers, be friendly and helpful. When writing social media content, be engaging and locally relevant. Always write in British English (used in Kenya). Never use American spellings.\", \"messages\": [{ \"role\": \"user\", \"content\": \"Write a {{ $json.targetPlatform === 'tiktok' ? '15' : '30' }}-second spoken video script for {{ $json.productName }} on {{ $json.targetPlatform }}. Return JSON: { 'script': 'spoken words only', 'hook': 'first 3 words', 'cta': 'final call to action' }\" }] }"
+      },
+      "name": "Claude: Write Video Script",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        640,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $node['Claude: Write Video Script'].json.content?.[0]?.text || '{}';\nlet parsed;\ntry { parsed = JSON.parse(raw.match(/\\{[\\s\\S]*\\}/)?.[0] || raw); } catch { parsed = { script: raw, hook: '', cta: '' }; }\nreturn [{ ...$node['Verify Signature'].json, script: parsed.script, hook: parsed.hook, cta: parsed.cta }];"
+      },
+      "name": "Extract Script",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        860,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.elevenlabs.io/v1/text-to-speech/{{$env.ELEVENLABS_VOICE_ID}}",
+        "method": "POST",
+        "authentication": "headerAuth",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "xi-api-key",
+              "value": "={{ $env.ELEVENLABS_API_KEY }}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"text\": \"{{ $json.script }}\", \"model_id\": \"eleven_multilingual_v2\", \"voice_settings\": { \"stability\": 0.5, \"similarity_boost\": 0.75, \"style\": 0.3, \"use_speaker_boost\": true } }",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "name": "ElevenLabs: Generate Voiceover",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1080,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.dev.runwayml.com/v1/image_to_video",
+        "method": "POST",
+        "authentication": "headerAuth",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.RUNWAY_API_KEY}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"model\": \"gen3a_turbo\", \"promptImage\": \"{{ $json.mockupImageUrl }}\", \"promptText\": \"Slow cinematic zoom in on the product. Professional product reveal. Smooth camera movement. {{ $json.productName }} in lifestyle setting.\", \"duration\": 5, \"ratio\": \"{{ $json.targetPlatform === 'tiktok' || $json.targetPlatform === 'instagram_reels' ? '768:1280' : '1280:768' }}\", \"watermark\": false }"
+      },
+      "name": "Runway: Generate Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1080,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.status }}",
+              "value2": "SUCCEEDED"
+            }
+          ]
+        }
+      },
+      "name": "Video Ready?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1520,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.dev.runwayml.com/v1/tasks/{{$node['Runway: Generate Video'].json.id}}",
+        "method": "GET",
+        "authentication": "headerAuth",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.RUNWAY_API_KEY}}"
+            }
+          ]
+        }
+      },
+      "name": "Poll Runway Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1300,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 10,
+        "unit": "seconds"
+      },
+      "name": "Wait 10s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1180,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://{{ $env.FFMPEG_SERVICE_URL || 'printhub-ffmpeg.railway.app' }}/combine",
+        "method": "POST",
+        "authentication": "headerAuth",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-combine-secret",
+              "value": "={{ $env.COMBINE_SECRET }}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"videoUrl\": \"{{ $node['Poll Runway Status'].json.output[0] }}\", \"audioUrl\": \"{{ $node['ElevenLabs: Generate Voiceover'].json.audioUrl || '' }}\", \"outputKey\": \"product-videos/{{ $json.productId }}/{{ $json.targetPlatform }}-{{ Date.now() }}.mp4\" }"
+      },
+      "name": "Combine Video + Audio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1740,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://admin.printhub.africa/api/n8n/save-video-content",
+        "method": "PATCH",
+        "authentication": "headerAuth",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"productId\": \"{{ $json.productId }}\", \"platform\": \"{{ $json.targetPlatform }}\", \"videoUrl\": \"{{ $node['Combine Video + Audio'].json.outputUrl }}\", \"thumbnailUrl\": \"{{ $json.mockupImageUrl }}\", \"duration\": 5 }"
+      },
+      "name": "Save Video to DB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1960,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: Generate Video": {
+      "main": [
+        [
+          {
+            "node": "Verify Signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Signature": {
+      "main": [
+        [
+          {
+            "node": "Claude: Write Video Script",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Runway: Generate Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: Write Video Script": {
+      "main": [
+        [
+          {
+            "node": "Extract Script",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Script": {
+      "main": [
+        [
+          {
+            "node": "ElevenLabs: Generate Voiceover",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Runway: Generate Video": {
+      "main": [
+        [
+          {
+            "node": "Wait 10s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 10s": {
+      "main": [
+        [
+          {
+            "node": "Poll Runway Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Poll Runway Status": {
+      "main": [
+        [
+          {
+            "node": "Video Ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Video Ready?": {
+      "main": [
+        [
+          {
+            "node": "Combine Video + Audio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait 10s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Video + Audio": {
+      "main": [
+        [
+          {
+            "node": "Save Video to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

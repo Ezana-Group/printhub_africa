@@ -1,0 +1,105 @@
+{
+  "name": "10. PrintHub - Quote Submitted (Lead Flow + PDF)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "quote-submitted",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "name": "Webhook: Quote Submit",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst sig = $node['Webhook: Quote Submit'].json.headers['x-printhub-signature'];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node['Webhook: Quote Submit'].json.body)).digest('hex');\nif (sig !== hmac) throw new Error('Invalid');\nreturn $node['Webhook: Quote Submit'].json.body;"
+      },
+      "name": "Verify Signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "method": "POST",
+        "authentication": "headerAuth",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.RESEND_API_KEY}}"
+            }
+          ]
+        },
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "from",
+              "value": "PrintHub Africa <quotes@printhub.africa>"
+            },
+            {
+              "name": "to",
+              "value": "={{$json.customerEmail}}"
+            },
+            {
+              "name": "subject",
+              "value": "=Quotation Request: {{$json.projectName || 'New Project'}}"
+            },
+            {
+              "name": "html",
+              "value": "=<p>Hi {{$json.customerName}},</p><p>We have received your request. Attached is a summary draft.</p>"
+            }
+          ]
+        },
+        "attachments": [
+          {
+            "name": "QuoteDraft.pdf",
+            "data": "={{$json.pdfBase64}}"
+          }
+        ]
+      },
+      "name": "Email: Draft Quote",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        540,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: Quote Submit": {
+      "main": [
+        [
+          {
+            "node": "Verify Signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Signature": {
+      "main": [
+        [
+          {
+            "node": "Email: Draft Quote",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

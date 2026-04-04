@@ -1,0 +1,154 @@
+{
+  "name": "AI-1 — Auto-Generate Social Media Posts (GPT-4o)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-generate-social",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "name": "Webhook: Product Published",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ],
+      "webhookId": "ai-generate-social"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst sig = $node['Webhook: Product Published'].json.headers['x-printhub-signature'];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node['Webhook: Product Published'].json.body)).digest('hex');\nif (sig !== hmac) throw new Error('Invalid signature');\nreturn $node['Webhook: Product Published'].json.body;"
+      },
+      "name": "Verify Signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://admin.printhub.africa/api/n8n/get-product-context",
+        "method": "GET",
+        "authentication": "headerAuth",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "qs": [
+          {
+            "name": "productId",
+            "value": "={{ $json.productId }}"
+          }
+        ]
+      },
+      "name": "Get Product Context",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "authentication": "headerAuth",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.OPENAI_API_KEY}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"model\": \"gpt-4o\", \"messages\": [{ \"role\": \"system\", \"content\": \"You are a social media and advertising copywriter for PrintHub Africa. Your style is punchy, engaging, and high-energy. You use emojis effectively. You understand Nairobi's trends and slang (Sheng) where appropriate for Gen Z audiences, but remain professional for LinkedIn. You always include targeted hashtags. British English only. No Americanisms.\" }, { \"role\": \"user\", \"content\": \"Create short, punchy social media posts for this product: {{ $json.name }}. Description: {{ $json.description }}. Category: {{ $json.category }}. Write unique versions for: 1. Instagram (visual, emoji-heavy), 2. TikTok (hook-driven, trendy), 3. LinkedIn (professional, B2B value). Return valid JSON: { 'instagram': '...', 'tiktok': '...', 'linkedin': '...' }\" }] }"
+      },
+      "name": "GPT-4o: Generate Social Posts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        860,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://admin.printhub.africa/api/n8n/save-ai-content",
+        "method": "POST",
+        "authentication": "headerAuth",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"productId\": \"{{ $node['Get Product Context'].json.id }}\", \"socialPosts\": {{ $json.choices[0].message.content }} }"
+      },
+      "name": "Save Social Posts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1080,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: Product Published": {
+      "main": [
+        [
+          {
+            "node": "Verify Signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Signature": {
+      "main": [
+        [
+          {
+            "node": "Get Product Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Product Context": {
+      "main": [
+        [
+          {
+            "node": "GPT-4o: Generate Social Posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o: Generate Social Posts": {
+      "main": [
+        [
+          {
+            "node": "Save Social Posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

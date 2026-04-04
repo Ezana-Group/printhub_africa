@@ -36,8 +36,10 @@ applyEnvFile(resolve(root, '.env.local'), true)
 
 export default defineConfig({
   datasource: {
+    // Primary URL for the application (often goes through a pooler in production)
     url: process.env.DATABASE_URL,
-    // @ts-expect-error - directUrl is required by Prisma 7 CLI but missing from types
-    directUrl: process.env.DATABASE_URL_UNPOOLED,
+    // Direct URL for migrations (bypasses pooler to avoid advisory lock timeouts)
+    // @ts-expect-error - directUrl is required by Prisma CLI but may be missing from strict types
+    directUrl: process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL,
   },
 })

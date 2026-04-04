@@ -1,0 +1,187 @@
+{
+  "name": "6. PrintHub - Low Stock Notify (Inventory Flow)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "low-stock",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "name": "Webhook: Low Stock",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "low-stock"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst sig = $node['Webhook: Low Stock'].json.headers['x-printhub-signature'];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node['Webhook: Low Stock'].json.body)).digest('hex');\nif (sig !== hmac) throw new Error('Invalid signature');\nreturn $node['Webhook: Low Stock'].json.body;"
+      },
+      "name": "Verify Signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://admin.printhub.africa/api/n8n/stock-levels",
+        "method": "GET",
+        "authentication": "headerAuth",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+            }
+          ]
+        }
+      },
+      "name": "Get All Low Stock Items",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "method": "POST",
+        "authentication": "headerAuth",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.RESEND_API_KEY}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"from\": \"PrintHub Stock <stock@printhub.africa>\", \"to\": \"{{ $env.ADMIN_EMAIL }}\", \"subject\": \"⚠️ Low Stock Alert — {{ $node['Webhook: Low Stock'].json.body.productName || $json.items.length + ' items' }}\", \"html\": \"<h2>⚠️ Low Stock Alert</h2>{{ $json.items && $json.items.length > 0 ? '<table style=\\'border-collapse:collapse;width:100%\\'><tr><th style=\\'padding:8px;border:1px solid #e5e7eb;text-align:left\\'>Item</th><th style=\\'padding:8px;border:1px solid #e5e7eb;text-align:left\\'>Type</th><th style=\\'padding:8px;border:1px solid #e5e7eb;text-align:left\\'>Current</th><th style=\\'padding:8px;border:1px solid #e5e7eb;text-align:left\\'>Minimum</th></tr>' + $json.items.map(i => '<tr><td style=\\'padding:8px;border:1px solid #e5e7eb\\'>' + i.itemName + '</td><td style=\\'padding:8px;border:1px solid #e5e7eb\\'>' + i.itemType + '</td><td style=\\'padding:8px;border:1px solid #e5e7eb;color:#dc2626\\'><strong>' + i.currentStock + ' ' + i.unit + '</strong></td><td style=\\'padding:8px;border:1px solid #e5e7eb\\'>' + i.minimumStock + ' ' + i.unit + '</td></tr>').join('') + '</table>' : '<p>Item: ' + $node['Webhook: Low Stock'].json.body.productName + ' — Current: ' + $node['Webhook: Low Stock'].json.body.currentStock + '</p>' }}<p style='margin-top:16px'><a href='https://admin.printhub.africa/admin/inventory'>Manage Inventory →</a></p>\" }"
+      },
+      "name": "Email: Low Stock Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        600,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "method": "POST",
+        "authentication": "headerAuth",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{ $env.BUSINESS_PHONE }}\", \"type\": \"text\", \"text\": { \"body\": \"⚠️ LOW STOCK ALERT\\n\\n{{ $node['Get All Low Stock Items'].json.items ? $node['Get All Low Stock Items'].json.items.slice(0,5).map(i => '• ' + i.itemName + ': ' + i.currentStock + ' ' + i.unit + ' remaining').join('\\n') : $node['Webhook: Low Stock'].json.body.productName + ' is critically low.' }}\\n\\nReview inventory: admin.printhub.africa/admin/inventory\" } }"
+      },
+      "name": "WhatsApp: Stock Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        600,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://admin.printhub.africa/api/n8n/mark-alert-sent",
+        "method": "POST",
+        "authentication": "headerAuth",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"alertId\": \"{{ $node['Webhook: Low Stock'].json.body.productId || 'inventory-batch' }}\", \"type\": \"low-stock\", \"urgency\": \"MEDIUM\" }"
+      },
+      "name": "Mark Alert Sent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        800,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: Low Stock": {
+      "main": [
+        [
+          {
+            "node": "Verify Signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Signature": {
+      "main": [
+        [
+          {
+            "node": "Get All Low Stock Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get All Low Stock Items": {
+      "main": [
+        [
+          {
+            "node": "Email: Low Stock Report",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "WhatsApp: Stock Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email: Low Stock Report": {
+      "main": [
+        [
+          {
+            "node": "Mark Alert Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp: Stock Alert": {
+      "main": [
+        [
+          {
+            "node": "Mark Alert Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
