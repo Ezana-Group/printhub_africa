@@ -37,7 +37,7 @@ PrintHub is a **full-stack e-commerce and print-services platform** for:
   - **Admin Portal (`STAFF/ADMIN`):** Hardened internal control centre with restricted access, hosted on a separate `admin.*` subdomain.
 - **Backend:** Next.js API Routes (running on Railway) with split authentication middleware for customers and staff.
 - **Database:** PostgreSQL via Prisma ORM (Neon in production; Railway Redis for rate-limiting).
-- **Automation:** Comprehensive n8n infrastructure for marketing, security, and AI-powered operations (34 workflows).
+- **Automation:** Comprehensive n8n infrastructure for marketing, security, and AI-powered operations (34 domain-driven, modular workflows).
 - **Deployment:** Multi-service Railway architecture: `web`, `n8n`, and `ffmpeg-service`.
 
 ### High-Level Architecture Diagram
@@ -200,10 +200,14 @@ Printhub_Africa_ProdV1/
 ├── hooks/                  # e.g. useLFRates
 ├── store/                  # Zustand: checkout-store, cart
 ├── n8n/                    # Automation infrastructure
-│   ├── workflows/          # JSON groups (Base, AI, Cron)
-│   │   ├── printhub_base_workflows.json
-│   │   ├── printhub_ai_workflows.json
-│   │   └── printhub_cron_workflows.json
+│   ├── workflows/          # Domain-driven individual workflow JSON files
+│   │   ├── auth-security/
+│   │   ├── catalog-inventory/
+│   │   ├── commerce-sales/
+│   │   ├── customer-support/
+│   │   ├── intelligence-reports/
+│   │   ├── marketing-content/
+│   │   └── notifications/
 │   ├── ffmpeg-service/     # Sidecar for media processing
 │   ├── railway.toml        # n8n-specific deployment config
 │   └── .env.example
@@ -639,7 +643,8 @@ The platform is deployed as a **multi-service project** on Railway to ensure sca
 2. **n8n Automation (Service: `n8n`):**
    - Self-hosted n8n instance for all asynchronous and AI-powered workflows.
    - **Isolation:** Uses a dedicated schema/database for n8n internal data to prevent collision with application data.
-   - Uses `n8n/railway.toml` for optimized healthchecks and startup.
+   - **Workflow Structure:** Workflows are managed as individual, modular JSON files mapped to domain verticals (e.g., `catalog-inventory`, `commerce-sales`), enabling structured deployment and easier version control.
+   - **Networking:** Optimized for Railway with stabilized WebSocket/Push backend connections and custom `n8n/railway.toml` for healthchecks and startup.
 3. **FFmpeg Sidecar (Service: `ffmpeg-service`):**
    - Express server providing an API for video/image manipulation.
    - Used by n8n workflows for generating social media assets.
