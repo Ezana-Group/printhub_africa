@@ -43,14 +43,14 @@ export function AdminHeaderClient({
           </Link>
         )}
 
-        <Link href="/" target="_blank" className="text-sm text-blue-600 hover:underline">
+        <Link href={process.env.NEXT_PUBLIC_APP_URL || "https://printhub.africa"} target="_blank" className="text-sm text-blue-600 hover:underline">
           View site
         </Link>
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          onClick={() => signOut({ callbackUrl: "/login", redirect: true })}
+          onClick={() => signOut({ callbackUrl: "/admin/login", redirect: true })}
           className="text-muted-foreground hover:text-foreground"
         >
           <LogOut className="h-4 w-4 mr-1.5" />

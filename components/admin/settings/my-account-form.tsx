@@ -287,7 +287,7 @@ export function MyAccountForm({
       setConfirmPassword("");
       setTimeout(() => {
         setPasswordSuccess(false);
-        signOut({ callbackUrl: "/login", redirect: true });
+        signOut({ callbackUrl: "/admin/login", redirect: true });
       }, 2000);
     } catch {
       setPasswordError("Something went wrong");
