@@ -2065,6 +2065,18 @@ model WhatsAppTemplate {
   @@index([slug])
 }
 
+model PdfTemplate {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String?
+  bodyHtml    String
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+
+  @@index([slug])
+}
+
 model DatabaseGuard {
   id        String   @id
   project   String

@@ -18,15 +18,16 @@ export default async function AdminTemplatesPage({
   await requireAdminSettings();
   const { q = "", tab = "email" } = await searchParams;
 
-  const [emailTemplates, whatsappTemplates] = await Promise.all([
+  const [emailTemplates, whatsappTemplates, pdfTemplates] = await Promise.all([
     prisma.emailTemplate.findMany({ orderBy: { slug: "asc" } }),
     prisma.whatsAppTemplate.findMany({ orderBy: { slug: "asc" } }),
+    prisma.pdfTemplate.findMany({ orderBy: { slug: "asc" } }),
   ]);
 
   const activeType = tab === "whatsapp" ? "whatsapp" : tab === "pdf" ? "pdf" : "email";
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
       <AdminBreadcrumbs
         items={[
           { label: "Content", href: "/admin/content/legal" },
@@ -44,10 +45,7 @@ export default async function AdminTemplatesPage({
             and <code className="text-orange-600 bg-orange-50 px-1 rounded">{`{{orderNumber}}`}</code> for dynamic data.
           </p>
         </div>
-        {/* Only show "New Template" for email and whatsapp — PDF templates are code-based */}
-        {activeType !== "pdf" && (
-          <NewTemplateDialog type={activeType as "email" | "whatsapp"} />
-        )}
+        <NewTemplateDialog defaultType={activeType as "email" | "whatsapp" | "pdf"} />
       </div>
 
       <Tabs defaultValue={tab} className="w-full">
@@ -71,7 +69,7 @@ export default async function AdminTemplatesPage({
               <FileText className="h-4 w-4" />
               PDF
               <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-slate-100 text-[10px] text-slate-500 font-bold">
-                3
+                {pdfTemplates.length}
               </span>
             </TabsTrigger>
           </TabsList>
@@ -97,7 +95,7 @@ export default async function AdminTemplatesPage({
         </TabsContent>
 
         <TabsContent value="pdf">
-          <PdfTemplatesTab query={q.toLowerCase()} />
+          <PdfTemplatesTab templates={pdfTemplates as any} query={q.toLowerCase()} />
         </TabsContent>
       </Tabs>
     </div>

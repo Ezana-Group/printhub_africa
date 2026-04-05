@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -10,22 +10,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, Loader2 } from "lucide-react";
 import { Select } from "@/components/ui/select";
 
-interface NewTemplateDialogProps {
-  type: "email" | "whatsapp";
-}
+// Interface not used anymore but keeping for backwards comp just in case
+interface NewTemplateDialogProps {}
 
-export function NewTemplateDialog({ type }: NewTemplateDialogProps) {
+export function NewTemplateDialog({ defaultType = "email" }: { defaultType?: "email" | "whatsapp" | "pdf" }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [type, setType] = useState<"email" | "whatsapp" | "pdf">(defaultType);
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
     description: "",
-    subject: "",
-    body: "",
     category: "UTILITY",
   });
 
@@ -35,41 +33,53 @@ export function NewTemplateDialog({ type }: NewTemplateDialogProps) {
     setError(null);
 
     try {
-      const endpoint = `/api/admin/content/templates/${type}`;
-      const body = type === "email" 
-        ? { 
-            name: formData.name, 
-            slug: formData.slug, 
-            description: formData.description, 
-            subject: formData.subject, 
-            bodyHtml: formData.body 
-          }
-        : { 
-            name: formData.name, 
-            slug: formData.slug, 
-            description: formData.description, 
-            category: formData.category, 
-            bodyText: formData.body 
-          };
-
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || `Failed to create ${type} template`);
+      if (type === "email") {
+        const res = await fetch(`/api/admin/content/templates/email`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: formData.name,
+            slug: formData.slug,
+            description: formData.description,
+            subject: `New ${formData.name}`,
+            bodyHtml: `<div><p>Hello {{firstName}},</p><p>This is a new template.</p></div>`,
+          }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error || "Failed to create email template");
+        setOpen(false);
+        router.push(`/admin/content/email-templates/${formData.slug}`);
+      } else if (type === "whatsapp") {
+        const res = await fetch(`/api/admin/content/templates/whatsapp`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: formData.name,
+            slug: formData.slug,
+            description: formData.description,
+            category: formData.category,
+            bodyText: `Hello {{firstName}}, this is a new message.`,
+          }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error || "Failed to create WhatsApp template");
+        setOpen(false);
+        router.push(`/admin/content/templates/whatsapp/${formData.slug}`);
+      } else if (type === "pdf") {
+        const res = await fetch(`/api/admin/content/templates/pdf`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: formData.name,
+            slug: formData.slug,
+            description: formData.description,
+            bodyHtml: `<div className="pdf-body"><h1>${formData.name}</h1><p>Body content...</p></div>`,
+          }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error || "Failed to create PDF template");
+        setOpen(false);
+        router.push(`/admin/content/pdf-templates/${formData.slug}`);
       }
-
-      setOpen(false);
-      router.refresh();
-      // Reset form
-      setFormData({ name: "", slug: "", description: "", subject: "", body: "", category: "UTILITY" });
     } catch (err: any) {
       setError(err.message);
-    } finally {
       setLoading(false);
     }
   };
@@ -79,74 +89,83 @@ export function NewTemplateDialog({ type }: NewTemplateDialogProps) {
     setFormData(prev => ({ ...prev, name, slug }));
   };
 
+  // Update internal type state when defaultType prop changes
+  useEffect(() => {
+    setType(defaultType);
+  }, [defaultType]);
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="gap-2">
+        <Button className="gap-2 shrink-0">
           <Plus className="h-4 w-4" />
-          New {type === "email" ? "Email" : "WhatsApp"} Template
+          New Template
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[525px]">
+      <DialogContent className="sm:max-w-[500px]">
         <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Create New {type === "email" ? "Email" : "WhatsApp"} Template</DialogTitle>
+          <DialogHeader className="mb-4">
+            <DialogTitle>Create New Template</DialogTitle>
             <DialogDescription>
-              Add a new automated {type} message template. Slugs must be unique.
+              Select the type of template to create and provide basic details. You can design the content in the next step.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">Name</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleNameChange(e.target.value)}
-                className="col-span-3"
-                placeholder="e.g. Order Confirmation"
-                required
-              />
+
+          <div className="grid gap-5">
+            <div className="space-y-2">
+              <Label>Template Type</Label>
+              <div className="flex gap-2">
+                {(["email", "whatsapp", "pdf"] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setType(t)}
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium border transition-colors ${type === t ? "bg-orange-50 border-orange-200 text-orange-700" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}`}
+                  >
+                    {t === "email" ? "Email" : t === "whatsapp" ? "WhatsApp" : "PDF"}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="slug" className="text-right">Slug</Label>
-              <Input
-                id="slug"
-                value={formData.slug}
-                onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-                className="col-span-3 font-mono text-xs"
-                placeholder="order-confirmation"
-                required
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="description" className="text-right">Description</Label>
-              <Input
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                className="col-span-3"
-                placeholder="Optional description"
-              />
-            </div>
-            
-            {type === "email" && (
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="subject" className="text-right">Subject</Label>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
                 <Input
-                  id="subject"
-                  value={formData.subject}
-                  onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
-                  className="col-span-3"
-                  placeholder="Email subject line"
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => handleNameChange(e.target.value)}
+                  placeholder="e.g. Order Confirmation"
                   required
                 />
               </div>
-            )}
 
-            {type === "whatsapp" && (
-               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="category" className="text-right">Category</Label>
-                <div className="col-span-3">
+              <div className="space-y-2">
+                <Label htmlFor="slug">Slug (Unique ID)</Label>
+                <Input
+                  id="slug"
+                  value={formData.slug}
+                  onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
+                  className="font-mono text-sm bg-slate-50"
+                  placeholder="order-confirmation"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description (Optional)</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Internal description for this template..."
+                  className="resize-none h-20"
+                />
+              </div>
+
+              {type === "whatsapp" && (
+                <div className="space-y-2">
+                  <Label htmlFor="category">Category</Label>
                   <Select 
                     value={formData.category} 
                     onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
@@ -157,29 +176,22 @@ export function NewTemplateDialog({ type }: NewTemplateDialogProps) {
                     ]}
                     placeholder="Select Category"
                   />
+                  <p className="text-[11px] text-slate-500">WhatsApp requires templates to be categorized for billing.</p>
                 </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label htmlFor="body" className="text-right pt-2">
-                {type === "email" ? "HTML Body" : "Message Text"}
-              </Label>
-              <Textarea
-                id="body"
-                value={formData.body}
-                onChange={(e) => setFormData(prev => ({ ...prev, body: e.target.value }))}
-                className="col-span-3 min-h-[150px] font-mono text-xs"
-                placeholder={type === "email" ? "<div>Hello {{name}}...</div>" : "Hello {{name}}, your order..."}
-                required
-              />
+              )}
             </div>
           </div>
-          {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
-          <DialogFooter>
+          
+          {error && (
+            <div className="mt-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg border border-red-100">
+              {error}
+            </div>
+          )}
+
+          <DialogFooter className="mt-6 pt-4 border-t border-slate-100">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={loading} className="min-w-[100px]">
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create Template"}
+            <Button type="submit" disabled={loading} className="gap-2">
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Continue to editor"}
             </Button>
           </DialogFooter>
         </form>

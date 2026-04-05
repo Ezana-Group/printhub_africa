@@ -24,7 +24,7 @@ export default async function EmailTemplateEditPage({
   const bodyHtml = row?.bodyHtml ?? "";
 
   return (
-    <div className="space-y-4">
+    <div className="p-6 lg:p-8 space-y-4">
       <AdminBreadcrumbs
         items={[
           { label: "Content", href: "/admin/content/legal" },
