@@ -51,7 +51,7 @@
       "parameters": {
         "url": "https://api.openai.com/v1/chat/completions",
         "method": "POST",
-        "bodyParametersJson": "={ \"model\": \"gpt-4o-mini\", \"messages\": [{ \"role\": \"system\", \"content\": \"Write 3 SMS marketing messages for PrintHub Africa...\" }, { \"role\": \"user\", \"content\": \"Featured: {{ JSON.stringify($node['Get Featured Products'].json) }}. Context: {{ $node['Perplexity: Trends'].json.choices[0].message.content }}\" }] }"
+        "bodyParametersJson": "={ \"model\": \"gpt-4o-mini\", \"messages\": [{ \"role\": \"system\", \"content\": \"Write 3 SMS marketing messages for PrintHub Africa... Return as JSON: { 'options': ['msg1', 'msg2', 'msg3'] }\" }, { \"role\": \"user\", \"content\": \"Featured: {{ JSON.stringify($node['Get Featured Products'].json) }}. Context: {{ $node['Perplexity: Trends'].json.choices[0].message.content }}\" }] }"
       },
       "name": "GPT-4o: SMS Copy",
       "type": "n8n-nodes-base.httpRequest",
@@ -63,11 +63,19 @@
     },
     {
       "parameters": {
-        "url": "https://api.resend.com/emails",
+        "url": "https://admin.printhub.africa/api/admin/content/broadcasts",
         "method": "POST",
-        "bodyParametersJson": "={ \"from\": \"ai@printhub.africa\", \"to\": \"{{$env.ADMIN_EMAIL}}\", \"subject\": \"SMS Broadcast Approval Required\", \"html\": \"{{ $json.choices[0].message.content }}\" }"
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={{ JSON.stringify({\n  type: 'SMS',\n  title: 'Weekly AI Broadcast Proposal',\n  bodyText: $node['GPT-4o: SMS Copy'].json.choices[0].message.content,\n  metadata: { \n    source: 'AI-12 n8n Workflow',\n    aiModel: 'gpt-4o-mini',\n    featuredProducts: $node['Get Featured Products'].json\n  }\n}) }}"
       },
-      "name": "Email: Admin Approval",
+      "name": "Push to Approval Queue",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
@@ -114,7 +122,7 @@
       "main": [
         [
           {
-            "node": "Email: Admin Approval",
+            "node": "Push to Approval Queue",
             "type": "main",
             "index": 0
           }

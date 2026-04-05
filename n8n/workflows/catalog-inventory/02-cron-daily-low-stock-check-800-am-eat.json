@@ -8,8 +8,7 @@
             {
               "field": "days"
             }
-          ],
-          "time": "08:00"
+          ]
         }
       },
       "id": "schedule-trigger-8am",
@@ -24,18 +23,15 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{$env[\"ADMIN_URL\"]}}/api/n8n/stock-levels",
-        "authentication": "none",
-        "sendHeaders": true,
+        "url": "={{$env.ADMIN_URL}}/api/n8n/stock-levels",
         "headerParameters": {
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{$env[\"N8N_WEBHOOK_SECRET\"]}}"
+              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
             }
           ]
-        },
-        "options": {}
+        }
       },
       "id": "pull-inventory-audit",
       "name": "Pull Inventory Audit",
@@ -69,89 +65,68 @@
     },
     {
       "parameters": {
+        "url": "=https://admin.printhub.africa/api/admin/content/templates/fetch/staff-alert-whatsapp",
+        "method": "GET",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+            }
+          ]
+        }
+      },
+      "name": "Fetch Template",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        760,
+        300
+      ]
+    },
+    {
+      "parameters": {
         "method": "POST",
-        "url": "=https://graph.facebook.com/v19.0/{{$env[\"WHATSAPP_PHONE_NUMBER_ID\"]}}/messages",
-        "authentication": "none",
-        "sendHeaders": true,
+        "url": "=https://graph.facebook.com/v19.0/{{$env.WHATSAPP_PHONE_NUMBER_ID}}/messages",
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env[\"WHATSAPP_ACCESS_TOKEN\"]}}"
+              "value": "=Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}"
             }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonParameters": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "messaging_product",
-              "value": "whatsapp"
-            },
-            {
-              "name": "to",
-              "value": "={{$env[\"STAFF_WHATSAPP_NUMBER\"]}}"
-            },
-            {
-              "name": "type",
-              "value": "text"
-            },
-            {
-              "name": "text",
-              "value": "={{ { \"body\": \"⚠️ LOW STOCK ALERT: \" + $json.name + \" (SKU: \" + $json.sku + \") has only \" + $json.stock + \" units left. Reorder soon!\" } }}"
-            }
-          ]
-        },
-        "options": {}
+        "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{$env.STAFF_WHATSAPP_NUMBER}}\", \"type\": \"text\", \"text\": { \"body\": \"{{ $node['Fetch Template'].json.body.replace('{{title}}', 'LOW STOCK ALERT').replace('{{message}}', $node['Filter: Stock < 5'].json.name + ' (SKU: ' + $node['Filter: Stock < 5'].json.sku + ') has only ' + $node['Filter: Stock < 5'].json.stock + ' units left.').replace('{{actionUrl}}', $env.ADMIN_URL + '/admin/inventory') }}\" } }"
       },
       "id": "whatsapp-notify-staff",
       "name": "WhatsApp: Notify Staff",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        760,
+        980,
         200
       ]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "={{$env[\"ADMIN_URL\"]}}/api/n8n/log",
-        "authentication": "none",
-        "sendHeaders": true,
+        "url": "={{$env.ADMIN_URL}}/api/n8n/log",
         "headerParameters": {
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{$env[\"N8N_WEBHOOK_SECRET\"]}}"
+              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
             }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonParameters": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "action",
-              "value": "LOW_STOCK_ALERT"
-            },
-            {
-              "name": "details",
-              "value": "={{JSON.stringify($json)}}"
-            }
-          ]
-        },
-        "options": {}
+        "bodyParametersJson": "={{ JSON.stringify({\n  action: 'LOW_STOCK_ALERT',\n  details: $json\n}) }}"
       },
       "id": "audit-log-low-stock",
       "name": "AuditLog: Low Stock Flagged",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        760,
+        980,
         400
       ]
     }
@@ -183,6 +158,18 @@
       "main": [
         [
           {
+            "node": "Fetch Template",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Fetch Template": {
+      "main": [
+        [
+          {
             "node": "WhatsApp: Notify Staff",
             "type": "main",
             "index": 0
@@ -192,8 +179,7 @@
             "type": "main",
             "index": 0
           }
-        ],
-        []
+        ]
       ]
     }
   },

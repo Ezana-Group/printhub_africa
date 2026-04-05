@@ -2046,6 +2046,7 @@ model EmailTemplate {
   description String?
   subject     String   @default("")
   bodyHtml    String
+  status      String   @default("DRAFT")
   updatedAt   DateTime @updatedAt
   updatedBy   String?
 
@@ -2059,6 +2060,7 @@ model WhatsAppTemplate {
   description String?
   category    String?  @default("UTILITY")
   bodyText    String
+  status      String   @default("DRAFT")
   updatedAt   DateTime @updatedAt
   updatedBy   String?
 
@@ -2071,6 +2073,7 @@ model PdfTemplate {
   name        String
   description String?
   bodyHtml    String
+  status      String   @default("DRAFT")
   updatedAt   DateTime @updatedAt
   updatedBy   String?
 
@@ -2081,6 +2084,21 @@ model DatabaseGuard {
   id        String   @id
   project   String
   updatedAt DateTime @updatedAt
+}
+
+model MarketingBroadcast {
+  id          String   @id @default(cuid())
+  slug        String?
+  type        String   // SMS, WHATSAPP, EMAIL
+  title       String
+  bodyText    String
+  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED, SENT
+  scheduledAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  metadata    Json?    // For tracking AI model, costs, etc.
+
+  @@index([status])
 }
 
 model CatalogueDesigner {

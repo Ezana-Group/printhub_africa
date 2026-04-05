@@ -29,7 +29,8 @@ export default async function MarketingContentPage() {
     pendingVideos,
     currentWeekCalendar,
     products,
-    categories
+    categories,
+    pendingBroadcasts
   ] = await Promise.all([
     prisma.productMockup.findMany({
       where: { isApproved: false },
@@ -88,6 +89,10 @@ export default async function MarketingContentPage() {
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
+    prisma.marketingBroadcast.findMany({
+      where: { status: "PENDING" },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
 
   // Parse calendar
@@ -126,6 +131,12 @@ export default async function MarketingContentPage() {
         categoryName: p.category?.name || "Uncategorized"
       }))}
       categories={categories}
+      broadcasts={pendingBroadcasts.map(b => ({
+        ...b,
+        createdAt: b.createdAt.toISOString(),
+        updatedAt: b.updatedAt.toISOString(),
+        scheduledAt: b.scheduledAt?.toISOString() || null
+      }))}
     />
   );
 }

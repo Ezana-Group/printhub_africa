@@ -31,8 +31,29 @@
     },
     {
       "parameters": {
+        "url": "=https://admin.printhub.africa/api/admin/content/templates/fetch/staff-alert-whatsapp",
+        "method": "GET",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+            }
+          ]
+        }
+      },
+      "name": "Fetch Template",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        540,
+        300
+      ]
+    },
+    {
+      "parameters": {
         "chatId": "={{$env.TELEGRAM_STAFF_GROUP_ID}}",
-        "text": "=🔔 *{{$json.title}}*\n\n{{$json.message}}\n\nUrgency: {{$json.urgency.toUpperCase()}}\nAction: {{$json.actionUrl}}",
+        "text": "={{ $node['Fetch Template'].json.body.replace('{{title}}', $node['Verify Internal Staff Sig'].json.title).replace('{{message}}', $node['Verify Internal Staff Sig'].json.message).replace('{{actionUrl}}', $node['Verify Internal Staff Sig'].json.actionUrl) }}",
         "additionalFields": {
           "parse_mode": "Markdown"
         }
@@ -41,7 +62,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1,
       "position": [
-        540,
+        760,
         200
       ],
       "credentials": {
@@ -64,13 +85,13 @@
             }
           ]
         },
-        "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{$env.STAFF_WHATSAPP_NUMBER}}\", \"type\": \"text\", \"text\": { \"body\": \"🔔 {{$json.title}}\\n\\n{{$json.message}}\\n\\nAction: {{$json.actionUrl}}\" } }"
+        "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{$env.STAFF_WHATSAPP_NUMBER}}\", \"type\": \"text\", \"text\": { \"body\": \"{{ $node['Fetch Template'].json.body.replace('{{title}}', $node['Verify Internal Staff Sig'].json.title).replace('{{message}}', $node['Verify Internal Staff Sig'].json.message).replace('{{actionUrl}}', $node['Verify Internal Staff Sig'].json.actionUrl) }}\" } }"
       },
       "name": "WhatsApp: Staff Alert",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        540,
+        760,
         400
       ]
     }
@@ -88,6 +109,17 @@
       ]
     },
     "Verify Internal Staff Sig": {
+      "main": [
+        [
+          {
+            "node": "Fetch Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Template": {
       "main": [
         [
           {

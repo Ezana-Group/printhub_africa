@@ -71,6 +71,7 @@ export async function sendWhatsAppMessage({
  */
 
 /** Triggered on successful order confirmation. */
+// TODO: replace with template slug: order-confirmation-meta
 export async function waOrderConfirmation(to: string, orderNumber: string, total: string) {
   return sendWhatsAppMessage({
     to,
@@ -84,6 +85,7 @@ export async function waOrderConfirmation(to: string, orderNumber: string, total
 }
 
 /** Triggered when order status → SHIPPED. */
+// TODO: replace with template slug: shipping-update-meta
 export async function waShippingUpdate(to: string, orderNumber: string, trackingNumber?: string) {
   return sendWhatsAppMessage({
     to,
