@@ -15,6 +15,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:legal": "tsx prisma/seeds/legal-pages.ts",
     "db:seed:email-templates": "tsx prisma/seeds/email-templates.ts",
+    "db:seed:whatsapp-templates": "tsx prisma/seeds/whatsapp-templates.ts",
     "db:clean-test-data": "tsx prisma/scripts/clean-test-data.ts",
     "db:reset-catalogue": "PRINTHUB_SEED_ALLOW=1 tsx prisma/scripts/reset-catalogue.ts",
     "db:reset": "prisma migrate reset",

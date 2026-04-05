@@ -7,8 +7,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { EmailTemplatesTab } from "./_components/EmailTemplatesTab";
 import { WhatsAppTemplatesTab } from "./_components/WhatsAppTemplatesTab";
 import { PdfTemplatesTab } from "./_components/PdfTemplatesTab";
-import { NewTemplateDialog } from "./_components/new-template-dialog";
-import { Mail, MessageCircle, Search, FileText } from "lucide-react";
+import Link from "next/link";
+import { Mail, MessageCircle, Search, FileText, Plus } from "lucide-react";
 
 export default async function AdminTemplatesPage({
   searchParams,
@@ -45,7 +45,13 @@ export default async function AdminTemplatesPage({
             and <code className="text-orange-600 bg-orange-50 px-1 rounded">{`{{orderNumber}}`}</code> for dynamic data.
           </p>
         </div>
-        <NewTemplateDialog defaultType={activeType as "email" | "whatsapp" | "pdf"} />
+        <Link 
+          href={`/admin/content/templates/new?type=${activeType}`}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#D85A30] text-white rounded-lg hover:bg-[#D85A30]/90 transition-colors font-medium shadow-sm active:scale-95"
+        >
+          <Plus className="h-4 w-4" />
+          New Template
+        </Link>
       </div>
 
       <Tabs defaultValue={tab} className="w-full">

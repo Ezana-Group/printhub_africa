@@ -112,6 +112,7 @@ async function sendTrackingSms(orderId: string, status: string) {
   });
   const phone = order?.shippingAddress?.phone ?? order?.user?.phone;
   if (phone) {
+    // TODO: replace with template slug: order-status-update-whatsapp
     await sendSMS(phone, `PrintHub: ${template.title} – Order ${order?.orderNumber ?? orderId}. Track: ${process.env.NEXT_PUBLIC_APP_URL ?? "https://printhub.africa"}/track?ref=${order?.orderNumber ?? ""}`);
   }
 }

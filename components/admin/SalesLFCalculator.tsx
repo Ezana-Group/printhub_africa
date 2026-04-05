@@ -541,6 +541,7 @@ export function SalesLFCalculator({
               asChild
               className="min-w-[140px]"
             >
+              {/* TODO: replace with template slug: lf-print-quote-whatsapp */}
               <a
                 href={`https://wa.me/${whatsappDigits}?text=${encodeURIComponent(
                   `PrintHub quote for ${clientName || "customer"}\nValid until: ${validUntil}\nTotal: ${formatKes(finalTotal)}\n\nDetails: ${lines.map((l, i) => `${i + 1}. ${l.description || "Item"} ${l.widthCm}×${l.heightCm}cm × ${l.quantity} = ${lineResults.find((r) => r.lineId === l.id) ? formatKes(lineResults.find((r) => r.lineId === l.id)!.lineTotal) : "—"}`).join("\n")}`
