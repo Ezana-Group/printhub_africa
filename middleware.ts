@@ -1,9 +1,6 @@
 import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
-
-export const runtime = "nodejs";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -61,7 +58,9 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
+    /* 
     // --- DB VALIDATION (Step 8 fix) ---
+    // CAUTION: Prisma in middleware might cause Edge runtime errors in production
     if (token && !isAuthApi && !isLoginPage) {
       const sessionId = token.sessionId as string;
       if (sessionId) {
@@ -95,6 +94,7 @@ export async function middleware(request: NextRequest) {
         }
       }
     }
+    */
 
     // Block CUSTOMER sessions entirely on admin domain
     if (token && token.role === "CUSTOMER") {
