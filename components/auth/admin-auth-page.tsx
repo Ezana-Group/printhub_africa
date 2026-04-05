@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { format, formatDistanceToNow } from "date-fns";
 import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, ShieldCheck, Lock, Mail, ArrowRight, AlertCircle } from "lucide-react";
@@ -62,8 +63,22 @@ export function AdminAuthPage() {
       const lastLoginIp = (session.user as any).lastLoginIp;
       if (lastLoginAt) {
         setLoading(false); // Stop the spinner
+        const loginDate = new Date(lastLoginAt);
+        const relativeStr = formatDistanceToNow(loginDate, { addSuffix: true });
+        const dateStr = format(loginDate, "MMM d, h:mm a");
+        
         toast.success(`Welcome back!`, {
-          description: `Last login: ${new Date(lastLoginAt).toLocaleString()} from ${lastLoginIp || 'unknown IP'}`,
+          icon: <ShieldCheck className="h-5 w-5 text-[#FF4D00]" />,
+          description: (
+            <div className="flex flex-col gap-0.5 mt-1">
+              <p className="font-medium text-zinc-900 dark:text-zinc-100">Security Insight</p>
+              <p className="text-zinc-500 text-xs">Last seen {relativeStr}</p>
+              <p className="text-[10px] text-zinc-400 font-mono mt-1 pt-1 border-t border-zinc-100 dark:border-zinc-800">
+                {lastLoginIp || "Unknown IP"} • {dateStr}
+              </p>
+            </div>
+          ),
+          duration: 6000,
         });
         router.push("/admin/dashboard");
       }

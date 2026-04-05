@@ -368,10 +368,11 @@ export function Header({ business }: { business?: BusinessPublic }) {
                     </Link>
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem asChild>
-                  <Link href="/api/auth/signout" className="focus:bg-slate-50 focus:text-slate-900 rounded-lg mx-1">
-                    Sign out
-                  </Link>
+                <DropdownMenuItem
+                  className="focus:bg-red-50 focus:text-red-900 rounded-lg mx-1 text-red-600 cursor-pointer"
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                >
+                  Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

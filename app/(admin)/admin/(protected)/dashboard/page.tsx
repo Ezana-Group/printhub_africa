@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatPrice } from "@/lib/utils";
 import { RevenueChart, StatusPieChart } from "@/components/admin/dashboard-charts";
 import { canAccessRoute } from "@/lib/admin-permissions";
-import { ShoppingCart, Printer, FileText } from "lucide-react";
+import { ShoppingCart, Printer, FileText, ShieldCheck } from "lucide-react";
 import { N8nHealthCard } from "@/components/admin/n8n-health-card";
 
 const PRINT_JOB_TYPES = ["LARGE_FORMAT", "THREE_D_PRINT", "CUSTOM_PRINT"] as const;
@@ -22,6 +22,10 @@ export default async function AdminDashboardPage() {
   if (!canAccessRoute("/admin/dashboard", role ?? "", permissions)) {
     redirect("/admin/access-denied");
   }
+  
+  const name = session.user.name ?? "Administrator";
+  const lastLoginAt = (session.user as any).lastLoginAt;
+  const lastLoginIp = (session.user as any).lastLoginIp;
 
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -152,7 +156,27 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <h1 className="font-display text-2xl font-bold">Dashboard</h1>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="font-display text-3xl font-bold tracking-tight">Welcome back, {name}</h1>
+          <p className="text-muted-foreground text-sm flex items-center gap-2 mt-1">
+            <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            System Status: Operational
+          </p>
+        </div>
+        
+        {lastLoginAt && (
+          <div className="bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl px-4 py-2 flex items-center gap-3">
+            <div className="bg-white dark:bg-zinc-800 h-8 w-8 rounded-full flex items-center justify-center shadow-sm">
+              <ShieldCheck className="h-4 w-4 text-[#FF4D00]" />
+            </div>
+            <div className="text-[11px] leading-tight">
+              <p className="font-semibold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">Security Insight</p>
+              <p className="text-zinc-500">Last login from <span className="font-medium text-zinc-700 dark:text-zinc-300">{lastLoginIp || "unknown"}</span></p>
+            </div>
+          </div>
+        )}
+      </div>
 
       <section>
         <h2 className="text-sm font-semibold text-muted-foreground mb-2">Today&apos;s snapshot</h2>
