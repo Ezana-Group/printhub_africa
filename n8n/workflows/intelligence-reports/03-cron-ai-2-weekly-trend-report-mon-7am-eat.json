@@ -1,0 +1,317 @@
+{
+  "name": "Cron AI-2 — Weekly Trend Report (Mon 7AM EAT)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 4 * * 1"
+            }
+          ]
+        }
+      },
+      "name": "Schedule: Monday 7AM EAT",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.perplexity.ai/chat/completions",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.PERPLEXITY_API_KEY}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"model\": \"llama-3.1-sonar-large-128k-online\", \"messages\": [{ \"role\": \"system\", \"content\": \"You are a market research analyst for PrintHub Africa, a Nairobi printing company. Research current trends relevant to their business.\" }, { \"role\": \"user\", \"content\": \"Research and report on: 1. Top trending 3D printable models this week on Printables and Thingiverse. 2. Trending topics in Kenya relevant to banner/signage printing (elections, sports, events, holidays). 3. What Nairobi businesses are currently ordering (trade shows, conferences, events this month). 4. Competitor activity in Nairobi print shops. 5. Recommended products to promote this week. Return a structured report with sources.\" }], \"max_tokens\": 2000, \"return_citations\": true, \"search_recency_filter\": \"week\" }"
+      },
+      "name": "Perplexity: Kenya Market Trends",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        420,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.perplexity.ai/chat/completions",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.PERPLEXITY_API_KEY}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"model\": \"llama-3.1-sonar-large-128k-online\", \"messages\": [{ \"role\": \"user\", \"content\": \"What content formats and topics are trending this week on TikTok, Instagram and LinkedIn in Kenya and East Africa? What hashtags are trending? What should a Nairobi business be posting about right now?\" }], \"max_tokens\": 1000, \"return_citations\": true, \"search_recency_filter\": \"week\" }"
+      },
+      "name": "Perplexity: Social Media Trends",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        420,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://admin.printhub.africa/api/n8n/product-catalogue-summary",
+        "method": "GET",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-n8n-secret",
+              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+            }
+          ]
+        }
+      },
+      "name": "Fetch Product Catalogue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        420,
+        350
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={{$env.GEMINI_API_KEY}}",
+        "method": "POST",
+        "bodyParametersJson": "={ \"contents\": [{ \"parts\": [{ \"text\": \"You are the marketing strategist for PrintHub Africa, a Nairobi printing company.\\n\\nMarket research from Perplexity:\\n{{ $node['Perplexity: Kenya Market Trends'].json.choices[0].message.content }}\\n\\nSocial media trends:\\n{{ $node['Perplexity: Social Media Trends'].json.choices[0].message.content }}\\n\\nOur product catalogue:\\n{{ JSON.stringify($node['Fetch Product Catalogue'].json.products) }}\\n\\nCreate a weekly content and promotion strategy:\\n1. Top 3 products to promote this week and why\\n2. Content angles for each platform\\n3. Hashtags to use this week\\n4. Time-sensitive opportunities\\n5. Recommended ad spend focus\\n\\nReturn as JSON: { 'summary': 'text', 'topProducts': [], 'hashtags': [], 'opportunities': [], 'adFocus': 'text' }\" }] }], \"generationConfig\": { \"maxOutputTokens\": 2000 } }"
+      },
+      "name": "Gemini: Synthesise Strategy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        700,
+        350
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $node['Gemini: Synthesise Strategy'].json.candidates?.[0]?.content?.parts?.[0]?.text || '{}';\nlet strategy;\ntry { strategy = JSON.parse(raw.match(/\\{[\\s\\S]*\\}/)?.[0] || raw); } catch { strategy = { summary: raw }; }\nreturn [{ strategy }];"
+      },
+      "name": "Parse Strategy",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        920,
+        350
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.anthropic.com/v1/messages",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"model\": \"claude-opus-4-6\", \"max_tokens\": 3000, \"system\": \"You are the content and customer service AI for PrintHub Africa, a professional large-format and 3D printing company based in Nairobi, Kenya. Your tone is warm, professional, and expert. You understand the Kenyan market. Prices are always in KES. You never promise specific delivery times unless given them explicitly. You never invent product specs. When writing for customers, be friendly and helpful. When writing social media content, be engaging and locally relevant. Always write in British English (used in Kenya). Never use American spellings.\", \"messages\": [{ \"role\": \"user\", \"content\": \"Based on this weekly strategy, write a 7-day social media content calendar for PrintHub Africa.\\n\\nStrategy: {{ JSON.stringify($json.strategy) }}\\n\\nWrite posts for each day (Monday to Sunday) for Instagram and TikTok. Each post should be ready to copy-paste with emoji.\\n\\nReturn JSON: { 'days': [{ 'date': 'Monday', 'posts': [{ 'platform': 'instagram', 'content': '...', 'hashtags': '...' }, { 'platform': 'tiktok', 'content': '...' }] }] }\" }] }"
+      },
+      "name": "Claude: Write Content Calendar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1140,
+        350
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $node['Claude: Write Content Calendar'].json.content?.[0]?.text || '{}';\nlet calendar;\ntry { calendar = JSON.parse(raw.match(/\\{[\\s\\S]*\\}/)?.[0] || raw); } catch { calendar = { days: [] }; }\nreturn [{ calendar, strategy: $node['Parse Strategy'].json.strategy }];"
+      },
+      "name": "Parse Calendar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        350
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://admin.printhub.africa/api/n8n/save-content-calendar",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={{ JSON.stringify({ weekStarting: new Date().toISOString(), strategy: $json.strategy, contentCalendar: $json.calendar }) }}"
+      },
+      "name": "Save Content Calendar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1580,
+        350
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.RESEND_API_KEY}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"from\": \"PrintHub AI <ai@printhub.africa>\", \"to\": \"{{$env.ADMIN_EMAIL}}\", \"subject\": \"PrintHub Weekly Content Strategy — w/c {{ new Date().toLocaleDateString('en-GB') }}\", \"html\": \"<h2>Weekly Marketing Strategy 🚀</h2><h3>Market Insights</h3><p>{{ $node['Perplexity: Kenya Market Trends'].json.choices[0].message.content.slice(0, 500) }}...</p><h3>Strategy Summary</h3><p>{{ $node['Parse Strategy'].json.strategy.summary }}</p><h3>Top Products to Push This Week</h3><ul>{{ ($node['Parse Strategy'].json.strategy.topProducts || []).map(p => '<li>' + p + '</li>').join('') }}</ul><h3>Trending Hashtags</h3><p>{{ ($node['Parse Strategy'].json.strategy.hashtags || []).join(' ') }}</p><p><a href='https://admin.printhub.africa/admin/ai'>View full content calendar →</a></p>\" }"
+      },
+      "name": "Email Weekly Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1800,
+        350
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule: Monday 7AM EAT": {
+      "main": [
+        [
+          {
+            "node": "Perplexity: Kenya Market Trends",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Perplexity: Social Media Trends",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Product Catalogue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perplexity: Kenya Market Trends": {
+      "main": [
+        [
+          {
+            "node": "Gemini: Synthesise Strategy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perplexity: Social Media Trends": {
+      "main": [
+        [
+          {
+            "node": "Gemini: Synthesise Strategy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Product Catalogue": {
+      "main": [
+        [
+          {
+            "node": "Gemini: Synthesise Strategy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini: Synthesise Strategy": {
+      "main": [
+        [
+          {
+            "node": "Parse Strategy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Strategy": {
+      "main": [
+        [
+          {
+            "node": "Claude: Write Content Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: Write Content Calendar": {
+      "main": [
+        [
+          {
+            "node": "Parse Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Calendar": {
+      "main": [
+        [
+          {
+            "node": "Save Content Calendar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Content Calendar": {
+      "main": [
+        [
+          {
+            "node": "Email Weekly Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+  }
+}

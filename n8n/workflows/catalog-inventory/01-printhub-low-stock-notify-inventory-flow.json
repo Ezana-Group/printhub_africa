@@ -1,0 +1,60 @@
+{
+  "name": "6. PrintHub - Low Stock Notify (Inventory Flow)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "low-stock",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "name": "Webhook: Low Stock",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "low-stock"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "authentication": "none",
+        "headerParametersUi": [
+          {
+            "name": "Authorization",
+            "value": "=Bearer {{$env.RESEND_API_KEY}}"
+          }
+        ],
+        "jsonParameters": true,
+        "bodyParametersJson": "={ \"from\": \"Stock <stock@printhub.africa>\", \"to\": \"{{ $env.ADMIN_EMAIL }}\", \"subject\": \"⚠️ Low Stock Alert: {{ $json.productName }}\", \"html\": \"<p><strong>{{ $json.productName }}</strong> is low in stock ({{ $json.currentStock }} remaining).</p>\" }"
+      },
+      "name": "Email: Stock Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: Low Stock": {
+      "main": [
+        [
+          {
+            "node": "Email: Stock Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+  }
+}

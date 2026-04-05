@@ -1,0 +1,163 @@
+{
+  "name": "Cron AI-4 — Google Maps Weekly Re-post",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 5 * * 1"
+            }
+          ]
+        }
+      },
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://printhub.africa/api/n8n/top-products-for-maps",
+        "method": "GET"
+      },
+      "name": "Get Top Products",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "splitIntoItems": true
+      },
+      "name": "Each Product",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "bodyParametersJson": "={ \"model\": \"gpt-4o-mini\", \"messages\": [{ \"role\": \"system\", \"content\": \"Write a fresh Google Maps post...\" }, { \"role\": \"user\", \"content\": \"Product: {{ $json.name }}\" }] }"
+      },
+      "name": "GPT-4o: Maps Copy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        600,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://mybusiness.googleapis.com/v4/accounts/{{$env.GOOGLE_ACCOUNT_ID}}/locations/{{$env.GOOGLE_LOCATION_ID}}/localPosts",
+        "method": "POST",
+        "authentication": "oAuth2",
+        "bodyParametersJson": "={ \"summary\": \"{{ $json.choices[0].message.content }}\", \"callToAction\": { \"actionType\": \"SHOP\", \"url\": \"https://printhub.africa/shop/{{ $node['Each Product'].json.productSlug }}\" }, \"media\": [{ \"mediaFormat\": \"PHOTO\", \"sourceUrl\": \"{{ $node['Each Product'].json.approvedMockupUrl }}\" }], \"topicType\": \"PRODUCT\" }"
+      },
+      "name": "Google Maps: Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        800,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "minutes"
+      },
+      "name": "Wait 30m",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Top Products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Top Products": {
+      "main": [
+        [
+          {
+            "node": "Each Product",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Each Product": {
+      "main": [
+        [
+          {
+            "node": "GPT-4o: Maps Copy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o: Maps Copy": {
+      "main": [
+        [
+          {
+            "node": "Google Maps: Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Maps: Post": {
+      "main": [
+        [
+          {
+            "node": "Wait 30m",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 30m": {
+      "main": [
+        [
+          {
+            "node": "Each Product",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+  }
+}

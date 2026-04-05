@@ -1,0 +1,128 @@
+{
+  "name": "AI-12 — SMS Weekly Broadcast",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 5"
+            }
+          ]
+        }
+      },
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.perplexity.ai/chat/completions",
+        "method": "POST",
+        "bodyParametersJson": "={ \"model\": \"llama-3.1-sonar-large-128k-online\", \"messages\": [{ \"role\": \"user\", \"content\": \"Kenya trends this week for print shop hooks.\" }] }"
+      },
+      "name": "Perplexity: Trends",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://admin.printhub.africa/api/n8n/weekly-featured-products",
+        "method": "GET"
+      },
+      "name": "Get Featured Products",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "bodyParametersJson": "={ \"model\": \"gpt-4o-mini\", \"messages\": [{ \"role\": \"system\", \"content\": \"Write 3 SMS marketing messages for PrintHub Africa...\" }, { \"role\": \"user\", \"content\": \"Featured: {{ JSON.stringify($node['Get Featured Products'].json) }}. Context: {{ $node['Perplexity: Trends'].json.choices[0].message.content }}\" }] }"
+      },
+      "name": "GPT-4o: SMS Copy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        600,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "method": "POST",
+        "bodyParametersJson": "={ \"from\": \"ai@printhub.africa\", \"to\": \"{{$env.ADMIN_EMAIL}}\", \"subject\": \"SMS Broadcast Approval Required\", \"html\": \"{{ $json.choices[0].message.content }}\" }"
+      },
+      "name": "Email: Admin Approval",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        800,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Perplexity: Trends",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perplexity: Trends": {
+      "main": [
+        [
+          {
+            "node": "Get Featured Products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Featured Products": {
+      "main": [
+        [
+          {
+            "node": "GPT-4o: SMS Copy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o: SMS Copy": {
+      "main": [
+        [
+          {
+            "node": "Email: Admin Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "name": "15. PrintHub - Lead Magnet Capture",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-magnet",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "webhook-lead-magnet",
+      "name": "Webhook: Lead Magnet",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        763,
+        300
+      ],
+      "webhookId": "lead-magnet"
+    }
+  ],
+  "connections": {},
+  "meta": {
+    "instanceId": "printhub-n8n-production"
+  },
+  "settings": {
+    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+  }
+}

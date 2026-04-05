@@ -1,0 +1,317 @@
+{
+  "name": "AI-10 — Telegram Customer Chat Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ]
+      },
+      "name": "Telegram: Receive Message",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-cred",
+          "name": "Telegram"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.message?.voice?.file_id }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "name": "Is Voice Note?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/getFile?file_id={{$json.message.voice.file_id}}",
+        "method": "GET"
+      },
+      "name": "Get Voice File URL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        640,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/file/bot{{$env.TELEGRAM_BOT_TOKEN}}/{{$node['Get Voice File URL'].json.result.file_path}}",
+        "method": "GET",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "name": "Download Voice File",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        860,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/audio/transcriptions",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.OPENAI_API_KEY}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"model\": \"whisper-1\", \"language\": \"en\", \"prompt\": \"PrintHub Africa customer service. Kenyan English. Printing services, 3D printing, banners, signage.\" }",
+        "sendBinaryData": true,
+        "binaryPropertyName": "data"
+      },
+      "name": "Whisper: Transcribe",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1080,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const isVoice = $node['Is Voice Note?'].json.message?.voice?.file_id !== undefined;\nconst text = isVoice ? $node['Whisper: Transcribe'].json.text : $node['Is Voice Note?'].json.message?.text;\nconst chatId = ($node['Is Voice Note?'].json.message?.chat?.id || '').toString();\nconst customerName = $node['Is Voice Note?'].json.message?.from?.first_name || 'Customer';\nreturn [{ messageText: text, chatId, customerName, wasVoiceNote: isVoice }];"
+      },
+      "name": "Normalise Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1300,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.anthropic.com/v1/messages",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"model\": \"claude-opus-4-6\", \"max_tokens\": 400, \"system\": \"You are the content and customer service AI for PrintHub Africa, a professional large-format and 3D printing company based in Nairobi, Kenya. Your tone is warm, professional, and expert. You understand the Kenyan market. Prices are always in KES. You never promise specific delivery times unless given them explicitly. You never invent product specs. When writing for customers, be friendly and helpful. When writing social media content, be engaging and locally relevant. Always write in British English (used in Kenya). Never use American spellings. Note: this customer sent a voice note that was transcribed. Acknowledge naturally if relevant.\", \"messages\": [{ \"role\": \"user\", \"content\": \"Customer ({{ $json.customerName }}): {{ $json.messageText }}\" }] }"
+      },
+      "name": "Claude: Generate Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1520,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $node['Claude: Generate Reply'].json.content?.[0]?.text || 'Thank you for your message! We will get back to you shortly.' }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Telegram: Send Reply",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        1740,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-cred",
+          "name": "Telegram"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $node['Claude: Generate Reply'].json.content?.[0]?.text }}",
+              "operation": "contains",
+              "value2": "escalat"
+            }
+          ]
+        }
+      },
+      "name": "Needs Human?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1960,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.RESEND_API_KEY}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"from\": \"PrintHub Telegram <bot@printhub.africa>\", \"to\": \"{{$env.ADMIN_EMAIL}}\", \"subject\": \"Telegram Customer Needs Human Support\", \"html\": \"<p>Customer {{ $node['Normalise Message'].json.customerName }} on Telegram needs human support.</p><p>Message: {{ $node['Normalise Message'].json.messageText }}</p>\" }"
+      },
+      "name": "Alert Admin: Human Needed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        2180,
+        200
+      ]
+    }
+  ],
+  "connections": {
+    "Telegram: Receive Message": {
+      "main": [
+        [
+          {
+            "node": "Is Voice Note?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Voice Note?": {
+      "main": [
+        [
+          {
+            "node": "Get Voice File URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normalise Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Voice File URL": {
+      "main": [
+        [
+          {
+            "node": "Download Voice File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Voice File": {
+      "main": [
+        [
+          {
+            "node": "Whisper: Transcribe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Whisper: Transcribe": {
+      "main": [
+        [
+          {
+            "node": "Normalise Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalise Message": {
+      "main": [
+        [
+          {
+            "node": "Claude: Generate Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: Generate Reply": {
+      "main": [
+        [
+          {
+            "node": "Telegram: Send Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram: Send Reply": {
+      "main": [
+        [
+          {
+            "node": "Needs Human?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Human?": {
+      "main": [
+        [
+          {
+            "node": "Alert Admin: Human Needed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+  }
+}

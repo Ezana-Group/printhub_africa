@@ -1,0 +1,138 @@
+{
+  "name": "AI-4 — Auto-Generate Product Descriptions (Claude)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-product-description",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "name": "Webhook: Generate Descriptions",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ],
+      "webhookId": "ai-generate-descriptions"
+    },
+    {
+      "parameters": {
+        "url": "https://admin.printhub.africa/api/n8n/get-product-context",
+        "method": "GET",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "qs": [
+          {
+            "name": "productId",
+            "value": "={{ $json.productId }}"
+          }
+        ]
+      },
+      "name": "Get Context",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.anthropic.com/v1/messages",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"model\": \"claude-opus-4-6\", \"max_tokens\": 1000, \"system\": \"You are the content and customer service AI for PrintHub Africa...\", \"messages\": [{ \"role\": \"user\", \"content\": \"Write a compelling, SEO-optimised product description for {{ $json.name }}. Include: 1. Main description (200 words), 2. Short description (50 words), 3. 5 Key Features as a list, 4. SEO meta title, 5. SEO meta description. Return valid JSON.\" }] }"
+      },
+      "name": "Claude: Write Descriptions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://admin.printhub.africa/api/n8n/save-ai-content",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"productId\": \"{{ $node['Get Context'].json.id }}\", \"descriptions\": {{ $json.content[0].text }} }"
+      },
+      "name": "Save Descriptions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        860,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: Generate Descriptions": {
+      "main": [
+        [
+          {
+            "node": "Get Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Context": {
+      "main": [
+        [
+          {
+            "node": "Claude: Write Descriptions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: Write Descriptions": {
+      "main": [
+        [
+          {
+            "node": "Save Descriptions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+  }
+}

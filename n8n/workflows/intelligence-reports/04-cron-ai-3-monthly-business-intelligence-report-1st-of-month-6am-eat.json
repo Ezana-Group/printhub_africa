@@ -1,0 +1,216 @@
+{
+  "name": "Cron AI-3 — Monthly Business Intelligence Report (1st of Month 6AM EAT)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 3 1 * *"
+            }
+          ]
+        }
+      },
+      "name": "Schedule: 1st of Month 6AM EAT",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://admin.printhub.africa/api/n8n/business-data-export",
+        "method": "GET",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-n8n-secret",
+              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+            }
+          ]
+        }
+      },
+      "name": "Fetch Business Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={{$env.GEMINI_API_KEY}}",
+        "method": "POST",
+        "bodyParametersJson": "={ \"contents\": [{ \"parts\": [{ \"text\": \"You are the business analyst for PrintHub Africa, a Nairobi printing company.\\n\\nAnalyse this month's complete business data and produce:\\n1. Executive summary (key wins, key concerns)\\n2. Revenue analysis with MoM comparison\\n3. Product performance (stars, dogs, risers, fallers)\\n4. Customer analysis (LTV trends, churn signals)\\n5. Operational insights (production efficiency, stock)\\n6. Top 5 actionable recommendations for next month\\n7. Forecast for next month based on trends\\n\\nBusiness data:\\n{{ JSON.stringify($json) }}\" }] }], \"generationConfig\": { \"maxOutputTokens\": 3000 } }"
+      },
+      "name": "Gemini: Analyse Business Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.anthropic.com/v1/messages",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"model\": \"claude-opus-4-6\", \"max_tokens\": 3000, \"system\": \"You are the content and customer service AI for PrintHub Africa, a professional large-format and 3D printing company based in Nairobi, Kenya. Your tone is warm, professional, and expert. You understand the Kenyan market. Prices are always in KES. You never promise specific delivery times unless given them explicitly. You never invent product specs. When writing for customers, be friendly and helpful. When writing social media content, be engaging and locally relevant. Always write in British English (used in Kenya). Never use American spellings.\", \"messages\": [{ \"role\": \"user\", \"content\": \"Format this analysis as a professional HTML report for PrintHub Africa. Include: executive summary at top, sections with clear h2 headings, key metrics in styled div callout boxes, recommendations as numbered list. Use inline styles only (no external CSS). Keep it clean and readable.\\n\\nAnalysis:\\n{{ $node['Gemini: Analyse Business Data'].json.candidates[0].content.parts[0].text }}\" }] }"
+      },
+      "name": "Claude: Format HTML Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        860,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const now = new Date();\nconst month = now.getMonth(); // previous month (data-export is for last month)\nconst year = now.getFullYear();\nconst htmlReport = $node['Claude: Format HTML Report'].json.content?.[0]?.text || '<p>Report generation failed</p>';\nreturn [{ htmlReport, month, year }];"
+      },
+      "name": "Prepare PDF Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1080,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://admin.printhub.africa/api/n8n/generate-insights-pdf",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={{ JSON.stringify({ htmlReport: $json.htmlReport, month: $json.month, year: $json.year }) }}"
+      },
+      "name": "Generate PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1300,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.RESEND_API_KEY}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"from\": \"PrintHub Reports <reports@printhub.africa>\", \"to\": \"{{$env.SUPER_ADMIN_EMAIL || $env.ADMIN_EMAIL}}\", \"subject\": \"PrintHub Monthly Business Report — {{ new Date().toLocaleString('en-GB', { month: 'long', year: 'numeric' }) }}\", \"html\": \"<h2>Monthly Business Intelligence Report</h2><p>Your full business report is ready.</p><p><a href='{{ $node['Generate PDF'].json.pdfUrl }}' style='display:inline-block;background:#0066cc;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;'>Download PDF Report →</a></p><hr><h3>Key Highlights</h3>{{ $node['Claude: Format HTML Report'].json.content?.[0]?.text?.slice(0, 1500) }}...\" }"
+      },
+      "name": "Email Report to SUPER_ADMIN",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1520,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule: 1st of Month 6AM EAT": {
+      "main": [
+        [
+          {
+            "node": "Fetch Business Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Business Data": {
+      "main": [
+        [
+          {
+            "node": "Gemini: Analyse Business Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini: Analyse Business Data": {
+      "main": [
+        [
+          {
+            "node": "Claude: Format HTML Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: Format HTML Report": {
+      "main": [
+        [
+          {
+            "node": "Prepare PDF Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare PDF Payload": {
+      "main": [
+        [
+          {
+            "node": "Generate PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate PDF": {
+      "main": [
+        [
+          {
+            "node": "Email Report to SUPER_ADMIN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+  }
+}

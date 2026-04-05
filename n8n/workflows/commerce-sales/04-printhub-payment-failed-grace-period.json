@@ -1,0 +1,30 @@
+{
+  "name": "13. PrintHub - Payment Failed (Grace Period)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "payment-failed",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "webhook-payment-fail",
+      "name": "Webhook: Payment Fail",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        717,
+        300
+      ],
+      "webhookId": "payment-failed"
+    }
+  ],
+  "connections": {},
+  "meta": {
+    "instanceId": "printhub-n8n-production"
+  },
+  "settings": {
+    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+  }
+}

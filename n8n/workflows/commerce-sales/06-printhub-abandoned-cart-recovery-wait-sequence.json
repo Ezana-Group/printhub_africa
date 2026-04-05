@@ -1,0 +1,85 @@
+{
+  "name": "3. PrintHub - Abandoned Cart Recovery (Wait & Sequence)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cart-abandoned",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "name": "Webhook: Cart Abandoned",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "cart-abandoned"
+    },
+    {
+      "parameters": {
+        "amount": 1,
+        "unit": "hours"
+      },
+      "name": "Wait 1 Hour",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.RESEND_API_KEY}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"from\": \"PrintHub <hello@printhub.africa>\", \"to\": \"{{ $json.customerEmail }}\", \"subject\": \"You left something behind! 🛒\", \"html\": \"<p>Hi {{ $json.customerName }}, we saved your cart for you. <a href='{{ $json.cartUrl }}'>Complete your order here</a></p>\" }"
+      },
+      "name": "Email: Stage 1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        400,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: Cart Abandoned": {
+      "main": [
+        [
+          {
+            "node": "Wait 1 Hour",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 1 Hour": {
+      "main": [
+        [
+          {
+            "node": "Email: Stage 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+  }
+}

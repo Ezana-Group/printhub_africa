@@ -1,0 +1,90 @@
+{
+  "name": "13. PrintHub - Delivery Status Changed (Post-Dispatch Automation)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "delivery-status-changed",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "webhook-delivery-status",
+      "name": "Webhook: Delivery Status",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ],
+      "webhookId": "delivery-status-changed"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst sig = $node['Webhook: Delivery Status'].json.headers['x-printhub-signature'];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node['Webhook: Delivery Status'].json.body)).digest('hex');\nif (sig !== hmac) throw new Error('Invalid signature');\nreturn $node['Webhook: Delivery Status'].json.body;"
+      },
+      "id": "verify-internal-sig",
+      "name": "Verify Internal Sig",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://graph.facebook.com/v19.0/{{$env[\"WHATSAPP_PHONE_NUMBER_ID\"]}}/messages",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env[\"WHATSAPP_ACCESS_TOKEN\"]}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{$json.customerPhone}}\", \"type\": \"template\", \"template\": { \"name\": \"delivery_update\", \"language\": { \"code\": \"en\" }, \"components\": [ { \"type\": \"body\", \"parameters\": [ { \"type\": \"text\", \"text\": \"{{$json.customerName}}\" }, { \"type\": \"text\", \"text\": \"{{$json.orderNumber}}\" }, { \"type\": \"text\", \"text\": \"{{$json.status}}\" } ] } ] } }"
+      },
+      "id": "whatsapp-delivery-update",
+      "name": "WhatsApp: Delivery Update",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        540,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: Delivery Status": {
+      "main": [
+        [
+          {
+            "node": "Verify Internal Sig",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Internal Sig": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp: Delivery Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "meta": {
+    "instanceId": "printhub-n8n-production"
+  },
+  "settings": {
+    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+  }
+}

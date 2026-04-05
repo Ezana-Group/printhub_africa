@@ -1,0 +1,197 @@
+{
+  "name": "5. PrintHub - Security Alert (Impossible Travel + Breaches)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "security-alert",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "webhook-security-alert",
+      "name": "Webhook: Security",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "security-alert"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst sig = $node['Webhook: Security'].json.headers['x-printhub-signature'];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node['Webhook: Security'].json.body)).digest('hex');\nif (sig !== hmac) throw new Error('Invalid signature');\nreturn $node['Webhook: Security'].json.body;"
+      },
+      "id": "verify-signature",
+      "name": "Verify Signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env[\"RESEND_API_KEY\"]}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"from\": \"PrintHub Security <security@printhub.africa>\", \"to\": [\"{{ $env[\\\"ADMIN_EMAIL\\\"] }}\", \"{{ $json.userEmail }}\"], \"subject\": \"🔐 Security Alert: {{ $json.alertType }} — {{ $json.userEmail }}\", \"html\": \"<h2 style='color:#dc2626'>🔐 Security Alert</h2><table style='border-collapse:collapse;width:100%'><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>Alert Type</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.alertType }}</td></tr><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>User</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.userEmail }}</td></tr><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>IP Address</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.ipAddress }}</td></tr><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>Location</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.location }}</td></tr>{{ $json.previousLocation ? '<tr><td style=\\'padding:8px;border:1px solid #e5e7eb\\'><strong>Previous Location</strong></td><td style=\\'padding:8px;border:1px solid #e5e7eb\\'>' + $json.previousLocation + '</td></tr>' : '' }}<tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>Device</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.userAgent }}</td></tr></table><p style='margin-top:16px'>If this was not you, please <a href='{{ $env[\\\"ADMIN_URL\\\"] }}/admin/security'>review active sessions immediately →</a></p>\" }"
+      },
+      "id": "email-security-alert",
+      "name": "Email: Security Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        400,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env[\"TELEGRAM_CHANNEL_ID\"] }}",
+        "text": "=🔐 *SECURITY ALERT*\n\n*Type:* {{ $json.alertType }}\n*User:* {{ $json.userEmail }}\n*IP:* {{ $json.ipAddress }}\n*Location:* {{ $json.location }}{{ $json.previousLocation ? '\n*Previous:* ' + $json.previousLocation : '' }}\n\n*Action required — check admin panel at {{ $env[\\\"ADMIN_URL\\\"] }}*",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-security-alert",
+      "name": "Telegram: Security Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        400,
+        350
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-cred",
+          "name": "Telegram"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.alertType }}",
+              "operation": "contains",
+              "value2": "IMPOSSIBLE_TRAVEL"
+            }
+          ]
+        }
+      },
+      "id": "is-impossible-travel",
+      "name": "Is Impossible Travel?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        600,
+        250
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://graph.facebook.com/v19.0/{{ $env[\"WHATSAPP_PHONE_NUMBER_ID\"] }}/messages",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env[\"WHATSAPP_ACCESS_TOKEN\"]}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{ $env[\\\"BUSINESS_PHONE\\\"] }}\", \"type\": \"text\", \"text\": { \"body\": \"🔐 IMPOSSIBLE TRAVEL DETECTED\\n\\nUser: {{ $json.userEmail }}\\nFrom: {{ $json.previousLocation }}\\nTo: {{ $json.location }}\\nIP: {{ $json.ipAddress }}\\n\\nReview immediately: {{ $env[\\\"ADMIN_URL\\\"] }}/admin/security\" } }"
+      },
+      "id": "whatsapp-impossible-travel",
+      "name": "WhatsApp: Impossible Travel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        800,
+        200
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: Security": {
+      "main": [
+        [
+          {
+            "node": "Verify Signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Signature": {
+      "main": [
+        [
+          {
+            "node": "Email: Security Alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Telegram: Security Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email: Security Alert": {
+      "main": [
+        [
+          {
+            "node": "Is Impossible Travel?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram: Security Alert": {
+      "main": [
+        [
+          {
+            "node": "Is Impossible Travel?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Impossible Travel?": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp: Impossible Travel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "meta": {
+    "instanceId": "printhub-n8n-production"
+  },
+  "settings": {
+    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+  }
+}

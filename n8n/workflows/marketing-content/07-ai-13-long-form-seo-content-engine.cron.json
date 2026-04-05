@@ -1,0 +1,205 @@
+{
+  "name": "AI-13 — Long-Form SEO Content Engine",
+  "nodes": [
+    {
+      "name": "Schedule: 1st & 15th",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 1,15 * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Perplexity: SEO Keywords",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        320,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.PERPLEXITY_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "body",
+              "value": "={{ JSON.stringify({ model: 'llama-3.1-sonar-large-128k-online', messages: [{ role: 'system', content: 'You are an SEO expert in Kenya. Find high-volume keywords for printing services in Nairobi.' }, { role: 'user', content: 'Suggest a title and outline for a 1500-word blog post.' }] }) }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "GPT-4o: Generate Outline",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        540,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.OPENAI_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "body",
+              "value": "={{ JSON.stringify({ model: 'gpt-4o', messages: [{ role: 'system', content: 'Create a detailed blog outline.' }, { role: 'user', content: $json.choices[0].message.content }] }) }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Claude: Write Full Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        760,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{$env.ANTHROPIC_API_KEY}}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "body",
+              "value": "={{ JSON.stringify({ model: 'claude-3-opus-20240229', max_tokens: 4000, messages: [{ role: 'user', content: 'Write a 1500 word SEO blog post based on this outline: ' + $json.choices[0].message.content }] }) }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Save Blog Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        980,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://printhub.africa/api/n8n/save-blog-post",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "title",
+              "value": "={{$node['Perplexity: SEO Keywords'].json.choices[0].message.content.split('\\n')[0]}}"
+            },
+            {
+              "name": "content",
+              "value": "={{$json.content[0].text}}"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule: 1st & 15th": {
+      "main": [
+        [
+          {
+            "node": "Perplexity: SEO Keywords",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perplexity: SEO Keywords": {
+      "main": [
+        [
+          {
+            "node": "GPT-4o: Generate Outline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o: Generate Outline": {
+      "main": [
+        [
+          {
+            "node": "Claude: Write Full Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: Write Full Post": {
+      "main": [
+        [
+          {
+            "node": "Save Blog Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+  }
+}

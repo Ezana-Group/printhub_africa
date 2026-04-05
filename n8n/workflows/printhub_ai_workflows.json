@@ -138,8 +138,14 @@
           "jsonParameters": true,
           "headerParameters": {
             "parameters": [
-              { "name": "Authorization", "value": "Bearer {{$env.OPENAI_API_KEY}}" },
-              { "name": "Content-Type", "value": "application/json" }
+              {
+                "name": "Authorization",
+                "value": "Bearer {{$env.OPENAI_API_KEY}}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
             ]
           },
           "sendBody": true,
@@ -167,8 +173,14 @@
           "sendHeaders": true,
           "headerParameters": {
             "parameters": [
-              { "name": "x-printhub-signature", "value": "={{$env.N8N_WEBHOOK_SECRET}}" },
-              { "name": "Content-Type", "value": "application/json" }
+              {
+                "name": "x-printhub-signature",
+                "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
             ]
           },
           "sendBody": true,
@@ -196,8 +208,14 @@
           "sendHeaders": true,
           "headerParameters": {
             "parameters": [
-              { "name": "x-printhub-signature", "value": "={{$env.N8N_WEBHOOK_SECRET}}" },
-              { "name": "Content-Type", "value": "application/json" }
+              {
+                "name": "x-printhub-signature",
+                "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
             ]
           },
           "sendBody": true,
@@ -301,6 +319,9 @@
           ]
         ]
       }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
     }
   },
   {
@@ -455,6 +476,9 @@
           ]
         ]
       }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
     }
   },
   {
@@ -680,14 +704,23 @@
           "sendHeaders": true,
           "headerParameters": {
             "parameters": [
-              { "name": "x-printhub-signature", "value": "={{$env.N8N_WEBHOOK_SECRET}}" },
-              { "name": "Content-Type", "value": "application/json" }
+              {
+                "name": "x-printhub-signature",
+                "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
             ]
           },
           "sendBody": true,
           "bodyParameters": {
             "parameters": [
-              { "name": "body", "value": "={{ JSON.stringify({ workflowName: 'AI-2 WhatsApp Auto-Reply', errorMessage: $json.message || 'Unknown error', node: $json.node || 'Unknown node', executionId: $execution.id }) }}" }
+              {
+                "name": "body",
+                "value": "={{ JSON.stringify({ workflowName: 'AI-2 WhatsApp Auto-Reply', errorMessage: $json.message || 'Unknown error', node: $json.node || 'Unknown node', executionId: $execution.id }) }}"
+              }
             ]
           }
         },
@@ -823,6 +856,9 @@
           ]
         ]
       }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
     }
   },
   {
@@ -954,6 +990,9 @@
           ]
         ]
       }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
     }
   },
   {
@@ -1089,6 +1128,9 @@
           ]
         ]
       }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
     }
   },
   {
@@ -1224,6 +1266,9 @@
           ]
         ]
       }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
     }
   },
   {
@@ -1316,9 +1361,11 @@
           ]
         ]
       }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
     }
   },
-
   {
     "name": "AI-8 — Generate Lifestyle Mockups (DALL-E 3 + Stability AI)",
     "nodes": [
@@ -1543,14 +1590,23 @@
           "sendHeaders": true,
           "headerParameters": {
             "parameters": [
-              { "name": "x-printhub-signature", "value": "={{$env.N8N_WEBHOOK_SECRET}}" },
-              { "name": "Content-Type", "value": "application/json" }
+              {
+                "name": "x-printhub-signature",
+                "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
             ]
           },
           "sendBody": true,
           "bodyParameters": {
             "parameters": [
-              { "name": "body", "value": "={{ JSON.stringify({ workflowName: 'AI-8 Lifestyle Mockups', errorMessage: $json.message || 'Unknown error', node: $json.node || 'Unknown node', executionId: $execution.id }) }}" }
+              {
+                "name": "body",
+                "value": "={{ JSON.stringify({ workflowName: 'AI-8 Lifestyle Mockups', errorMessage: $json.message || 'Unknown error', node: $json.node || 'Unknown node', executionId: $execution.id }) }}"
+              }
             ]
           }
         },
@@ -1707,6 +1763,9 @@
           ]
         ]
       }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
     }
   },
   {
@@ -2046,6 +2105,9 @@
           ]
         ]
       }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
     }
   },
   {
@@ -2360,6 +2422,9 @@
           ]
         ]
       }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
     }
   },
   {
@@ -2971,6 +3036,9 @@
           ]
         ]
       }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
     }
   }
 ]
