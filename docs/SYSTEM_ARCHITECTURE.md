@@ -530,14 +530,15 @@ The system uses two isolated NextAuth configurations to decouple customer and ad
     *   **Purpose:** Hardened administrative access via `admin.printhub.africa` subdomain.
     *   **Providers:** Credentials only (no social login allowed for staff).
     *   *Security Features:* 2FA enforcement, device fingerprinting, and session logging in the `AdminSession` table.
-    *   *Session Persistence:* **JWT maxAge set to 8 hours** (improving over the default 30 days).
+    *   *Session Persistence:* **JWT maxAge set to 8 hours** (4 hours for `SUPER_ADMIN`).
     *   *Validation:* Hardened via `middleware.ts` which performs real-time database validation of the `AdminSession` record on every request.
     *   *Cookie:* `printhub.admin.session` (HttpOnly, Secure, SameSite=Strict).
+    *   *Open Redirect Protection:* `callbackUrl` is strictly validated to be same-origin or a relative path before redirection.
 
 ### 6.2 Security Infrastructure
 
 *   **Subdomain Isolation:** `middleware.ts` enforces that administrative routes are only accessible via the `admin.*` subdomain. Unauthorized access from the main domain results in a 404 or redirect.
-*   **Geographic Security (`lib/geo-detection.ts`):** Every admin login attempt is cross-referenced with `ip-api.com` to capture City and Country.
+*   **Geographic Security (`lib/geo-detection.ts`):** Every admin login attempt is cross-referenced with `ip-api.com` to capture City and Country. Includes a 2000ms timeout and fails open (returning "Unknown") to ensure login is never blocked by third-party service downtime.
 *   **Impossible Travel (`lib/impossible-travel.ts`):** Logic to detect logins from geographically distant locations within an impossible timeframe. Triggers automatic session revocation and `SUPER_ADMIN` alerts via n8n.
 *   **Rate Limiting (`lib/rate-limit.ts`):** Enforced via Upstash Redis. Keyed by IP and Action (e.g., login, refunds, bulk updates).
 *   **HMAC Webhook Verification:** All inbound requests from n8n are verified using `lib/n8n-verify.ts`, checking an HMAC-SHA256 signature against the request body and a 5-minute timestamp window.
@@ -549,9 +550,10 @@ The system uses two isolated NextAuth configurations to decouple customer and ad
 *   **Session Expansion:** JWTs include `permissions`, `isCorporate`, `corporateId`, and `emailVerified` status to minimize database hits during route resolution.
 *   **Bypass Logic:** `STAFF` and above bypass certain customer-facing restrictions (like email verification gates) for internal efficiency.
 
-- **CSRF-style:** Mutation requests (POST/PUT/PATCH/DELETE) to `/api/*` check `Origin` against allowed origins (request host, NEXT_PUBLIC_APP_URL, NEXTAUTH_URL, localhost).
+- **CSRF-style:** Mutation requests (POST/PUT/PATCH/DELETE) to `/api/*` check `Origin` against allowed origins. Payment provider callbacks (`/api/payments/*/callback`, etc.) are explicitly exempted but require strict provider-specific validation (M-Pesa ID matching, Stripe signature verification, etc.).
 - **Cron:** `/api/cron/*` secured with CRON_SECRET.
-- **Uploads:** Presign/confirm flow; optional VirusTotal scan; UploadedFile status (virus scan, review).
+- **Uploads:** Presign/confirm flow; **Mandatory VirusTotal scan in production** (enforced at startup); UploadedFile status (virus scan, review). Files marked `PENDING` or `INFECTED` are blocked from public access.
+- **Audit Logging:** All sensitive fields (passwords, secret tokens, etc.) are redacted from JSON snapshots before storage in `AuditLog`.
 
 ---
 
@@ -593,8 +595,9 @@ The system uses two isolated NextAuth configurations to decouple customer and ad
 1. **Import/Scrape:** Admin provides a URL (Printables/Thingiverse). `POST /api/admin/catalogue/import` triggers the **AI-7 Catalogue Import** n8n workflow.
 2. **AI Analysis:** n8n uses **GPT-4o Vision** to analyze images and **Claude 3.5** to parse specifications, generating a structured `CatalogueImportQueue` entry.
 3. **Review:** Admin reviews the AI-generated name, description, and suggested categories in the Admin Portal.
-4. **Approval:** `/api/admin/import/[id]/approve` creates a `Product` and triggers **AI-3 Ad Copy Generation** for all **27 Social Platforms**.
-5. **STL Management:** `/api/admin/catalogue/[id]/stl` handles manual upload/replacement of 3D model files for approved items.
+4. **Approval:** `/api/admin/import/[id]/approve` creates a `Product`.
+5. **Human Review Gate:** All AI-generated assets (Mockups, Videos, Blog Posts) default to `PENDING_REVIEW`. They must be manually approved by an admin before they appear publicly or sync to external platforms (Medium/LinkedIn).
+6. **STL Management:** `/api/admin/catalogue/[id]/stl` handles manual upload/replacement of 3D model files for approved items.
 
 ### 7.5 Production & Inventory
 
@@ -714,7 +717,7 @@ The platform is deployed as a **multi-service project** on Railway to ensure sca
 - **Build:** `npm run build` runs `prisma generate` and `next build`.
 - **Migrations:** Managed via `npx prisma migrate deploy` in the `web` service.
 - **Env:** See `.env.example` in both the root and `n8n/` directories for required keys.
-- **Default admin:** Seeded by `prisma/seed.ts`.
+- **Default admin:** Seeded by `prisma/seed.ts` using cryptographically random one-time passwords generated at runtime. Seed scripts are restricted from running if an admin already exists to prevent credential reset.
 - **Currency:** KES (Kenya Shillings), 16% VAT.
 
 ---

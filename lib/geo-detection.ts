@@ -1,3 +1,5 @@
+import { captureException } from "@sentry/nextjs";
+
 export async function getLocationFromIp(ip: string): Promise<{
   country: string | null;
   city: string | null;
@@ -13,9 +15,14 @@ export async function getLocationFromIp(ip: string): Promise<{
     return null;
   }
   
+  const timeoutMs = 2000;
+  
   try {
     const fetchPromise = fetch(`http://ip-api.com/json/${ip}?fields=country,city,lat,lon,status`)
-      .then((res) => (res.ok ? res.json() : null))
+      .then((res) => {
+        if (!res.ok) throw new Error(`IP-API HTTP error: ${res.status}`);
+        return res.json();
+      })
       .then((data) => {
         if (data && data.status === "success") {
           return {
@@ -25,7 +32,7 @@ export async function getLocationFromIp(ip: string): Promise<{
             lon: data.lon || null,
           };
         }
-        return null;
+        throw new Error(`IP-API invalid response: ${JSON.stringify(data)}`);
       });
 
     const timeoutPromise = new Promise<{
@@ -33,10 +40,19 @@ export async function getLocationFromIp(ip: string): Promise<{
       city: string | null;
       lat: number | null;
       lon: number | null;
-    } | null>((resolve) => setTimeout(() => resolve(null), 2000));
+    }>((_, reject) => setTimeout(() => reject(new Error("Geo-detection timeout")), timeoutMs));
 
+    // 🔴 HIGH-3: Geo Detection Fallback & Timeout
     return await Promise.race([fetchPromise, timeoutPromise]);
-  } catch (err) {
+  } catch (err: any) {
+    // Log to Sentry unless it's just our intentional timeout giving up
+    if (err.message !== "Geo-detection timeout") {
+      console.error(`[GeoDetection] Error resolving IP ${ip}:`, err);
+      captureException(err, { tags: { ip, service: "ip-api" } });
+    } else {
+      console.warn(`[GeoDetection] Timeout resolving IP ${ip} after ${timeoutMs}ms`);
+    }
+    // Fail open safely so logins are not blocked
     return null;
   }
 }

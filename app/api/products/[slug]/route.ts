@@ -13,6 +13,8 @@ export async function GET(
         category: { select: { id: true, name: true, slug: true } },
         productImages: { orderBy: { sortOrder: "asc" } },
         variants: true,
+        mockups: { where: { status: "APPROVED" } },   // MED-1: Filter out pending/rejected AI mockups
+        videos: { where: { status: "APPROVED" } },    // MED-1: Filter out pending/rejected AI videos
       },
     });
     if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });

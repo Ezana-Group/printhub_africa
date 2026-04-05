@@ -250,6 +250,32 @@ export const authOptionsAdmin: NextAuthOptions = {
     }),
   ],
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      // 🔴 HIGH-6: Safe `callbackUrl` Redirect Validation
+      
+      // Allow relative urls
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
+      }
+      
+      // Allow urls that belong to our application domains
+      try {
+        const parsedUrl = new URL(url);
+        if (
+          parsedUrl.origin === baseUrl ||
+          parsedUrl.hostname === 'printhub.africa' ||
+          parsedUrl.hostname === 'admin.printhub.africa' ||
+          parsedUrl.hostname === 'localhost' 
+        ) {
+          return url;
+        }
+      } catch (e) {
+        // invalid URL format, ignore
+      }
+
+      console.warn(`[Security] Admin open redirect blocked to: ${url}`);
+      return baseUrl;
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;

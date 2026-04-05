@@ -24,6 +24,21 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  // 🔴 CRIT-3: Prevent download of unscanned or infected files
+  if (file.status === "VIRUS_SCANNING" || file.virusScanStatus === "PENDING") {
+    return NextResponse.json({ 
+      error: "File is currently being scanned for viruses. Try again in 30 seconds.",
+      code: "SCAN_PENDING"
+    }, { status: 423 });
+  }
+
+  if (file.status === "INFECTED" || file.virusScanStatus === "infected") {
+    return NextResponse.json({ 
+      error: "Access denied. This file has been flagged as malicious and cannot be downloaded.",
+      code: "FILE_INFECTED"
+    }, { status: 403 });
+  }
+
   const isOwner = file.userId === session?.user?.id;
   const role = (session?.user as { role?: string })?.role ?? "";
   const isAdmin = role === "ADMIN" || role === "SUPER_ADMIN" || role === "STAFF";

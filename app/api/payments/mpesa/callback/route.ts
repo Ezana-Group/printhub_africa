@@ -23,6 +23,13 @@ interface CallbackBody {
 
 import { withRateLimit } from "@/lib/rate-limit-wrapper";
 
+/**
+ * Security Validation:
+ * - Uses `getMpesaCallbackIpCheck` which validates that incoming callbacks 
+ *   originate from safaricom's IP whitelist (in production).
+ * - Matches the CheckoutRequestID from the callback securely against 
+ *   the pending `MpesaTransaction` in the database.
+ */
 async function _POST(req: Request) {
   const ipCheck = getMpesaCallbackIpCheck(req);
   if (!ipCheck.allowed && ipCheck.productionRequiresWhitelist) {

@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
         tags: tags || [],
         targetKeyword,
         aiGenerated: aiGenerated ?? true,
-        status: "DRAFT",
+        status: (aiGenerated ?? true) ? "PENDING_REVIEW" : "DRAFT", // MED-2: AI generated posts default to PENDING_REVIEW
       },
     });
 

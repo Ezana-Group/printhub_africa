@@ -42,9 +42,14 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { title, excerpt, bodyHtml, tags, targetKeyword, aiGenerated = false, status = "DRAFT" } = body;
+    const { title, excerpt, bodyHtml, tags, targetKeyword, aiGenerated = false } = body;
+    let { status } = body;
 
     if (!title) return NextResponse.json({ error: "Title is required" }, { status: 400 });
+
+    if (!status) {
+      status = aiGenerated ? "PENDING_REVIEW" : "DRAFT";
+    }
 
     const slug = toSlug(title);
     

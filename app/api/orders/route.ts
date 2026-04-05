@@ -142,6 +142,34 @@ export async function POST(req: Request) {
     }
   }
 
+  // Server-side price recalculation (CRIT-1)
+  const productIds = items.map((i) => i.productId).filter(Boolean) as string[];
+  const variantIds = items.map((i) => i.variantId).filter(Boolean) as string[];
+
+  const [dbProducts, dbVariants] = await Promise.all([
+    prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, basePrice: true },
+    }),
+    prisma.productVariant.findMany({
+      where: { id: { in: variantIds } },
+      select: { id: true, price: true },
+    }),
+  ]);
+
+  const productPriceMap = new Map(dbProducts.map((p) => [p.id, Number(p.basePrice)]));
+  const variantPriceMap = new Map(dbVariants.map((v) => [v.id, Number(v.price ?? 0)]));
+
+  const itemsWithServerPrices = items.map((item) => {
+    let unitPrice = 0;
+    if (item.variantId) {
+      unitPrice = variantPriceMap.get(item.variantId) || 0;
+    } else if (item.productId) {
+      unitPrice = productPriceMap.get(item.productId) || 0;
+    }
+    return { ...item, unitPrice };
+  });
+
   // Corporate & Loyalty Discounts
   let orderCorporateId: string | null = null;
   let orderIsNetTerms = false;
@@ -154,6 +182,7 @@ export async function POST(req: Request) {
         userId: session.user.id,
         corporateId: reqCorporateId,
         isActive: true,
+        canPlaceOrders: true, // MED-6: Enforce order placement permission
         corporate: { status: "APPROVED" },
       },
       include: { corporate: { select: { id: true, discountPercent: true } } },
@@ -162,14 +191,14 @@ export async function POST(req: Request) {
       orderCorporateId = membership.corporate.id;
       orderIsNetTerms = !!reqIsNetTerms;
       orderPoReference = (reqPoReference?.trim() || null) ?? null;
-      const subtotalBeforeCorporate = items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+      const subtotalBeforeCorporate = itemsWithServerPrices.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
       const corporateDiscountKes = Math.round(subtotalBeforeCorporate * (membership.corporate.discountPercent / 100));
       effectiveDiscount += corporateDiscountKes;
     }
   }
 
   const { subtotalInclVat, vatAmount, total } = calculateCartTotals(
-    items.map((i) => ({ unitPrice: i.unitPrice, quantity: i.quantity })),
+    itemsWithServerPrices.map((i) => ({ unitPrice: i.unitPrice, quantity: i.quantity })),
     reqShipping,
     effectiveDiscount
   );
@@ -240,7 +269,7 @@ export async function POST(req: Request) {
           poReference: orderPoReference ?? undefined,
           placedBy: session?.user?.id ?? undefined,
           items: {
-            create: items.map((i) => ({
+            create: itemsWithServerPrices.map((i) => ({
               productId: i.productId ?? null,
               productVariantId: i.variantId ?? null,
               quantity: i.quantity,

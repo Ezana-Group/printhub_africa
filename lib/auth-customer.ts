@@ -144,6 +144,32 @@ export const authOptionsCustomer: NextAuthOptions = {
 
       return true;
     },
+    async redirect({ url, baseUrl }) {
+      // 🔴 HIGH-6: Safe `callbackUrl` Redirect Validation
+      
+      // Allow relative urls
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
+      }
+      
+      // Allow urls that belong to our application domains
+      try {
+        const parsedUrl = new URL(url);
+        if (
+          parsedUrl.origin === baseUrl ||
+          parsedUrl.hostname === 'printhub.africa' ||
+          parsedUrl.hostname === 'admin.printhub.africa' ||
+          parsedUrl.hostname === 'localhost' 
+        ) {
+          return url;
+        }
+      } catch (e) {
+        // invalid URL format, ignore
+      }
+
+      console.warn(`[Security] Blocked open redirect attempt to: ${url}`);
+      return baseUrl;
+    },
     async jwt({ token, user, trigger, session }) {
       if (trigger === "update" && session) {
         if (session.emailVerified !== undefined) token.emailVerified = session.emailVerified;

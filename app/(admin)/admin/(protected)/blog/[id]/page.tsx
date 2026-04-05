@@ -88,8 +88,13 @@ export default function BlogEditorPage() {
       const payload = { ...formData };
       if (publish) payload.status = "PUBLISHED";
 
-      const url = isNew ? "/api/admin/blog" : `/api/admin/blog/${id}`;
-      const method = isNew ? "POST" : "PATCH";
+      let url = isNew ? "/api/admin/blog" : `/api/admin/blog/${id}`;
+      let method = isNew ? "POST" : "PATCH";
+
+      if (publish && !isNew) {
+        url = `/api/admin/blog/${id}/publish`;
+        method = "POST";
+      }
 
       const response = await fetch(url, {
         method,

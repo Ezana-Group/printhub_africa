@@ -4,6 +4,7 @@ import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import { ensureUniqueOrderNumber } from "@/lib/order-utils";
 import { createTrackingEvent } from "@/lib/tracking";
+import { calculateCartTotals } from "@/lib/cart-calculations";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "STAFF"];
 
@@ -53,7 +54,7 @@ export async function POST(req: Request) {
     total: number;
   };
 
-  if (!customerId || !items?.length || total == null) {
+  if (!customerId || !items?.length) {
     return NextResponse.json(
       { error: "Customer and items are required" },
       { status: 400 }
@@ -67,6 +68,40 @@ export async function POST(req: Request) {
   if (!customer) {
     return NextResponse.json({ error: "Customer not found" }, { status: 404 });
   }
+
+  // Server-side price recalculation (CRIT-1)
+  const productIds = items.map((i) => i.productId).filter(Boolean);
+  const variantIds = items.map((i) => i.variantId).filter(Boolean) as string[];
+
+  const [dbProducts, dbVariants] = await Promise.all([
+    prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, basePrice: true },
+    }),
+    prisma.productVariant.findMany({
+      where: { id: { in: variantIds } },
+      select: { id: true, price: true },
+    }),
+  ]);
+
+  const productPriceMap = new Map(dbProducts.map((p) => [p.id, Number(p.basePrice)]));
+  const variantPriceMap = new Map(dbVariants.map((v) => [v.id, Number(v.price ?? 0)]));
+
+  const itemsWithServerPrices = items.map((item) => {
+    let unitPrice = 0;
+    if (item.variantId) {
+      unitPrice = variantPriceMap.get(item.variantId) || 0;
+    } else if (item.productId) {
+      unitPrice = productPriceMap.get(item.productId) || 0;
+    }
+    return { ...item, unitPrice };
+  });
+
+  const { subtotalInclVat, vatAmount: calculatedVat, total: calculatedTotal } = calculateCartTotals(
+    itemsWithServerPrices.map((i) => ({ unitPrice: i.unitPrice, quantity: i.quantity })),
+    deliveryFee,
+    discountAmount
+  );
 
   let orderNumber: string;
   try {
@@ -92,15 +127,15 @@ export async function POST(req: Request) {
       type: "SHOP",
       paymentMethod: paymentMethod ?? "CASH_ON_PICKUP",
       paymentStatus,
-      subtotal,
-      tax: vatAmount,
+      subtotal: subtotalInclVat,
+      tax: calculatedVat,
       shippingCost: deliveryFee,
       discount: discountAmount,
-      total,
+      total: calculatedTotal,
       currency: "KES",
       notes: adminNotes ?? null,
       items: {
-        create: items.map((item) => ({
+        create: itemsWithServerPrices.map((item) => ({
           productId: item.productId,
           productVariantId: item.variantId ?? null,
           quantity: item.quantity,

@@ -23,11 +23,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (bodyHtml) data.bodyHtml = bodyHtml;
     if (tags) data.tags = tags;
     if (targetKeyword !== undefined) data.targetKeyword = targetKeyword;
+    
+    // MED-2: Prevent publishing via PATCH. Must use the dedicated /publish route.
     if (status) {
-      data.status = status;
-      if (status === "PUBLISHED" && !data.publishedAt) {
-        data.publishedAt = new Date();
+      if (status === "PUBLISHED") {
+        return NextResponse.json({ error: "Use the dedicated /publish route to publish posts." }, { status: 400 });
       }
+      data.status = status;
     }
     if (aiGenerated !== undefined) data.aiGenerated = aiGenerated;
 

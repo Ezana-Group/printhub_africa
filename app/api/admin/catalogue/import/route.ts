@@ -14,6 +14,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "URL_REQUIRED" }, { status: 400 });
     }
 
+    // 🔴 HIGH-2: SSRF Prevention
+    try {
+      const parsedUrl = new URL(url);
+      const host = parsedUrl.hostname.toLowerCase();
+      
+      const allowedDomains = ["thingiverse.com", "printables.com", "makerworld.com", "cults3d.com"];
+      const isAllowed = allowedDomains.some(d => host === d || host.endsWith(`.${d}`));
+      
+      if (!isAllowed) {
+        return NextResponse.json({ error: "UNSUPPORTED_DOMAIN", message: "Only Thingiverse, Printables, MakerWorld, and Cults3D are supported." }, { status: 400 });
+      }
+      
+      if (parsedUrl.protocol !== "https:") {
+        return NextResponse.json({ error: "INVALID_PROTOCOL", message: "Only HTTPS protocols are allowed." }, { status: 400 });
+      }
+    } catch {
+      return NextResponse.json({ error: "INVALID_URL", message: "The provided URL is not valid." }, { status: 400 });
+    }
+
     // 1. Create CatalogueImportQueue entry immediately (PENDING)
     const importQueue = await prisma.catalogueImportQueue.create({
       data: {

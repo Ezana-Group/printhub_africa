@@ -2663,41 +2663,41 @@ model MarketingErrorLog {
 }
 
 model ProductMockup {
-  id         String    @id @default(cuid())
+  id         String            @id @default(cuid())
   productId  String
   platform   String
   imageUrl   String
   generator  String
   prompt     String
-  isApproved Boolean   @default(false)
-  isUsed     Boolean   @default(false)
+  status     ModerationStatus  @default(PENDING_REVIEW)
+  isUsed     Boolean           @default(false)
   approvedAt DateTime?
   approvedBy String?
-  createdAt  DateTime  @default(now())
-  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt  DateTime          @default(now())
+  product    Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
-  @@index([isApproved])
+  @@index([status])
   @@index([platform])
 }
 
 model ProductVideo {
-  id           String    @id @default(cuid())
+  id           String            @id @default(cuid())
   productId    String
   platform     String
   videoUrl     String
   audioUrl     String?
   thumbnailUrl String?
   duration     Int?
-  isApproved   Boolean   @default(false)
-  isPosted     Boolean   @default(false)
+  status       ModerationStatus  @default(PENDING_REVIEW)
+  isPosted     Boolean           @default(false)
   approvedAt   DateTime?
-  createdAt    DateTime  @default(now())
-  product      Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt    DateTime          @default(now())
+  product      Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
   @@index([platform])
-  @@index([isApproved])
+  @@index([status])
 }
 
 model ContentCalendar {
@@ -2739,6 +2739,12 @@ enum UserRole {
   STAFF
   ADMIN
   SUPER_ADMIN
+}
+
+enum ModerationStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
 }
 
 enum ProductType {
@@ -3211,11 +3217,12 @@ model BlogPost {
   tags            String[]  @default([])
   targetKeyword   String?
   status          String    @default("DRAFT")
-  // DRAFT | PUBLISHED | ARCHIVED
+  // DRAFT | PENDING_REVIEW | PUBLISHED | ARCHIVED
   aiGenerated     Boolean   @default(true)
   mediumUrl       String?
   linkedinPostUrl String?
   publishedAt     DateTime?
+  publishedBy     String?    // MED-2: Audit trail for who published the post
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 }

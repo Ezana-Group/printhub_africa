@@ -14,14 +14,14 @@ export async function GET(req: NextRequest) {
 
   try {
     const pendingMockups = await prisma.productMockup.findMany({
-      where: { isApproved: false },
+      where: { status: "PENDING_REVIEW" },
       include: { product: true },
       orderBy: { createdAt: "desc" },
       take: 20,
     });
 
     const pendingVideos = await prisma.productVideo.findMany({
-      where: { isApproved: false },
+      where: { status: "PENDING_REVIEW" },
       include: { product: true },
       orderBy: { createdAt: "desc" },
       take: 20,
@@ -55,15 +55,17 @@ export async function PATCH(req: NextRequest) {
   }
 
   try {
-    const { type, id, isApproved } = await req.json();
+    const { type, id, status } = await req.json();
     const adminId = (session.user as { id?: string }).id ?? "unknown";
     const now = new Date();
+    
+    const isApproved = status === "APPROVED";
 
     if (type === "mockup") {
       await prisma.productMockup.update({
         where: { id },
         data: {
-          isApproved,
+          status,
           approvedAt: isApproved ? now : null,
           approvedBy: isApproved ? adminId : null,
         },
@@ -71,7 +73,7 @@ export async function PATCH(req: NextRequest) {
     } else if (type === "video") {
       await prisma.productVideo.update({
         where: { id },
-        data: { isApproved, approvedAt: isApproved ? now : null },
+        data: { status, approvedAt: isApproved ? now : null },
       });
     } else if (type === "ad-copy") {
       await prisma.adCopyVariation.update({

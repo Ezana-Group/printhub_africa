@@ -9,6 +9,11 @@ import { withRateLimit } from "@/lib/rate-limit-wrapper";
  * POST /api/payments/pesapal/callback
  * PesaPal IPN (Instant Payment Notification). Register this URL in PesaPal dashboard.
  * Fetches transaction status from PesaPal (IPN does not include status), then updates Payment + Order.
+ *
+ * Security Validation: 
+ * - The raw IPN does not contain the payment status, preventing IPN spoofing.
+ * - This endpoint uses the tracking ID from the IPN to query the Pesapal API securely.
+ * - Only the Pesapal API response determines the order fulfillment status.
  */
 async function _POST(req: NextRequest) {
   try {

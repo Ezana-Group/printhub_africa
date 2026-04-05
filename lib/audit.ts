@@ -15,6 +15,23 @@ export interface AuditEntry {
   request?: Request; // For backward compatibility
 }
 
+const SENSITIVE_FIELDS = ['password', 'passwordHash', 'token', 'secret', 'key', 'accessToken', 'refreshToken', 'credential'];
+
+function redactSensitiveFields(obj: any): any {
+  if (!obj || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(redactSensitiveFields);
+  
+  const redacted: any = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (SENSITIVE_FIELDS.some(sf => k.toLowerCase().includes(sf.toLowerCase()))) {
+      redacted[k] = '[REDACTED]';
+    } else {
+      redacted[k] = redactSensitiveFields(v);
+    }
+  }
+  return redacted;
+}
+
 export async function createAuditLog(entry: AuditEntry) {
   try {
     let ip = entry.ipAddress;
@@ -22,18 +39,24 @@ export async function createAuditLog(entry: AuditEntry) {
       ip = entry.request.headers.get("x-forwarded-for") || undefined;
     }
 
+    const beforeData = entry.before ? redactSensitiveFields(entry.before) : undefined;
+    
+    // Sometimes unstructured details come through 'after'. Try 'after' first, then fallback to 'details'.
+    const rawAfter = entry.after !== undefined ? entry.after : entry.details;
+    const afterData = rawAfter !== undefined ? redactSensitiveFields(rawAfter) : undefined;
+
     return await prisma.auditLog.create({
       data: {
         userId: entry.userId,
         action: entry.action,
         entity: entry.entity || entry.category || "SYSTEM",
         entityId: entry.entityId,
-        before: entry.before ? JSON.parse(JSON.stringify(entry.before)) : undefined,
+        before: beforeData,
         ipAddress: ip,
         category: entry.category,
         targetType: entry.targetType,
         targetId: entry.targetId,
-        after: entry.after ? JSON.parse(JSON.stringify(entry.after)) : (entry.details ? JSON.parse(JSON.stringify(entry.details)) : undefined),
+        after: afterData,
       },
     });
   } catch (error) {

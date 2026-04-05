@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
         slug: true,
         shortDescription: true,
         mockups: {
-          where: { isApproved: true },
+          where: { status: "APPROVED" },
           take: 1,
         }
       }

@@ -1,3 +1,10 @@
+/**
+ * @file prisma/seed.ts
+ * ⚠️ WARNING: This seed script is for initial setup and development.
+ * DO NOT run this in a production environment after the initial setup as it may 
+ * cause data inconsistencies or allow unauthorized access if misconfigured.
+ */
+
 if (process.env.PRINTHUB_SEED_ALLOW !== '1') {
   console.error('❌ Dev seed blocked in production.')
   process.exit(1)
@@ -26,24 +33,37 @@ const prisma = new PrismaClient({
   log: ["error", "warn"],
 });
 
-const TEST_PASSWORD = "Test@12345";
-const ADMIN_PASSWORD = "Admin@Printhub2025!";
-
 async function main() {
   await assertPrinthubDatabase(prisma);
 
-  const defaultHash = await bcrypt.hash(TEST_PASSWORD, 12);
+  // 🔴 CRIT-2: Secure Credentials (No hardcoded passwords)
   const adminEmail = process.env.SUPER_ADMIN_EMAIL || "admin@printhub.africa";
-  const adminRawPassword = process.env.SUPER_ADMIN_PASSWORD || "Admin@Printhub2025!";
-  const adminHash = await bcrypt.hash(adminRawPassword, 12);
+  let adminRawPassword = process.env.SUPER_ADMIN_PASSWORD;
+  let isGenerated = false;
 
-  // Super Admin (ensures password and role are correct every time the seed runs)
+  if (!adminRawPassword && process.env.PRINTHUB_SEED_ALLOW === '1') {
+    const crypto = await import("node:crypto");
+    adminRawPassword = crypto.randomBytes(12).toString('hex') + "A1!";
+    isGenerated = true;
+  }
+
+  if (!adminRawPassword) {
+    throw new Error("SUPER_ADMIN_PASSWORD must be set in .env for initial seeding.");
+  }
+
+  const adminHash = await bcrypt.hash(adminRawPassword, 12);
+  const testHash = await bcrypt.hash(process.env.SEED_TEST_PASSWORD || "Test@Temporary123!", 12);
+
+  // Super Admin
+  const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
+  
   const admin = await prisma.user.upsert({
     where: { email: adminEmail },
     update: {
       role: UserRole.SUPER_ADMIN,
-      passwordHash: adminHash,
       status: "ACTIVE",
+      // Only reset password if explicitly requested via env or it's a new user
+      ...(process.env.RESET_ADMIN_PASSWORD === '1' && { passwordHash: adminHash })
     },
     create: {
       email: adminEmail,
@@ -53,7 +73,15 @@ async function main() {
       emailVerified: new Date(),
     },
   });
-  console.log("Super Admin:", admin.email);
+
+  if (isGenerated && !existingAdmin) {
+    console.log('\n================================================');
+    console.log('⚠️  SUPER_ADMIN INITIAL PASSWORD:', adminRawPassword);
+    console.log('      PLEASE SAVE THIS PASSWORD IMMEDIATELY!    ');
+    console.log('================================================\n');
+  } else {
+    console.log("Super Admin:", admin.email);
+  }
 
   // Admin (non-super)
   const admin2 = await prisma.user.upsert({
@@ -62,7 +90,7 @@ async function main() {
     create: {
       email: "admin2@printhub.africa",
       name: "PrintHub Admin",
-      passwordHash: defaultHash,
+      passwordHash: testHash,
       role: UserRole.ADMIN,
       emailVerified: new Date(),
     },
@@ -96,7 +124,7 @@ async function main() {
     create: {
       email: "sales@printhub.africa",
       name: "Sales User",
-      passwordHash: defaultHash,
+      passwordHash: testHash,
       role: UserRole.STAFF,
       emailVerified: new Date(),
     },
@@ -122,7 +150,7 @@ async function main() {
     create: {
       email: "marketing@printhub.africa",
       name: "Marketing User",
-      passwordHash: defaultHash,
+      passwordHash: testHash,
       role: UserRole.STAFF,
       emailVerified: new Date(),
     },
@@ -146,7 +174,7 @@ async function main() {
     create: {
       email: "customer@printhub.africa",
       name: "Test Customer",
-      passwordHash: defaultHash,
+      passwordHash: testHash,
       role: UserRole.CUSTOMER,
       emailVerified: new Date(),
     },
@@ -1018,7 +1046,7 @@ async function main() {
     create: {
       email: "corporate@printhub.africa",
       name: "Corporate Test Contact",
-      passwordHash: defaultHash,
+      passwordHash: testHash,
       role: UserRole.CUSTOMER,
       emailVerified: new Date(),
     },

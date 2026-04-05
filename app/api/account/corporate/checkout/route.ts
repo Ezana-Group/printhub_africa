@@ -19,6 +19,7 @@ export async function GET() {
     where: {
       userId: session.user.id,
       isActive: true,
+      canPlaceOrders: true, // MED-6: Enforce order placement permission
       corporate: { status: APPROVED },
     },
     include: {
@@ -57,6 +58,7 @@ export async function GET() {
       creditUsed: corp.creditUsed,
       availableCredit,
       canUseNetTerms,
+      canPlaceOrders: membership.canPlaceOrders,
     },
   });
 }
