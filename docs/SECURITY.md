@@ -16,6 +16,24 @@ This document outlines the security procedures, key rotation policies, and incid
   - Super Admin: 4 hours
 - **Hardware Security:** 2FA is mandatory for all administrative accounts.
 
+### 1.3 Order Integrity (Price Recalculation)
+- **Status:** MANDATORY.
+- **Enforcement:** All orders (Storefront & Admin) must use `calculateOrderPriceServerSide`.
+- **Behavior:** The server ignores price data from the client, recalculating the final total from the ground truth database (Product pricing, Variant overrides, Dynamic VAT, Corporate discounts).
+- **Audit:** Any detected mismatch between client-sent prices and server-calculated prices is logged as `ORDER_PRICE_MISMATCH` with severity `SECURITY_CRITICAL`.
+
+### 1.4 SSRF Prevention (Catalogue Import)
+- **Status:** MANDATORY.
+- **Enforcement:** Strict URL validation in the import API.
+- **Behavior:** Blocks internal/private IP addresses (127.0.0.1, localhost, VPC ranges) and enforces a strict domain allowlist for external imports.
+- **Audit:** Blocked attempts are recorded in the `AuditLog` as `BLOCKED_IMPORT_URL`.
+
+### 1.5 Warranty Data Scoping
+- **Status:** MANDATORY.
+- **Enforcement:** All warranty lookups are strictly scoped to the `customerId` from the session.
+- **Rate Limiting:** Maximum 10 lookups per hour per user/IP to prevent serial number enumeration.
+- **Audit:** Failed lookups (serial numbers not found for the user) are logged to detect brute-force activity.
+
 ---
 
 ## 2. Key Rotation Policy
@@ -48,6 +66,11 @@ To minimize the impact of credential leakage, the following rotation schedule is
 - **Opt-In:** Sending is strictly restricted to users with `smsMarketingOptIn: true`.
 - **Rate Limiting:** Maximum 1 broadcast per hour per admin to prevent accidental spam or CA enforcement.
 - **Audit:** All broadcasts are logged in the `AuditLog` including message content and recipient count.
+
+### 3.3 Content Lifecycle (Human review gate)
+- **Status:** MANDATORY for Blog Posts.
+- **Workflow:** `DRAFT` -> `PENDING_REVIEW` -> `PUBLISHED` (requires explicit staff approval).
+- **Enforcement:** The `PUBLISHED` status cannot be set via standard `PATCH` routes; it requires a dedicated `/publish` endpoint which logs the authorizing administrator.
 
 ---
 

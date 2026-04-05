@@ -30,7 +30,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const updated = await prisma.blogPost.update({
       where: { id },
       data: {
-        status: "PUBLISHED",
+        status: "PUBLISHED" as any,
         publishedAt: new Date(),
         publishedBy: userId,
       },

@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
         tags: tags || [],
         targetKeyword,
         aiGenerated,
-        status,
+        status: status as any, // Cast to any to avoid enum type issues in TS if not generated yet
         publishedAt: status === "PUBLISHED" ? new Date() : null,
       },
     });

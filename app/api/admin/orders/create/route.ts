@@ -4,7 +4,7 @@ import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import { ensureUniqueOrderNumber } from "@/lib/order-utils";
 import { createTrackingEvent } from "@/lib/tracking";
-import { calculateCartTotals } from "@/lib/cart-calculations";
+import { calculateOrderPriceServerSide } from "@/lib/order-price-calculator";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "STAFF"];
 
@@ -28,15 +28,12 @@ export async function POST(req: Request) {
     items,
     deliveryAddress,
     deliveryCounty,
-    deliveryMethod,
+    deliveryMethod: reqDeliveryMethod,
     paymentMethod,
     poReference,
     adminNotes,
-    subtotal,
-    discountAmount = 0,
-    vatAmount = 0,
-    deliveryFee = 0,
-    total,
+    deliveryFee: reqDeliveryFee = 0,
+    discountAmount: reqDiscountAmount = 0,
   } = body as {
     customerId: string;
     corporateId?: string | null;
@@ -47,11 +44,8 @@ export async function POST(req: Request) {
     paymentMethod?: string;
     poReference?: string | null;
     adminNotes?: string | null;
-    subtotal: number;
-    discountAmount?: number;
-    vatAmount?: number;
     deliveryFee?: number;
-    total: number;
+    discountAmount?: number;
   };
 
   if (!customerId || !items?.length) {
@@ -70,38 +64,29 @@ export async function POST(req: Request) {
   }
 
   // Server-side price recalculation (CRIT-1)
-  const productIds = items.map((i) => i.productId).filter(Boolean);
-  const variantIds = items.map((i) => i.variantId).filter(Boolean) as string[];
-
-  const [dbProducts, dbVariants] = await Promise.all([
-    prisma.product.findMany({
-      where: { id: { in: productIds } },
-      select: { id: true, basePrice: true },
-    }),
-    prisma.productVariant.findMany({
-      where: { id: { in: variantIds } },
-      select: { id: true, price: true },
-    }),
-  ]);
-
-  const productPriceMap = new Map(dbProducts.map((p) => [p.id, Number(p.basePrice)]));
-  const variantPriceMap = new Map(dbVariants.map((v) => [v.id, Number(v.price ?? 0)]));
-
-  const itemsWithServerPrices = items.map((item) => {
-    let unitPrice = 0;
-    if (item.variantId) {
-      unitPrice = variantPriceMap.get(item.variantId) || 0;
-    } else if (item.productId) {
-      unitPrice = productPriceMap.get(item.productId) || 0;
+  const { 
+    items: itemsWithServerPrices, 
+    subtotal, 
+    discountAmount, 
+    deliveryFee, 
+    vatAmount, 
+    total: calculatedTotal 
+  } = await calculateOrderPriceServerSide(
+    items.map(i => ({ productId: i.productId, variantId: i.variantId || undefined, quantity: i.quantity })),
+    null,
+    reqDeliveryMethod === 'Express' ? 'EXPRESS' : 'STANDARD',
+    customerId,
+    {
+      corporateId: corporateId
     }
-    return { ...item, unitPrice };
-  });
-
-  const { subtotalInclVat, vatAmount: calculatedVat, total: calculatedTotal } = calculateCartTotals(
-    itemsWithServerPrices.map((i) => ({ unitPrice: i.unitPrice, quantity: i.quantity })),
-    deliveryFee,
-    discountAmount
   );
+
+  // Sentry mismatch guard
+  const clientSubtotal = items.reduce((sum, i) => sum + (i.unitPrice * i.quantity), 0);
+  if (Math.abs(clientSubtotal - subtotal) > 1) {
+    console.warn(`[SECURITY] Admin price mismatch detected for customer ${customerId}. Client subtotal: ${clientSubtotal}, Server subtotal: ${subtotal}`);
+  }
+
 
   let orderNumber: string;
   try {
@@ -127,8 +112,8 @@ export async function POST(req: Request) {
       type: "SHOP",
       paymentMethod: paymentMethod ?? "CASH_ON_PICKUP",
       paymentStatus,
-      subtotal: subtotalInclVat,
-      tax: calculatedVat,
+      subtotal: subtotal,
+      tax: vatAmount,
       shippingCost: deliveryFee,
       discount: discountAmount,
       total: calculatedTotal,
@@ -150,7 +135,7 @@ export async function POST(req: Request) {
           street: deliveryAddress ?? "",
           city: deliveryCounty ?? "",
           county: deliveryCounty ?? "",
-          deliveryMethod: deliveryMethod ?? undefined,
+          deliveryMethod: reqDeliveryMethod ?? undefined,
         },
       },
       timeline: {
@@ -179,7 +164,7 @@ export async function POST(req: Request) {
   if (corporateId && isNetTerms) {
     await prisma.corporateAccount.update({
       where: { id: corporateId },
-      data: { creditUsed: { increment: Math.round(total) } },
+      data: { creditUsed: { increment: Math.round(calculatedTotal) } },
     });
   }
 

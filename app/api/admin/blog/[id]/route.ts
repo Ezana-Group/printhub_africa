@@ -29,7 +29,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (status === "PUBLISHED") {
         return NextResponse.json({ error: "Use the dedicated /publish route to publish posts." }, { status: 400 });
       }
-      data.status = status;
+      data.status = status as any;
     }
     if (aiGenerated !== undefined) data.aiGenerated = aiGenerated;
 

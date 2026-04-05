@@ -62,7 +62,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // --- DB VALIDATION (Step 8 fix) ---
-    if (token && !isAuthApi) {
+    if (token && !isAuthApi && !isLoginPage) {
       const sessionId = token.sessionId as string;
       if (sessionId) {
         const dbSession = await prisma.adminSession.findUnique({
@@ -72,12 +72,25 @@ export async function middleware(request: NextRequest) {
 
         if (!dbSession || dbSession.revokedAt || new Date() > dbSession.expiresAt) {
           console.warn(`[Security] Admin session ${sessionId} is invalid or revoked. Redirecting to login.`);
+          
+          if (isLoginPage) {
+            // Already on login page, just clear the stale cookie and continue
+            const response = NextResponse.next();
+            response.cookies.delete(ADMIN_COOKIE);
+            return response;
+          }
+
           const loginUrl = new URL("/login", request.url);
           if (host.includes('localhost') && pathname.startsWith('/admin')) {
             loginUrl.pathname = '/admin/login';
           }
           const response = NextResponse.redirect(loginUrl);
-          response.cookies.delete(ADMIN_COOKIE);
+          // Ensure we delete with domain if in production
+          response.cookies.delete({
+            name: ADMIN_COOKIE,
+            domain: isProduction ? ".printhub.africa" : undefined,
+            path: "/",
+          });
           return response;
         }
       }

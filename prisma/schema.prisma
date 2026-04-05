@@ -3208,21 +3208,29 @@ model SmsBroadcast {
 }
 
 model BlogPost {
-  id              String    @id @default(cuid())
+  id              String         @id @default(cuid())
   title           String
-  slug            String    @unique
+  slug            String         @unique
   excerpt         String?
   bodyHtml        String
   metaDescription String?
-  tags            String[]  @default([])
+  tags            String[]       @default([])
   targetKeyword   String?
-  status          String    @default("DRAFT")
-  // DRAFT | PENDING_REVIEW | PUBLISHED | ARCHIVED
-  aiGenerated     Boolean   @default(true)
+  status          BlogPostStatus @default(DRAFT)
+  aiGenerated     Boolean        @default(true)
   mediumUrl       String?
   linkedinPostUrl String?
   publishedAt     DateTime?
-  publishedBy     String?    // MED-2: Audit trail for who published the post
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  publishedBy     String? // userId of admin who approved
+  syncedAt        DateTime? // when it was synced to external platforms
+  syncTargets     String[] // e.g. ["medium", "linkedin"]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+enum BlogPostStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  REJECTED
 }

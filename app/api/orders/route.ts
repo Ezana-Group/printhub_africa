@@ -4,7 +4,7 @@ import { authOptionsCustomer } from "@/lib/auth-customer";
 import { prisma } from "@/lib/prisma";
 import { ensureUniqueOrderNumber } from "@/lib/order-utils";
 import { createTrackingEvent } from "@/lib/tracking";
-import { calculateCartTotals } from "@/lib/cart-calculations";
+import { calculateOrderPriceServerSide } from "@/lib/order-price-calculator";
 import { reserveOrderStock } from "@/lib/order-stock";
 import { z } from "zod";
 
@@ -143,65 +143,45 @@ export async function POST(req: Request) {
   }
 
   // Server-side price recalculation (CRIT-1)
-  const productIds = items.map((i) => i.productId).filter(Boolean) as string[];
-  const variantIds = items.map((i) => i.variantId).filter(Boolean) as string[];
-
-  const [dbProducts, dbVariants] = await Promise.all([
-    prisma.product.findMany({
-      where: { id: { in: productIds } },
-      select: { id: true, basePrice: true },
-    }),
-    prisma.productVariant.findMany({
-      where: { id: { in: variantIds } },
-      select: { id: true, price: true },
-    }),
-  ]);
-
-  const productPriceMap = new Map(dbProducts.map((p) => [p.id, Number(p.basePrice)]));
-  const variantPriceMap = new Map(dbVariants.map((v) => [v.id, Number(v.price ?? 0)]));
-
-  const itemsWithServerPrices = items.map((item) => {
-    let unitPrice = 0;
-    if (item.variantId) {
-      unitPrice = variantPriceMap.get(item.variantId) || 0;
-    } else if (item.productId) {
-      unitPrice = productPriceMap.get(item.productId) || 0;
+  const { 
+    items: itemsWithServerPrices, 
+    subtotal, 
+    discountAmount: effectiveDiscount, 
+    deliveryFee: shippingCost, 
+    vatAmount, 
+    total: calculatedTotal 
+  } = await calculateOrderPriceServerSide(
+    items.map(i => ({ productId: i.productId, variantId: i.variantId, quantity: i.quantity })),
+    null, // coupon handling can be expanded here if implemented
+    isPickup ? 'PICKUP' : (reqAddress.deliveryMethod === 'Express' ? 'EXPRESS' : 'STANDARD'),
+    session?.user?.id,
+    {
+      loyaltyPoints: reqLoyaltyPoints,
+      corporateId: reqCorporateId
     }
-    return { ...item, unitPrice };
-  });
+  );
 
-  // Corporate & Loyalty Discounts
-  let orderCorporateId: string | null = null;
-  let orderIsNetTerms = false;
-  let orderPoReference: string | null = null;
-  let effectiveDiscount = reqDiscount + loyaltyDiscountKes;
-
-  if (reqCorporateId && session?.user?.id) {
-    const membership = await prisma.corporateTeamMember.findFirst({
-      where: {
-        userId: session.user.id,
-        corporateId: reqCorporateId,
-        isActive: true,
-        canPlaceOrders: true, // MED-6: Enforce order placement permission
-        corporate: { status: "APPROVED" },
-      },
-      include: { corporate: { select: { id: true, discountPercent: true } } },
-    });
-    if (membership?.corporate) {
-      orderCorporateId = membership.corporate.id;
-      orderIsNetTerms = !!reqIsNetTerms;
-      orderPoReference = (reqPoReference?.trim() || null) ?? null;
-      const subtotalBeforeCorporate = itemsWithServerPrices.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
-      const corporateDiscountKes = Math.round(subtotalBeforeCorporate * (membership.corporate.discountPercent / 100));
-      effectiveDiscount += corporateDiscountKes;
-    }
+  // Sentry mismatch guard
+  const clientTotal = Number(parsed.data.items.reduce((sum, i) => sum + (i.unitPrice * i.quantity), 0)) + 
+                      Number(reqShipping || 0) - 
+                      Number(reqDiscount || 0);
+  
+  if (Math.abs(clientTotal - calculatedTotal) > 1) {
+    console.error(`[SECURITY_CRITICAL] Price mismatch detected for user ${session?.user?.id || 'GUEST'}. Client total: ${clientTotal}, Server total: ${calculatedTotal}. Possible manipulation attempt.`);
+    // Log to a dedicated security audit log
+    await prisma.auditLog.create({
+      data: {
+        userId: session?.user?.id || 'GUEST',
+        action: 'ORDER_PRICE_MISMATCH',
+        entity: 'Order',
+        after: { clientTotal, serverTotal: calculatedTotal, items: parsed.data.items } as any,
+      }
+    }).catch(err => console.error("Failed to log price mismatch:", err));
   }
 
-  const { subtotalInclVat, vatAmount, total } = calculateCartTotals(
-    itemsWithServerPrices.map((i) => ({ unitPrice: i.unitPrice, quantity: i.quantity })),
-    reqShipping,
-    effectiveDiscount
-  );
+  const vatAmountResult = vatAmount;
+  const total = calculatedTotal;
+
 
   const hasPOD = items.some((i) => i.catalogueItemId);
   const orderType = hasPOD ? "POD" : "SHOP";
@@ -253,30 +233,33 @@ export async function POST(req: Request) {
           userId: session?.user?.id ?? null,
           status: "PENDING",
           type: orderType,
-          subtotal: subtotalInclVat,
-          tax: vatAmount,
-          shippingCost: reqShipping,
+          subtotal: subtotal,
+          tax: vatAmountResult,
+          shippingCost: shippingCost,
           discount: effectiveDiscount,
-          total,
+          total: calculatedTotal,
           currency: "KES",
           notes: [notes, deliveryNotes].filter(Boolean).join(" — ") || undefined,
           pickupLocationId: orderPickupLocationId,
           courierId: orderCourierId ?? undefined,
           deliveryZoneId: orderDeliveryZoneId ?? undefined,
           estimatedDelivery: orderEstimatedDelivery ?? undefined,
-          corporateId: orderCorporateId ?? undefined,
-          isNetTerms: orderIsNetTerms || undefined,
-          poReference: orderPoReference ?? undefined,
+          corporateId: reqCorporateId ?? undefined,
+          isNetTerms: reqIsNetTerms || undefined,
+          poReference: reqPoReference ?? undefined,
           placedBy: session?.user?.id ?? undefined,
           items: {
-            create: itemsWithServerPrices.map((i) => ({
-              productId: i.productId ?? null,
-              productVariantId: i.variantId ?? null,
-              quantity: i.quantity,
-              unitPrice: i.unitPrice,
-              customizations: (i.customizations ?? undefined) as object | undefined,
-              instructions: i.instructions ?? undefined,
-            })),
+            create: itemsWithServerPrices.map((i, index) => {
+              const originalItem = items[index];
+              return {
+                productId: i.productId ?? null,
+                productVariantId: i.variantId ?? null,
+                quantity: i.quantity,
+                unitPrice: i.unitPrice,
+                customizations: (originalItem.customizations ?? undefined) as any,
+                instructions: originalItem.instructions ?? undefined,
+              };
+            }),
           },
           shippingAddress: { create: shippingAddress },
           ...(isShipping && {

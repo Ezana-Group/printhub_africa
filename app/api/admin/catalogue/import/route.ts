@@ -9,34 +9,69 @@ export async function POST(req: Request) {
   if (auth instanceof NextResponse) return auth;
 
   try {
-    const { url } = await req.json();
-    if (!url) {
+    const { url: importUrl } = await req.json();
+    if (!importUrl) {
       return NextResponse.json({ error: "URL_REQUIRED" }, { status: 400 });
     }
 
-    // 🔴 HIGH-2: SSRF Prevention
-    try {
-      const parsedUrl = new URL(url);
-      const host = parsedUrl.hostname.toLowerCase();
-      
-      const allowedDomains = ["thingiverse.com", "printables.com", "makerworld.com", "cults3d.com"];
-      const isAllowed = allowedDomains.some(d => host === d || host.endsWith(`.${d}`));
-      
-      if (!isAllowed) {
-        return NextResponse.json({ error: "UNSUPPORTED_DOMAIN", message: "Only Thingiverse, Printables, MakerWorld, and Cults3D are supported." }, { status: 400 });
+    const ALLOWED_IMPORT_DOMAINS = [
+      'printables.com',
+      'www.printables.com',
+      'thingiverse.com',
+      'www.thingiverse.com',
+      'myminifactory.com',
+      'www.myminifactory.com',
+      'cults3d.com',
+      'www.cults3d.com',
+    ];
+
+    const PRIVATE_IP_REGEX = /^(localhost|127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|169\.254\.|::1|fc00:|fe80:)/i;
+
+    function validateImportUrl(url: string): { valid: boolean; reason?: string } {
+      try {
+        const parsed = new URL(url);
+
+        if (parsed.protocol !== 'https:') {
+          return { valid: false, reason: 'Only HTTPS URLs are permitted' };
+        }
+
+        if (PRIVATE_IP_REGEX.test(parsed.hostname)) {
+          return { valid: false, reason: 'Internal/private IP addresses are not permitted' };
+        }
+
+        const isAllowed = ALLOWED_IMPORT_DOMAINS.some(
+          (d) => parsed.hostname === d || parsed.hostname.endsWith('.' + d)
+        );
+
+        if (!isAllowed) {
+          return { valid: false, reason: `Domain not in allowlist. Permitted: ${ALLOWED_IMPORT_DOMAINS.join(', ')}` };
+        }
+
+        return { valid: true };
+      } catch {
+        return { valid: false, reason: 'Invalid URL format' };
       }
-      
-      if (parsedUrl.protocol !== "https:") {
-        return NextResponse.json({ error: "INVALID_PROTOCOL", message: "Only HTTPS protocols are allowed." }, { status: 400 });
-      }
-    } catch {
-      return NextResponse.json({ error: "INVALID_URL", message: "The provided URL is not valid." }, { status: 400 });
+    }
+
+    const validation = validateImportUrl(importUrl);
+    if (!validation.valid) {
+      // Log the attempt for security monitoring
+      // Log the attempt for security monitoring
+      await prisma.auditLog.create({
+        data: {
+          userId: (auth.session.user as any).id,
+          action: 'BLOCKED_IMPORT_URL',
+          entity: 'CatalogueImport',
+          after: JSON.stringify({ attemptedUrl: importUrl, reason: validation.reason }),
+        },
+      });
+      return NextResponse.json({ error: validation.reason }, { status: 400 });
     }
 
     // 1. Create CatalogueImportQueue entry immediately (PENDING)
     const importQueue = await prisma.catalogueImportQueue.create({
       data: {
-        sourceUrl: url,
+        sourceUrl: importUrl,
         status: "PENDING",
         aiEnhancementStatus: "processing"
       }
@@ -46,8 +81,8 @@ export async function POST(req: Request) {
     // We execute this without awaiting to return a response to the admin UI immediately.
     (async () => {
       try {
-        console.log(`[Import] Starting background scrape for: ${url}`);
-        const scrapedData = await scrapeModelSource(url);
+        console.log(`[Import] Starting background scrape for: ${importUrl}`);
+        const scrapedData = await scrapeModelSource(importUrl);
 
         // Update the record with initial scraped data
         await prisma.catalogueImportQueue.update({
@@ -69,7 +104,7 @@ export async function POST(req: Request) {
         // 3. Trigger n8n enhancement workflow
         await n8n.catalogueImportEnhance({
           importId: importQueue.id,
-          sourceUrl: url,
+          sourceUrl: importUrl,
           platform: scrapedData.platform,
           originalName: scrapedData.originalName,
           originalDescription: scrapedData.originalDescription,

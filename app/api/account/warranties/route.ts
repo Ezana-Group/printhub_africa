@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptionsCustomer } from "@/lib/auth-customer";
 import { prisma } from "@/lib/prisma";
 import { rateLimit, getRateLimitClientIp } from "@/lib/rate-limit";
+import { createAuditLog } from "@/lib/audit";
 
 /**
  * GET /api/account/warranties
@@ -48,7 +49,14 @@ export async function GET(req: NextRequest) {
       });
 
       if (!warranty) {
-        // Return generic 404 even if it exists for another user
+        // Log potential enumeration attempt if serialNumber is provided but not found for user
+        await createAuditLog({
+          userId,
+          action: "WARRANTY_LOOKUP_NOT_FOUND",
+          entity: "WarrantyRecord",
+          after: { serialNumber, ip },
+        });
+        // Return generic 404 even if it exists for another user to prevent enumeration
         return NextResponse.json({ error: "Warranty record not found" }, { status: 404 });
       }
 
@@ -57,7 +65,9 @@ export async function GET(req: NextRequest) {
 
     // List all warranties for user
     const warranties = await prisma.warrantyRecord.findMany({
-      where: { customerId: userId },
+      where: { 
+        customerId: userId 
+      },
       include: {
         HardwareProduct: {
           select: {
@@ -72,6 +82,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(warranties);
   } catch (error) {
     console.error("[GET /api/account/warranties]", error);
-    return NextResponse.json({ error: "Failed to fetch warranty records" }, { status: 500 });
+    return NextResponse.json({ error: "An error occurred while fetching warranty records" }, { status: 500 });
   }
 }

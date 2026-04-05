@@ -41,6 +41,12 @@ PrintHub is a **full-stack e-commerce and print-services platform** for:
 - **Automation:** Comprehensive n8n infrastructure for marketing, security, and AI-powered operations (34 modular workflows + Centralized Error Handler).
 - **Deployment:** Multi-service Railway architecture: `web`, `n8n`, and `ffmpeg-service`.
 - **Templates:** Unified Database-Driven Template Management for Email, WhatsApp, and PDF with full-page editor.
+- **Security Remediation (April 2026):**
+  - **Server-Side Price Integrity:** Order prices are recalculated on the server using `lib/order-price-calculator.ts`, ignoring client-side input.
+  - **SSRF Prevention:** Strict domain allowlisting and private IP blocking for external catalogue imports.
+  - **Content Lifecycle:** Multi-stage review gate for AI-generated content (DRAFT -> PENDING_REVIEW -> PUBLISHED).
+  - **B2B Authorization:** Centralized corporate membership and role verification via `lib/corporate-auth.ts`.
+  - **Data Scoping:** Strict user-based scoping and rate-limiting for sensitive data lookups (e.g., Warranties).
 
 ### High-Level Architecture Diagram
 

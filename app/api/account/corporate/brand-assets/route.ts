@@ -14,24 +14,33 @@ export async function GET() {
   const session = await getServerSession(authOptionsCustomer);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const corporate = await prisma.corporateAccount.findUnique({
-    where: { primaryUserId: session.user.id },
-    select: {
-      logoImageUrl: true,
-      brandGuidelineUrl: true,
-      brandNotes: true,
-      status: true,
-    }
+  const userId = session.user.id;
+
+  // Find membership to get corporateId
+  const membership = await prisma.corporateTeamMember.findFirst({
+    where: { userId, isActive: true },
+    include: { corporate: true }
   });
 
-  if (!corporate) return NextResponse.json({ error: "Not a corporate account" }, { status: 403 });
+  if (!membership?.corporate) {
+    return NextResponse.json({ error: "Not a member of a corporate account" }, { status: 403 });
+  }
 
-  return NextResponse.json(corporate);
+  const { corporate } = membership;
+
+  return NextResponse.json({
+    logoImageUrl: corporate.logoImageUrl,
+    brandGuidelineUrl: corporate.brandGuidelineUrl,
+    brandNotes: corporate.brandNotes,
+    status: corporate.status,
+  });
 }
 
 export async function PATCH(req: NextRequest) {
   const session = await getServerSession(authOptionsCustomer);
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const userId = session.user.id;
 
   const body = await req.json().catch(() => ({}));
   const parsed = assetSchema.safeParse(body);
@@ -39,14 +48,21 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const corporate = await prisma.corporateAccount.findUnique({
-    where: { primaryUserId: session.user.id },
+  // Check membership and role
+  const membership = await prisma.corporateTeamMember.findFirst({
+    where: { 
+      userId, 
+      isActive: true,
+      role: { in: ["OWNER", "ADMIN"] }
+    }
   });
 
-  if (!corporate) return NextResponse.json({ error: "Not a corporate account" }, { status: 403 });
+  if (!membership) {
+    return NextResponse.json({ error: "Unauthorized: Only OWNER or ADMIN can update brand assets" }, { status: 403 });
+  }
 
   const updated = await prisma.corporateAccount.update({
-    where: { id: corporate.id },
+    where: { id: membership.corporateId },
     data: parsed.data,
   });
 
