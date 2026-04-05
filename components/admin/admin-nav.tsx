@@ -90,6 +90,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/finance", label: "Finance", icon: DollarSign },
       { href: "/admin/refunds", label: "Refunds", icon: DollarSign },
       { href: "/admin/marketing", label: "Marketing", icon: Megaphone },
+      { href: "/admin/marketing/content", label: "Media & Content", icon: LayoutDashboard },
     ],
   },
   {

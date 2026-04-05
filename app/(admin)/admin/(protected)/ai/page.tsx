@@ -6,10 +6,10 @@ import { redirect } from "next/navigation";
 import { canAccessRoute } from "@/lib/admin-permissions";
 import { prisma } from "@/lib/prisma";
 import { AiStatusDashboard } from "./_components/ai-status-card";
-import { ContentQueueTable } from "./_components/content-queue-table";
-import { ContentCalendarView } from "./_components/content-calendar-view";
 import { AiSettingsForm } from "./_components/ai-settings-form";
 import { AiCostChart } from "./_components/ai-cost-chart";
+import Link from "next/link";
+import { Sparkles } from "lucide-react";
 
 export const metadata = {
   title: "AI Control Centre | PrintHub Admin",
@@ -120,16 +120,30 @@ export default async function AiControlCentrePage() {
     aiImageGenerator: businessSettings?.aiImageGenerator ?? "both",
     aiElevenLabsCharUsed: businessSettings?.aiElevenLabsCharUsed ?? 0,
     aiElevenLabsCharLimit: businessSettings?.aiElevenLabsCharLimit ?? 10000,
+    // New fields to fix lint
+    aiSocialGenerationEnabled: true,
+    aiAdCopyEnabled: true,
+    aiQuoteDraftingEnabled: true,
+    aiSentimentAnalysisEnabled: true,
   };
 
   return (
     <div className="p-6 space-y-10 max-w-screen-xl">
       {/* Header */}
-      <div>
-        <h1 className="font-display text-2xl font-bold">AI Control Centre</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Monitor AI services, approve content, manage the weekly calendar, and track costs.
-        </p>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+          <h1 className="font-display text-2xl font-bold italic text-slate-800">AI Control Centre</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Monitor infrastructure health, configure core AI logic, and track computational costs.
+          </p>
+        </div>
+        <Link 
+          href="/admin/marketing/content"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-bold text-sm shadow-sm hover:scale-[1.02] transition-all"
+        >
+          <Sparkles className="h-4 w-4" />
+          Manage AI Generated Content
+        </Link>
       </div>
 
       {/* ── Section 1: Model Health Dashboard ──────────────────────── */}
@@ -144,81 +158,28 @@ export default async function AiControlCentrePage() {
         <AiStatusDashboard />
       </section>
 
-      {/* ── Section 2: Content Queue ─────────────────────────────────── */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">📋</span>
-          <div>
-            <h2 className="text-lg font-semibold">Content Approval Queue</h2>
-            <p className="text-xs text-muted-foreground">
-              {pendingMockups.length} mockups and {pendingVideos.length} videos awaiting approval.
-            </p>
-          </div>
-        </div>
-        <ContentQueueTable
-          mockups={pendingMockups.map((m) => ({
-            id: m.id,
-            productId: m.productId,
-            platform: m.platform,
-            imageUrl: m.imageUrl,
-            generator: m.generator,
-            isApproved: m.isApproved,
-            createdAt: m.createdAt.toISOString(),
-            product: m.product,
-          }))}
-          videos={pendingVideos.map((v) => ({
-            id: v.id,
-            productId: v.productId,
-            platform: v.platform,
-            videoUrl: v.videoUrl,
-            thumbnailUrl: v.thumbnailUrl,
-            isApproved: v.isApproved,
-            createdAt: v.createdAt.toISOString(),
-            product: v.product,
-          }))}
-        />
-      </section>
-
-      {/* ── Section 3: Weekly Content Calendar ──────────────────────── */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">📅</span>
-          <div>
-            <h2 className="text-lg font-semibold">Weekly Content Calendar</h2>
-            <p className="text-xs text-muted-foreground">
-              AI-generated Monday to Sunday plan. Generated every Monday at 7AM EAT.
-            </p>
-          </div>
-        </div>
-        <ContentCalendarView
-          weekStarting={monday.toISOString()}
-          days={calendarDays}
-          strategy={strategyText}
-        />
-      </section>
-
-      {/* ── Section 4: AI Settings ───────────────────────────────────── */}
+      {/* ── Section 2: AI Settings ───────────────────────────────────── */}
       <section className="space-y-4">
         <div className="flex items-center gap-3">
           <span className="text-2xl">⚙️</span>
           <div>
-            <h2 className="text-lg font-semibold">AI Settings</h2>
+            <h2 className="text-lg font-semibold">AI Logic & Settings</h2>
             <p className="text-xs text-muted-foreground">
-              Control which AI features are active and which models to use.
+              Control which AI features are active and select the preferred models for production.
             </p>
           </div>
         </div>
         <AiSettingsForm settings={defaultSettings} />
       </section>
 
-      {/* ── Section 5: Usage & Cost Tracker ──────────────────────────── */}
+      {/* ── Section 3: Usage & Cost Tracker ──────────────────────────── */}
       <section className="space-y-4">
         <div className="flex items-center gap-3">
           <span className="text-2xl">💰</span>
           <div>
             <h2 className="text-lg font-semibold">Usage &amp; Cost Tracker</h2>
             <p className="text-xs text-muted-foreground">
-              Monthly AI spend by service. Costs are estimated based on known pricing.
+              Monthly compute spend by service, including OpenAI, Anthropic, and ElevenLabs.
             </p>
           </div>
         </div>

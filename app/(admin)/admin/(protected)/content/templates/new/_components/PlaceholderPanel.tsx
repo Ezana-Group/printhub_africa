@@ -27,6 +27,7 @@ interface PlaceholderPanelProps {
   onInsertEmailSubject: (tag: string) => void;
   onInsertWhatsApp: (tag: string) => void;
   onInsertPdf: (tag: string) => void;
+  onInsertGeneric: (tag: string) => void;
 }
 
 export function PlaceholderPanel({ 
@@ -37,7 +38,8 @@ export function PlaceholderPanel({
   onInsertEmailBody,
   onInsertEmailSubject,
   onInsertWhatsApp,
-  onInsertPdf
+  onInsertPdf,
+  onInsertGeneric
 }: PlaceholderPanelProps) {
   const [search, setSearch] = useState("");
   
@@ -56,7 +58,7 @@ export function PlaceholderPanel({
   }, [search]);
 
   return (
-    <div className="w-full lg:w-[420px] xl:w-[480px] bg-white border-l border-slate-200 flex flex-col h-full sticky top-[65px] lg:top-0">
+    <div className="w-full lg:w-[420px] xl:w-[480px] bg-white border-l border-slate-200 flex flex-col h-full overflow-hidden">
       {/* Preview Section (Conditional) */}
       <div className="border-b border-slate-200 bg-slate-50/50 flex-none overflow-hidden">
         <div className="px-5 py-3 border-b border-slate-200/60 bg-white/50 backdrop-blur-sm flex items-center gap-2">
@@ -170,7 +172,11 @@ export function PlaceholderPanel({
                     <div className="flex items-center gap-2 min-w-0">
                        <GripVertical className="h-3.5 w-3.5 text-slate-300 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity" />
                        <div className="min-w-0">
-                          <code className="bg-[#EEEDFE] text-[#534AB7] px-1.5 py-0.5 rounded text-[11px] font-mono font-bold leading-none inline-block mb-1">
+                          <code 
+                            onClick={() => onInsertGeneric("{{" + p.key + "}}")}
+                            className="bg-[#EEEDFE] text-[#534AB7] px-1.5 py-0.5 rounded text-[11px] font-mono font-bold leading-none inline-block mb-1 cursor-pointer hover:bg-[#534AB7] hover:text-white transition-colors active:scale-95"
+                            title="Click to insert at cursor"
+                          >
                             {"{{" + p.key + "}}"}
                           </code>
                           <p className="text-[10px] text-slate-500 truncate" title={p.description}>

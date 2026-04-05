@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { AdminBreadcrumbs } from "@/components/admin/admin-breadcrumbs";
 import { Button } from "@/components/ui/button";
@@ -18,9 +18,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { EmailEditor } from "./_components/EmailEditor";
-import { WhatsAppEditor } from "./_components/WhatsAppEditor";
-import { PdfEditor } from "./_components/PdfEditor";
+import { EmailEditor, type EmailEditorHandle } from "./_components/EmailEditor";
+import { WhatsAppEditor, type WhatsAppEditorHandle } from "./_components/WhatsAppEditor";
+import { PdfEditor, type PdfEditorHandle } from "./_components/PdfEditor";
 import { PlaceholderPanel } from "./_components/PlaceholderPanel";
 
 type TemplateType = "email" | "whatsapp" | "pdf";
@@ -30,6 +30,11 @@ export default function TemplateCreatorClient({ initialType = "email" }: { initi
   const [type, setType] = useState<TemplateType>(initialType);
   const [loading, setLoading] = useState(false);
   
+  // Refs for insertion
+  const emailEditorRef = useRef<EmailEditorHandle>(null);
+  const whatsAppEditorRef = useRef<WhatsAppEditorHandle>(null);
+  const pdfEditorRef = useRef<PdfEditorHandle>(null);
+
   // Shared fields
   const [formData, setFormData] = useState({
     name: "",
@@ -38,6 +43,7 @@ export default function TemplateCreatorClient({ initialType = "email" }: { initi
   });
 
   // Type-specific fields
+  const [activeField, setActiveField] = useState<string | null>(null);
   const [emailData, setEmailData] = useState({
     subject: "",
     bodyHtml: "<p>Hello {{firstName}},</p><p>This is your new template content.</p>",
@@ -53,6 +59,21 @@ export default function TemplateCreatorClient({ initialType = "email" }: { initi
     orientation: "PORTRAIT",
     bodyHtml: "<div class='pdf-body'><h1>{{businessName}}</h1><p>Body content...</p></div>",
   });
+
+  const handlePlaceholderClick = (tag: string) => {
+    if (type === "email") {
+      if (activeField === "email-subject") {
+        emailEditorRef.current?.insertSubject(tag);
+      } else {
+        // Default to body
+        emailEditorRef.current?.insertBody(tag);
+      }
+    } else if (type === "whatsapp") {
+      whatsAppEditorRef.current?.insertText(tag);
+    } else if (type === "pdf") {
+      pdfEditorRef.current?.insertText(tag);
+    }
+  };
 
   // Auto-generate slug from name
   const handleNameChange = (name: string) => {
@@ -118,7 +139,7 @@ export default function TemplateCreatorClient({ initialType = "email" }: { initi
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="h-screen bg-slate-50 flex flex-col overflow-hidden">
       {/* Header bar */}
       <header className="sticky top-0 z-30 bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -179,9 +200,9 @@ export default function TemplateCreatorClient({ initialType = "email" }: { initi
         </div>
       </div>
 
-      <main className="flex-1 flex flex-col lg:flex-row min-h-0 container max-w-[1600px] mx-auto">
+      <main className="flex-1 flex flex-col lg:flex-row min-h-0 container max-w-[1600px] mx-auto overflow-hidden">
         {/* Left Panel: Editor Form */}
-        <div className="flex-1 overflow-y-auto p-6 lg:p-8 space-y-8">
+        <div className="flex-1 overflow-y-auto p-6 lg:p-8 space-y-8 h-full">
           {/* Metadata Section */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
@@ -223,20 +244,27 @@ export default function TemplateCreatorClient({ initialType = "email" }: { initi
           <div className="pb-12">
             {type === "email" && (
               <EmailEditor 
+                ref={emailEditorRef}
                 data={emailData} 
                 onChange={setEmailData} 
+                onFocusSubject={() => setActiveField("email-subject")}
+                onFocusBody={() => setActiveField("email-body")}
               />
             )}
             {type === "whatsapp" && (
               <WhatsAppEditor 
+                ref={whatsAppEditorRef}
                 data={whatsAppData} 
                 onChange={setWhatsAppData} 
+                onFocus={() => setActiveField("whatsapp-body")}
               />
             )}
             {type === "pdf" && (
               <PdfEditor 
+                ref={pdfEditorRef}
                 data={pdfData} 
                 onChange={setPdfData} 
+                onFocus={() => setActiveField("pdf-body")}
               />
             )}
           </div>
@@ -248,10 +276,11 @@ export default function TemplateCreatorClient({ initialType = "email" }: { initi
           currentEmailData={emailData}
           currentWhatsAppData={whatsAppData}
           currentPdfData={pdfData}
-          onInsertEmailBody={(tag) => setEmailData(v => ({ ...v, bodyHtml: v.bodyHtml + tag }))}
-          onInsertEmailSubject={(tag) => setEmailData(v => ({ ...v, subject: v.subject + tag }))}
-          onInsertWhatsApp={(tag) => setWhatsAppData(v => ({ ...v, bodyText: v.bodyText + tag }))}
-          onInsertPdf={(tag) => setPdfData(v => ({ ...v, bodyHtml: v.bodyHtml + tag }))}
+          onInsertEmailBody={(tag) => emailEditorRef.current?.insertBody(tag)}
+          onInsertEmailSubject={(tag) => emailEditorRef.current?.insertSubject(tag)}
+          onInsertWhatsApp={(tag) => whatsAppEditorRef.current?.insertText(tag)}
+          onInsertPdf={(tag) => pdfEditorRef.current?.insertText(tag)}
+          onInsertGeneric={handlePlaceholderClick}
         />
       </main>
     </div>
