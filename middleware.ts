@@ -1,6 +1,9 @@
 import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { prisma } from "@/lib/prisma";
+
+export const runtime = "nodejs";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -52,11 +55,32 @@ export async function middleware(request: NextRequest) {
     if (!token && !isLoginPage && !isAuthApi) {
       console.log(`[Middleware] No admin token for: ${pathname}. Domain: ${host}`);
       const loginUrl = new URL("/login", request.url);
-      // If we're on localhost and the path is an admin path, we should use /admin/login
       if (host.includes('localhost') && pathname.startsWith('/admin')) {
           loginUrl.pathname = '/admin/login';
       }
       return NextResponse.redirect(loginUrl);
+    }
+
+    // --- DB VALIDATION (Step 8 fix) ---
+    if (token && !isAuthApi) {
+      const sessionId = token.sessionId as string;
+      if (sessionId) {
+        const dbSession = await prisma.adminSession.findUnique({
+          where: { id: sessionId },
+          select: { revokedAt: true, expiresAt: true }
+        });
+
+        if (!dbSession || dbSession.revokedAt || new Date() > dbSession.expiresAt) {
+          console.warn(`[Security] Admin session ${sessionId} is invalid or revoked. Redirecting to login.`);
+          const loginUrl = new URL("/login", request.url);
+          if (host.includes('localhost') && pathname.startsWith('/admin')) {
+            loginUrl.pathname = '/admin/login';
+          }
+          const response = NextResponse.redirect(loginUrl);
+          response.cookies.delete(ADMIN_COOKIE);
+          return response;
+        }
+      }
     }
 
     // Block CUSTOMER sessions entirely on admin domain

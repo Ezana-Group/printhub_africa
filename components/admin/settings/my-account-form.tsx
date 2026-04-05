@@ -285,9 +285,11 @@ export function MyAccountForm({
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setTimeout(() => {
+      setTimeout(async () => {
         setPasswordSuccess(false);
-        signOut({ callbackUrl: "/admin/login", redirect: true });
+        // Using the custom logout route to ensure DB session and admin cookies are cleared
+        await fetch("/api/auth/admin/logout", { method: "POST" }).catch(err => console.error("Logout fetch failed:", err));
+        window.location.href = "/admin/login";
       }, 2000);
     } catch {
       setPasswordError("Something went wrong");

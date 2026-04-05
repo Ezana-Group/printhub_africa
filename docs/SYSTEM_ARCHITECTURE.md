@@ -3,7 +3,7 @@
 **Product:** PrintHub — Large-format printing & 3D printing for Nairobi and Kenya  
 **Company:** Ezana Group  
 **Repository:** Printhub_Africa_ProdV1  
-**Last updated:** April 4, 2026
+**Last updated:** April 5, 2026
 
 ---
 
@@ -29,6 +29,7 @@ PrintHub is a **full-stack e-commerce and print-services platform** for:
 - **3D printing** (FDM, resin; custom and ready-made)
 - **Shop** (ready-made products, custom print, print-on-demand catalogue)
 - **B2B** (corporate accounts, net terms, POs, team management)
+- **Hardware/Equipment** (professional printers, scanners, bundles, warranties)
 
 ### Architecture Summary
 
@@ -37,8 +38,9 @@ PrintHub is a **full-stack e-commerce and print-services platform** for:
   - **Admin Portal (`STAFF/ADMIN`):** Hardened internal control centre with restricted access, hosted on a separate `admin.*` subdomain.
 - **Backend:** Next.js API Routes (running on Railway) with split authentication middleware for customers and staff.
 - **Database:** PostgreSQL via Prisma ORM (Neon in production; Railway Redis for rate-limiting).
-- **Automation:** Comprehensive n8n infrastructure for marketing, security, and AI-powered operations (34 domain-driven, modular workflows).
+- **Automation:** Comprehensive n8n infrastructure for marketing, security, and AI-powered operations (34 modular workflows + Centralized Error Handler).
 - **Deployment:** Multi-service Railway architecture: `web`, `n8n`, and `ffmpeg-service`.
+- **Templates:** Unified Database-Driven Template Management for Email, WhatsApp, and PDF with full-page editor.
 
 ### High-Level Architecture Diagram
 
@@ -109,6 +111,7 @@ flowchart TB
 |-------|------------|
 | **Framework** | Next.js 15 (App Router), React 18 |
 | **Language** | TypeScript |
+| **Date Formatting** | date-fns (relative timing, dashboard polish) |
 | **Styling** | Tailwind CSS, shadcn/ui (Radix), tailwindcss-animate |
 | **State** | Zustand (cart, checkout) |
 | **Backend** | Next.js API Routes (Railway) |
@@ -170,9 +173,10 @@ Printhub_Africa_ProdV1/
 │   │       ├── catalogue/, coupons/
 │   │       ├── staff/, departments/, corporate-accounts/, corporate/applications/
 │   │       ├── careers/, support/, uploads/
-│   │       ├── content/legal/
+│   │       ├── content/legal/, content/templates/
 │   │       ├── settings/   # Business, payments, shipping, SEO, notifications, audit, users, danger
 │   │       ├── reports/, sales/calculator/
+│   │       ├── hardware/   # Hardware catalog, bundles, suppliers, warranties
 │   │       └── access-denied/, accept-invite/
 │   └── api/                # All API routes (see §5)
 ├── components/
@@ -284,6 +288,13 @@ erDiagram
   Product ||--o{ AdCopyVariation : "ai copy"
   Product }o--o{ ThreeDConsumable : "materials"
   CatalogueItem ||--o{ CatalogueImportQueue : "source"
+
+  HardwareProduct ||--o{ HardwareVariant : has
+  HardwareProduct }o--|| HardwareCategory : in
+  HardwareProduct }o--|| Supplier : "supplied by"
+  HardwareProduct ||--o{ HardwareBundleItem : "part of"
+  HardwareProduct ||--o{ WarrantyRecord : "covered by"
+  HardwareBundle ||--o{ HardwareBundleItem : contains
 ```
 
 ### 4.2 Users & Auth
@@ -431,6 +442,31 @@ erDiagram
 | **LoyaltyAccount**, **LoyaltyTransaction**, **ReferralCode** | Loyalty and referrals. | → User |
 | **SavedAddress** | User’s saved checkout addresses. | → User |
 
+### 4.14 Templates (Unified Communication)
+
+| Model | Description | Key Relations |
+|-------|-------------|---------------|
+| **EmailTemplate** | subject, bodyHtml, status (DRAFT/PUBLISHED). | — |
+| **WhatsAppTemplate** | category, bodyText (WhatsApp Cloud API format). | — |
+| **PdfTemplate** | bodyHtml (HTML-to-PDF pipeline). | — |
+
+### 4.15 Hardware & Equipment
+
+| Model | Description | Key Relations |
+|-------|-------------|---------------|
+| **HardwareProduct** | name, SKU, price, stock, specs, warranty terms. | → Category, Supplier, Variant[], BundleItem[], Warranty[] |
+| **HardwareCategory** | Hierarchy for equipment (Printers, Scanners, etc.). | → HardwareProduct[] |
+| **HardwareBundle** | Multi-product equipment packages (e.g., Starter Kit). | → BundleItem[] |
+| **Supplier** | Machine vendors and manufacturers (country, contact, lead time). | → HardwareProduct[] |
+| **WarrantyRecord** | Individual unit coverage linked to serial number/order. | → HardwareProduct, User |
+
+### 4.16 Monitoring & Logging
+
+| Model | Description |
+|-------|-------------|
+| **MarketingErrorLog** | Centralized log for n8n/webhook failures (channel, error, payload). |
+| **AiServiceLog** | Tracks AI usage, tokens, and costs (service, model, tokens). |
+
 ---
 
 ## 5. API Layer
@@ -450,6 +486,8 @@ All API routes live under `app/api/`. Protection is enforced by **middleware** a
 | **/api/orders/** | create, list, status, invoice | Session/Access |
 | **/api/payments/** | mpesa, pesapal, flutterwave, stripe (STK, callbacks, IPNs) | Mixed (Callbacks: public+verify) |
 | **/api/admin/** | Full admin: orders, quotes, production, products, finance, inventory, staff, settings | Admin Session + Permissions |
+| **/api/admin/email-templates** | Unified CRUD for system templates | Admin Session |
+| **/api/admin/hardware** | Lifecycle for equipment catalog | Admin Session |
 | **/api/quotes/** | GET/POST quotes, upload, [id] GET/PATCH, PDF | Session/Access |
 | **/api/upload/** | presign, confirm, download | Session / Context |
 | **/api/branding/favicon** | Dynamic favicon with database caching | Public |
@@ -492,6 +530,8 @@ The system uses two isolated NextAuth configurations to decouple customer and ad
     *   **Purpose:** Hardened administrative access via `admin.printhub.africa` subdomain.
     *   **Providers:** Credentials only (no social login allowed for staff).
     *   *Security Features:* 2FA enforcement, device fingerprinting, and session logging in the `AdminSession` table.
+    *   *Session Persistence:* **JWT maxAge set to 8 hours** (improving over the default 30 days).
+    *   *Validation:* Hardened via `middleware.ts` which performs real-time database validation of the `AdminSession` record on every request.
     *   *Cookie:* `printhub.admin.session` (HttpOnly, Secure, SameSite=Strict).
 
 ### 6.2 Security Infrastructure
@@ -595,6 +635,26 @@ The system uses two isolated NextAuth configurations to decouple customer and ad
 - **Cron:** GET `/api/cron/abandoned-carts` (CRON_SECRET) → finds carts, sends recovery email (Resend); recoveryEmailSent1At / recoveryEmailSent2At; `/api/unsubscribe/abandoned-cart` for opt-out.
 - **n8n Fallback:** The **Abandoned Cart Detector** cron in n8n serves as a secondary recovery layer via WhatsApp.
 
+### 7.11 Unified Template Management
+
+1. **System Templates:** Admin manages `EmailTemplate`, `WhatsAppTemplate`, and `PdfTemplate` in the Admin Portal.
+2. **Editor:** Full-page editor for HTML/Text content with dynamic variable mapping (e.g., `{{orderNumber}}`).
+3. **Draft/Publish:** Templates start as `DRAFT` and are published for use by n8n or the core app.
+4. **WhatsApp Approval:** Integrated workflow for submitting templates for Meta review (via n8n).
+
+### 7.12 Hardware & Equipment Lifecycle
+
+1. **Inventory Management:** Full lifecycle tracking for high-value equipment (HardwareProducts) from receipt to sale.
+2. **Variants & Bundles:** Equipment can be sold as single units or bundled sets with associated discounts.
+3. **Suppliers:** Integrated supplier database managing lead times and vendor contact details.
+4. **Warranties:** Digital warranty records created upon sale, including serial number tracking and claim history.
+
+### 7.13 Centralized Automation Monitoring (N8N)
+
+1. **Global Error Handler:** Every n8n workflow is linked to a `Global Error Handler` workflow.
+2. **Alerting:** Failures trigger high-priority WhatsApp/Telegram alerts to `STAFF`/`ADMIN`.
+3. **Error Logging:** Failures are recorded in `MarketingErrorLog` with full payload for debugging.
+4. **AI Usage Logs:** Every AI call (OpenAI, Anthropic, Gemini) is recorded in `AiServiceLog` for cost auditing.
 
 ---
 

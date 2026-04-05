@@ -56,9 +56,11 @@ export function AdminHeaderClient({
           type="button"
           variant="ghost"
           size="sm"
-          onClick={async () => {
-            const data = await signOut({ callbackUrl: "/admin/login", redirect: false });
-            window.location.href = data.url || "/admin/login";
+          onClick={async (e) => {
+            e.preventDefault();
+            // Using the custom logout route to ensure DB session and admin cookies are cleared
+            await fetch("/api/auth/admin/logout", { method: "POST" }).catch(err => console.error("Logout fetch failed:", err));
+            window.location.href = "/admin/login";
           }}
           className="text-muted-foreground hover:text-foreground"
         >
