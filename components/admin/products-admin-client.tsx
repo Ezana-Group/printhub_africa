@@ -254,12 +254,19 @@ export function ProductsAdminClient({
         cell: ({ row }) => {
           const imgs = row.original.images;
           const src = Array.isArray(imgs) && imgs[0] ? imgs[0] : null;
+          // If the "image" looks like a slug (only chars and hyphens), it's likely a data mismatch.
+          // Real images should be URLs or absolute paths from public/ (e.g. /uploads/...)
+          const isUrl = src && (src.startsWith("/") || src.startsWith("http"));
+          
           return (
-            <div className="h-12 w-12 rounded-md bg-[#F3F4F6] overflow-hidden shrink-0 flex items-center justify-center">
-              {src ? (
+            <div className="h-12 w-12 rounded-md bg-[#F3F4F6] overflow-hidden shrink-0 flex items-center justify-center border border-[#E5E7EB]">
+              {src && isUrl ? (
                 <Image src={src} alt="" width={48} height={48} className="h-full w-full object-cover" />
               ) : (
-                <Box className="h-5 w-5 text-[#9CA3AF]" />
+                <div className="flex flex-col items-center justify-center text-[8px] text-[#9CA3AF] text-center px-1">
+                  <Box className="h-4 w-4 mb-0.5" />
+                  NO IMG
+                </div>
               )}
             </div>
           );

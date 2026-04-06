@@ -89,7 +89,7 @@ export function N8nExecutionLog() {
                   <div className="flex items-center gap-2 mt-0.5">
                     <p className="text-[10px] text-slate-400 font-mono">ID: #{exe.id}</p>
                     <span className="text-[10px] text-slate-300">•</span>
-                    <p className="text-[10px] text-slate-500 font-medium">
+                    <p className="text-[10px] text-slate-500 font-medium" suppressHydrationWarning>
                       {new Date(exe.startedAt).toLocaleTimeString("en-GB", { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </p>
                   </div>
@@ -111,8 +111,8 @@ export function N8nExecutionLog() {
                 <div className="grid grid-cols-2 gap-y-3 gap-x-8">
                   <div className="space-y-1">
                     <p className="text-[10px] text-slate-400 font-bold uppercase">Time Logs</p>
-                    <p className="text-slate-600 font-medium">Start: {new Date(exe.startedAt).toLocaleString("en-GB")}</p>
-                    <p className="text-slate-600 font-medium">
+                    <p className="text-slate-600 font-medium" suppressHydrationWarning>Start: {new Date(exe.startedAt).toLocaleString("en-GB")}</p>
+                    <p className="text-slate-600 font-medium" suppressHydrationWarning>
                       End: {exe.stoppedAt ? new Date(exe.stoppedAt).toLocaleString("en-GB") : "In Progress"}
                     </p>
                   </div>

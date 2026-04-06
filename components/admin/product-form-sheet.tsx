@@ -275,17 +275,30 @@ export function ProductFormSheet({
   const handleAiGenerate = async (action: string) => {
     if (!product?.id) return;
     setAiGenerating(action);
+    setError(null);
     try {
       const res = await fetch("/api/admin/ai/n8n/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, productId: product.id }),
       });
-      if (!res.ok) throw new Error("AI Trigger failed");
+      
+      if (!res.ok) {
+        let errMsg = "AI Trigger failed";
+        try {
+          const data = await res.json();
+          errMsg = data.error || data.message || `AI Trigger failed (${res.status})`;
+        } catch {
+          errMsg = `AI Trigger failed with status ${res.status}`;
+        }
+        throw new Error(errMsg);
+      }
+      
       // Add a small delay for feedback
       await new Promise(r => setTimeout(r, 1500));
     } catch (e) {
-      console.error(e);
+      console.error("[AI Generate Error]", e);
+      setError(e instanceof Error ? e.message : "AI generation failed");
     } finally {
       setAiGenerating(null);
     }

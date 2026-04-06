@@ -127,7 +127,7 @@ function ServiceCard({ serviceKey }: { serviceKey: string }) {
       <div className="flex items-center justify-between mt-auto pt-2 border-t border-dashed">
         {data?.lastSuccessAt ? (
           <p className="text-[10px] text-muted-foreground uppercase font-semibold">
-            Verified: {new Date(data.lastSuccessAt).toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" })}
+            Verified: <span suppressHydrationWarning>{new Date(data.lastSuccessAt).toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" })}</span>
           </p>
         ) : (
           <div />
