@@ -43,8 +43,8 @@ export function MarketingContentClient({
   const [broadcastList, setBroadcastList] = useState(initialBroadcasts);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  const pendingCount = mockups.filter(m => !m.isApproved).length + 
-                       videos.filter(v => !v.isApproved).length +
+  const pendingCount = mockups.filter(m => m.status === 'PENDING_REVIEW').length + 
+                       videos.filter(v => v.status === 'PENDING_REVIEW').length +
                        broadcastList.length;
 
   const handleAction = async (id: string, status: 'APPROVED' | 'REJECTED') => {

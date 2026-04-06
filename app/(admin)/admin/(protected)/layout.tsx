@@ -28,7 +28,15 @@ export default async function AdminLayout({
   const permissions = user.permissions;
 
   const newQuotesCount = await prisma.quote.count({ where: { status: "new" } }).catch(() => 0);
-  const pendingApprovalCount = await prisma.catalogueItem.count({ where: { status: "PENDING_REVIEW" } }).catch(() => 0);
+  
+  const [pendingCatalogue, pendingMockups, pendingVideos, pendingBroadcasts] = await Promise.all([
+    prisma.catalogueItem.count({ where: { status: "PENDING_REVIEW" } }).catch(() => 0),
+    prisma.productMockup.count({ where: { status: "PENDING_REVIEW" } }).catch(() => 0),
+    prisma.productVideo.count({ where: { status: "PENDING_REVIEW" } }).catch(() => 0),
+    prisma.marketingBroadcast.count({ where: { status: "PENDING" } }).catch(() => 0),
+  ]);
+
+  const pendingApprovalCount = pendingCatalogue + pendingMockups + pendingVideos + pendingBroadcasts;
 
   return (
     <div className="min-h-screen bg-background">

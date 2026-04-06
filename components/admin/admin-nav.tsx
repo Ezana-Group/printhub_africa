@@ -29,6 +29,7 @@ import {
   PanelLeft,
   Zap,
   Brain,
+  CheckCircle2,
 } from "lucide-react";
 import { canAccessRoute } from "@/lib/admin-permissions";
 import { cn } from "@/lib/utils";
@@ -91,6 +92,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/refunds", label: "Refunds", icon: DollarSign },
       { href: "/admin/marketing", label: "Marketing", icon: Megaphone },
       { href: "/admin/marketing/content", label: "Media & Content", icon: LayoutDashboard },
+      { href: "/admin/marketing/content?tab=approval", label: "Content Queue", icon: CheckCircle2, badge: "approval" },
     ],
   },
   {
