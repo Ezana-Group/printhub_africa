@@ -36,7 +36,10 @@
             "name": "productId",
             "value": "={{ $json.productId }}"
           }
-        ]
+        ],
+        "options": {
+          "timeout": 30000
+        }
       },
       "name": "Get Product Details",
       "type": "n8n-nodes-base.httpRequest",
@@ -44,7 +47,10 @@
       "position": [
         420,
         300
-      ]
+      ],
+      "retryOnFail": true,
+      "maxRetries": 3,
+      "waitBetweenRetries": 5000
     },
     {
       "parameters": {

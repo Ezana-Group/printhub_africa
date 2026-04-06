@@ -18,9 +18,10 @@ export async function POST(req: NextRequest) {
 
     const n8nBaseUrl = process.env.N8N_WEBHOOK_URL || "https://n8n.printhub.africa";
     const secret = process.env.N8N_WEBHOOK_SECRET;
+    const n8nApiKey = process.env.N8N_API_KEY;
 
     if (!secret) {
-      return NextResponse.json({ error: "N8N Webhook Secret not configured" }, { status: 500 });
+      return NextResponse.json({ error: "N8N_WEBHOOK_SECRET not configured" }, { status: 500 });
     }
 
     // Determine the n8n path based on the action
@@ -63,6 +64,7 @@ export async function POST(req: NextRequest) {
         "Content-Type": "application/json",
         "x-printhub-signature": signature,
         "x-printhub-timestamp": payload.timestamp.toString(),
+        ...(n8nApiKey ? { "x-api-key": n8nApiKey } : {}),
       },
       body,
     });
