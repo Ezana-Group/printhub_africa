@@ -28,9 +28,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing service or operation" }, { status: 400 });
     }
 
+    const serviceKey = service.toLowerCase();
+
     const log = await prisma.aiServiceLog.create({
       data: {
-        service,
+        service: serviceKey,
         operation,
         model,
         inputTokens,
@@ -47,7 +49,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Special handling for ElevenLabs character counting
-    if (service === "ElevenLabs" && audioChars > 0) {
+    if (serviceKey === "elevenlabs" && audioChars > 0) {
       await prisma.businessSettings.updateMany({
         data: {
           aiElevenLabsCharUsed: {

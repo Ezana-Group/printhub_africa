@@ -18,7 +18,8 @@ export async function PATCH(req: NextRequest) {
       "aiRequireApproval", "aiAutoMockups", "aiAutoVideos", "aiVoiceTranscription",
       "aiTelegramBot", "aiWeeklyTrendReport", "aiMonthlyBusinessReport", "aiJijiEnabled",
       "aiCustomerReplyModel", "aiDescriptionModel", "aiImageGenerator",
-      "aiElevenLabsCharLimit",
+      "aiElevenLabsCharLimit", "aiSocialGenerationEnabled", "aiAdCopyEnabled",
+      "aiQuoteDraftingEnabled", "aiSentimentAnalysisEnabled",
     ];
     const data: Record<string, boolean | string | number> = {};
     for (const key of allowedKeys) {

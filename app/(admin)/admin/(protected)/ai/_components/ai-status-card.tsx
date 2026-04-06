@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { RefreshCw } from "lucide-react";
 
 interface ServiceStatus {
   service: string;
   status: "healthy" | "degraded" | "down";
   reachable: boolean;
   lastSuccessAt: string | null;
+  errorMessage: string | null;
   consecutiveFailures: number;
   monthlyStats: { totalCalls: number; successRate: number; totalCostUsd: number };
 }
@@ -46,6 +48,7 @@ function StatusBadge({ status }: { status: "healthy" | "degraded" | "down" }) {
 function ServiceCard({ serviceKey }: { serviceKey: string }) {
   const [data, setData] = useState<ServiceStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [verifying, setVerifying] = useState(false);
   const meta = SERVICE_LABELS[serviceKey];
 
   useEffect(() => {
@@ -61,6 +64,17 @@ function ServiceCard({ serviceKey }: { serviceKey: string }) {
     const interval = setInterval(load, 60_000); // refresh every minute
     return () => clearInterval(interval);
   }, [serviceKey]);
+
+  const handleVerify = async () => {
+    if (verifying) return;
+    setVerifying(true);
+    try {
+      const res = await fetch(`/api/admin/ai/service-health/${serviceKey}?verify=true`, { cache: "no-store" });
+      if (res.ok) setData(await res.json());
+    } catch {/* silent */} finally {
+      setVerifying(false);
+    }
+  };
 
   return (
     <div className="rounded-xl border bg-card p-4 flex flex-col gap-3">
@@ -104,11 +118,29 @@ function ServiceCard({ serviceKey }: { serviceKey: string }) {
         </div>
       )}
 
-      {data?.lastSuccessAt && (
-        <p className="text-xs text-muted-foreground">
-          Last OK: {new Date(data.lastSuccessAt).toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" })}
+      {data?.status === "down" && data?.errorMessage && (
+        <p className="text-[10px] text-destructive font-medium bg-destructive/5 p-1.5 rounded border border-destructive/10 leading-tight">
+          Error: {data.errorMessage}
         </p>
       )}
+
+      <div className="flex items-center justify-between mt-auto pt-2 border-t border-dashed">
+        {data?.lastSuccessAt ? (
+          <p className="text-[10px] text-muted-foreground uppercase font-semibold">
+            Verified: {new Date(data.lastSuccessAt).toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" })}
+          </p>
+        ) : (
+          <div />
+        )}
+        <button
+          onClick={handleVerify}
+          disabled={verifying || loading}
+          className="p-1 hover:bg-muted rounded-md transition-colors disabled:opacity-50"
+          title="Test connectivity now"
+        >
+          <RefreshCw className={`h-3 w-3 text-muted-foreground ${verifying ? "animate-spin" : ""}`} />
+        </button>
+      </div>
     </div>
   );
 }

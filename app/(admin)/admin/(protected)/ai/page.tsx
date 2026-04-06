@@ -89,7 +89,7 @@ export default async function AiControlCentrePage() {
     ]);
 
     const costData = monthlyAiLogs.map((l) => ({
-      service: l.service,
+      service: l.service.toLowerCase(),
       costUsd: Number(l._sum.costUsd ?? 0),
       label: l.service,
     }));

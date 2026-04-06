@@ -33,8 +33,6 @@ model User {
   acceptedTermsAt          DateTime?
   marketingConsent         Boolean                    @default(false)
   marketingConsentAt       DateTime?
-  smsMarketingOptIn        Boolean                    @default(false)
-  smsUnsubscribedAt        DateTime?
   termsVersion             String?
   productionPinHash        String?
   twoFaMethod              String?
@@ -42,15 +40,15 @@ model User {
   otpExpiresAt             DateTime?
   displayName              String?
   displayEmail             String?
-  personalEmail            String?
   lastActiveAt             DateTime?                  @default(now())
   passwordChangedAt        DateTime?                  @default(now())
   passwordExpired          Boolean                    @default(false)
   passwordHistory          String[]                   @default([])
   lastLoginIp              String?
+  personalEmail            String?
+  smsMarketingOptIn        Boolean                    @default(false)
+  smsUnsubscribedAt        DateTime?
   referredById             String?
-  referredBy               User?                      @relation("UserReferrals", fields: [referredById], references: [id])
-  referrals                User[]                     @relation("UserReferrals")
   accounts                 Account[]
   addresses                Address[]
   adminSessions            AdminSession[]
@@ -86,6 +84,8 @@ model User {
   performedByMovements     ThreeDConsumableMovement[]
   ticketMessages           TicketMessage[]
   uploadedFiles            UploadedFile[]
+  referredBy               User?                      @relation("UserReferrals", fields: [referredById], references: [id])
+  referrals                User[]                     @relation("UserReferrals")
   userNotificationPrefs    UserNotificationPrefs?
   userPermissions          UserPermission[]
   wishlists                Wishlist[]
@@ -243,40 +243,40 @@ model Product {
   exportNotes                String?
   /// Human-readable estimated print time, e.g. "4–6 hours"
   exportToGoogle             Boolean                 @default(true)
-  exportToMeta               Boolean                 @default(true)
-  exportToTiktok             Boolean                 @default(true)
-  exportToLinkedIn           Boolean                 @default(false)
-  exportToPinterest          Boolean                 @default(false)
-  exportToX                  Boolean                 @default(false)
   exportToGoogleBiz          Boolean                 @default(true)
-  exportToSnapchat           Boolean                 @default(false)
-  exportToYoutube            Boolean                 @default(false)
-  exportToInstagramStories   Boolean                 @default(false)
-  exportToInstagramReels     Boolean                 @default(false)
-  exportToYoutubeShorts      Boolean                 @default(false)
-  exportToWhatsappStatus     Boolean                 @default(false)
-  exportToWhatsappChannel    Boolean                 @default(false)
-  exportToTelegram           Boolean                 @default(false)
+  exportToLinkedIn           Boolean                 @default(false)
+  exportToMeta               Boolean                 @default(true)
+  exportToPinterest          Boolean                 @default(false)
+  exportToTiktok             Boolean                 @default(true)
+  exportToX                  Boolean                 @default(false)
+  lastExportedAt             DateTime?
   exportToGoogleDiscover     Boolean                 @default(false)
-  exportToGoogleMapsPost     Boolean                 @default(true)
-  exportToBingPlaces         Boolean                 @default(false)
+  exportToInstagramReels     Boolean                 @default(false)
+  exportToInstagramStories   Boolean                 @default(false)
+  exportToJiji               Boolean                 @default(false)
+  exportToTelegram           Boolean                 @default(false)
+  exportToWhatsappChannel    Boolean                 @default(false)
+  exportToWhatsappStatus     Boolean                 @default(false)
+  exportToYoutubeShorts      Boolean                 @default(false)
+  aiDescriptionGenerated     Boolean                 @default(false)
+  aiGeneratedAt              DateTime?
+  keyFeatures                String[]                @default([])
   exportToAppleMaps          Boolean                 @default(false)
-  exportToPigiaMe            Boolean                 @default(false)
-  exportToOlxKenya           Boolean                 @default(false)
-  exportToReddit             Boolean                 @default(false)
+  exportToBingPlaces         Boolean                 @default(false)
+  exportToGoogleMapsPost     Boolean                 @default(true)
   exportToLinkedInNewsletter Boolean                 @default(false)
   exportToMedium             Boolean                 @default(false)
   exportToNextdoor           Boolean                 @default(false)
-  exportToJiji               Boolean                 @default(false)
+  exportToOlxKenya           Boolean                 @default(false)
+  exportToPigiaMe            Boolean                 @default(false)
+  exportToReddit             Boolean                 @default(false)
+  exportToSnapchat           Boolean                 @default(false)
+  exportToYoutube            Boolean                 @default(false)
   featuredThisWeek           Boolean                 @default(false)
-  weeklyViews                Int                     @default(0)
   totalViews                 Int                     @default(0)
-  lastExportedAt             DateTime?
-  aiDescriptionGenerated     Boolean                 @default(false)
-  aiGeneratedAt              DateTime?
-  catalogueImportQueue       CatalogueImportQueue?
-  keyFeatures                String[]                @default([])
+  weeklyViews                Int                     @default(0)
   adCopyVariations           AdCopyVariation[]
+  catalogueImportQueue       CatalogueImportQueue?
   catalogueItem              CatalogueItem?          @relation("CatalogueProductLink")
   externalModel              ExternalModel?
   inventory                  Inventory[]
@@ -1115,11 +1115,11 @@ model CorporateAccount {
   suspendedAt           DateTime?
   suspendedReason       String?
   estimatedMonthlySpend String?
-  logoImageUrl          String?
-  brandGuidelineUrl     String?
-  brandNotes            String?
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
+  brandGuidelineUrl     String?
+  brandNotes            String?
+  logoImageUrl          String?
   bulkQuotes            BulkQuote[]
   primaryUser           User                   @relation("CorporatePrimaryContact", fields: [primaryUserId], references: [id])
   applications          CorporateApplication[]
@@ -1885,16 +1885,15 @@ model BusinessSettings {
   aiTelegramBot              Boolean   @default(false)
   aiVoiceTranscription       Boolean   @default(true)
   aiWeeklyTrendReport        Boolean   @default(true)
-  aiSocialGenerationEnabled  Boolean   @default(true)
   aiAdCopyEnabled            Boolean   @default(true)
   aiQuoteDraftingEnabled     Boolean   @default(true)
   aiSentimentAnalysisEnabled Boolean   @default(true)
+  aiSocialGenerationEnabled  Boolean   @default(true)
 }
 
 model AdCopyVariation {
   id             String    @id @default(cuid())
   productId      String
-  product        Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   platform       String
   variationIndex Int
   headline       String?
@@ -1908,6 +1907,7 @@ model AdCopyVariation {
   generatedAt    DateTime  @default(now())
   approvedAt     DateTime?
   approvedBy     String?
+  product        Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
 }
@@ -1965,10 +1965,10 @@ model LoyaltySettings {
 
 model ReferralSettings {
   id                  String   @id
+  updatedAt           DateTime @updatedAt
   enabled             Boolean? @default(true)
   pointsPerReferral   Int?     @default(500)
   refereeDiscountCode String?  @default("WELCOME10")
-  updatedAt           DateTime @updatedAt
 }
 
 model DiscountSettings {
@@ -2046,9 +2046,9 @@ model EmailTemplate {
   description String?
   subject     String   @default("")
   bodyHtml    String
-  status      String   @default("DRAFT")
   updatedAt   DateTime @updatedAt
   updatedBy   String?
+  status      String   @default("DRAFT")
 
   @@index([slug])
 }
@@ -2060,9 +2060,9 @@ model WhatsAppTemplate {
   description String?
   category    String?  @default("UTILITY")
   bodyText    String
-  status      String   @default("DRAFT")
   updatedAt   DateTime @updatedAt
   updatedBy   String?
+  status      String   @default("DRAFT")
 
   @@index([slug])
 }
@@ -2073,9 +2073,9 @@ model PdfTemplate {
   name        String
   description String?
   bodyHtml    String
-  status      String   @default("DRAFT")
   updatedAt   DateTime @updatedAt
   updatedBy   String?
+  status      String   @default("DRAFT")
 
   @@index([slug])
 }
@@ -2087,16 +2087,16 @@ model DatabaseGuard {
 }
 
 model MarketingBroadcast {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   slug        String?
-  type        String   // SMS, WHATSAPP, EMAIL
+  type        String
   title       String
   bodyText    String
-  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED, SENT
+  status      String    @default("PENDING")
   scheduledAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  metadata    Json?    // For tracking AI model, costs, etc.
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  metadata    Json?
 
   @@index([status])
 }
@@ -2199,23 +2199,22 @@ model CatalogueImportQueue {
   status              ImportStatus @default(PENDING)
   sourceUrl           String?
   stlStorageKey       String?
-  scrapedName         String?
-  scrapedDescription  String?
-  scrapedTags         String[]     @default([])
-  scrapedCategory     String?
-  scrapedImageUrls    String[]     @default([])
-  designerName        String?
-  licenseType         String?
-  downloadCount       Int?
-  likeCount           Int?
-  aiEnhancement       Json?
-  aiEnhancedAt        DateTime?
-  aiEnhancementStatus String?      @default("pending")
-  // pending | processing | complete | failed
-  productId           String?      @unique
-  product             Product?     @relation(fields: [productId], references: [id])
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
+  aiEnhancedAt        DateTime?
+  aiEnhancement       Json?
+  aiEnhancementStatus String?      @default("pending")
+  designerName        String?
+  downloadCount       Int?
+  licenseType         String?
+  likeCount           Int?
+  scrapedCategory     String?
+  scrapedDescription  String?
+  scrapedImageUrls    String[]     @default([])
+  scrapedName         String?
+  scrapedTags         String[]     @default([])
+  productId           String?      @unique
+  product             Product?     @relation(fields: [productId], references: [id])
 
   @@index([status])
 }
@@ -2669,15 +2668,14 @@ model ProductMockup {
   imageUrl   String
   generator  String
   prompt     String
-  status     ModerationStatus  @default(PENDING_REVIEW)
   isUsed     Boolean           @default(false)
   approvedAt DateTime?
   approvedBy String?
   createdAt  DateTime          @default(now())
+  status     ModerationStatus? @default(PENDING_REVIEW)
   product    Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
-  @@index([status])
   @@index([platform])
 }
 
@@ -2689,15 +2687,14 @@ model ProductVideo {
   audioUrl     String?
   thumbnailUrl String?
   duration     Int?
-  status       ModerationStatus  @default(PENDING_REVIEW)
   isPosted     Boolean           @default(false)
   approvedAt   DateTime?
   createdAt    DateTime          @default(now())
+  status       ModerationStatus? @default(PENDING_REVIEW)
   product      Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
   @@index([platform])
-  @@index([status])
 }
 
 model ContentCalendar {
@@ -2734,6 +2731,50 @@ model AiServiceLog {
   @@index([entityId])
 }
 
+model AiServiceVerification {
+  id             String   @id @default(cuid())
+  service        String   @unique
+  apiKeyHash     String?
+  status         String   @default("down")
+  lastVerifiedAt DateTime @default(now())
+  errorMessage   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([service])
+}
+
+model SmsBroadcast {
+  id               String    @id @default(cuid())
+  broadcastDate    DateTime
+  smsText          String
+  recipientCount   Int
+  deliveredCount   Int       @default(0)
+  failedCount      Int       @default(0)
+  featuredProducts String[]  @default([])
+  approvedBy       String?
+  sentAt           DateTime?
+  createdAt        DateTime  @default(now())
+}
+
+model BlogPost {
+  id              String    @id @default(cuid())
+  title           String
+  slug            String    @unique
+  excerpt         String?
+  bodyHtml        String
+  metaDescription String?
+  tags            String[]  @default([])
+  targetKeyword   String?
+  status          String    @default("DRAFT")
+  aiGenerated     Boolean   @default(true)
+  mediumUrl       String?
+  linkedinPostUrl String?
+  publishedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
 enum UserRole {
   CUSTOMER
   STAFF
@@ -2745,6 +2786,7 @@ enum ModerationStatus {
   PENDING_REVIEW
   APPROVED
   REJECTED
+  ARCHIVED
 }
 
 enum ProductType {
@@ -3192,45 +3234,4 @@ enum WarrantyStatus {
   EXPIRED
   CLAIMED
   VOID
-}
-
-model SmsBroadcast {
-  id               String    @id @default(cuid())
-  broadcastDate    DateTime
-  smsText          String
-  recipientCount   Int
-  deliveredCount   Int       @default(0)
-  failedCount      Int       @default(0)
-  featuredProducts String[]  @default([])
-  approvedBy       String?
-  sentAt           DateTime?
-  createdAt        DateTime  @default(now())
-}
-
-model BlogPost {
-  id              String         @id @default(cuid())
-  title           String
-  slug            String         @unique
-  excerpt         String?
-  bodyHtml        String
-  metaDescription String?
-  tags            String[]       @default([])
-  targetKeyword   String?
-  status          BlogPostStatus @default(DRAFT)
-  aiGenerated     Boolean        @default(true)
-  mediumUrl       String?
-  linkedinPostUrl String?
-  publishedAt     DateTime?
-  publishedBy     String? // userId of admin who approved
-  syncedAt        DateTime? // when it was synced to external platforms
-  syncTargets     String[] // e.g. ["medium", "linkedin"]
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-}
-
-enum BlogPostStatus {
-  DRAFT
-  PENDING_REVIEW
-  PUBLISHED
-  REJECTED
 }
