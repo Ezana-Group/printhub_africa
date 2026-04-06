@@ -276,7 +276,7 @@ export function ProductFormSheet({
     if (!product?.id) return;
     setAiGenerating(action);
     try {
-      const res = await fetch("/api/admin/ai/generate", {
+      const res = await fetch("/api/admin/ai/n8n/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, productId: product.id }),

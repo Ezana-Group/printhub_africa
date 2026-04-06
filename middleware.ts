@@ -9,7 +9,7 @@ export async function middleware(request: NextRequest) {
   const isAdminDomain = 
     host.startsWith('admin.') || 
     host.startsWith('admin.localhost') ||
-    (host.includes('localhost') && pathname.startsWith('/admin'));
+    (host.includes('localhost') && (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')));
 
   const isProduction = process.env.NODE_ENV === "production";
   const ADMIN_COOKIE = isProduction ? "__Secure-printhub.admin.session" : "printhub.admin.session";
