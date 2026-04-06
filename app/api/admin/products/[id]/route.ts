@@ -29,6 +29,33 @@ const updateSchema = z.object({
   metaTitle: z.string().max(200).nullable().optional(),
   metaDescription: z.string().max(500).nullable().optional(),
   tags: z.array(z.string().max(50)).optional(),
+  featuredThisWeek: z.boolean().optional(),
+  exportToGoogle: z.boolean().optional(),
+  exportToGoogleBiz: z.boolean().optional(),
+  exportToLinkedIn: z.boolean().optional(),
+  exportToMeta: z.boolean().optional(),
+  exportToPinterest: z.boolean().optional(),
+  exportToTiktok: z.boolean().optional(),
+  exportToX: z.boolean().optional(),
+  exportToGoogleDiscover: z.boolean().optional(),
+  exportToInstagramReels: z.boolean().optional(),
+  exportToInstagramStories: z.boolean().optional(),
+  exportToJiji: z.boolean().optional(),
+  exportToTelegram: z.boolean().optional(),
+  exportToWhatsappChannel: z.boolean().optional(),
+  exportToWhatsappStatus: z.boolean().optional(),
+  exportToYoutubeShorts: z.boolean().optional(),
+  exportToAppleMaps: z.boolean().optional(),
+  exportToBingPlaces: z.boolean().optional(),
+  exportToGoogleMapsPost: z.boolean().optional(),
+  exportToLinkedInNewsletter: z.boolean().optional(),
+  exportToMedium: z.boolean().optional(),
+  exportToNextdoor: z.boolean().optional(),
+  exportToOlxKenya: z.boolean().optional(),
+  exportToPigiaMe: z.boolean().optional(),
+  exportToReddit: z.boolean().optional(),
+  exportToSnapchat: z.boolean().optional(),
+  exportToYoutube: z.boolean().optional(),
 });
 
 import { detectBackInStock } from "@/lib/marketing/back-in-stock";
@@ -103,6 +130,33 @@ export async function PATCH(
     if (data.metaTitle !== undefined) updateData.metaTitle = data.metaTitle;
     if (data.metaDescription !== undefined) updateData.metaDescription = data.metaDescription;
     if (data.tags !== undefined) updateData.tags = data.tags;
+    if (data.featuredThisWeek !== undefined) updateData.featuredThisWeek = data.featuredThisWeek;
+    if (data.exportToGoogle !== undefined) updateData.exportToGoogle = data.exportToGoogle;
+    if (data.exportToGoogleBiz !== undefined) updateData.exportToGoogleBiz = data.exportToGoogleBiz;
+    if (data.exportToLinkedIn !== undefined) updateData.exportToLinkedIn = data.exportToLinkedIn;
+    if (data.exportToMeta !== undefined) updateData.exportToMeta = data.exportToMeta;
+    if (data.exportToPinterest !== undefined) updateData.exportToPinterest = data.exportToPinterest;
+    if (data.exportToTiktok !== undefined) updateData.exportToTiktok = data.exportToTiktok;
+    if (data.exportToX !== undefined) updateData.exportToX = data.exportToX;
+    if (data.exportToGoogleDiscover !== undefined) updateData.exportToGoogleDiscover = data.exportToGoogleDiscover;
+    if (data.exportToInstagramReels !== undefined) updateData.exportToInstagramReels = data.exportToInstagramReels;
+    if (data.exportToInstagramStories !== undefined) updateData.exportToInstagramStories = data.exportToInstagramStories;
+    if (data.exportToJiji !== undefined) updateData.exportToJiji = data.exportToJiji;
+    if (data.exportToTelegram !== undefined) updateData.exportToTelegram = data.exportToTelegram;
+    if (data.exportToWhatsappChannel !== undefined) updateData.exportToWhatsappChannel = data.exportToWhatsappChannel;
+    if (data.exportToWhatsappStatus !== undefined) updateData.exportToWhatsappStatus = data.exportToWhatsappStatus;
+    if (data.exportToYoutubeShorts !== undefined) updateData.exportToYoutubeShorts = data.exportToYoutubeShorts;
+    if (data.exportToAppleMaps !== undefined) updateData.exportToAppleMaps = data.exportToAppleMaps;
+    if (data.exportToBingPlaces !== undefined) updateData.exportToBingPlaces = data.exportToBingPlaces;
+    if (data.exportToGoogleMapsPost !== undefined) updateData.exportToGoogleMapsPost = data.exportToGoogleMapsPost;
+    if (data.exportToLinkedInNewsletter !== undefined) updateData.exportToLinkedInNewsletter = data.exportToLinkedInNewsletter;
+    if (data.exportToMedium !== undefined) updateData.exportToMedium = data.exportToMedium;
+    if (data.exportToNextdoor !== undefined) updateData.exportToNextdoor = data.exportToNextdoor;
+    if (data.exportToOlxKenya !== undefined) updateData.exportToOlxKenya = data.exportToOlxKenya;
+    if (data.exportToPigiaMe !== undefined) updateData.exportToPigiaMe = data.exportToPigiaMe;
+    if (data.exportToReddit !== undefined) updateData.exportToReddit = data.exportToReddit;
+    if (data.exportToSnapchat !== undefined) updateData.exportToSnapchat = data.exportToSnapchat;
+    if (data.exportToYoutube !== undefined) updateData.exportToYoutube = data.exportToYoutube;
 
     const product = await prisma.product.update({
       where: { id },

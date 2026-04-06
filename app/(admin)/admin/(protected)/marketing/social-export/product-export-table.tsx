@@ -101,35 +101,46 @@ export function ProductExportTable({
     });
   };
 
-  const platforms = [
-    { field: "exportToGoogle", label: "Google" },
-    { field: "exportToMeta", label: "Meta" },
-    { field: "exportToTiktok", label: "TikTok" },
-    { field: "exportToLinkedIn", label: "LinkedIn" },
-    { field: "exportToPinterest", label: "Pinterest" },
-    { field: "exportToX", label: "X" },
-    { field: "exportToGoogleBiz", label: "G-Biz" },
-    { field: "exportToSnapchat", label: "Snapchat" },
-    { field: "exportToYoutube", label: "YouTube" },
-    { field: "exportToInstagramStories", label: "IG Stories" },
+  const MARKETPLACE_SYNC = [
+    { field: "exportToGoogle", label: "Google Merchant" },
+    { field: "exportToMeta", label: "Meta Marketplace" },
+    { field: "exportToTiktok", label: "TikTok Shop" },
+    { field: "exportToJiji", label: "Jiji" },
+    { field: "exportToOlxKenya", label: "OLX Kenya" },
+    { field: "exportToPigiaMe", label: "PigiaMe" },
+    { field: "exportToBingPlaces", label: "Bing Places" },
+    { field: "exportToAppleMaps", label: "Apple Maps" },
+    { field: "exportToGoogleBiz", label: "Google Biz" },
+  ] as const;
+
+  const SOCIAL_ADVERTISING = [
     { field: "exportToInstagramReels", label: "IG Reels" },
+    { field: "exportToInstagramStories", label: "IG Stories" },
     { field: "exportToYoutubeShorts", label: "YT Shorts" },
     { field: "exportToWhatsappStatus", label: "WA Status" },
     { field: "exportToWhatsappChannel", label: "WA Channel" },
+    { field: "exportToLinkedIn", label: "LinkedIn" },
+    { field: "exportToPinterest", label: "Pinterest" },
+    { field: "exportToX", label: "X (Twitter)" },
+    { field: "exportToSnapchat", label: "Snapchat" },
+    { field: "exportToYoutube", label: "YouTube" },
     { field: "exportToTelegram", label: "Telegram" },
-    { field: "exportToGoogleDiscover", label: "Discover" },
-    { field: "exportToGoogleMapsPost", label: "Maps Post" },
-    { field: "exportToBingPlaces", label: "Bing" },
-    { field: "exportToAppleMaps", label: "Apple" },
-    { field: "exportToPigiaMe", label: "PigiaMe" },
-    { field: "exportToOlxKenya", label: "OLX" },
     { field: "exportToReddit", label: "Reddit" },
     { field: "exportToLinkedInNewsletter", label: "LI News" },
     { field: "exportToMedium", label: "Medium" },
     { field: "exportToNextdoor", label: "Nextdoor" },
-    { field: "exportToJiji", label: "Jiji" },
-    { field: "featuredThisWeek", label: "SMS Feature" },
+    { field: "exportToGoogleDiscover", label: "Discover" },
+    { field: "exportToGoogleMapsPost", label: "Maps Post" },
+    { field: "featuredThisWeek", label: "SMS Spotlight" },
   ] as const;
+
+  const renderHeaderGroup = (title: string, items: readonly { field: string; label: string }[]) => (
+    <>
+      <th colSpan={items.length} className="bg-slate-50/80 p-2 text-center border-x border-slate-200">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{title}</span>
+      </th>
+    </>
+  );
 
   return (
     <div className="bg-card rounded-xl border border-border/50 shadow-lg overflow-hidden flex flex-col transition-all duration-500 hover:shadow-primary/5">
@@ -158,16 +169,23 @@ export function ProductExportTable({
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left border-collapse">
+      <div className="overflow-x-auto relative scrollbar-thin scrollbar-thumb-slate-200">
+        <table className="w-full text-sm text-left border-collapse min-w-[2500px]">
           <thead>
+            <tr className="border-b border-border/60">
+              <th className="sticky left-0 z-30 bg-slate-50 p-4 min-w-[200px] border-r border-slate-200"></th>
+              {renderHeaderGroup("Marketplace & Shop Sync", MARKETPLACE_SYNC)}
+              {renderHeaderGroup("Social Advertising & Content Hooks", SOCIAL_ADVERTISING)}
+            </tr>
             <tr className="bg-muted/50 border-b border-border/60">
-              <th className="p-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground">Product</th>
-              {platforms.map(p => (
-                <th key={p.field} className="p-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground text-center">
-                  <div className="flex flex-col items-center gap-2">
-                    <span>{p.label}</span>
-                    <div className="flex gap-1">
+              <th className="sticky left-0 z-30 bg-slate-50 p-4 font-semibold text-xs uppercase tracking-wider text-muted-foreground border-r border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                Product Name
+              </th>
+              {[...MARKETPLACE_SYNC, ...SOCIAL_ADVERTISING].map((p, idx) => (
+                <th key={p.field} className={`p-3 font-semibold text-[10px] uppercase tracking-wider text-muted-foreground text-center border-r border-border/10 ${idx === MARKETPLACE_SYNC.length - 1 ? 'border-r-slate-300' : ''}`}>
+                  <div className="flex flex-col items-center gap-2 min-w-[70px]">
+                    <span className="truncate w-full block px-1">{p.label}</span>
+                    <div className="flex gap-1 scale-90">
                       <button 
                         onClick={() => bulkToggle(p.field, true)}
                         className="p-1 rounded bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition-colors"
@@ -191,25 +209,22 @@ export function ProductExportTable({
           <tbody className="divide-y divide-border/40">
             {filteredProducts.map((p) => (
               <tr key={p.id} className="hover:bg-muted/30 transition-all duration-200 group">
-                <td className="p-4">
+                <td className="sticky left-0 z-20 bg-white p-4 border-r border-border/60 shadow-[2px_0_5px_rgba(0,0,0,0.05)] group-hover:bg-slate-50 transition-colors">
                   <div className="flex flex-col">
-                    <span className="font-medium group-hover:text-primary transition-colors">{p.name}</span>
-                    <span className="text-[10px] uppercase text-muted-foreground font-semibold">{p.categoryName}</span>
+                    <span className="font-semibold text-slate-900 group-hover:text-primary transition-colors text-xs whitespace-nowrap">{p.name}</span>
+                    <span className="text-[9px] uppercase text-slate-400 font-bold tracking-tight">{p.categoryName}</span>
                   </div>
                 </td>
                 
-                {platforms.map(platform => (
-                  <td key={platform.field} className="p-4 text-center">
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        className="sr-only peer"
-                        checked={p[platform.field]}
-                        onChange={(e) => toggleExport(p.id, platform.field, e.target.checked)}
-                        disabled={saving === p.id}
-                      />
-                      <div className="w-9 h-5 bg-muted rounded-full peer peer-focus:ring-2 peer-focus:ring-primary/30 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border/60 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary transition-all duration-300"></div>
-                    </label>
+                {[...MARKETPLACE_SYNC, ...SOCIAL_ADVERTISING].map((platform, idx) => (
+                  <td key={platform.field} className={`p-2 text-center border-r border-border/10 ${idx === MARKETPLACE_SYNC.length - 1 ? 'border-r-slate-300' : ''}`}>
+                    <input 
+                      type="checkbox" 
+                      className="w-4 h-4 rounded text-primary focus:ring-primary border-slate-300 cursor-pointer transition-transform hover:scale-110 active:scale-95"
+                      checked={p[platform.field]}
+                      onChange={(e) => toggleExport(p.id, platform.field, e.target.checked)}
+                      disabled={saving === p.id}
+                    />
                   </td>
                 ))}
               </tr>
@@ -217,7 +232,7 @@ export function ProductExportTable({
 
             {filteredProducts.length === 0 && (
               <tr>
-                <td colSpan={30} className="p-10 text-center text-muted-foreground italic">
+                <td colSpan={100} className="p-10 text-center text-muted-foreground italic">
                   No products found matching your search.
                 </td>
               </tr>

@@ -46,6 +46,32 @@ interface ProductFormProps {
     metaDescription: string | null;
     tags?: string[];
     featuredThisWeek: boolean;
+    exportToGoogle: boolean;
+    exportToGoogleBiz: boolean;
+    exportToLinkedIn: boolean;
+    exportToMeta: boolean;
+    exportToPinterest: boolean;
+    exportToTiktok: boolean;
+    exportToX: boolean;
+    exportToGoogleDiscover: boolean;
+    exportToInstagramReels: boolean;
+    exportToInstagramStories: boolean;
+    exportToJiji: boolean;
+    exportToTelegram: boolean;
+    exportToWhatsappChannel: boolean;
+    exportToWhatsappStatus: boolean;
+    exportToYoutubeShorts: boolean;
+    exportToAppleMaps: boolean;
+    exportToBingPlaces: boolean;
+    exportToGoogleMapsPost: boolean;
+    exportToLinkedInNewsletter: boolean;
+    exportToMedium: boolean;
+    exportToNextdoor: boolean;
+    exportToOlxKenya: boolean;
+    exportToPigiaMe: boolean;
+    exportToReddit: boolean;
+    exportToSnapchat: boolean;
+    exportToYoutube: boolean;
   };
 }
 
@@ -89,6 +115,39 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const [metaTitle, setMetaTitle] = useState(product?.metaTitle ?? "");
   const [metaDescription, setMetaDescription] = useState(product?.metaDescription ?? "");
   const [tagsStr, setTagsStr] = useState((product?.tags ?? []).join(", "));
+
+  const [exportSettings, setExportSettings] = useState({
+    exportToGoogle: product?.exportToGoogle ?? true,
+    exportToGoogleBiz: product?.exportToGoogleBiz ?? true,
+    exportToMeta: product?.exportToMeta ?? true,
+    exportToTiktok: product?.exportToTiktok ?? true,
+    exportToGoogleMapsPost: product?.exportToGoogleMapsPost ?? true,
+    exportToLinkedIn: product?.exportToLinkedIn ?? false,
+    exportToPinterest: product?.exportToPinterest ?? false,
+    exportToX: product?.exportToX ?? false,
+    exportToGoogleDiscover: product?.exportToGoogleDiscover ?? false,
+    exportToInstagramReels: product?.exportToInstagramReels ?? false,
+    exportToInstagramStories: product?.exportToInstagramStories ?? false,
+    exportToJiji: product?.exportToJiji ?? false,
+    exportToTelegram: product?.exportToTelegram ?? false,
+    exportToWhatsappStatus: product?.exportToWhatsappStatus ?? false,
+    exportToWhatsappChannel: product?.exportToWhatsappChannel ?? false,
+    exportToYoutubeShorts: product?.exportToYoutubeShorts ?? false,
+    exportToAppleMaps: product?.exportToAppleMaps ?? false,
+    exportToBingPlaces: product?.exportToBingPlaces ?? false,
+    exportToLinkedInNewsletter: product?.exportToLinkedInNewsletter ?? false,
+    exportToMedium: product?.exportToMedium ?? false,
+    exportToNextdoor: product?.exportToNextdoor ?? false,
+    exportToOlxKenya: product?.exportToOlxKenya ?? false,
+    exportToPigiaMe: product?.exportToPigiaMe ?? false,
+    exportToReddit: product?.exportToReddit ?? false,
+    exportToSnapchat: product?.exportToSnapchat ?? false,
+    exportToYoutube: product?.exportToYoutube ?? false,
+  });
+
+  const toggleExport = (field: keyof typeof exportSettings) => {
+    setExportSettings(prev => ({ ...prev, [field]: !prev[field] }));
+  };
 
   const tagsArray = tagsStr.split(",").map((s) => s.trim()).filter(Boolean);
   const hasTag = (name: string) => tagsArray.some((t) => t.toLowerCase() === name.toLowerCase());
@@ -155,6 +214,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       featuredThisWeek,
       metaTitle: metaTitle || undefined,
       metaDescription: metaDescription || undefined,
+      ...exportSettings,
       ...(images != null && { images }),
     };
     try {
@@ -414,6 +474,87 @@ export function ProductForm({ categories, product }: ProductFormProps) {
               placeholder="White, Black"
               className="mt-1"
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-indigo-100 bg-indigo-50/5 shadow-sm">
+        <CardHeader className="pb-3 border-b border-indigo-100/50">
+          <h2 className="font-bold text-indigo-900 flex items-center gap-2">
+            <div className="p-1 rounded bg-indigo-100 text-indigo-600">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            </div>
+            Marketing & Distribution
+          </h2>
+          <p className="text-[10px] text-indigo-500 uppercase font-bold tracking-wider mt-1">Automatic Cloud Sync Settings</p>
+        </CardHeader>
+        <CardContent className="pt-6 space-y-6">
+          <div className="space-y-4">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <span className="w-8 h-[1px] bg-indigo-100"></span>
+              Marketplace & Shop Sync
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {[
+                { field: "exportToGoogle", label: "Google Merchant" },
+                { field: "exportToMeta", label: "Meta Marketplace" },
+                { field: "exportToTiktok", label: "TikTok Shop" },
+                { field: "exportToJiji", label: "Jiji" },
+                { field: "exportToOlxKenya", label: "OLX Kenya" },
+                { field: "exportToPigiaMe", label: "PigiaMe" },
+                { field: "exportToBingPlaces", label: "Bing Places" },
+                { field: "exportToAppleMaps", label: "Apple Maps" },
+                { field: "exportToGoogleBiz", label: "Google Biz" },
+              ].map((item) => (
+                <label key={item.field} className="flex items-center gap-2 p-2 rounded-lg border border-indigo-100 bg-white hover:border-indigo-300 hover:bg-indigo-50/50 cursor-pointer transition-all">
+                  <input
+                    type="checkbox"
+                    checked={exportSettings[item.field as keyof typeof exportSettings]}
+                    onChange={() => toggleExport(item.field as keyof typeof exportSettings)}
+                    className="w-4 h-4 rounded text-indigo-600 border-indigo-200 focus:ring-indigo-500"
+                  />
+                  <span className="text-xs font-medium text-slate-800">{item.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-4 pt-4 border-t border-indigo-100/50">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              <span className="w-8 h-[1px] bg-indigo-100"></span>
+              Social Posting & Advertising
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {[
+                { field: "exportToInstagramReels", label: "IG Reels" },
+                { field: "exportToInstagramStories", label: "IG Stories" },
+                { field: "exportToYoutubeShorts", label: "YT Shorts" },
+                { field: "exportToWhatsappStatus", label: "WA Status" },
+                { field: "exportToWhatsappChannel", label: "WA Channel" },
+                { field: "exportToLinkedIn", label: "LinkedIn" },
+                { field: "exportToPinterest", label: "Pinterest" },
+                { field: "exportToX", label: "X (Twitter)" },
+                { field: "exportToSnapchat", label: "Snapchat" },
+                { field: "exportToYoutube", label: "YouTube" },
+                { field: "exportToTelegram", label: "Telegram" },
+                { field: "exportToReddit", label: "Reddit" },
+                { field: "exportToLinkedInNewsletter", label: "LI News" },
+                { field: "exportToMedium", label: "Medium" },
+                { field: "exportToNextdoor", label: "Nextdoor" },
+                { field: "exportToGoogleDiscover", label: "Discover" },
+                { field: "exportToGoogleMapsPost", label: "Maps Post" },
+              ].map((item) => (
+                <label key={item.field} className="flex items-center gap-2 p-2 rounded-lg border border-slate-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/50 cursor-pointer transition-all">
+                  <input
+                    type="checkbox"
+                    checked={exportSettings[item.field as keyof typeof exportSettings]}
+                    onChange={() => toggleExport(item.field as keyof typeof exportSettings)}
+                    className="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500"
+                  />
+                  <span className="text-xs font-medium text-slate-600">{item.label}</span>
+                </label>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
