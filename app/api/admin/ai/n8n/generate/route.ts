@@ -29,16 +29,16 @@ export async function POST(req: NextRequest) {
 
     switch (action) {
       case "GENERATE_DESCRIPTION":
-        n8nPath = "ai-generate-descriptions";
+        n8nPath = "generate-product-description";
         payload.productId = productId;
         payload.autoAnalyze = true; // Activate Vision mode if images found
         break;
       case "GENERATE_AD_COPY":
-        n8nPath = "ai-generate-adcopy";
+        n8nPath = "generate-ad-copy";
         payload.productId = productId;
         break;
       case "GENERATE_SOCIAL":
-        n8nPath = "ai-generate-social";
+        n8nPath = "generate-social-posts";
         payload.productId = productId;
         break;
       case "GENERATE_QUOTE_DRAFT":

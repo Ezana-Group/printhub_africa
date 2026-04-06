@@ -31,14 +31,25 @@ export async function middleware(request: NextRequest) {
 
     // --- CSRF/Origin Protection for Mutations ---
     const isMutation = ["POST", "PUT", "PATCH", "DELETE"].includes(request.method);
-    if (isMutation) {
+    const isTelemetry = pathname.includes("/envelope"); // Sentry/telemetry
+
+    if (isMutation && !isTelemetry) {
       const origin = request.headers.get("origin");
       const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL; // e.g. https://admin.printhub.africa
       
-      // Strict check: origin must match adminUrl
-      if (isProduction && origin !== adminUrl) {
+      // Robust check: origin must match adminUrl or be part of the core domain
+      const isAuthorizedOrigin = 
+        !origin || 
+        origin === adminUrl || 
+        origin.endsWith(".printhub.africa") ||
+        (host.includes('localhost') && !isProduction);
+
+      if (isProduction && origin && !isAuthorizedOrigin) {
         console.error(`[Security] CSRF/Origin mismatch. Method: ${request.method}, Path: ${pathname}, Origin: ${origin}, Expected: ${adminUrl}`);
-        return new NextResponse(JSON.stringify({ error: "CSRF Prevention: Invalid Origin" }), { 
+        return new NextResponse(JSON.stringify({ 
+          error: "CSRF Prevention: Invalid Origin",
+          detail: "The request origin does not match the authorized administration domain."
+        }), { 
           status: 403, 
           headers: { 'Content-Type': 'application/json' } 
         });

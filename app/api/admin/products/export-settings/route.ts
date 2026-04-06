@@ -24,7 +24,26 @@ export async function POST(req: NextRequest) {
       "exportToLinkedIn",
       "exportToPinterest",
       "exportToX",
-      "exportToGoogleBiz"
+      "exportToGoogleBiz",
+      "exportToGoogleDiscover",
+      "exportToInstagramReels",
+      "exportToInstagramStories",
+      "exportToJiji",
+      "exportToTelegram",
+      "exportToWhatsappChannel",
+      "exportToWhatsappStatus",
+      "exportToYoutubeShorts",
+      "exportToAppleMaps",
+      "exportToBingPlaces",
+      "exportToGoogleMapsPost",
+      "exportToLinkedInNewsletter",
+      "exportToMedium",
+      "exportToNextdoor",
+      "exportToOlxKenya",
+      "exportToPigiaMe",
+      "exportToReddit",
+      "exportToSnapchat",
+      "exportToYoutube"
     ];
 
     if (!allowedFields.includes(field)) {
