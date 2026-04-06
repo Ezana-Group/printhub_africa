@@ -18,6 +18,7 @@ import type { ProductRow } from "@/components/admin/products-admin-client";
 import { ProductImagesTab } from "@/components/admin/product-images-tab";
 import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 import { ProductMaterialSelector } from "@/components/admin/ProductMaterialSelector";
+import { Sparkles, Zap, Megaphone, CheckCircle2, Loader2 } from "lucide-react";
 
 import type { ProductType } from "@prisma/client";
 
@@ -44,7 +45,7 @@ export function ProductFormSheet({
   const isEdit = !!product && product.id !== "new";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"details" | "pricing" | "images" | "materials" | "seo">("details");
+  const [activeTab, setActiveTab] = useState<"details" | "pricing" | "images" | "materials" | "seo" | "marketing">("details");
 
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -61,6 +62,34 @@ export function ProductFormSheet({
   const [imagesStr, setImagesStr] = useState("");
   const [metaTitle, setMetaTitle] = useState("");
   const [metaDescription, setMetaDescription] = useState("");
+  const [featuredThisWeek, setFeaturedThisWeek] = useState(false);
+  const [exportToGoogle, setExportToGoogle] = useState(true);
+  const [exportToGoogleBiz, setExportToGoogleBiz] = useState(true);
+  const [exportToLinkedIn, setExportToLinkedIn] = useState(false);
+  const [exportToMeta, setExportToMeta] = useState(true);
+  const [exportToPinterest, setExportToPinterest] = useState(false);
+  const [exportToTiktok, setExportToTiktok] = useState(true);
+  const [exportToX, setExportToX] = useState(false);
+  const [exportToGoogleDiscover, setExportToGoogleDiscover] = useState(false);
+  const [exportToInstagramReels, setExportToInstagramReels] = useState(false);
+  const [exportToInstagramStories, setExportToInstagramStories] = useState(false);
+  const [exportToJiji, setExportToJiji] = useState(false);
+  const [exportToTelegram, setExportToTelegram] = useState(false);
+  const [exportToWhatsappChannel, setExportToWhatsappChannel] = useState(false);
+  const [exportToWhatsappStatus, setExportToWhatsappStatus] = useState(false);
+  const [exportToYoutubeShorts, setExportToYoutubeShorts] = useState(false);
+  const [exportToAppleMaps, setExportToAppleMaps] = useState(false);
+  const [exportToBingPlaces, setExportToBingPlaces] = useState(false);
+  const [exportToGoogleMapsPost, setExportToGoogleMapsPost] = useState(true);
+  const [exportToLinkedInNewsletter, setExportToLinkedInNewsletter] = useState(false);
+  const [exportToMedium, setExportToMedium] = useState(false);
+  const [exportToNextdoor, setExportToNextdoor] = useState(false);
+  const [exportToOlxKenya, setExportToOlxKenya] = useState(false);
+  const [exportToPigiaMe, setExportToPigiaMe] = useState(false);
+  const [exportToReddit, setExportToReddit] = useState(false);
+  const [exportToSnapchat, setExportToSnapchat] = useState(false);
+  const [exportToYoutube, setExportToYoutube] = useState(false);
+  const [aiGenerating, setAiGenerating] = useState<string | null>(null);
 
   useEffect(() => {
     if (product) {
@@ -77,8 +106,35 @@ export function ProductFormSheet({
       setIsFeatured((product as Record<string, unknown>).isFeatured as boolean ?? false);
       setIsPOD(product.isPOD ?? false);
       setImagesStr(Array.isArray(product.images) ? product.images.join("\n") : "");
-      setMetaTitle("");
-      setMetaDescription("");
+      setMetaTitle((product as any).metaTitle ?? "");
+      setMetaDescription((product as any).metaDescription ?? "");
+      setFeaturedThisWeek((product as any).featuredThisWeek ?? false);
+      setExportToGoogle((product as any).exportToGoogle ?? true);
+      setExportToGoogleBiz((product as any).exportToGoogleBiz ?? true);
+      setExportToLinkedIn((product as any).exportToLinkedIn ?? false);
+      setExportToMeta((product as any).exportToMeta ?? true);
+      setExportToPinterest((product as any).exportToPinterest ?? false);
+      setExportToTiktok((product as any).exportToTiktok ?? true);
+      setExportToX((product as any).exportToX ?? false);
+      setExportToGoogleDiscover((product as any).exportToGoogleDiscover ?? false);
+      setExportToInstagramReels((product as any).exportToInstagramReels ?? false);
+      setExportToInstagramStories((product as any).exportToInstagramStories ?? false);
+      setExportToJiji((product as any).exportToJiji ?? false);
+      setExportToTelegram((product as any).exportToTelegram ?? false);
+      setExportToWhatsappChannel((product as any).exportToWhatsappChannel ?? false);
+      setExportToWhatsappStatus((product as any).exportToWhatsappStatus ?? false);
+      setExportToYoutubeShorts((product as any).exportToYoutubeShorts ?? false);
+      setExportToAppleMaps((product as any).exportToAppleMaps ?? false);
+      setExportToBingPlaces((product as any).exportToBingPlaces ?? false);
+      setExportToGoogleMapsPost((product as any).exportToGoogleMapsPost ?? true);
+      setExportToLinkedInNewsletter((product as any).exportToLinkedInNewsletter ?? false);
+      setExportToMedium((product as any).exportToMedium ?? false);
+      setExportToNextdoor((product as any).exportToNextdoor ?? false);
+      setExportToOlxKenya((product as any).exportToOlxKenya ?? false);
+      setExportToPigiaMe((product as any).exportToPigiaMe ?? false);
+      setExportToReddit((product as any).exportToReddit ?? false);
+      setExportToSnapchat((product as any).exportToSnapchat ?? false);
+      setExportToYoutube((product as any).exportToYoutube ?? false);
     } else {
       setName("");
       setSlug("");
@@ -95,6 +151,33 @@ export function ProductFormSheet({
       setImagesStr("");
       setMetaTitle("");
       setMetaDescription("");
+      setFeaturedThisWeek(false);
+      setExportToGoogle(true);
+      setExportToGoogleBiz(true);
+      setExportToLinkedIn(false);
+      setExportToMeta(true);
+      setExportToPinterest(false);
+      setExportToTiktok(true);
+      setExportToX(false);
+      setExportToGoogleDiscover(false);
+      setExportToInstagramReels(false);
+      setExportToInstagramStories(false);
+      setExportToJiji(false);
+      setExportToTelegram(false);
+      setExportToWhatsappChannel(false);
+      setExportToWhatsappStatus(false);
+      setExportToYoutubeShorts(false);
+      setExportToAppleMaps(false);
+      setExportToBingPlaces(false);
+      setExportToGoogleMapsPost(true);
+      setExportToLinkedInNewsletter(false);
+      setExportToMedium(false);
+      setExportToNextdoor(false);
+      setExportToOlxKenya(false);
+      setExportToPigiaMe(false);
+      setExportToReddit(false);
+      setExportToSnapchat(false);
+      setExportToYoutube(false);
     }
   }, [product, categories]);
 
@@ -125,6 +208,33 @@ export function ProductFormSheet({
       isFeatured,
       metaTitle: metaTitle || undefined,
       metaDescription: metaDescription || undefined,
+      featuredThisWeek,
+      exportToGoogle,
+      exportToGoogleBiz,
+      exportToLinkedIn,
+      exportToMeta,
+      exportToPinterest,
+      exportToTiktok,
+      exportToX,
+      exportToGoogleDiscover,
+      exportToInstagramReels,
+      exportToInstagramStories,
+      exportToJiji,
+      exportToTelegram,
+      exportToWhatsappChannel,
+      exportToWhatsappStatus,
+      exportToYoutubeShorts,
+      exportToAppleMaps,
+      exportToBingPlaces,
+      exportToGoogleMapsPost,
+      exportToLinkedInNewsletter,
+      exportToMedium,
+      exportToNextdoor,
+      exportToOlxKenya,
+      exportToPigiaMe,
+      exportToReddit,
+      exportToSnapchat,
+      exportToYoutube,
       ...(images != null && { images }),
     };
     try {
@@ -159,7 +269,27 @@ export function ProductFormSheet({
     { id: "images" as const, label: "Images" },
     { id: "materials" as const, label: "Materials" },
     { id: "seo" as const, label: "SEO" },
+    { id: "marketing" as const, label: "Marketing" },
   ];
+
+  const handleAiGenerate = async (action: string) => {
+    if (!product?.id) return;
+    setAiGenerating(action);
+    try {
+      const res = await fetch("/api/admin/ai/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, productId: product.id }),
+      });
+      if (!res.ok) throw new Error("AI Trigger failed");
+      // Add a small delay for feedback
+      await new Promise(r => setTimeout(r, 1500));
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setAiGenerating(null);
+    }
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -362,6 +492,146 @@ export function ProductFormSheet({
                   />
                 </div>
               </div>
+            )}
+
+            {activeTab === "marketing" && (
+              <div className="space-y-8 pb-10">
+                {/* AI Section */}
+                <div className="bg-primary/5 border border-primary/10 rounded-xl p-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                       <Sparkles className="h-4 w-4 text-primary" />
+                       AI Content Engine
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-600">Generate high-quality descriptions and social ad copy using our trained AI models.</p>
+                  <div className="grid grid-cols-2 gap-3">
+                     <Button 
+                       type="button" 
+                       variant="outline" 
+                       className="gap-2 bg-white" 
+                       onClick={() => handleAiGenerate("GENERATE_DESCRIPTION")}
+                       disabled={aiGenerating === "GENERATE_DESCRIPTION" || !isEdit}
+                     >
+                       {aiGenerating === "GENERATE_DESCRIPTION" ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <Sparkles className="h-4 w-4 text-primary" />}
+                       AI Description
+                     </Button>
+                     <Button 
+                       type="button" 
+                       variant="outline" 
+                       className="gap-2 bg-white" 
+                       onClick={() => handleAiGenerate("GENERATE_AD_COPY")}
+                       disabled={aiGenerating === "GENERATE_AD_COPY" || !isEdit}
+                     >
+                        {aiGenerating === "GENERATE_AD_COPY" ? <Loader2 className="h-4 w-4 animate-spin text-indigo-500" /> : <Zap className="h-4 w-4 text-indigo-500" />}
+                        AI Ad Copy
+                     </Button>
+                  </div>
+                  {!isEdit && <p className="text-[10px] text-amber-600 font-medium italic">Save the product first to enable AI generation.</p>}
+                </div>
+
+                {/* Spotlight Section */}
+                <div className="space-y-3">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest px-1">Campaign Targeting</h3>
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center justify-between">
+                       <div className="space-y-0.5">
+                          <p className="text-sm font-bold text-slate-800">Weekly AI Spotlight</p>
+                          <p className="text-[11px] text-slate-500">Nominate this item for weekly SMS & broadcast campaigns.</p>
+                       </div>
+                       <Switch 
+                         checked={featuredThisWeek} 
+                         onCheckedChange={setFeaturedThisWeek}
+                       />
+                    </div>
+                </div>
+
+                {/* Distribution Section */}
+                <div className="space-y-6">
+                   <div className="flex items-center gap-2 px-1">
+                      <Megaphone className="h-4 w-4 text-slate-400" />
+                      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Multi-Channel Distribution</h3>
+                   </div>
+                   
+                   <div className="grid gap-6">
+                      {/* Marketplace Sync */}
+                      <div className="space-y-3">
+                         <p className="text-[10px] font-bold text-primary/70 uppercase px-1">Marketplace & Shop Sync</p>
+                         <div className="grid grid-cols-2 gap-x-6 gap-y-3 p-4 bg-white border rounded-xl shadow-sm">
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                               <Switch checked={exportToGoogle} onCheckedChange={setExportToGoogle} />
+                               <span className="text-sm font-medium text-slate-600 group-hover:text-slate-900 transition-colors">Google Merchant</span>
+                            </label>
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                               <Switch checked={exportToMeta} onCheckedChange={setExportToMeta} />
+                               <span className="text-sm font-medium text-slate-600 group-hover:text-slate-900 transition-colors">Meta Marketplace</span>
+                            </label>
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                               <Switch checked={exportToTiktok} onCheckedChange={setExportToTiktok} />
+                               <span className="text-sm font-medium text-slate-600 group-hover:text-slate-900 transition-colors">TikTok Shop</span>
+                            </label>
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                               <Switch checked={exportToJiji} onCheckedChange={setExportToJiji} />
+                               <span className="text-sm font-medium text-slate-600 group-hover:text-slate-900 transition-colors">Jiji Kenya</span>
+                            </label>
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                               <Switch checked={exportToOlxKenya} onCheckedChange={setExportToOlxKenya} />
+                               <span className="text-sm font-medium text-slate-600 group-hover:text-slate-900 transition-colors">OLX / Jiji</span>
+                            </label>
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                               <Switch checked={exportToPigiaMe} onCheckedChange={setExportToPigiaMe} />
+                               <span className="text-sm font-medium text-slate-600 group-hover:text-slate-900 transition-colors">PigiaMe</span>
+                            </label>
+                         </div>
+                      </div>
+
+                      {/* Social Ads */}
+                      <div className="space-y-3">
+                         <p className="text-[10px] font-bold text-indigo-500 uppercase px-1">Social Advertising Hooks</p>
+                         <div className="grid grid-cols-2 gap-x-6 gap-y-3 p-4 bg-slate-50/50 border border-slate-200 rounded-xl">
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                               <Switch checked={exportToInstagramReels} onCheckedChange={setExportToInstagramReels} />
+                               <span className="text-sm font-medium text-slate-600">IG Reels</span>
+                            </label>
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                               <Switch checked={exportToInstagramStories} onCheckedChange={setExportToInstagramStories} />
+                               <span className="text-sm font-medium text-slate-600">IG Stories</span>
+                            </label>
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                               <Switch checked={exportToYoutubeShorts} onCheckedChange={setExportToYoutubeShorts} />
+                               <span className="text-sm font-medium text-slate-600">YouTube Shorts</span>
+                            </label>
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                               <Switch checked={exportToWhatsappStatus} onCheckedChange={setExportToWhatsappStatus} />
+                               <span className="text-sm font-medium text-slate-600">WhatsApp Status</span>
+                            </label>
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                               <Switch checked={exportToWhatsappChannel} onCheckedChange={setExportToWhatsappChannel} />
+                               <span className="text-sm font-medium text-slate-600">WA Channel</span>
+                            </label>
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                               <Switch checked={exportToLinkedIn} onCheckedChange={setExportToLinkedIn} />
+                               <span className="text-sm font-medium text-slate-600">LinkedIn</span>
+                            </label>
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                               <Switch checked={exportToX} onCheckedChange={setExportToX} />
+                               <span className="text-sm font-medium text-slate-600">X (Twitter)</span>
+                            </label>
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                               <Switch checked={exportToTelegram} onCheckedChange={setExportToTelegram} />
+                               <span className="text-sm font-medium text-slate-600">Telegram</span>
+                            </label>
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                               <Switch checked={exportToPinterest} onCheckedChange={setExportToPinterest} />
+                               <span className="text-sm font-medium text-slate-600">Pinterest</span>
+                            </label>
+                            <label className="flex items-center gap-3 cursor-pointer group">
+                               <Switch checked={exportToSnapchat} onCheckedChange={setExportToSnapchat} />
+                               <span className="text-sm font-medium text-slate-600">Snapchat</span>
+                            </label>
+                         </div>
+                      </div>
+                   </div>
+                </div>
             )}
           </div>
 
