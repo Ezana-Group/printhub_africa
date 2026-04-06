@@ -63,7 +63,7 @@
             }
           ]
         },
-        "bodyParametersJson": "={ \"model\": \"claude-opus-4-6\", \"max_tokens\": 1000, \"system\": \"You are the content and customer service AI for PrintHub Africa...\", \"messages\": [{ \"role\": \"user\", \"content\": \"Write a compelling, SEO-optimised product description for {{ $json.name }}. Include: 1. Main description (200 words), 2. Short description (50 words), 3. 5 Key Features as a list, 4. SEO meta title, 5. SEO meta description. Return valid JSON.\" }] }"
+        "bodyParametersJson": "={ \"model\": \"claude-3-5-sonnet-20240620\", \"max_tokens\": 2000, \"system\": \"You are the Lead Content Strategist for PrintHub Africa. Your task is to analyze product data and images to create high-conversion, SEO-optimized e-commerce content. You must return valid JSON with keys: mainDescription, shortDescription, keyFeatures (array), metaTitle, metaDescription.\", \"messages\": [ { \"role\": \"user\", \"content\": [ {{ $node['Get Context'].json.images[0] ? '{ \"type\": \"image\", \"source\": { \"type\": \"url\", \"url\": \"' + $node['Get Context'].json.images[0] + '\" } },' : '' }} { \"type\": \"text\", \"text\": \"Analyze this product: {{ $node['Get Context'].json.name }}. Category: {{ $node['Get Context'].json.category }}. Price: KES {{ $node['Get Context'].json.basePrice }}. Vision Analysis: If an image is provided, describe its visual appeal, texture, and physical attributes. Guidelines: 1. Tone: Professional yet energetic. 2. Main Description: ~200 words, HTML formatted (<p>, <ul>, <strong>). 3. Key Features: Exactly 5 items. 4. Output: STRICT JSON only.\" } ] } ] }"
       },
       "name": "Claude: Write Descriptions",
       "type": "n8n-nodes-base.httpRequest",

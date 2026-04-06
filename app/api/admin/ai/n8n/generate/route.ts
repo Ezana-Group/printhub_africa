@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
       case "GENERATE_DESCRIPTION":
         n8nPath = "ai-generate-descriptions";
         payload.productId = productId;
+        payload.autoAnalyze = true; // Activate Vision mode if images found
         break;
       case "GENERATE_AD_COPY":
         n8nPath = "ai-generate-adcopy";

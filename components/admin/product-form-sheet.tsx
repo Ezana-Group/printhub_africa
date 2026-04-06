@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { CategoryCascadingSelect } from "@/components/admin/CategoryCascadingSelect";
 import { Switch } from "@/components/ui/switch";
 import type { ProductRow } from "@/components/admin/products-admin-client";
@@ -90,6 +91,7 @@ export function ProductFormSheet({
   const [exportToSnapchat, setExportToSnapchat] = useState(false);
   const [exportToYoutube, setExportToYoutube] = useState(false);
   const [aiGenerating, setAiGenerating] = useState<string | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
     if (product) {
@@ -246,6 +248,7 @@ export function ProductFormSheet({
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.slug?.[0] ?? data.error ?? "Update failed");
+        onSuccess();
       } else {
         const res = await fetch("/api/admin/products", {
           method: "POST",
@@ -254,8 +257,16 @@ export function ProductFormSheet({
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.slug?.[0] ?? data.error ?? "Create failed");
+        
+        // AUTO-VISION TRIGGER: If creating a new product with images, trigger AI immediately
+        if (images && images.length > 0) {
+          setIsAnalyzing(true);
+          // We don't await this so the UI can finish the submission flow
+          handleAiGenerate("GENERATE_DESCRIPTION", data.product?.id);
+        } else {
+          onSuccess();
+        }
       }
-      onSuccess();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -272,15 +283,16 @@ export function ProductFormSheet({
     { id: "marketing" as const, label: "Marketing" },
   ];
 
-  const handleAiGenerate = async (action: string) => {
-    if (!product?.id) return;
+  const handleAiGenerate = async (action: string, overrideId?: string) => {
+    const targetId = overrideId || product?.id;
+    if (!targetId) return;
     setAiGenerating(action);
     setError(null);
     try {
       const res = await fetch("/api/admin/ai/n8n/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, productId: product.id }),
+        body: JSON.stringify({ action, productId: targetId }),
       });
       
       if (!res.ok) {
@@ -516,8 +528,36 @@ export function ProductFormSheet({
                        <Sparkles className="h-4 w-4 text-primary" />
                        AI Content Engine
                     </h3>
+                    {(isAnalyzing || aiGenerating) && (
+                      <Badge variant="outline" className="animate-pulse bg-primary/5 text-primary border-primary/20 gap-1.5 py-1">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Claude is drafting...
+                      </Badge>
+                    )}
                   </div>
-                  <p className="text-xs text-slate-600">Generate high-quality descriptions and social ad copy using our trained AI models.</p>
+                  <p className="text-xs text-slate-600">Analyze product images and generate SEO-optimized descriptions automatically.</p>
+                  
+                  {isAnalyzing && (
+                    <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 flex items-center justify-between">
+                       <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-amber-500" />
+                          <p className="text-[11px] text-amber-700 font-medium">AI analysis triggered! n8n is processing your visual data.</p>
+                       </div>
+                       <Button 
+                         type="button" 
+                         variant="ghost" 
+                         size="sm" 
+                         className="h-7 text-xs font-bold text-amber-700 hover:bg-amber-100"
+                         onClick={() => {
+                            setIsAnalyzing(false);
+                            onSuccess(); // This will refresh the parent list
+                         }}
+                       >
+                         Finish & Refresh
+                       </Button>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-2 gap-3">
                      <Button 
                        type="button" 
