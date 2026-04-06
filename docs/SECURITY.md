@@ -15,6 +15,8 @@ This document outlines the security procedures, key rotation policies, and incid
   - Standard Admin: 8 hours
   - Super Admin: 4 hours
 - **Hardware Security:** 2FA is mandatory for all administrative accounts.
+- **Operational Visibility:** The "Live Execution Feed" resolved to human-readable workflow names.
+- **Deep Audit:** Direct "Deep Audit in n8n" links are provided for every execution to ensure rapid incident response for automated tasks.
 
 ### 1.3 Order Integrity (Price Recalculation)
 - **Status:** MANDATORY.
@@ -68,9 +70,9 @@ To minimize the impact of credential leakage, the following rotation schedule is
 - **Audit:** All broadcasts are logged in the `AuditLog` including message content and recipient count.
 
 ### 3.3 Content Lifecycle (Human review gate)
-- **Status:** MANDATORY for Blog Posts.
+- **Status:** MANDATORY for Blog Posts, **AI Ad Copy**, and **Product Descriptions**.
 - **Workflow:** `DRAFT` -> `PENDING_REVIEW` -> `PUBLISHED` (requires explicit staff approval).
-- **Enforcement:** The `PUBLISHED` status cannot be set via standard `PATCH` routes; it requires a dedicated `/publish` endpoint which logs the authorizing administrator.
+- **Enforcement:** AI-generated marketing content cannot be synchronized to social feeds without a manual "Save" or "Approve" action by an administrator.
 
 ---
 
@@ -94,6 +96,7 @@ In the event of a suspected security breach:
 ## 5. Audit & Compliance
 - **Audit Logs:** All administrative actions are recorded with `before` and `after` state snapshots.
 - **Redaction:** Sensitive fields (passwords, hashes, tokens) are automatically masked in log snapshots.
+- **Automation Mapping:** Workflow name resolution is enforced in the monitoring layer to bridge the gap between technical execution IDs and business logic names.
 - **Database Backups:** Automated daily backups with point-in-time recovery enabled.
 
 *Last Reviewed: April 5, 2026*

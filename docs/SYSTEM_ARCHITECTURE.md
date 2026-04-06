@@ -47,6 +47,8 @@ PrintHub is a **full-stack e-commerce and print-services platform** for:
   - **Content Lifecycle:** Multi-stage review gate for AI-generated content (DRAFT -> PENDING_REVIEW -> PUBLISHED).
   - **B2B Authorization:** Centralized corporate membership and role verification via `lib/corporate-auth.ts`.
   - **Data Scoping:** Strict user-based scoping and rate-limiting for sensitive data lookups (e.g., Warranties).
+  - **Marketing Operations Hub (April 2026):** Consolidated dashboard for AI content generation and multi-channel social distribution (25+ platforms).
+  - **Automation Transparency:** Live Execution Feed with resolved workflow name mapping for improved technical oversight.
 
 ### High-Level Architecture Diagram
 
@@ -320,7 +322,7 @@ erDiagram
 | Model | Description | Key Relations |
 |-------|-------------|---------------|
 | **Category** | Tree (parentId), slug, sortOrder, isActive. | → Category[] (children), Product[] |
-| **Product** | name, slug, categoryId, **productType**, basePrice, comparePrice, costPrice, sku, stock, images, **27 Social Platform Export Flags** (Google, Meta, TikTok, LinkedIn, Pinterest, X, Snapchat, Youtube, etc.), **AI Content Flags** (aiDescriptionGenerated, aiGeneratedAt). | → Category, ProductVariant[], ProductImage[], ProductReview[], OrderItem[], Wishlist[], Inventory[], CatalogueImportQueue?, AdCopyVariation[], ProductMockup[], ProductVideo[] |
+| **Product** | name, slug, categoryId, **productType**, basePrice, comparePrice, costPrice, sku, stock, images, **25+ Multi-Channel Distribution Flags** (Google, Meta, TikTok, Jiji, LinkedIn, Pinterest, X, Snapchat, Youtube, etc.), **AI Content Flags** (aiDescriptionGenerated, aiGeneratedAt, adCopyVariations). | → Category, ProductVariant[], ProductImage[], ProductReview[], OrderItem[], Wishlist[], Inventory[], CatalogueImportQueue?, AdCopyVariation[], ProductMockup[], ProductVideo[] |
 | **ProductVariant** | name, sku, price, stock, attributes (JSON). | → Product, OrderItem[], Inventory[] |
 | **ProductImage** | url, storageKey, altText, sortOrder, isPrimary. | → Product |
 | **ProductMockup** | AI-generated lifestyle images (DALL-E 3 / Stability AI). | → Product |
@@ -643,11 +645,15 @@ The system uses two isolated NextAuth configurations to decouple customer and ad
 
 - **Cron:** GET `/api/cron/abandoned-carts` (CRON_SECRET) → finds carts, sends recovery email (Resend); recoveryEmailSent1At / recoveryEmailSent2At; `/api/unsubscribe/abandoned-cart` for opt-out.
 - **n8n Fallback:** The **Abandoned Cart Detector** cron in n8n serves as a secondary recovery layer via WhatsApp.
+- **Marketing Hub Consolidation:** The **Product Marketing** tab serves as the primary orchestration point for all recovery and broadcasting triggers.
 
 ### 7.11 Unified Template Management
 
 1. **System Templates:** Admin manages `EmailTemplate`, `WhatsAppTemplate`, and `PdfTemplate` in the Admin Portal.
-2. **Editor:** Full-page editor for HTML/Text content with dynamic variable mapping (e.g., `{{orderNumber}}`).
+2. **Interactive Editor:** Full-page editor featuring:
+    *   **WhatsApp Live Preview:** Real-time rendering of messages with sample data mapping for visualization.
+    *   **Contextual Variable Sidebar:** Independently scrollable library of 20+ system placeholders.
+    *   **Global Variable Search:** Instant filtering of placeholders by name or description.
 3. **Draft/Publish:** Templates start as `DRAFT` and are published for use by n8n or the core app.
 4. **WhatsApp Approval:** Integrated workflow for submitting templates for Meta review (via n8n).
 
@@ -662,7 +668,7 @@ The system uses two isolated NextAuth configurations to decouple customer and ad
 
 1. **Global Error Handler:** Every n8n workflow is linked to a `Global Error Handler` workflow.
 2. **Alerting:** Failures trigger high-priority WhatsApp/Telegram alerts to `STAFF`/`ADMIN`.
-3. **Error Logging:** Failures are recorded in `MarketingErrorLog` with full payload for debugging.
+3. **Live Execution Feed:** Improved operational insight via the **N8nExecutionLog** which resolves raw IDs to human-readable workflow names for auditability.
 4. **AI Usage Logs:** Every AI call (OpenAI, Anthropic, Gemini) is recorded in `AiServiceLog` for cost auditing.
 
 ---
