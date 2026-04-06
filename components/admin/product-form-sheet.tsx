@@ -630,8 +630,9 @@ export function ProductFormSheet({
                             </label>
                          </div>
                       </div>
-                   </div>
-                </div>
+                    </div>
+                 </div>
+               </div>
             )}
           </div>
 
