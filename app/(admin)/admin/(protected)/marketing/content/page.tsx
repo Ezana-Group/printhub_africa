@@ -33,13 +33,13 @@ export default async function MarketingContentPage() {
     pendingBroadcasts
   ] = await Promise.all([
     prisma.productMockup.findMany({
-      where: { isApproved: false },
+      where: { status: "PENDING_REVIEW" },
       orderBy: { createdAt: "desc" },
       take: 50,
       include: { product: { select: { name: true, slug: true } } },
     }),
     prisma.productVideo.findMany({
-      where: { isApproved: false },
+      where: { status: "PENDING_REVIEW" },
       orderBy: { createdAt: "desc" },
       take: 20,
       include: { product: { select: { name: true } } },

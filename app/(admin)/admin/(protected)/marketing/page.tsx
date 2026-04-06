@@ -5,6 +5,8 @@ import { AdminBreadcrumbs } from "@/components/admin/admin-breadcrumbs";
 import { CouponForm } from "@/components/admin/coupon-form";
 import { CouponList } from "@/components/admin/coupon-list";
 import { requireAdminSection } from "@/lib/admin-route-guard";
+import Link from "next/link";
+import { Share2, LayoutDashboard } from "lucide-react";
 
 export default async function AdminMarketingPage() {
   try {
@@ -60,6 +62,23 @@ export default async function AdminMarketingPage() {
         <p className="text-[13px] text-[#6B7280] mt-0.5">
           Coupons, promo codes, and newsletter subscribers.
         </p>
+      </div>
+
+      <div className="flex flex-wrap gap-4">
+        <Link 
+          href="/admin/marketing/social-export"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg font-bold text-sm shadow-sm hover:scale-[1.02] transition-all"
+        >
+          <Share2 className="h-4 w-4 text-emerald-400" />
+          Marketplace & Social Export
+        </Link>
+        <Link 
+          href="/admin/marketing/content"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-bold text-sm shadow-sm hover:scale-[1.02] transition-all"
+        >
+          <LayoutDashboard className="h-4 w-4" />
+          AI Media & Content
+        </Link>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
