@@ -9,7 +9,7 @@ import { AiStatusDashboard } from "./_components/ai-status-card";
 import { AiSettingsForm } from "./_components/ai-settings-form";
 import { AiCostChart } from "./_components/ai-cost-chart";
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Zap } from "lucide-react";
 
 export const metadata = {
   title: "AI Control Centre | PrintHub Admin",
@@ -141,24 +141,25 @@ export default async function AiControlCentrePage() {
               Monitor infrastructure health, configure core AI logic, and track computational costs.
             </p>
           </div>
-          <Link 
-            href="/admin/marketing/content"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-bold text-sm shadow-sm hover:scale-[1.02] transition-all"
-          >
-            <Sparkles className="h-4 w-4" />
-            Manage AI Generated Content
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <Link 
+              href="/admin/ai/workflows"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg font-bold text-sm shadow-sm hover:scale-[1.02] transition-all"
+            >
+              <Zap className="h-4 w-4 text-amber-500" />
+              Monitor AI Workflows
+            </Link>
+            <Link 
+              href="/admin/marketing/content"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-bold text-sm shadow-sm hover:scale-[1.02] transition-all"
+            >
+              <Sparkles className="h-4 w-4" />
+              Manage AI Generated Content
+            </Link>
+          </div>
         </div>
 
-        {/* ── Section 1: Model Health Dashboard ──────────────────────── */}
-        <section className="space-y-4">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">🛰️</span>
-            <div>
-              <h2 className="text-lg font-semibold">Model Health Dashboard</h2>
-              <p className="text-xs text-muted-foreground">Live status for all AI services. Refreshes every 60 seconds.</p>
-            </div>
-          </div>
+        <section className="mt-8">
           <AiStatusDashboard />
         </section>
 
