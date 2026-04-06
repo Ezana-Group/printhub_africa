@@ -285,12 +285,12 @@ export default async function AdminDashboardPage() {
             </Link>
           </CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-sm">Jobs in queue: <strong>{inQueue}</strong></p>
-            <p className="text-sm">In production: <strong>{inProgress}</strong></p>
+            <div className="text-sm">Jobs in queue: <strong>{inQueue}</strong></div>
+            <div className="text-sm">In production: <strong>{inProgress}</strong></div>
             {(printerStatus as { name: string }[]).length > 0 && (
-              <p className="text-sm text-muted-foreground mt-2">
+              <div className="text-sm text-muted-foreground mt-2">
                 Printers: {(printerStatus as { name: string }[]).map((p) => p.name).join(" | ")} <Badge variant="secondary">Active</Badge>
-              </p>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -300,24 +300,24 @@ export default async function AdminDashboardPage() {
           </CardHeader>
           <CardContent className="space-y-2">
             {shopLowStockList.length > 0 && (
-              <p className="text-sm">
+              <div className="text-sm">
                 <span className="font-medium">Shop:</span> {shopLowStockList.length} product(s) low on stock
                 {" "}
                 <Link href="/admin/inventory" className="text-primary hover:underline">View</Link>
-              </p>
+              </div>
             )}
             {lfLow.length > 0 && (
-              <p className="text-sm">
+              <div className="text-sm">
                 <span className="font-medium">Print (LF):</span> {lfLow.map((i) => `${i.name} (${i.quantityOnHand})`).join(", ")}
-              </p>
+              </div>
             )}
             {threeDLow.length > 0 && (
-              <p className="text-sm">
+              <div className="text-sm">
                 <span className="font-medium">Print (3D):</span> {threeDLow.map((i) => `${i.name} (${i.quantity})`).join(", ")}
-              </p>
+              </div>
             )}
             {shopLowStockList.length === 0 && lfLow.length === 0 && threeDLow.length === 0 && (
-              <p className="text-muted-foreground text-sm">No low stock alerts</p>
+              <div className="text-muted-foreground text-sm">No low stock alerts</div>
             )}
           </CardContent>
         </Card>
@@ -366,7 +366,7 @@ export default async function AdminDashboardPage() {
                 ))}
               </ul>
             ) : (
-              <p className="text-muted-foreground text-sm">No low stock items</p>
+              <div className="text-muted-foreground text-sm">No low stock items</div>
             )}
           </CardContent>
         </Card>
@@ -381,10 +381,10 @@ export default async function AdminDashboardPage() {
         <h1 className="font-display text-2xl font-bold mb-4">Dashboard</h1>
         <Card>
           <CardHeader>
-            <p className="text-destructive font-medium">Unable to load dashboard</p>
-            <p className="text-sm text-muted-foreground">
+            <div className="text-destructive font-medium">Unable to load dashboard</div>
+            <div className="text-sm text-muted-foreground">
               {message}. Check that migrations have been run and DATABASE_URL is correct. Try again or contact support.
-            </p>
+            </div>
           </CardHeader>
           <CardContent>
             <Link href="/admin/dashboard" className="text-primary hover:underline">

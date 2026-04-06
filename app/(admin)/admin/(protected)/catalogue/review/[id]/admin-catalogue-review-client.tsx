@@ -220,7 +220,21 @@ export function AdminCatalogueReviewClient({ importItem, categories }: AdminCata
                 <div className="py-12 flex flex-col items-center justify-center text-slate-500">
                   <Loader2 className="w-10 h-10 animate-spin text-[#FF4D00] mb-4" />
                   <p className="font-medium animate-pulse">AI is generating listing content...</p>
-                  <p className="text-sm mt-1">This usually takes 15-30 seconds.</p>
+                  <p className="text-sm mt-1 mb-4">This usually takes 15-30 seconds.</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={async () => {
+                      setStatus("manual");
+                      try {
+                        await fetch(`/api/admin/catalogue/stop-ai/${importItem.id}`, { method: "POST" });
+                      } catch (e) {
+                         console.error("Failed to persist manual status:", e);
+                      }
+                    }}
+                  >
+                    Stop AI & Edit Manually
+                  </Button>
                 </div>
               ) : (
                 <>

@@ -20,6 +20,7 @@ import { ProductImagesTab } from "@/components/admin/product-images-tab";
 import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 import { ProductMaterialSelector } from "@/components/admin/ProductMaterialSelector";
 import { Sparkles, Zap, Megaphone, CheckCircle2, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 import type { ProductType } from "@prisma/client";
 
@@ -305,9 +306,29 @@ export function ProductFormSheet({
         }
         throw new Error(errMsg);
       }
-      
-      // Add a small delay for feedback
-      await new Promise(r => setTimeout(r, 1500));
+
+      // POLL FOR RESULT
+      let attempts = 0;
+      const maxAttempts = 20; // 40 seconds max
+      while (attempts < maxAttempts) {
+        attempts++;
+        await new Promise(r => setTimeout(r, 2000));
+        
+        const statusRes = await fetch(`/api/admin/products/${targetId}/ai-status`);
+        if (statusRes.ok) {
+          const statusData = await statusRes.json();
+          if (statusData.complete) {
+            // Update fields based on what was generated
+            if (statusData.description) setDescription(statusData.description);
+            if (statusData.shortDescription) setShortDescription(statusData.shortDescription);
+            if (statusData.metaTitle) setMetaTitle(statusData.metaTitle);
+            if (statusData.metaDescription) setMetaDescription(statusData.metaDescription);
+            
+            toast.success("AI Content Generated!");
+            break;
+          }
+        }
+      }
     } catch (e) {
       console.error("[AI Generate Error]", e);
       setError(e instanceof Error ? e.message : "AI generation failed");
@@ -402,7 +423,20 @@ export function ProductFormSheet({
                   />
                 </div>
                 <div>
-                  <Label htmlFor="description">Description</Label>
+                  <div className="flex items-center justify-between mb-1">
+                    <Label htmlFor="description">Description</Label>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-7 text-[10px] font-bold text-primary hover:bg-primary/5 gap-1.5"
+                      onClick={() => handleAiGenerate("GENERATE_DESCRIPTION")}
+                      disabled={aiGenerating === "GENERATE_DESCRIPTION" || !isEdit}
+                    >
+                      {aiGenerating === "GENERATE_DESCRIPTION" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                      Generate with AI
+                    </Button>
+                  </div>
                   <div className="mt-1">
                     <SmartTextEditor
                       value={description}
@@ -413,7 +447,20 @@ export function ProductFormSheet({
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="shortDescription">Short description (150 chars)</Label>
+                  <div className="flex items-center justify-between mb-1">
+                    <Label htmlFor="shortDescription">Short description (150 chars)</Label>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-7 text-[10px] font-bold text-indigo-600 hover:bg-indigo-50 gap-1.5"
+                      onClick={() => handleAiGenerate("GENERATE_SHORT_DESCRIPTION")}
+                      disabled={aiGenerating === "GENERATE_SHORT_DESCRIPTION" || !isEdit}
+                    >
+                      {aiGenerating === "GENERATE_SHORT_DESCRIPTION" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
+                      Generate with AI
+                    </Button>
+                  </div>
                   <Input
                     id="shortDescription"
                     value={shortDescription}
@@ -610,18 +657,33 @@ export function ProductFormSheet({
                       <div className="space-y-3">
                          <p className="text-[10px] font-bold text-primary/70 uppercase px-1">Marketplace & Shop Sync</p>
                          <div className="grid grid-cols-2 gap-x-6 gap-y-3 p-4 bg-white border rounded-xl shadow-sm">
-                            <label className="flex items-center gap-3 cursor-pointer group">
+                            <div className="flex items-center justify-between p-2 border rounded-lg hover:bg-slate-50 transition-colors">
+                               <div className="flex flex-col">
+                                  <span className="text-sm font-medium text-slate-600">Google Merchant</span>
+                                  <span className="text-[9px] text-slate-400">
+                                     {(product as any)?.lastGoogleSync ? `Synced: ${new Date((product as any).lastGoogleSync).toLocaleDateString()}` : "Not synced"}
+                                  </span>
+                               </div>
                                <Switch checked={exportToGoogle} onCheckedChange={setExportToGoogle} />
-                               <span className="text-sm font-medium text-slate-600 group-hover:text-slate-900 transition-colors">Google Merchant</span>
-                            </label>
-                            <label className="flex items-center gap-3 cursor-pointer group">
+                            </div>
+                            <div className="flex items-center justify-between p-2 border rounded-lg hover:bg-slate-50 transition-colors">
+                               <div className="flex flex-col">
+                                  <span className="text-sm font-medium text-slate-600">Meta Shop</span>
+                                  <span className="text-[9px] text-slate-400">
+                                     {(product as any)?.lastMetaSync ? `Synced: ${new Date((product as any).lastMetaSync).toLocaleDateString()}` : "Not synced"}
+                                  </span>
+                               </div>
                                <Switch checked={exportToMeta} onCheckedChange={setExportToMeta} />
-                               <span className="text-sm font-medium text-slate-600 group-hover:text-slate-900 transition-colors">Meta Marketplace</span>
-                            </label>
-                            <label className="flex items-center gap-3 cursor-pointer group">
+                            </div>
+                            <div className="flex items-center justify-between p-2 border rounded-lg hover:bg-slate-50 transition-colors">
+                               <div className="flex flex-col">
+                                  <span className="text-sm font-medium text-slate-600">TikTok Shop</span>
+                                  <span className="text-[9px] text-slate-400">
+                                     {(product as any)?.lastTiktokSync ? `Synced: ${new Date((product as any).lastTiktokSync).toLocaleDateString()}` : "Not synced"}
+                                  </span>
+                               </div>
                                <Switch checked={exportToTiktok} onCheckedChange={setExportToTiktok} />
-                               <span className="text-sm font-medium text-slate-600 group-hover:text-slate-900 transition-colors">TikTok Shop</span>
-                            </label>
+                            </div>
                             <label className="flex items-center gap-3 cursor-pointer group">
                                <Switch checked={exportToJiji} onCheckedChange={setExportToJiji} />
                                <span className="text-sm font-medium text-slate-600 group-hover:text-slate-900 transition-colors">Jiji Kenya</span>

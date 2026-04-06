@@ -162,7 +162,10 @@ export function AdminNav({
                 const basePath = item.href.split("?")[0];
                 const isActive =
                   pathname === basePath ||
-                  (basePath !== "/admin/dashboard" && pathname.startsWith(basePath + "/"));
+                  (basePath !== "/admin/dashboard" && 
+                   basePath !== "/admin/catalogue" && 
+                   basePath !== "/admin/marketing" &&
+                   pathname.startsWith(basePath + "/"));
                 const showQuotesBadge = item.badge === "quotes" && newQuotesCount > 0;
                 const showApprovalBadge = item.badge === "approval" && pendingApprovalCount > 0;
                 const isExternal = item.href.startsWith("/api/admin/n8n");
