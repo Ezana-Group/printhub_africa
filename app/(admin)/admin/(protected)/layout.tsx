@@ -27,13 +27,31 @@ export default async function AdminLayout({
   const role = user.role;
   const permissions = user.permissions;
 
-  const newQuotesCount = await prisma.quote.count({ where: { status: "new" } }).catch(() => 0);
-  
-  const [pendingCatalogue, pendingMockups, pendingVideos, pendingBroadcasts, pendingAiImports] = await Promise.all([
-    prisma.catalogueItem.count({ where: { status: "PENDING_REVIEW" } }).catch(() => 0),
-    prisma.productMockup.count({ where: { status: "PENDING_REVIEW" } }).catch(() => 0),
-    prisma.productVideo.count({ where: { status: "PENDING_REVIEW" } }).catch(() => 0),
-    prisma.marketingBroadcast.count({ where: { status: "PENDING" } }).catch(() => 0),
+  const [
+    newQuotesCount,
+    pendingCatalogue,
+    pendingMockups,
+    pendingVideos,
+    pendingBroadcasts,
+    pendingAiImports
+  ] = await Promise.all([
+    prisma.quote.count({ where: { status: "new" } }).catch((err) => {
+      console.error("[Layout Data Error] Quote count failed:", err);
+      return 0;
+    }),
+    prisma.catalogueItem.count({ where: { status: "PENDING_REVIEW" } }).catch((err) => {
+      console.error("[Layout Data Error] CatalogueItem count failed:", err);
+      return 0;
+    }),
+    prisma.productMockup.count({ where: { status: "PENDING_REVIEW" } }).catch((err) => {
+      console.error("[Layout Data Error] ProductMockup count failed:", err);
+      return 0;
+    }),
+    prisma.productVideo.count({ where: { status: "PENDING_REVIEW" } }).catch((err) => {
+      console.error("[Layout Data Error] ProductVideo count failed:", err);
+      return 0;
+    }),
+    prisma.marketingBroadcast ? prisma.marketingBroadcast.count({ where: { status: "PENDING" } }).catch(() => 0) : Promise.resolve(0),
     prisma.catalogueImportQueue.count({ 
       where: { 
         OR: [
@@ -41,7 +59,10 @@ export default async function AdminLayout({
           { aiEnhancementStatus: "pending" }
         ]
       } 
-    }).catch(() => 0),
+    }).catch((err) => {
+      console.error("[Layout Data Error] CatalogueImportQueue count failed:", err);
+      return 0;
+    }),
   ]);
 
   const pendingApprovalCount = pendingCatalogue + pendingMockups + pendingVideos + pendingBroadcasts + pendingAiImports;
