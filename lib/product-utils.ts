@@ -99,6 +99,41 @@ export async function generatePODSku(): Promise<string> {
   return `POD-${yearMonth}-${sequence}`;
 }
 
+
+/**
+ * Generate a unique product slug by checking both existing products and catalogue items.
+ * If the preferred slug is taken, appends a numeric suffix.
+ */
+export async function generateUniqueProductSlug(preferredSlug: string, skipId?: string): Promise<string> {
+  let slug = preferredSlug;
+  let counter = 1;
+  const maxAttempts = 100;
+
+  while (counter <= maxAttempts) {
+    const [existingProduct, existingCatalogue] = await Promise.all([
+      prisma.product.findFirst({
+        where: { slug, NOT: skipId ? { id: skipId } : undefined },
+        select: { id: true }
+      }),
+      prisma.catalogueItem.findFirst({
+        where: { slug, NOT: skipId ? { id: skipId } : undefined },
+        select: { id: true }
+      })
+    ]);
+
+    if (!existingProduct && !existingCatalogue) {
+      return slug;
+    }
+
+    // Collision — try next
+    slug = `${preferredSlug}-${counter}`;
+    counter++;
+  }
+
+  // Final fallback if many collisions (unlikely)
+  return `${preferredSlug}-${Math.random().toString(36).substring(2, 7)}`;
+}
+
 function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

@@ -378,10 +378,12 @@ export function AdminCatalogueApprovalQueueClient() {
                     </td>
                     <td className="p-4">
                       <div className="h-12 w-12 rounded-lg bg-slate-100 overflow-hidden relative border border-slate-200 shadow-sm">
-                        {primaryPhoto ? (
+                        {primaryPhoto && primaryPhoto.url && !primaryPhoto.url.startsWith("cm") && primaryPhoto.url.includes("/") ? (
                           <Image src={primaryPhoto.url} alt="" fill className="object-cover" sizes="48px" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400">None</div>
+                          <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400 bg-slate-50 uppercase font-bold tracking-tighter">
+                            {primaryPhoto?.url?.startsWith("cm") ? "NO_URL" : "None"}
+                          </div>
                         )}
                       </div>
                     </td>

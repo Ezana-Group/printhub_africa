@@ -25,31 +25,44 @@ export async function PATCH(
     });
     if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    // Generate unique SKU
-    const { generateNextProductSku } = await import("@/lib/product-utils");
+    // Generate unique slug for the product to avoid collisions
+    const { generateNextProductSku, generateUniqueProductSlug } = await import("@/lib/product-utils");
     const sku = await generateNextProductSku(item.categoryId);
+    const productSlug = await generateUniqueProductSlug(item.slug || "product");
 
     // Create or find Product
     let productId = item.productId;
     if (!productId) {
-      const product = await prisma.product.create({
-        data: {
-          name: item.name,
-          slug: item.slug,
-          description: item.description,
-          shortDescription: item.shortDescription,
-          categoryId: item.categoryId,
-          productType: "READYMADE_3D",
-          images: item.photos.length > 0 ? item.photos.map(p => p.url) : [],
-          basePrice: item.priceOverrideKes ?? item.basePriceKes ?? 0,
-          comparePrice: item.priceOverrideKes && item.basePriceKes ? item.basePriceKes : null,
-          sku: sku,
-          stock: 0,
-          isActive: true,
-          tags: item.tags || [],
+      try {
+        const product = await prisma.product.create({
+          data: {
+            name: item.name,
+            slug: productSlug,
+            description: item.description,
+            shortDescription: item.shortDescription,
+            categoryId: item.categoryId,
+            productType: "READYMADE_3D",
+            images: item.photos.length > 0 ? item.photos.map(p => p.url) : [],
+            basePrice: item.priceOverrideKes ?? item.basePriceKes ?? 0,
+            comparePrice: item.priceOverrideKes && item.basePriceKes ? item.basePriceKes : null,
+            sku: sku,
+            stock: 0,
+            isActive: true,
+            tags: item.tags || [],
+            catalogueItemId: id, // Link it back
+          }
+        });
+        productId = product.id;
+      } catch (err: any) {
+        console.error("[APPROVAL_QUEUE_APPROVE] Product Creation Error:", err);
+        // Custom error if it's a known prisma unique constraint issue
+        if (err.code === 'P2002') {
+          return NextResponse.json({ 
+            error: `Unique constraint failed on fields: ${err.meta?.target || 'unknown'}` 
+          }, { status: 400 });
         }
-      });
-      productId = product.id;
+        throw err; // Re-throw to be caught by the outer catch
+      }
     }
 
     const updated = await prisma.catalogueItem.update({
@@ -61,6 +74,7 @@ export async function PATCH(
         rejectedById: null,
         rejectionReason: null,
         productId: productId,
+        slug: productSlug, // Sync the slug back to catalogue item
       },
     });
 
