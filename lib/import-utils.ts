@@ -28,6 +28,7 @@ export function detectPlatform(url: string): ImportPlatform {
     if (domain.includes("myminifactory.com")) return "MYMINIFACTORY";
     if (domain.includes("thangs.com")) return "THANGS";
     if (domain.includes("cgtrader.com")) return "CGTRADER";
+    if (domain.includes("makerworld.com")) return "MAKERWORLD";
   } catch {}
   return "OTHER";
 }

@@ -23,6 +23,8 @@ export async function POST(req: Request) {
       'www.myminifactory.com',
       'cults3d.com',
       'www.cults3d.com',
+      'makerworld.com',
+      'www.makerworld.com',
     ];
 
     const PRIVATE_IP_REGEX = /^(localhost|127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|169\.254\.|::1|fc00:|fe80:)/i;

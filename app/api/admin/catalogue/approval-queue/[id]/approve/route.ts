@@ -34,6 +34,17 @@ export async function PATCH(
     let productId = item.productId;
     if (!productId) {
       try {
+        // Defensive check for SKU/Slug collisions using findMany to avoid findUnique internal optimization
+        const existing = await prisma.product.findMany({
+          where: { OR: [{ sku }, { slug: productSlug }] },
+          select: { id: true },
+          take: 1
+        });
+
+        if (existing.length > 0) {
+           return NextResponse.json({ error: "Product with this SKU or Slug already exists. Please regenerate." }, { status: 400 });
+        }
+
         const product = await prisma.product.create({
           data: {
             name: item.name,

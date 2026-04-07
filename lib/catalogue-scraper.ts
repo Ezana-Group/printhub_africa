@@ -1,7 +1,7 @@
 import { detectPlatform as existingDetectPlatform } from "./import-utils";
 
 export interface ScrapedModelData {
-  platform: 'printables' | 'thingiverse' | 'myminifactory' | 'cults3d' | 'unknown'
+  platform: 'printables' | 'thingiverse' | 'myminifactory' | 'cults3d' | 'makerworld' | 'unknown'
   originalName: string | null
   originalDescription: string | null
   originalTags: string[]
@@ -45,6 +45,8 @@ export async function scrapeModelSource(url: string): Promise<ScrapedModelData> 
         return await scrapeMyMiniFactory(url, baseData);
       case 'cults3d':
         return await scrapeCults3d(url, baseData);
+      case 'makerworld':
+        return await scrapeMakerWorld(url, baseData);
       default:
         return await scrapeUnknown(url, baseData);
     }
@@ -60,6 +62,7 @@ function detectPlatform(url: string): ScrapedModelData['platform'] {
   if (domain.includes("thingiverse.com")) return "thingiverse";
   if (domain.includes("myminifactory.com")) return "myminifactory";
   if (domain.includes("cults3d.com")) return "cults3d";
+  if (domain.includes("makerworld.com")) return "makerworld";
   return "unknown";
 }
 
@@ -100,13 +103,19 @@ async function scrapePrintables(url: string, data: ScrapedModelData): Promise<Sc
         const json = await res.json();
         const model = json.data?.print;
         if (model) {
+          // Ensure absolute image URLs
+          const imageUrls = (model.images || [])
+            .map((img: any) => img.filePath)
+            .filter(Boolean)
+            .map((path: string) => path.startsWith('http') ? path : `https://media.printables.com/${path}`);
+
           return {
             ...data,
             originalName: model.name,
             originalDescription: model.description || model.summary,
             originalTags: model.tags?.map((t: any) => t.name) || [],
             originalCategory: model.category?.name,
-            imageUrls: model.images?.map((img: any) => img.filePath).filter(Boolean) || [],
+            imageUrls,
             designerName: model.user?.publicUsername,
             licenseType: model.license?.name,
             likeCount: model.likesCount,
@@ -201,6 +210,24 @@ async function scrapeCults3d(url: string, data: ScrapedModelData): Promise<Scrap
   return await scrapeUnknown(url, data);
 }
 
+async function scrapeMakerWorld(url: string, data: ScrapedModelData): Promise<ScrapedModelData> {
+  // MakerWorld uses a mix of static SSR and dynamic data. 
+  // We'll use a robust HTML fallback with JSON-LD extraction.
+  try {
+    const scraped = await scrapeUnknown(url, data);
+    
+    // MakerWorld specific cleanup
+    if (scraped.originalName?.includes(" | MakerWorld")) {
+      scraped.originalName = scraped.originalName.replace(" | MakerWorld", "").trim();
+    }
+    
+    return scraped;
+  } catch (e) {
+    console.error("[Scraper] MakerWorld failed:", e);
+    return data;
+  }
+}
+
 import { load } from "cheerio";
 
 async function scrapeUnknown(url: string, data: ScrapedModelData): Promise<ScrapedModelData> {
@@ -240,7 +267,13 @@ async function scrapeUnknown(url: string, data: ScrapedModelData): Promise<Scrap
     const images: string[] = [];
     $('meta[property="og:image"]').each((_, el) => {
       const src = $(el).attr('content');
-      if (src) images.push(src);
+      if (src) {
+        try {
+          images.push(new URL(src, url).href);
+        } catch {
+          images.push(src);
+        }
+      };
     });
     
     // JSON-LD fallback for images
@@ -248,8 +281,14 @@ async function scrapeUnknown(url: string, data: ScrapedModelData): Promise<Scrap
       try {
         const json = JSON.parse($(el).html() || "{}");
         if (json.image) {
-          if (Array.isArray(json.image)) images.push(...json.image);
-          else images.push(json.image);
+          const rawImages = Array.isArray(json.image) ? json.image : [json.image];
+          for (const img of rawImages) {
+            try {
+              images.push(new URL(img, url).href);
+            } catch {
+              images.push(img);
+            }
+          }
         }
       } catch {}
     });

@@ -73,11 +73,14 @@ export async function generateNextProductSku(categoryId?: string | null, overrid
   }
   const next = maxNum + 1;
   const sku = `${prefix}-${String(next).padStart(SKU_PAD, "0")}`;
-  const exists = await prisma.product.findFirst({ 
+  
+  // Defensive check: use findMany to avoid findUnique internal optimization which crashes on some DBs
+  const existing = await prisma.product.findMany({ 
     where: { sku },
-    select: { id: true }
+    select: { id: true },
+    take: 1
   });
-  if (exists) return generateNextProductSku(categoryId ?? undefined);
+  if (existing.length > 0) return generateNextProductSku(categoryId ?? undefined);
   return sku;
 }
 
@@ -113,18 +116,21 @@ export async function generateUniqueProductSlug(preferredSlug: string, skipId?: 
   const maxAttempts = 100;
 
   while (counter <= maxAttempts) {
-    const [existingProduct, existingCatalogue] = await Promise.all([
-      prisma.product.findFirst({
+    // Defensive check using findMany to avoid findUnique internal optimization
+    const [existingProducts, existingCatalogue] = await Promise.all([
+      prisma.product.findMany({
         where: { slug, NOT: skipId ? { id: skipId } : undefined },
-        select: { id: true }
+        select: { id: true },
+        take: 1
       }),
-      prisma.catalogueItem.findFirst({
+      prisma.catalogueItem.findMany({
         where: { slug, NOT: skipId ? { id: skipId } : undefined },
-        select: { id: true }
+        select: { id: true },
+        take: 1
       })
     ]);
 
-    if (!existingProduct && !existingCatalogue) {
+    if (existingProducts.length === 0 && existingCatalogue.length === 0) {
       return slug;
     }
 
