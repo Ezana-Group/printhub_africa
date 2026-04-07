@@ -543,7 +543,20 @@ export function ProductFormSheet({
             {activeTab === "seo" && (
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="metaTitle">Meta title ({metaTitle.length}/60)</Label>
+                  <div className="flex items-center justify-between mb-1">
+                    <Label htmlFor="metaTitle">Meta title ({metaTitle.length}/60)</Label>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-7 text-[10px] font-bold text-primary hover:bg-primary/5 gap-1.5"
+                      onClick={() => handleAiGenerate("GENERATE_SEO")}
+                      disabled={aiGenerating === "GENERATE_SEO" || !isEdit}
+                    >
+                      {aiGenerating === "GENERATE_SEO" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                      Generate with AI
+                    </Button>
+                  </div>
                   <Input
                     id="metaTitle"
                     value={metaTitle}
@@ -553,7 +566,20 @@ export function ProductFormSheet({
                   />
                 </div>
                 <div>
-                  <Label htmlFor="metaDescription">Meta description ({metaDescription.length}/160)</Label>
+                  <div className="flex items-center justify-between mb-1">
+                    <Label htmlFor="metaDescription">Meta description ({metaDescription.length}/160)</Label>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-7 text-[10px] font-bold text-primary hover:bg-primary/5 gap-1.5"
+                      onClick={() => handleAiGenerate("GENERATE_SEO")}
+                      disabled={aiGenerating === "GENERATE_SEO" || !isEdit}
+                    >
+                      {aiGenerating === "GENERATE_SEO" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                      Generate with AI
+                    </Button>
+                  </div>
                   <Textarea
                     id="metaDescription"
                     value={metaDescription}

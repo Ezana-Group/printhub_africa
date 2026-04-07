@@ -35,6 +35,16 @@ export async function POST(req: NextRequest) {
         payload.productId = productId;
         payload.autoAnalyze = true; // Activate Vision mode if images found
         break;
+      case "GENERATE_SHORT_DESCRIPTION":
+        n8nPath = "generate-product-description";
+        payload.productId = productId;
+        payload.fieldOnly = "short_description";
+        break;
+      case "GENERATE_SEO":
+        n8nPath = "generate-seo-content";
+        payload.productId = productId;
+        payload.target = "product";
+        break;
       case "GENERATE_AD_COPY":
         n8nPath = "generate-ad-copy";
         payload.productId = productId;

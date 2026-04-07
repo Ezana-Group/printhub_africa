@@ -82,7 +82,7 @@ export async function parseUrlImport(url: string): Promise<ExtractedModelData | 
     }
 
     if (platform === "MYMINIFACTORY") {
-      const match = url.match(/\/object\/(\d+)/) || url.match(/-(\d+)$/);
+      const match = url.match(/\/object\/(\d+)/) || url.match(/-(\d+)$/) || url.match(/\/(\d+)/);
       if (match?.[1]) return await fetchMyMiniFactoryData(match[1], url);
     }
 
@@ -104,7 +104,7 @@ export async function parseUrlImport(url: string): Promise<ExtractedModelData | 
 async function fetchPrintablesData(modelId: string, sourceUrl: string): Promise<ExtractedModelData | { error: string; detail?: string }> {
   try {
     const query = `
-      query getPrint($id: String!) {
+      query getPrint($id: ID!) {
         print(id: $id) {
           name
           summary
@@ -134,6 +134,7 @@ async function fetchPrintablesData(modelId: string, sourceUrl: string): Promise<
       headers: {
         "Content-Type": "application/json",
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Referer": "https://www.printables.com/"
       },
       body: JSON.stringify({ query, variables: { id: modelId } }),
       signal: controller.signal,

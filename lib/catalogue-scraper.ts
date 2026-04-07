@@ -15,7 +15,7 @@ export interface ScrapedModelData {
   sourceUrl: string
 }
 
-const USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+const USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
 
 export async function scrapeModelSource(url: string): Promise<ScrapedModelData> {
   const platform = detectPlatform(url);
@@ -69,8 +69,8 @@ async function scrapePrintables(url: string, data: ScrapedModelData): Promise<Sc
   if (modelId) {
     try {
       const query = `
-        query GetModel($id: ID!) {
-          model(id: $id) {
+        query GetPrint($id: ID!) {
+          print(id: $id) {
             id
             name
             summary
@@ -88,13 +88,17 @@ async function scrapePrintables(url: string, data: ScrapedModelData): Promise<Sc
       
       const res = await fetch("https://api.printables.com/graphql/", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "User-Agent": USER_AGENT },
+        headers: { 
+          "Content-Type": "application/json", 
+          "User-Agent": USER_AGENT,
+          "Referer": "https://www.printables.com/"
+        },
         body: JSON.stringify({ query, variables: { id: modelId } }),
       });
       
       if (res.ok) {
         const json = await res.json();
-        const model = json.data?.model;
+        const model = json.data?.print;
         if (model) {
           return {
             ...data,
@@ -121,7 +125,7 @@ async function scrapePrintables(url: string, data: ScrapedModelData): Promise<Sc
 
 async function scrapeThingiverse(url: string, data: ScrapedModelData): Promise<ScrapedModelData> {
   const thingId = url.match(/\/thing:(\d+)/)?.[1] || url.match(/\/(\d+)/)?.[1];
-  const token = process.env.THINGIVERSE_TOKEN;
+  const token = process.env.THINGIVERSE_APP_TOKEN || process.env.THINGIVERSE_TOKEN;
 
   if (thingId && token) {
     try {
@@ -157,12 +161,16 @@ async function scrapeThingiverse(url: string, data: ScrapedModelData): Promise<S
 }
 
 async function scrapeMyMiniFactory(url: string, data: ScrapedModelData): Promise<ScrapedModelData> {
-  const objectId = url.match(/\/object\/(\d+)/)?.[1] || url.match(/-(\d+)$/)?.[1];
+  // Regex for /object/8600 or /object/name-8600
+  const objectId = url.match(/\/object\/(\d+)/)?.[1] || url.match(/-(\d+)$/)?.[1] || url.match(/\/(\d+)/)?.[1];
   
   if (objectId) {
     try {
       const res = await fetch(`https://www.myminifactory.com/api/v2/objects/${objectId}`, {
-        headers: { "User-Agent": USER_AGENT }
+        headers: { 
+          "User-Agent": USER_AGENT,
+          "Referer": "https://www.myminifactory.com/"
+        }
       });
       
       if (res.ok) {
@@ -193,43 +201,64 @@ async function scrapeCults3d(url: string, data: ScrapedModelData): Promise<Scrap
   return await scrapeUnknown(url, data);
 }
 
+import { load } from "cheerio";
+
 async function scrapeUnknown(url: string, data: ScrapedModelData): Promise<ScrapedModelData> {
   try {
-    const res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
+    const res = await fetch(url, { 
+      headers: { 
+        "User-Agent": USER_AGENT,
+        "Referer": "https://www.google.com/" // Use a neutral referer for generic scraping
+      } 
+    });
     if (!res.ok) return data;
     
     const html = await res.text();
+    const $ = load(html);
     
-    // OG Tags
-    const ogTitle = html.match(/<meta\s+property="og:title"\s+content="([^"]*)"/i)?.[1];
-    const ogDesc = html.match(/<meta\s+property="og:description"\s+content="([^"]*)"/i)?.[1];
-    const ogImage = html.match(/<meta\s+property="og:image"\s+content="([^"]*)"/i)?.[1];
-    const ogImages = [...html.matchAll(/<meta\s+property="og:image"\s+content="([^"]*)"/gi)].map(m => m[1]);
-
-    // JSON-LD
-    let jsonLd: any = null;
-    const jsonLdMatch = html.match(/<script\s+type="application\/ld\+json">([\s\S]*?)<\/script>/i);
-    if (jsonLdMatch) {
-      try { jsonLd = JSON.parse(jsonLdMatch[1]); } catch {}
+    // 1. Domain Specific Extraction
+    if (url.includes("myminifactory.com")) {
+      data.originalName = $("h1").first().text().trim();
+      data.originalDescription = $(".description").text().trim() || $(".object-description").text().trim();
+    } else if (url.includes("cults3d.com")) {
+      data.originalName = $("h1").first().text().trim();
+      data.originalDescription = $(".field-name-body").text().trim();
     }
 
-    const name = ogTitle || jsonLd?.name || null;
-    const description = ogDesc || jsonLd?.description || null;
-    const images = ogImages.length > 0 ? ogImages : (ogImage ? [ogImage] : []);
-    if (jsonLd?.image) {
-      if (Array.isArray(jsonLd.image)) images.push(...jsonLd.image);
-      else images.push(jsonLd.image);
-    }
+    // 2. Generic Metadata Extraction (favors domain-specific if filled)
+    const title = $('meta[property="og:title"]').attr('content') || 
+                  $('meta[name="title"]').attr('content') || 
+                  $("title").text();
+    
+    const description = $('meta[property="og:description"]').attr('content') || 
+                        $('meta[name="description"]').attr('content');
 
-    return {
-      ...data,
-      originalName: decodeHtml(name),
-      originalDescription: decodeHtml(description),
-      imageUrls: [...new Set(images)].filter(Boolean),
-      designerName: jsonLd?.author?.name || jsonLd?.creator?.name || null,
-      licenseType: jsonLd?.license || null,
-    };
+    if (!data.originalName) data.originalName = decodeHtml(title || null);
+    if (!data.originalDescription) data.originalDescription = decodeHtml(description || null);
+
+    // 3. Image Extraction
+    const images: string[] = [];
+    $('meta[property="og:image"]').each((_, el) => {
+      const src = $(el).attr('content');
+      if (src) images.push(src);
+    });
+    
+    // JSON-LD fallback for images
+    $('script[type="application/ld+json"]').each((_, el) => {
+      try {
+        const json = JSON.parse($(el).html() || "{}");
+        if (json.image) {
+          if (Array.isArray(json.image)) images.push(...json.image);
+          else images.push(json.image);
+        }
+      } catch {}
+    });
+
+    data.imageUrls = [...new Set([...(data.imageUrls || []), ...images])].filter(Boolean);
+
+    return data;
   } catch (e) {
+    console.error("[Scraper] scrapeUnknown failed:", e);
     return data;
   }
 }
