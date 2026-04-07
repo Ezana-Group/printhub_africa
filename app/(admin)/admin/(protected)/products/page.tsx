@@ -10,9 +10,24 @@ export default async function AdminProductsPage() {
     prisma.product.findMany({
       orderBy: { createdAt: "desc" },
       take: 500,
-      include: {
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        sku: true,
+        description: true,
+        categoryId: true,
+        productType: true,
+        isPOD: true,
+        basePrice: true,
+        comparePrice: true,
+        stock: true,
+        isActive: true,
+        isFeatured: true,
+        images: true,
+        createdAt: true,
         category: { select: { id: true, name: true } },
-        _count: { select: { variants: true } },
+        variants: { select: { id: true } }, // Minimal to replace _count
       },
     }).catch((err) => {
       console.error("[AdminProductsPage] Product fetch error:", err);
@@ -45,7 +60,7 @@ export default async function AdminProductsPage() {
     isFeatured: p.isFeatured ?? false,
     images: p.images ?? [],
     createdAt: p.createdAt,
-    _variantsCount: p._count?.variants || 0,
+    _variantsCount: (p as any).variants?.length || 0,
   }));
 
   return (

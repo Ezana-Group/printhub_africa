@@ -48,9 +48,24 @@ export async function GET(req: NextRequest) {
         if (pageIds.length > 0) {
           const found = await prisma.product.findMany({
             where: { id: { in: pageIds }, isActive: true },
-            include: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              shortDescription: true,
+              productType: true,
+              basePrice: true,
+              comparePrice: true,
+              sku: true,
+              stock: true,
+              isFeatured: true,
+              tags: true,
+              images: true,
               category: { select: { name: true, slug: true } },
-              productImages: { orderBy: { sortOrder: "asc" } },
+              productImages: { 
+                orderBy: { sortOrder: "asc" },
+                select: { url: true, storageKey: true, isPrimary: true }
+              },
             },
           });
           const byId = Object.fromEntries(found.map((p) => [p.id, p]));
@@ -158,13 +173,7 @@ export async function GET(req: NextRequest) {
     if (inStock === "true") where.stock = { gt: 0 };
     if (q) where.OR = [{ name: { contains: q, mode: "insensitive" } }, { slug: { contains: q, mode: "insensitive" } }];
 
-    let products: Awaited<
-      ReturnType<
-        typeof prisma.product.findMany<{
-          include: { category: { select: { name: true; slug: true } }; productImages: { orderBy: { sortOrder: "asc" } } };
-        }>
-      >
-    >;
+    let products: any[];
     let total: number;
 
     if (isBestselling) {
@@ -184,13 +193,28 @@ export async function GET(req: NextRequest) {
         }
         const orderedIds = [...matchingIds].sort((a, b) => (countByProductId[b] ?? 0) - (countByProductId[a] ?? 0));
         const pageIds = orderedIds.slice((page - 1) * limit, page * limit);
-        const found = await prisma.product.findMany({
-          where: { id: { in: pageIds } },
-          include: {
-            category: { select: { name: true, slug: true } },
-            productImages: { orderBy: { sortOrder: "asc" } },
-          },
-        });
+          const found = await prisma.product.findMany({
+            where: { id: { in: pageIds } },
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              shortDescription: true,
+              productType: true,
+              basePrice: true,
+              comparePrice: true,
+              sku: true,
+              stock: true,
+              isFeatured: true,
+              tags: true,
+              images: true,
+              category: { select: { name: true, slug: true } },
+              productImages: { 
+                orderBy: { sortOrder: "asc" },
+                select: { url: true, storageKey: true, isPrimary: true }
+              },
+            },
+          });
         products = pageIds.map((id) => found.find((p) => p.id === id)).filter(Boolean) as typeof found;
       }
     } else {
@@ -200,9 +224,24 @@ export async function GET(req: NextRequest) {
           orderBy,
           skip: (page - 1) * limit,
           take: limit,
-          include: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            shortDescription: true,
+            productType: true,
+            basePrice: true,
+            comparePrice: true,
+            sku: true,
+            stock: true,
+            isFeatured: true,
+            tags: true,
+            images: true,
             category: { select: { name: true, slug: true } },
-            productImages: { orderBy: { sortOrder: "asc" } },
+            productImages: { 
+              orderBy: { sortOrder: "asc" },
+              select: { url: true, storageKey: true, isPrimary: true }
+            },
           },
         }),
         prisma.product.count({ where }),
@@ -211,7 +250,7 @@ export async function GET(req: NextRequest) {
       total = count;
     }
 
-    const productIds = products.map((p) => p.id);
+    const productIds = products.map((p: any) => p.id);
     const reviewStats =
       productIds.length > 0
         ? await prisma.productReview.groupBy({
@@ -229,9 +268,9 @@ export async function GET(req: NextRequest) {
       };
     }
 
-    const items = products.map((p) => {
+    const items = products.map((p: any) => {
       const imgs = p.productImages ?? [];
-      const featured = imgs.find((i) => i.isPrimary) ?? imgs[0];
+      const featured = imgs.find((img: any) => img.isPrimary) ?? imgs[0];
       const rawImage = p.images?.[0] ?? featured?.url ?? null;
       const image =
         rawImage && rawImage.startsWith("http")

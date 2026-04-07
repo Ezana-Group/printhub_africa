@@ -15,10 +15,17 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Select, SelectOption 
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { 
-  ExternalLink, Loader2, Sparkles, AlertCircle, CheckCircle2, RefreshCw, ArrowLeft, Trash2 
+  ExternalLink as ExternalLinkIcon, 
+  Loader2 as Loader2Icon, 
+  Sparkles as SparklesIcon, 
+  AlertCircle as AlertIcon, 
+  CheckCircle2 as CheckIcon, 
+  RefreshCw as RefreshIcon, 
+  ArrowLeft as ArrowIcon, 
+  Trash2 as TrashIcon,
+  Wand2 as WandIcon
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,8 +37,8 @@ interface AdminCatalogueReviewClientProps {
 export function AdminCatalogueReviewClient({ importItem, categories }: AdminCatalogueReviewClientProps) {
   const router = useRouter();
   const [status, setStatus] = useState(importItem.aiEnhancementStatus);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  const [loadingField, setLoadingField] = useState<string | null>(null);
   const [formData, setFormData] = useState<any>({
     name: importItem.scrapedName || "",
     shortDescription: "",
@@ -50,8 +57,9 @@ export function AdminCatalogueReviewClient({ importItem, categories }: AdminCata
 
   const aiData = importItem.aiEnhancement as any;
 
+  // Poll for status if a field is being enhanced
   useEffect(() => {
-    if (status === "processing" || status === "pending") {
+    if (status === "processing") {
       const interval = setInterval(async () => {
         try {
           const res = await fetch(`/api/admin/catalogue/enhance-status/${importItem.id}`);
@@ -59,11 +67,14 @@ export function AdminCatalogueReviewClient({ importItem, categories }: AdminCata
             const data = await res.json();
             if (data.status === "complete") {
               setStatus("complete");
+              setLoadingField(null);
               clearInterval(interval);
               router.refresh();
             } else if (data.status === "failed") {
               setStatus("failed");
+              setLoadingField(null);
               clearInterval(interval);
+              toast.error("AI enhancement failed");
             }
           }
         } catch (e) {
@@ -74,51 +85,51 @@ export function AdminCatalogueReviewClient({ importItem, categories }: AdminCata
     }
   }, [status, importItem.id, router]);
 
+  // Sync AI data to form when complete
   useEffect(() => {
     if (aiData) {
-      setFormData({
-        name: aiData.product_name || importItem.scrapedName || "",
-        shortDescription: aiData.short_description || "",
-        fullDescription: aiData.full_description || "",
-        seoTitle: aiData.seo_title || "",
-        metaDescription: aiData.meta_description || "",
-        categoryId: formData.categoryId, // Keep selection unless AI suggests better
-        tags: aiData.suggested_tags || [],
-        keyFeatures: aiData.key_features || [],
-        suggestedPriceMin: aiData.suggested_price_range?.min_kes || 0,
-        suggestedPriceMax: aiData.suggested_price_range?.max_kes || 0,
-        complexityTier: aiData.complexity_tier || "medium",
-        materialRecommendations: aiData.material_recommendations || [],
-        faq: aiData.faq || []
-      });
+      setFormData((prev: any) => ({
+        ...prev,
+        name: aiData.product_name || prev.name || importItem.scrapedName || "",
+        shortDescription: aiData.short_description || prev.shortDescription || "",
+        fullDescription: aiData.full_description || prev.fullDescription || "",
+        seoTitle: aiData.seo_title || prev.seoTitle || "",
+        metaDescription: aiData.meta_description || prev.metaDescription || "",
+        tags: aiData.suggested_tags || prev.tags || [],
+        keyFeatures: aiData.key_features || prev.keyFeatures || [],
+        suggestedPriceMin: aiData.suggested_price_range?.min_kes || prev.suggestedPriceMin || 0,
+        suggestedPriceMax: aiData.suggested_price_range?.max_kes || prev.suggestedPriceMax || 0,
+        complexityTier: aiData.complexity_tier || prev.complexityTier || "medium",
+        materialRecommendations: aiData.material_recommendations || prev.materialRecommendations || [],
+        faq: aiData.faq || prev.faq || []
+      }));
     }
   }, [aiData, importItem.scrapedName]);
 
-  const handleRegenerate = async () => {
-    setIsRefreshing(true);
+  const handleEnhanceField = async (field: string) => {
+    setLoadingField(field);
     try {
-      const res = await fetch("/api/admin/catalogue/enhance-single", {
+      const res = await fetch("/api/admin/catalogue/enhance-field", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ importId: importItem.id })
+        body: JSON.stringify({ importId: importItem.id, field })
       });
       if (res.ok) {
         setStatus("processing");
-        toast.success("AI enhancement re-triggered");
+        toast.success(`Triggered AI enhancement for ${field}`);
       } else {
-        toast.error("Failed to trigger AI enhancement");
+        toast.error(`Failed to trigger AI for ${field}`);
+        setLoadingField(null);
       }
     } catch (e) {
       toast.error("An error occurred");
-    } finally {
-      setIsRefreshing(false);
+      setLoadingField(null);
     }
   };
 
   const handleApprove = async () => {
     setIsApproving(true);
     try {
-      // Logic for approval - calling the approve endpoint
       const res = await fetch(`/api/admin/import/${importItem.id}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -133,7 +144,6 @@ export function AdminCatalogueReviewClient({ importItem, categories }: AdminCata
         router.push("/admin/catalogue");
         router.refresh();
       } else {
-        // Handle non-JSON or malformed error responses
         let errorMessage = "Approval failed";
         try {
           const err = await res.json();
@@ -155,12 +165,12 @@ export function AdminCatalogueReviewClient({ importItem, categories }: AdminCata
     <div className="container max-w-7xl mx-auto py-6 px-4">
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" onClick={() => router.push("/admin/catalogue/queue")}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
+          <ArrowIcon className="w-4 h-4 mr-2" />
           Back to Queue
         </Button>
         <h1 className="text-2xl font-bold text-slate-900">Review Imported Model</h1>
         <Badge variant={status === "complete" ? "success" : status === "processing" ? "warning" : "default" } className="ml-2">
-          {status === "complete" ? "AI Ready" : status === "processing" ? "AI Processing" : "Status: " + status}
+          {status === "complete" ? "AI Ready" : status === "processing" ? "AI Processing" : "Manual Status: " + status}
         </Badge>
       </div>
 
@@ -176,28 +186,28 @@ export function AdminCatalogueReviewClient({ importItem, categories }: AdminCata
               <div className="flex items-center justify-between">
                 <Badge variant="outline">{importItem.sourceUrl?.includes("printables") ? "Printables" : "External Source"}</Badge>
                 <Link href={importItem.sourceUrl || "#"} target="_blank" className="text-blue-600 flex items-center text-sm">
-                  View Source <ExternalLink className="w-3 h-3 ml-1" />
+                  View Source <ExternalLinkIcon className="w-3 h-3 ml-1" />
                 </Link>
               </div>
 
               <div>
-                <Label className="text-xs text-slate-500 uppercase tracking-wider">Original Name</Label>
-                <p className="font-medium">{importItem.scrapedName || "N/A"}</p>
+                <Label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Original Name</Label>
+                <p className="font-medium text-slate-700">{importItem.scrapedName || "N/A"}</p>
               </div>
 
               <div>
-                <Label className="text-xs text-slate-500 uppercase tracking-wider">Original Stats</Label>
+                <Label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Original Stats</Label>
                 <div className="flex gap-4 mt-1">
-                  <span className="text-sm font-medium">❤️ {importItem.likeCount || 0}</span>
-                  <span className="text-sm font-medium">⬇️ {importItem.downloadCount || 0}</span>
+                  <span className="text-sm font-medium text-slate-600">❤️ {importItem.likeCount || 0}</span>
+                  <span className="text-sm font-medium text-slate-600">⬇️ {importItem.downloadCount || 0}</span>
                 </div>
               </div>
 
               <div>
-                <Label className="text-xs text-slate-500 uppercase tracking-wider">Source Images</Label>
-                <div className="grid grid-cols-3 gap-2 mt-2">
+                <Label className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-2 block">Source Images</Label>
+                <div className="grid grid-cols-3 gap-2">
                   {importItem.scrapedImageUrls?.slice(0, 6).map((url: string, i: number) => (
-                    <div key={i} className="aspect-square relative rounded-lg overflow-hidden border border-slate-100">
+                    <div key={i} className="aspect-square relative rounded-lg overflow-hidden border border-slate-100 shadow-sm">
                       <Image src={url} alt={`img-${i}`} fill className="object-cover" />
                     </div>
                   ))}
@@ -205,8 +215,8 @@ export function AdminCatalogueReviewClient({ importItem, categories }: AdminCata
               </div>
 
               <div>
-                <Label className="text-xs text-slate-500 uppercase tracking-wider">Original Description</Label>
-                <div className="mt-1 text-sm text-slate-600 max-h-48 overflow-y-auto whitespace-pre-wrap p-3 bg-slate-50 rounded-lg">
+                <Label className="text-xs text-slate-400 font-bold uppercase tracking-wider">Original Description</Label>
+                <div className="mt-2 text-sm text-slate-600 max-h-48 overflow-y-auto whitespace-pre-wrap p-4 bg-slate-50 rounded-xl border border-slate-100 italic">
                   {importItem.scrapedDescription || "No description found."}
                 </div>
               </div>
@@ -214,134 +224,136 @@ export function AdminCatalogueReviewClient({ importItem, categories }: AdminCata
           </Card>
         </div>
 
-        {/* RIGHT COLUMN: AI ENHANCEMENT / EDITABLE FORM */}
+        {/* RIGHT COLUMN: EDITABLE FORM */}
         <div className="space-y-6">
-          <Card className="border-[#FF4D00]/20 shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-[#FF4D00]/5 to-transparent">
-              <CardTitle className="text-lg flex items-center">
-                <Sparkles className="w-5 h-5 mr-2 text-[#FF4D00]" />
-                AI Enhancement & Listing Details
+          <Card className="border-[#FF4D00]/10 shadow-sm overflow-hidden">
+            <CardHeader className="bg-slate-50/80 border-b border-slate-100">
+              <CardTitle className="text-lg flex items-center text-slate-800">
+                <WandIcon className="w-5 h-5 mr-2 text-[#FF4D00]" />
+                Listing & Enhancement
               </CardTitle>
-              <CardDescription>Pre-filled with AI suggestions. Review and edit before approval.</CardDescription>
+              <CardDescription>Fill manually or use sectional AI assistants.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
-              {status === "processing" ? (
-                <div className="py-12 flex flex-col items-center justify-center text-slate-500">
-                  <Loader2 className="w-10 h-10 animate-spin text-[#FF4D00] mb-4" />
-                  <p className="font-medium animate-pulse">AI is generating listing content...</p>
-                  <p className="text-sm mt-1 mb-4">This usually takes 15-30 seconds.</p>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="name" className="text-sm font-bold text-slate-700">Product Name</Label>
                   <Button 
-                    variant="outline" 
+                    variant="ghost" 
                     size="sm" 
-                    onClick={async () => {
-                      setStatus("manual");
-                      try {
-                        await fetch(`/api/admin/catalogue/stop-ai/${importItem.id}`, { method: "POST" });
-                      } catch (e) {
-                         console.error("Failed to persist manual status:", e);
-                      }
-                    }}
+                    className="h-7 text-[10px] uppercase font-bold text-[#FF4D00] hover:text-[#FF4D00] hover:bg-[#FF4D00]/5 border border-[#FF4D00]/20"
+                    onClick={() => handleEnhanceField("name")}
+                    disabled={status === "processing"}
                   >
-                    Stop AI & Edit Manually
+                    {loadingField === "name" ? <Loader2Icon className="h-3 w-3 animate-spin mr-1" /> : <SparklesIcon className="h-3 w-3 mr-1" />}
+                    Enhance Name
                   </Button>
                 </div>
-              ) : status === "idle" || status === "pending" ? (
-                <div className="py-12 flex flex-col items-center justify-center text-slate-500 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                  <Sparkles className="w-10 h-10 text-[#FF4D00]/40 mb-4" />
-                  <p className="font-medium text-slate-700">Ready for AI Enhancement</p>
-                  <p className="text-sm mt-1 mb-6 text-center max-w-[280px]">
-                    Let AI suggest a professional name, description, SEO tags, and pricing based on the source data.
-                  </p>
+                <Input 
+                  id="name" 
+                  value={formData.name} 
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
+                  placeholder="e.g. Modern Desk Planter"
+                  className="bg-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="category" className="text-sm font-bold text-slate-700">Category</Label>
+                  <Select 
+                    value={formData.categoryId} 
+                    onValueChange={(v) => setFormData({ ...formData, categoryId: v })}
+                    options={categories.map((cat: any) => ({ value: cat.id, label: cat.name }))}
+                    placeholder="Select Category"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="complexity" className="text-sm font-bold text-slate-700">Complexity</Label>
+                  <Select 
+                    value={formData.complexityTier} 
+                    onValueChange={(v) => setFormData({ ...formData, complexityTier: v })}
+                    options={[
+                      { value: "simple", label: "Simple" },
+                      { value: "medium", label: "Medium" },
+                      { value: "complex", label: "Complex" },
+                      { value: "very_complex", label: "Very Complex" }
+                    ]}
+                    placeholder="Complexity"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-bold text-slate-700">Descriptions</Label>
                   <Button 
-                    className="bg-[#FF4D00] hover:bg-[#E64500] text-white shadow-lg shadow-[#FF4D00]/20 gap-2 px-6"
-                    onClick={handleRegenerate}
-                    disabled={isRefreshing}
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-7 text-[10px] uppercase font-bold text-[#FF4D00] hover:text-[#FF4D00] hover:bg-[#FF4D00]/5 border border-[#FF4D00]/20"
+                    onClick={() => handleEnhanceField("descriptions")}
+                    disabled={status === "processing"}
                   >
-                    {isRefreshing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                    Generate AI Enhancement
+                    {loadingField === "descriptions" ? <Loader2Icon className="h-3 w-3 animate-spin mr-1" /> : <SparklesIcon className="h-3 w-3 mr-1" />}
+                    Enhance Descriptions
                   </Button>
-                  <p className="text-[10px] mt-4 text-slate-400">Or start typing below to edit manually</p>
                 </div>
-              ) : (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Product Name</Label>
-                    <Input 
-                      id="name" 
-                      value={formData.name} 
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
-                      placeholder="e.g. Modern Desk Planter"
-                    />
-                  </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="short_desc" className="text-xs text-slate-500">Short Description</Label>
+                  <Textarea 
+                    id="short_desc" 
+                    value={formData.shortDescription} 
+                    onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })} 
+                    placeholder="Catchy tagline (max 150 chars)"
+                    className="h-20 text-sm"
+                  />
+                </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="category">Category</Label>
-                      <Select 
-                      value={formData.categoryId} 
-                      onValueChange={(v) => setFormData({ ...formData, categoryId: v })}
-                      options={categories.map((cat: any) => ({ value: cat.id, label: cat.name }))}
-                      placeholder="Select Category"
-                    />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="complexity">Complexity Tier</Label>
-                      <Select 
-                      value={formData.complexityTier} 
-                      onValueChange={(v) => setFormData({ ...formData, complexityTier: v })}
-                      options={[
-                        { value: "simple", label: "Simple" },
-                        { value: "medium", label: "Medium" },
-                        { value: "complex", label: "Complex" },
-                        { value: "very_complex", label: "Very Complex" }
-                      ]}
-                      placeholder="Complexity"
-                    />
-                    </div>
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="full_desc" className="text-xs text-slate-500">Body Content (HTML)</Label>
+                  <Textarea 
+                    id="full_desc" 
+                    value={formData.fullDescription} 
+                    onChange={(e) => setFormData({ ...formData, fullDescription: e.target.value })} 
+                    placeholder="Detailed product information..."
+                    className="h-44 text-sm font-mono p-4 bg-slate-50/50"
+                  />
+                </div>
+              </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="short_desc">Short Description</Label>
-                    <Textarea 
-                      id="short_desc" 
-                      value={formData.shortDescription} 
-                      onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })} 
-                      placeholder="Catchy tagline (max 150 chars)"
-                      className="h-20"
-                    />
-                  </div>
+              <Separator />
 
-                  <div className="space-y-2">
-                    <Label htmlFor="full_desc">Full Description (HTML Supported)</Label>
-                    <Textarea 
-                      id="full_desc" 
-                      value={formData.fullDescription} 
-                      onChange={(e) => setFormData({ ...formData, fullDescription: e.target.value })} 
-                      placeholder="Detailed product information..."
-                      className="h-48"
-                    />
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-4">
-                    <Label>SEO Fields</Label>
-                    <div className="space-y-2">
-                      <Input 
-                        value={formData.seoTitle} 
-                        onChange={(e) => setFormData({ ...formData, seoTitle: e.target.value })} 
-                        placeholder="SEO Title"
-                      />
-                      <Textarea 
-                        value={formData.metaDescription} 
-                        onChange={(e) => setFormData({ ...formData, metaDescription: e.target.value })} 
-                        placeholder="Meta Description"
-                        className="h-20"
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-bold text-slate-700">SEO & Metadata</Label>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-7 text-[10px] uppercase font-bold text-[#FF4D00] hover:text-[#FF4D00] hover:bg-[#FF4D00]/5 border border-[#FF4D00]/20"
+                    onClick={() => handleEnhanceField("seo")}
+                    disabled={status === "processing"}
+                  >
+                    {loadingField === "seo" ? <Loader2Icon className="h-3 w-3 animate-spin mr-1" /> : <SparklesIcon className="h-3 w-3 mr-1" />}
+                    Enhance SEO
+                  </Button>
+                </div>
+                
+                <div className="space-y-2">
+                  <Input 
+                    value={formData.seoTitle} 
+                    onChange={(e) => setFormData({ ...formData, seoTitle: e.target.value })} 
+                    placeholder="Meta Title"
+                    className="h-9 text-sm"
+                  />
+                  <Textarea 
+                    value={formData.metaDescription} 
+                    onChange={(e) => setFormData({ ...formData, metaDescription: e.target.value })} 
+                    placeholder="Meta Description"
+                    className="h-20 text-sm"
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -350,33 +362,31 @@ export function AdminCatalogueReviewClient({ importItem, categories }: AdminCata
       {/* BOTTOM SECTION */}
       <div className="mt-8 space-y-6">
         {status === "complete" && aiData && (
-          <Card>
+          <Card className="bg-slate-50/50 border-slate-200">
             <CardHeader>
               <CardTitle className="text-lg">AI Admin Insights</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
-                <div className="p-4 bg-amber-50 rounded-lg border border-amber-100">
-                  <h4 className="font-bold text-amber-800 text-sm mb-2 uppercase tracking-wide">Pricing Suggestions</h4>
-                  <p className="text-lg font-bold text-amber-900">KES {aiData.suggested_price_range?.min_kes} - {aiData.suggested_price_range?.max_kes}</p>
-                  <p className="text-xs text-amber-700 mt-1">{aiData.suggested_price_range?.pricing_basis}</p>
+                <div className="p-4 bg-amber-50 rounded-lg border border-amber-100 shadow-sm">
+                  <h4 className="font-bold text-amber-800 text-[10px] mb-2 uppercase tracking-wide">Pricing Suggestions</h4>
+                  <p className="text-xl font-bold text-amber-900">KES {aiData.suggested_price_range?.min_kes} - {aiData.suggested_price_range?.max_kes}</p>
+                  <p className="text-[11px] text-amber-700 mt-1 leading-relaxed">{aiData.suggested_price_range?.pricing_basis}</p>
                 </div>
                 <div>
-                  <Label className="text-slate-500 text-xs uppercase cursor-default">Admin Notes</Label>
-                  <p className="text-sm p-3 bg-slate-50 rounded-lg mt-1">{aiData.admin_notes}</p>
-                </div>
-                <div>
-                  <Label className="text-slate-500 text-xs uppercase cursor-default">Social Platform Preview</Label>
-                  {/* ... social platforms summary ... */}
-                  <Button variant="outline" className="mt-2 w-full">View Social Captions</Button>
+                  <Label className="text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-1 block">Contextual Notes</Label>
+                  <p className="text-xs p-3 bg-white rounded-lg border border-slate-100">{aiData.admin_notes}</p>
                 </div>
               </div>
               <div className="space-y-4">
                 <div>
-                  <Label className="text-slate-500 text-xs uppercase cursor-default">License Caution</Label>
-                  <div className={`p-3 rounded-lg mt-1 text-sm flex items-start gap-2 ${importItem.licenseType?.includes('NC') ? 'bg-red-50 text-red-800 border border-red-100' : 'bg-green-50 text-green-800 border border-green-100'}`}>
-                    {importItem.licenseType?.includes('NC') ? <AlertCircle className="w-5 h-5 flex-shrink-0" /> : <CheckCircle2 className="w-5 h-5 flex-shrink-0" />}
-                    <p>{aiData.admin_notes || "Check license restrictions manually."}</p>
+                  <Label className="text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-1 block">License Analysis</Label>
+                  <div className={`p-4 rounded-lg text-xs flex items-start gap-3 border ${importItem.licenseType?.includes('NC') ? 'bg-red-50 text-red-800 border-red-100' : 'bg-green-50 text-green-800 border-green-100'}`}>
+                    {importItem.licenseType?.includes('NC') ? <AlertIcon className="w-5 h-5 flex-shrink-0" /> : <CheckIcon className="w-5 h-5 flex-shrink-0" />}
+                    <div>
+                      <p className="font-bold mb-1">{importItem.licenseType?.includes('NC') ? 'Commercial Restriction Detected' : 'Commercial-Friendly License'}</p>
+                      <p className="opacity-80 leading-relaxed">{aiData.admin_notes || "Check license restrictions manually."}</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -384,31 +394,31 @@ export function AdminCatalogueReviewClient({ importItem, categories }: AdminCata
           </Card>
         )}
 
-        <div className="p-6 bg-white border border-slate-200 rounded-xl shadow-sm flex items-center justify-between sticky bottom-6 z-10">
+        <div className="p-6 bg-white border border-slate-200 rounded-2xl shadow-xl flex items-center justify-between sticky bottom-6 z-10 backdrop-blur-sm bg-white/95">
           <div className="flex gap-3">
              <Button 
-               variant="outline" 
-               onClick={handleRegenerate}
-               disabled={isRefreshing || status === "processing"}
+               variant="ghost" 
+               className="text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+               onClick={() => router.push("/admin/catalogue/queue")}
              >
-               {isRefreshing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-               Regenerate AI Content
+               <ArrowIcon className="w-4 h-4 mr-2" />
+               Exit to Queue
              </Button>
           </div>
           <div className="flex gap-3">
             <Button 
                variant="ghost" 
-               className="text-red-500 hover:text-red-600 hover:bg-red-50"
+               className="text-red-400 hover:text-red-500 hover:bg-red-50 font-medium"
             >
-              <Trash2 className="w-4 h-4 mr-2" />
+              <TrashIcon className="w-4 h-4 mr-2" />
               Discard Import
             </Button>
             <Button 
-              className="bg-[#FF4D00] hover:bg-[#E64500] text-white px-8"
+              className="bg-[#FF4D00] hover:bg-[#E64500] text-white px-10 h-11 font-bold shadow-lg shadow-[#FF4D00]/20"
               onClick={handleApprove}
               disabled={isApproving || status === "processing"}
             >
-              {isApproving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {isApproving && <Loader2Icon className="w-4 h-4 mr-2 animate-spin" />}
               Approve & Create Product
             </Button>
           </div>
