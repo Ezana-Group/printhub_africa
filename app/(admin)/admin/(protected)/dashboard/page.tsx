@@ -44,41 +44,41 @@ export default async function AdminDashboardPage() {
       productionQueueCounts,
       printerStatus,
     ] = await Promise.all([
-    prisma.order.findMany({
-      where: { createdAt: { gte: startOfMonth } },
-      include: { payments: true },
-    }),
-    prisma.payment.findMany({
-      where: { status: "COMPLETED", createdAt: { gte: startOfMonth } },
-      include: { order: { select: { type: true } } },
-    }),
-    prisma.order.count({ where: { status: "PENDING" } }),
-    prisma.uploadedFile.count({ where: { status: "UPLOADED" } }),
-    prisma.product.findMany({
-      select: { id: true, name: true, stock: true, lowStockThreshold: true },
-      take: 200,
-    }),
-    prisma.order.findMany({
-      take: 10,
-      orderBy: { createdAt: "desc" },
-      include: { user: { select: { name: true, email: true } } },
-    }),
-    prisma.order.findMany({
-      where: { createdAt: { gte: startOfToday } },
-      select: { id: true, type: true },
-    }),
-    prisma.payment.findMany({
-      where: { status: "COMPLETED", createdAt: { gte: startOfToday } },
-    }),
-    prisma.productionQueue.groupBy({
-      by: ["status"],
-      _count: { id: true },
-    }).catch(() => []),
-    prisma.printerAsset.findMany({
-      where: { isActive: true },
-      select: { name: true },
-      take: 5,
-    }).catch(() => []),
+      prisma.order.findMany({
+        where: { createdAt: { gte: startOfMonth } },
+        include: { payments: true },
+      }).catch(() => []),
+      prisma.payment.findMany({
+        where: { status: "COMPLETED", createdAt: { gte: startOfMonth } },
+        include: { order: { select: { type: true } } },
+      }).catch(() => []),
+      prisma.order.count({ where: { status: "PENDING" } }).catch(() => 0),
+      prisma.uploadedFile.count({ where: { status: "UPLOADED" } }).catch(() => 0),
+      prisma.product.findMany({
+        select: { id: true, name: true, stock: true, lowStockThreshold: true },
+        take: 200,
+      }).catch(() => []),
+      prisma.order.findMany({
+        take: 10,
+        orderBy: { createdAt: "desc" },
+        include: { user: { select: { name: true, email: true } } },
+      }).catch(() => []),
+      prisma.order.findMany({
+        where: { createdAt: { gte: startOfToday } },
+        select: { id: true, type: true },
+      }).catch(() => []),
+      prisma.payment.findMany({
+        where: { status: "COMPLETED", createdAt: { gte: startOfToday } },
+      }).catch(() => []),
+      prisma.productionQueue.groupBy({
+        by: ["status"],
+        _count: { id: true },
+      }).catch(() => []),
+      prisma.printerAsset.findMany({
+        where: { isActive: true },
+        select: { name: true },
+        take: 5,
+      }).catch(() => []),
     ]);
 
   // Low stock: stock ≤ lowStockThreshold when set, else stock ≤ 5 or out of stock
