@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, ArrowLeft, Save, Search, Info, ExternalLink, MessageSquare, Briefcase, UserCircle, Calculator, Check, Phone } from "lucide-react";
+import { Loader2, ArrowLeft, Save, Search, Info, ExternalLink, MessageSquare, Briefcase, UserCircle, Calculator, Check, Phone, GripVertical } from "lucide-react";
 import Link from "next/link";
 import { AdminBreadcrumbs } from "@/components/admin/admin-breadcrumbs";
 
@@ -19,10 +19,30 @@ export default function WhatsAppTemplateEditPage({
   const [name, setName] = useState(template.name);
   const [description, setDescription] = useState(template.description || "");
   const [bodyText, setBodyText] = useState(template.bodyText);
-  const [saving, setSaving] = useState(false);
+   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<"saved" | "error" | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+
+  const insertIntoBody = useCallback((text: string) => {
+    const el = bodyRef.current;
+    if (!el) return;
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    const current = bodyText;
+    const next = current.slice(0, start) + text + current.slice(end);
+    setBodyText(next);
+    
+    // Reset cursor position after React update
+    setTimeout(() => {
+      const pos = start + text.length;
+      el.setSelectionRange(pos, pos);
+      el.focus();
+    }, 0);
+  }, [bodyText]);
 
   const SAMPLE_DATA: Record<string, string> = {
     quoteNumber: "Q-2024-0406",
@@ -99,15 +119,19 @@ export default function WhatsAppTemplateEditPage({
   ];
 
   const filteredPlaceholders = useMemo(() => {
-    if (!searchTerm) return PLACEHOLDERS;
-    return PLACEHOLDERS.map(cat => ({
+    let result = PLACEHOLDERS;
+    if (selectedCategory !== "all") {
+      result = PLACEHOLDERS.filter(cat => cat.label === selectedCategory);
+    }
+    if (!searchTerm) return result;
+    return result.map(cat => ({
       ...cat,
       variables: cat.variables.filter(v => 
         v.key.toLowerCase().includes(searchTerm.toLowerCase()) || 
         v.desc.toLowerCase().includes(searchTerm.toLowerCase())
       )
     })).filter(cat => cat.variables.length > 0);
-  }, [searchTerm]);
+  }, [searchTerm, selectedCategory]);
 
   const previewBody = useMemo(() => {
     return bodyText.replace(/{{(.*?)}}/g, (match, p1) => {
@@ -142,31 +166,6 @@ export default function WhatsAppTemplateEditPage({
     }
   };
 
-  const VariableCard = ({ label, variables }: { label: string, variables: { key: string, desc: string }[] }) => (
-    <div className="space-y-3">
-      <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">{label}</h3>
-      <div className="grid gap-1.5">
-        {variables.map((v) => (
-          <button
-            key={v.key}
-            type="button"
-            onClick={() => copyToClipboard(`{{${v.key}}}`)}
-            className="group flex flex-col items-start p-2 rounded-lg border border-slate-100 bg-white hover:border-blue-200 hover:bg-blue-50/30 transition-all text-left relative overflow-hidden"
-          >
-            <div className="flex w-full justify-between items-center">
-              <code className="text-xs font-bold text-blue-600 group-hover:text-blue-700">{"{{"}{v.key}{"}}"}</code>
-              {copyStatus === `{{${v.key}}}` ? (
-                <span className="text-[9px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded animate-in fade-in zoom-in duration-200">COPIED</span>
-              ) : (
-                <span className="text-[9px] font-bold text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity">CLICK TO COPY</span>
-              )}
-            </div>
-            <p className="text-[10px] text-slate-500 mt-0.5">{v.desc}</p>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
 
   return (
     <div className="p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
@@ -225,6 +224,7 @@ export default function WhatsAppTemplateEditPage({
                   <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-0.5 rounded font-bold">TEXT ONLY</span>
                 </div>
                 <Textarea
+                  ref={bodyRef}
                   id="bodyText"
                   value={bodyText}
                   onChange={(e) => setBodyText(e.target.value)}
@@ -287,12 +287,10 @@ export default function WhatsAppTemplateEditPage({
 
           {/* Placeholder Library */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col h-auto lg:h-[calc(100vh-140px)]">
-            <div className="p-5 border-b border-slate-100 space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded bg-blue-50 text-blue-600">
-                  <Calculator className="h-4 w-4" />
-                </div>
-                <h2 className="font-bold text-slate-800 text-sm">Insert Placeholders</h2>
+            <div className="p-5 border-b border-slate-100 bg-white space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Placeholders</h3>
+                <span className="text-[10px] text-slate-400 font-medium">{filteredPlaceholders.reduce((acc, cat) => acc + cat.variables.length, 0)} available</span>
               </div>
               
               <div className="relative group">
@@ -304,52 +302,58 @@ export default function WhatsAppTemplateEditPage({
                    onChange={(e) => setSearchTerm(e.target.value)}
                  />
               </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Category Filter</label>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full h-8 rounded-md border border-slate-200 bg-white px-3 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                >
+                  <option value="all">All categories</option>
+                  {PLACEHOLDERS.map((cat) => (
+                    <option key={cat.label} value={cat.label}>
+                      {cat.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar">
-              {filteredPlaceholders.map((cat) => (
+            <div className="flex-1 overflow-y-auto p-5 space-y-6 custom-scrollbar">               {filteredPlaceholders.map((cat) => (
                 <div key={cat.label} className="space-y-3">
                   <div className="flex items-center gap-2 px-1">
                     <span className="text-slate-400">{cat.icon}</span>
                     <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{cat.label}</h3>
                   </div>
-                  <div className="grid gap-1.5">
+                  <div className="flex flex-wrap gap-1.5">
                     {cat.variables.map((v) => (
-                      <button
+                      <div
                         key={v.key}
-                        type="button"
-                        onClick={() => copyToClipboard(`{{${v.key}}}`)}
-                        className={`group flex items-center justify-between p-2.5 rounded-xl border transition-all text-left relative overflow-hidden ${
-                          copyStatus === `{{${v.key}}}` 
-                          ? 'border-emerald-200 bg-emerald-50/30' 
-                          : 'border-slate-100 bg-white hover:border-blue-200 hover:shadow-sm'
-                        }`}
+                        className="group flex items-center gap-0.5 rounded-md border border-slate-200 bg-slate-50 hover:bg-slate-100 font-mono text-[11px]"
                       >
-                        <div className="space-y-0.5">
-                           <code className={`text-xs font-bold transition-colors ${
-                             copyStatus === `{{${v.key}}}` ? 'text-emerald-700' : 'text-blue-600 group-hover:text-blue-700'
-                           }`}>
-                             {"{{"}{v.key}{"}}"}
-                           </code>
-                           <p className="text-[10px] text-slate-500 line-clamp-1">{v.desc}</p>
-                        </div>
-                        
-                        <div className="shrink-0 ml-2">
-                           {copyStatus === `{{${v.key}}}` ? (
-                             <div className="bg-emerald-500 rounded-full p-0.5">
-                                <Check className="h-3 w-3 text-white" />
-                             </div>
-                           ) : (
-                             <div className="w-6 h-6 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <span className="text-xs text-slate-400 font-bold">+</span>
-                             </div>
-                           )}
-                        </div>
-                      </button>
+                        <span className="cursor-grab active:cursor-grabbing px-1.5 py-1 text-slate-400" title="Drag to body">
+                          <GripVertical className="h-3 w-3" />
+                        </span>
+                        <span className="py-1 pr-1 text-slate-700" title={v.desc}>
+                          {`{{${v.key}}}`}
+                        </span>
+                        <span className="flex items-center border-l border-slate-200">
+                          <button
+                            type="button"
+                            onClick={() => insertIntoBody(`{{${v.key}}}`)}
+                            className="px-2 py-1 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-r-md text-[10px] font-bold uppercase transition-colors"
+                            title="Insert into body"
+                          >
+                            Insert
+                          </button>
+                        </span>
+                      </div>
                     ))}
                   </div>
                 </div>
               ))}
+
 
               {filteredPlaceholders.length === 0 && (
                 <div className="py-10 text-center space-y-2">

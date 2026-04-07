@@ -73,7 +73,7 @@ export async function POST(req: Request) {
       data: {
         sourceUrl: importUrl,
         status: "PENDING",
-        aiEnhancementStatus: "processing"
+        aiEnhancementStatus: "idle"
       }
     });
 

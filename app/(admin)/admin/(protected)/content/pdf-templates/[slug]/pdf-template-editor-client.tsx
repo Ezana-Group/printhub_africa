@@ -4,7 +4,7 @@ import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, Send, Loader2, Search, GripVertical } from "lucide-react";
+import { Eye, Loader2, Search, GripVertical, FileText } from "lucide-react";
 import {
   EMAIL_PLACEHOLDER_CATEGORIES,
   formatPlaceholder,
@@ -12,24 +12,6 @@ import {
   type PlaceholderItem,
 } from "@/lib/email-placeholders";
 import { SmartTextEditor, type SmartTextEditorHandle } from "@/components/admin/smart-text-editor";
-
-function insertAtCursor(
-  el: HTMLInputElement | HTMLTextAreaElement | null,
-  text: string,
-  setValue: (value: string) => void
-) {
-  if (!el) return;
-  const start = el.selectionStart ?? 0;
-  const end = el.selectionEnd ?? 0;
-  const current = el.value;
-  const next = current.slice(0, start) + text + current.slice(end);
-  setValue(next);
-  setTimeout(() => {
-    const pos = start + text.length;
-    el.setSelectionRange(pos, pos);
-    el.focus();
-  }, 0);
-}
 
 export function PdfTemplateEditorClient({
   slug,
@@ -105,85 +87,101 @@ export function PdfTemplateEditorClient({
   }));
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+    <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 min-h-0">
       {/* Left: template form */}
       <div className="flex-1 min-w-0 space-y-6">
         {description && (
           <p className="text-sm text-slate-600">{description}</p>
         )}
-        <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4">
+        <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
           <div className="space-y-2">
-            <Label htmlFor="bodyHtml">Body (Visual & HTML)</Label>
+            <div className="flex justify-between items-center">
+              <Label htmlFor="bodyHtml">PDF Content (HTML)</Label>
+              <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded font-bold uppercase tracking-wider border border-amber-100">A4 Document</span>
+            </div>
             <SmartTextEditor
               ref={bodyRef}
               value={bodyHtml}
               onChange={setBodyHtml}
-              placeholder="Write your email content here. Use {{placeholders}} for dynamic data."
-              minHeight="400px"
+              placeholder="Design your PDF layout using HTML and tailwind classes. Use {{placeholders}} for dynamic data."
+              minHeight="550px"
             />
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            <Button onClick={handleSave} disabled={saving} className="min-w-[100px]">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Save Template
             </Button>
             <Button variant="outline" onClick={handlePreview} disabled={previewLoading}>
-              {previewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
-              Preview
+              {previewLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+              Generate Preview
             </Button>
-            {message === "saved" && <span className="text-sm text-green-600">Saved.</span>}
-            {message === "error" && <span className="text-sm text-red-600">Save failed.</span>}
+            {message === "saved" && <span className="text-sm text-green-600 font-medium">Changes saved!</span>}
+            {message === "error" && <span className="text-sm text-red-600 font-medium">Error saving.</span>}
+          </div>
+        </div>
+      </div>
+
+      {/* Right: preview & placeholders panel */}
+      <div className="w-full lg:w-80 xl:w-96 shrink-0 space-y-6">
+        {/* PDF Live Preview Window */}
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden sticky top-4">
+          <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+              <FileText className="h-3 w-3 text-blue-500" /> PDF Preview
+            </span>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handlePreview} 
+              disabled={previewLoading}
+              className="h-7 px-2 text-[10px] font-bold uppercase hover:bg-white transition-colors"
+            >
+              {previewLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Eye className="h-3 w-3 mr-1" />}
+              Refresh
+            </Button>
+          </div>
+          <div className="bg-[#f8fafc] min-h-[400px] max-h-[550px] overflow-y-auto custom-scrollbar p-4 flex justify-center items-start">
+            {previewHtml ? (
+              <div 
+                className="bg-white shadow-lg origin-top scale-[0.35] w-[210mm] h-[297mm] -mb-[180%] border border-slate-200 pointer-events-none overflow-hidden"
+                style={{ width: "210mm", height: "297mm" }}
+                dangerouslySetInnerHTML={{ __html: previewHtml }}
+              />
+            ) : (
+              <div className="mt-20 flex flex-col items-center justify-center text-center space-y-3 px-6">
+                <div className="w-12 h-12 rounded-full bg-white border border-slate-100 flex items-center justify-center shadow-sm">
+                  <FileText className="h-6 w-6 text-slate-300" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-500">No Preview Ready</p>
+                  <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">Click refresh to visualize the A4 layout with sample data.</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {previewHtml !== null && (
-          <div className="rounded-xl border border-slate-200 bg-white overflow-hidden max-w-[800px] mx-auto shadow-sm">
-            <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 text-sm font-medium text-slate-700">
-              PDF Preview (Visual Approximation)
-            </div>
-            <div
-              className="p-8 mx-auto bg-white"
-              style={{ minHeight: "297mm", width: "210mm", transformOrigin: "top left", transform: "scale(0.85)" }}
-              dangerouslySetInnerHTML={{ __html: previewHtml }}
-            />
+        <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4 shadow-sm">
+          <div className="flex items-center gap-2">
+             <Search className="h-4 w-4 text-blue-500" />
+             <h3 className="font-bold text-slate-800 text-sm">Placeholders</h3>
           </div>
-        )}
-      </div>
-
-      {/* Right: placeholders panel */}
-      <div className="w-full lg:w-80 xl:w-96 shrink-0">
-        <div className="rounded-xl border border-slate-200 bg-white p-4 sticky top-4 space-y-4">
-          <h3 className="font-semibold text-slate-900">Placeholders</h3>
           <p className="text-xs text-slate-500">
-            Drag into body, or click &quot;Insert&quot; to add at cursor.
+            Drag into editor or click "Insert" to add at cursor.
           </p>
 
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
-              placeholder="Filter placeholders..."
+              placeholder="Find a variable..."
               value={placeholderFilter}
               onChange={(e) => setPlaceholderFilter(e.target.value)}
-              className="pl-8 h-9 text-sm"
+              className="pl-8 h-9 text-xs"
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-500">Category</label>
-            <select
-              value={placeholderCategory}
-              onChange={(e) => setPlaceholderCategory(e.target.value as PlaceholderCategory | "all")}
-              className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700"
-            >
-              <option value="all">All categories</option>
-              {(Object.keys(EMAIL_PLACEHOLDER_CATEGORIES) as PlaceholderCategory[]).map((key) => (
-                <option key={key} value={key}>
-                  {EMAIL_PLACEHOLDER_CATEGORIES[key].label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="max-h-[min(60vh,520px)] overflow-y-auto space-y-4 pr-1">
+          <div className="max-h-[400px] overflow-y-auto space-y-4 pr-1 custom-scrollbar">
             {categoriesToShow.map(({ label, placeholders, categoryKey }) => {
               const filtered = filterLower
                 ? placeholders.filter(
@@ -195,7 +193,7 @@ export function PdfTemplateEditorClient({
               if (filtered.length === 0) return null;
               return (
                 <div key={categoryKey} className="space-y-2">
-                  <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
                     {label}
                   </h4>
                   <div className="flex flex-wrap gap-1.5">
@@ -210,19 +208,25 @@ export function PdfTemplateEditorClient({
                 </div>
               );
             })}
-            {placeholderFilter.trim() && categoriesToShow.every(({ placeholders }) => {
-              const filtered = placeholders.filter(
-                (p) =>
-                  p.key.toLowerCase().includes(filterLower) ||
-                  p.description.toLowerCase().includes(filterLower)
-              );
-              return filtered.length === 0;
-            }) && (
-              <p className="text-sm text-slate-500">No placeholders match &quot;{placeholderFilter}&quot;.</p>
-            )}
           </div>
         </div>
       </div>
+      
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: #f8fafc;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #e2e8f0;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #cbd5e1;
+        }
+      `}</style>
     </div>
   );
 }
@@ -242,10 +246,10 @@ function PlaceholderChip({
         e.dataTransfer.setData("text/plain", text);
         e.dataTransfer.effectAllowed = "copy";
       }}
-      className="group flex items-center gap-0.5 rounded-md border border-slate-200 bg-slate-50 hover:bg-slate-100 font-mono text-xs"
+      className="group flex items-center gap-0.5 rounded-md border border-slate-200 bg-slate-50 hover:bg-slate-100 font-mono text-[11px]"
     >
-      <span className="cursor-grab active:cursor-grabbing px-1.5 py-1 text-slate-400" title="Drag to subject or body">
-        <GripVertical className="h-3.5 w-3.5" />
+      <span className="cursor-grab active:cursor-grabbing px-1.5 py-1 text-slate-400" title="Drag to editor">
+        <GripVertical className="h-3 w-3" />
       </span>
       <span className="py-1 pr-1 text-slate-700" title={item.description}>
         {`{{${item.key}}}`}
@@ -254,7 +258,7 @@ function PlaceholderChip({
         <button
           type="button"
           onClick={onInsert}
-          className="px-2 py-1 text-slate-500 hover:text-orange-600 hover:bg-orange-50 text-[10px] font-medium"
+          className="px-2 py-1 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-r-md text-[10px] font-bold uppercase transition-colors"
           title="Insert into body"
         >
           Insert

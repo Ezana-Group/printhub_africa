@@ -14,13 +14,14 @@ export async function POST(
   const data = await req.json();
 
   try {
-    let existingModel = await prisma.externalModel.findUnique({
+    let existingModel = await prisma.externalModel.findFirst({
       where: { id },
+      select: { id: true, name: true, description: true, tags: true, categoryId: true }
     }) as any;
 
     let importQueue = null;
     if (!existingModel) {
-      importQueue = await prisma.catalogueImportQueue.findUnique({
+      importQueue = await prisma.catalogueImportQueue.findFirst({
         where: { id },
       });
       if (!importQueue) {
@@ -62,18 +63,12 @@ export async function POST(
     const baseSlug = (data.name || "product").toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
-    
+
     // Auto-generate unique slug
-    let finalSlug = baseSlug || "imported-product";
-    let slugExists = await prisma.product.findUnique({ where: { slug: finalSlug } });
-    let counter = 1;
-    while (slugExists) {
-      finalSlug = `${baseSlug}-${counter++}`;
-      slugExists = await prisma.product.findUnique({ where: { slug: finalSlug } });
-    }
+    const { generateUniqueProductSlug, generateNextProductSku } = await import("@/lib/product-utils");
+    const finalSlug = await generateUniqueProductSlug(baseSlug || "imported-product");
 
     // Auto-generate SKU
-    const { generateNextProductSku } = await import("@/lib/product-utils");
     const sku = await generateNextProductSku(categoryId);
 
     const product = await prisma.product.create({
@@ -165,7 +160,24 @@ export async function POST(
           x: true,
           googleBusiness: true,
           snapchat: true,
-          youtube: true
+          youtube: true,
+          instagramStories: true,
+          instagramReels: true,
+          youtubeShorts: true,
+          whatsappStatus: true,
+          whatsappChannel: true,
+          telegram: true,
+          googleDiscover: true,
+          googleMapsPost: true,
+          bingPlaces: true,
+          appleMaps: true,
+          pigiaMe: true,
+          olxKenya: true,
+          reddit: true,
+          linkedinNewsletter: true,
+          medium: true,
+          nextdoor: true,
+          jiji: true
         }
       });
     } catch (err) {

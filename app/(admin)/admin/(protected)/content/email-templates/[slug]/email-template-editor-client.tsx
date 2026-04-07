@@ -137,13 +137,13 @@ export function EmailTemplateEditorClient({
   }));
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+    <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 min-h-0">
       {/* Left: template form */}
       <div className="flex-1 min-w-0 space-y-6">
         {description && (
           <p className="text-sm text-slate-600">{description}</p>
         )}
-        <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4">
+        <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
           <div className="space-y-2">
             <Label htmlFor="subject">Subject line</Label>
             <Input
@@ -158,7 +158,7 @@ export function EmailTemplateEditorClient({
                 if (text && /^\{\{\w+\}\}$/.test(text)) insertIntoSubject(text);
               }}
               placeholder="e.g. Order {{orderNumber}} confirmed – {{businessName}}"
-              className="font-mono text-sm"
+              className="font-mono text-sm h-10"
             />
           </div>
           <div className="space-y-2">
@@ -168,36 +168,27 @@ export function EmailTemplateEditorClient({
               value={bodyHtml}
               onChange={setBodyHtml}
               placeholder="Write your email content here. Use {{placeholders}} for dynamic data."
-              minHeight="400px"
+              minHeight="450px"
             />
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            <Button onClick={handleSave} disabled={saving} className="min-w-[100px]">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Save Changes
             </Button>
             <Button variant="outline" onClick={handlePreview} disabled={previewLoading}>
-              {previewLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
+              {previewLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
               Preview
             </Button>
-            {message === "saved" && <span className="text-sm text-green-600">Saved.</span>}
-            {message === "error" && <span className="text-sm text-red-600">Save failed.</span>}
+            {message === "saved" && <span className="text-sm text-green-600 font-medium">Saved.</span>}
+            {message === "error" && <span className="text-sm text-red-600 font-medium">Save failed.</span>}
           </div>
         </div>
 
-        {previewHtml !== null && (
-          <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-            <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 text-sm font-medium text-slate-700">
-              Preview (sample data)
-            </div>
-            <div
-              className="p-6 min-h-[200px] prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: previewHtml }}
-            />
-          </div>
-        )}
-
-        <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4">
-          <h3 className="font-semibold text-slate-900">Send test email</h3>
+        <div className="rounded-xl border border-slate-200 bg-white p-6 space-y-4 shadow-sm">
+          <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+            <Send className="h-4 w-4 text-blue-500" /> Send test email
+          </h3>
           <p className="text-sm text-slate-600">
             Sends this template to an address using sample placeholder data. Leave empty to use your account email.
           </p>
@@ -207,24 +198,64 @@ export function EmailTemplateEditorClient({
               placeholder="Optional: recipient email"
               value={testTo}
               onChange={(e) => setTestTo(e.target.value)}
-              className="max-w-xs"
+              className="max-w-xs h-10"
             />
             <Button variant="outline" onClick={handleSendTest} disabled={testSending}>
-              {testSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              {testSending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
               Send test
             </Button>
-            {testMessage === "sent" && <span className="text-sm text-green-600">Test email sent.</span>}
-            {testMessage === "error" && <span className="text-sm text-red-600">Send failed.</span>}
+            {testMessage === "sent" && <span className="text-sm text-green-600 font-medium">Test email sent.</span>}
+            {testMessage === "error" && <span className="text-sm text-red-600 font-medium">Send failed.</span>}
           </div>
         </div>
       </div>
 
-      {/* Right: placeholders panel */}
-      <div className="w-full lg:w-80 xl:w-96 shrink-0">
-        <div className="rounded-xl border border-slate-200 bg-white p-4 sticky top-4 space-y-4">
-          <h3 className="font-semibold text-slate-900">Placeholders</h3>
+      {/* Right: placeholders & preview panel */}
+      <div className="w-full lg:w-80 xl:w-96 shrink-0 space-y-6">
+        {/* Live Preview Window */}
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden sticky top-4">
+          <div className="bg-slate-50 px-4 py-2 border-b border-slate-200 flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+              <Eye className="h-3 w-3 text-blue-500" /> Live Preview
+            </span>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handlePreview} 
+              disabled={previewLoading}
+              className="h-7 px-2 text-[10px] font-bold uppercase hover:bg-white transition-colors"
+            >
+              {previewLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Eye className="h-3 w-3 mr-1" />}
+              Refresh
+            </Button>
+          </div>
+          <div className="bg-[#f8fafc] min-h-[350px] max-h-[500px] overflow-y-auto custom-scrollbar p-0">
+            {previewHtml ? (
+              <div
+                className="bg-white shadow-sm prose prose-sm max-w-none origin-top scale-[0.9] w-[111%] -mb-[10%]"
+                dangerouslySetInnerHTML={{ __html: previewHtml }}
+              />
+            ) : (
+              <div className="h-[350px] flex flex-col items-center justify-center text-center space-y-3 px-6">
+                <div className="w-12 h-12 rounded-full bg-white border border-slate-100 flex items-center justify-center shadow-sm">
+                  <Eye className="h-6 w-6 text-slate-300" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-500">No Preview Loaded</p>
+                  <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">Click refresh to generate a preview with sample data.</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-4 shadow-sm">
+          <div className="flex items-center gap-2">
+             <Search className="h-4 w-4 text-blue-500" />
+             <h3 className="font-bold text-slate-800 text-sm">Placeholders</h3>
+          </div>
           <p className="text-xs text-slate-500">
-            Drag into subject or body, or click &quot;Subject&quot; / &quot;Body&quot; to insert at cursor.
+            Drag into subject or body, or click "Subject" / "Body" to insert at cursor.
           </p>
 
           <div className="relative">
@@ -233,16 +264,16 @@ export function EmailTemplateEditorClient({
               placeholder="Filter placeholders..."
               value={placeholderFilter}
               onChange={(e) => setPlaceholderFilter(e.target.value)}
-              className="pl-8 h-9 text-sm"
+              className="pl-8 h-9 text-xs"
             />
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-500">Category</label>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Category</label>
             <select
               value={placeholderCategory}
               onChange={(e) => setPlaceholderCategory(e.target.value as PlaceholderCategory | "all")}
-              className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700"
+              className="w-full h-8 rounded-md border border-slate-200 bg-white px-3 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             >
               <option value="all">All categories</option>
               {(Object.keys(EMAIL_PLACEHOLDER_CATEGORIES) as PlaceholderCategory[]).map((key) => (
@@ -253,7 +284,7 @@ export function EmailTemplateEditorClient({
             </select>
           </div>
 
-          <div className="max-h-[min(60vh,520px)] overflow-y-auto space-y-4 pr-1">
+          <div className="max-h-[500px] overflow-y-auto space-y-4 pr-1 custom-scrollbar">
             {categoriesToShow.map(({ label, placeholders, categoryKey }) => {
               const filtered = filterLower
                 ? placeholders.filter(
@@ -265,7 +296,7 @@ export function EmailTemplateEditorClient({
               if (filtered.length === 0) return null;
               return (
                 <div key={categoryKey} className="space-y-2">
-                  <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">
                     {label}
                   </h4>
                   <div className="flex flex-wrap gap-1.5">
@@ -289,11 +320,27 @@ export function EmailTemplateEditorClient({
               );
               return filtered.length === 0;
             }) && (
-              <p className="text-sm text-slate-500">No placeholders match &quot;{placeholderFilter}&quot;.</p>
+              <p className="text-xs text-slate-500 p-2 italic">No placeholders match "{placeholderFilter}".</p>
             )}
           </div>
         </div>
       </div>
+      
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: #f8fafc;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #e2e8f0;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #cbd5e1;
+        }
+      `}</style>
     </div>
   );
 }
@@ -315,10 +362,10 @@ function PlaceholderChip({
         e.dataTransfer.setData("text/plain", text);
         e.dataTransfer.effectAllowed = "copy";
       }}
-      className="group flex items-center gap-0.5 rounded-md border border-slate-200 bg-slate-50 hover:bg-slate-100 font-mono text-xs"
+      className="group flex items-center gap-0.5 rounded-md border border-slate-200 bg-slate-50 hover:bg-slate-100 font-mono text-[11px]"
     >
       <span className="cursor-grab active:cursor-grabbing px-1.5 py-1 text-slate-400" title="Drag to subject or body">
-        <GripVertical className="h-3.5 w-3.5" />
+        <GripVertical className="h-3 w-3" />
       </span>
       <span className="py-1 pr-1 text-slate-700" title={item.description}>
         {`{{${item.key}}}`}
@@ -327,15 +374,15 @@ function PlaceholderChip({
         <button
           type="button"
           onClick={onInsertSubject}
-          className="px-1.5 py-1 text-slate-500 hover:text-orange-600 hover:bg-orange-50 rounded-r-md text-[10px] font-medium"
+          className="px-1.5 py-1 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-r-md text-[10px] font-bold uppercase transition-colors"
           title="Insert into subject"
         >
-          Subject
+          Sub
         </button>
         <button
           type="button"
           onClick={onInsertBody}
-          className="px-1.5 py-1 text-slate-500 hover:text-orange-600 hover:bg-orange-50 text-[10px] font-medium"
+          className="px-1.5 py-1 text-slate-500 hover:text-blue-600 hover:bg-blue-50 text-[10px] font-bold uppercase transition-colors"
           title="Insert into body"
         >
           Body

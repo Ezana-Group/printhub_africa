@@ -73,7 +73,10 @@ export async function generateNextProductSku(categoryId?: string | null, overrid
   }
   const next = maxNum + 1;
   const sku = `${prefix}-${String(next).padStart(SKU_PAD, "0")}`;
-  const exists = await prisma.product.findUnique({ where: { sku } });
+  const exists = await prisma.product.findFirst({ 
+    where: { sku },
+    select: { id: true }
+  });
   if (exists) return generateNextProductSku(categoryId ?? undefined);
   return sku;
 }
