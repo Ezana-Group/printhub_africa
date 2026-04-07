@@ -52,7 +52,7 @@ export const authOptionsAdmin: NextAuthOptions = {
         sameSite: "strict", // Tightened for enhanced CSRF protection
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        domain: process.env.NODE_ENV === "production" ? ".printhub.africa" : "localhost",
+        domain: process.env.NODE_ENV === "production" ? ".printhub.africa" : undefined,
       },
     },
   },

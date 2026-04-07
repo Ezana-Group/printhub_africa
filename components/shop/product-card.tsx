@@ -62,7 +62,7 @@ export function ProductCard({ id, name, slug, image, imagesCount, basePrice, com
   return (
     <Link href={`/shop/${slug}`} className="group block rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-lg">
       <div className="relative aspect-square overflow-hidden rounded-xl bg-slate-100">
-        {image ? (
+        {image && (image.startsWith("/") || image.startsWith("http")) ? (
           <Image src={image} alt={name} fill className="object-cover transition group-hover:scale-105" sizes="(max-width:768px) 100vw, 33vw" />
         ) : (
           <Image

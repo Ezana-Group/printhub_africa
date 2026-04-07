@@ -80,8 +80,8 @@ export async function middleware(request: NextRequest) {
     const isLoginPage = pathname === "/login" || pathname === "/admin/login";
     const isAuthApi = pathname.startsWith("/api/auth");
 
-    // Redirect to login if no session and not on auth pages
-    if (!token && !isLoginPage && !isAuthApi) {
+    // Redirect to login if no session and not on auth pages or telemetry
+    if (!token && !isLoginPage && !isAuthApi && !isTelemetry) {
       console.log(`[Middleware] No admin token for: ${pathname}. Domain: ${host}`);
       const loginUrl = new URL("/login", request.url);
       if (host.includes('localhost') && pathname.startsWith('/admin')) {
