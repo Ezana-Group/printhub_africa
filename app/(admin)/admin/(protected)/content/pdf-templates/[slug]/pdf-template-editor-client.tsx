@@ -12,6 +12,13 @@ import {
   type PlaceholderItem,
 } from "@/lib/email-placeholders";
 import { SmartTextEditor, type SmartTextEditorHandle } from "@/components/admin/smart-text-editor";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Maximize2, ExternalLink, Download } from "lucide-react";
 
 export function PdfTemplateEditorClient({
   slug,
@@ -29,6 +36,7 @@ export function PdfTemplateEditorClient({
   const [previewLoading, setPreviewLoading] = useState(false);
   const [placeholderFilter, setPlaceholderFilter] = useState("");
   const [placeholderCategory, setPlaceholderCategory] = useState<PlaceholderCategory | "all">("all");
+  const [fullscreenPreview, setFullscreenPreview] = useState(false);
 
   const bodyRef = useRef<SmartTextEditorHandle>(null);
   const insertIntoBody = useCallback(
@@ -130,16 +138,40 @@ export function PdfTemplateEditorClient({
             <span className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
               <FileText className="h-3 w-3 text-blue-500" /> PDF Preview
             </span>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handlePreview} 
-              disabled={previewLoading}
-              className="h-7 px-2 text-[10px] font-bold uppercase hover:bg-white transition-colors"
-            >
-              {previewLoading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Eye className="h-3 w-3 mr-1" />}
-              Refresh
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handlePreview} 
+                disabled={previewLoading}
+                className="h-7 w-7 hover:bg-white transition-colors"
+                title="Refresh Preview"
+              >
+                {previewLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Eye className="h-3 w-3" />}
+              </Button>
+              {previewHtml && (
+                <>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => setFullscreenPreview(true)} 
+                    className="h-7 w-7 hover:bg-white transition-colors"
+                    title="Fullscreen Mode"
+                  >
+                    <Maximize2 className="h-3 w-3" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => window.open(`/api/admin/content/templates/pdf-preview/${slug}`, '_blank')}
+                    className="h-7 w-7 hover:bg-white transition-colors"
+                    title="Open Full Page"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
           <div className="bg-[#f8fafc] min-h-[400px] max-h-[550px] overflow-y-auto custom-scrollbar p-4 flex justify-center items-start">
             {previewHtml ? (
@@ -211,6 +243,49 @@ export function PdfTemplateEditorClient({
           </div>
         </div>
       </div>
+
+      <Dialog open={fullscreenPreview} onOpenChange={setFullscreenPreview}>
+        <DialogContent className="max-w-[95vw] w-[95vw] h-[95vh] flex flex-col p-0 overflow-hidden bg-slate-100 border-none shadow-2xl">
+          <DialogHeader className="p-4 bg-white border-b border-slate-200 flex-row items-center justify-between space-y-0">
+            <DialogTitle className="text-sm font-bold flex items-center gap-2">
+              <FileText className="h-4 w-4 text-blue-500" />
+              Full Page Preview: {slug}
+            </DialogTitle>
+            <div className="flex items-center gap-2 pr-8">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => window.open(`/api/admin/content/templates/pdf-preview/${slug}`, '_blank')}
+                className="text-xs h-8"
+              >
+                <ExternalLink className="h-3.5 w-3.5 mr-2" />
+                Open Full Window
+              </Button>
+              <Button 
+                size="sm" 
+                onClick={() => window.open(`/api/admin/content/templates/pdf-preview/${slug}?print=true`, '_blank')}
+                className="text-xs h-8"
+              >
+                <Download className="h-3.5 w-3.5 mr-2" />
+                Download PDF
+              </Button>
+            </div>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto p-8 flex justify-center bg-slate-500/10 custom-scrollbar">
+            {previewHtml ? (
+              <div 
+                className="bg-white shadow-2xl border border-slate-200"
+                style={{ 
+                  width: "210mm", 
+                  minHeight: "297mm",
+                  padding: "0" // The template's internal padding should define this
+                }}
+                dangerouslySetInnerHTML={{ __html: previewHtml }}
+              />
+            ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
       
       <style jsx global>{`
         .custom-scrollbar::-webkit-scrollbar {

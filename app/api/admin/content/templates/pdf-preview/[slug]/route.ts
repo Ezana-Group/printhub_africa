@@ -84,6 +84,14 @@ export async function GET(
           }
         </style>
         <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+          window.onload = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('print')) {
+              window.print();
+            }
+          };
+        </script>
       </head>
       <body>
         <div class="a4-page prose prose-sm max-w-none">
