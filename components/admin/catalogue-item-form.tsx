@@ -128,7 +128,44 @@ export function CatalogueItemForm({ categories }: CatalogueItemFormProps) {
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="description">Description</Label>
+          <Button 
+            type="button" 
+            variant="ghost" 
+            size="sm" 
+            className="h-7 text-[10px] font-bold text-primary hover:bg-primary/5 gap-1.5"
+            onClick={async () => {
+              if (!name) {
+                setError("Please enter a name first to get AI suggestions.");
+                return;
+              }
+              setLoading(true);
+              try {
+                const res = await fetch("/api/admin/ai/n8n/generate", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ 
+                    action: "GENERATE_CATALOGUE_SUGGESTION", 
+                    name, 
+                    categoryId 
+                  }),
+                });
+                if (res.ok) {
+                  // This is a placeholder for a real n8n callback or polling
+                  // In a real app, you'd wait for n8n to push back or poll a status
+                  setError("AI suggestion request sent. For now, n8n will process this and update the record (requires saved item).");
+                }
+              } catch (e) {
+                setError("AI suggestion failed.");
+              } finally {
+                setLoading(false);
+              }
+            }}
+          >
+            Ask AI to fill
+          </Button>
+        </div>
         <div className="mt-1">
           <SmartTextEditor
             value={description}

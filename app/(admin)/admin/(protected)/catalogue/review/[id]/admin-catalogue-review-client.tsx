@@ -245,6 +245,23 @@ export function AdminCatalogueReviewClient({ importItem, categories }: AdminCata
                     Stop AI & Edit Manually
                   </Button>
                 </div>
+              ) : status === "idle" || status === "pending" ? (
+                <div className="py-12 flex flex-col items-center justify-center text-slate-500 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                  <Sparkles className="w-10 h-10 text-[#FF4D00]/40 mb-4" />
+                  <p className="font-medium text-slate-700">Ready for AI Enhancement</p>
+                  <p className="text-sm mt-1 mb-6 text-center max-w-[280px]">
+                    Let AI suggest a professional name, description, SEO tags, and pricing based on the source data.
+                  </p>
+                  <Button 
+                    className="bg-[#FF4D00] hover:bg-[#E64500] text-white shadow-lg shadow-[#FF4D00]/20 gap-2 px-6"
+                    onClick={handleRegenerate}
+                    disabled={isRefreshing}
+                  >
+                    {isRefreshing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    Generate AI Enhancement
+                  </Button>
+                  <p className="text-[10px] mt-4 text-slate-400">Or start typing below to edit manually</p>
+                </div>
               ) : (
                 <>
                   <div className="space-y-2">

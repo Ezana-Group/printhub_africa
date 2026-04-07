@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/admin-api-guard";
-import { CatalogueStatus } from "@prisma/client";
+import { CatalogueStatus, ProductType, ProductAvailability } from "@prisma/client";
 import { writeAudit } from "@/lib/audit";
 import { revalidatePath, revalidateTag } from "next/cache";
+import { generateUniqueProductSlug, generateNextProductSku } from "@/lib/product-utils";
 
 export async function POST(req: Request) {
   const auth = await requireAdminApi({ permission: "catalogue_review" });
@@ -18,21 +19,88 @@ export async function POST(req: Request) {
   }
 
   try {
+    let auditAction = "";
+    
+    // ACTION: APPROVE (Requires creating Product records)
+    if (action === "approve") {
+      const items = await prisma.catalogueItem.findMany({
+        where: { id: { in: ids }, status: { not: CatalogueStatus.LIVE } },
+        include: { photos: { orderBy: { sortOrder: "asc" } } }
+      });
+
+      let successCount = 0;
+      const errors: string[] = [];
+
+      for (const item of items) {
+        try {
+          await prisma.$transaction(async (tx) => {
+             // 1. Generate unique identifiers
+             const uniqueSlug = await generateUniqueProductSlug(item.slug || item.name.toLowerCase().replace(/ /g, "-"));
+             const uniqueSku = await generateNextProductSku(item.categoryId);
+             
+             // 2. Create the store Product
+             const product = await tx.product.create({
+               data: {
+                 name: item.name,
+                 slug: uniqueSlug,
+                 description: item.description,
+                 shortDescription: item.shortDescription,
+                 categoryId: item.categoryId,
+                 sku: uniqueSku,
+                 images: item.photos.map(p => p.url),
+                 basePrice: item.basePriceKes || 0,
+                 productType: ProductType.PRINT_ON_DEMAND,
+                 availability: ProductAvailability.IN_STOCK,
+                 isPOD: true,
+                 catalogueItemId: item.id,
+                 isActive: true,
+                 metaTitle: item.metaTitle,
+                 metaDescription: item.metaDescription,
+                 tags: item.tags,
+               }
+             });
+
+             // 3. Link back and update status
+             await tx.catalogueItem.update({
+               where: { id: item.id },
+               data: {
+                 status: CatalogueStatus.LIVE,
+                 approvedById: userId,
+                 approvedAt: new Date(),
+                 productId: product.id,
+                 rejectedById: null,
+                 rejectionReason: null,
+               }
+             });
+          });
+          successCount++;
+        } catch (err) {
+          console.error(`[BulkApprove] Failed for ${item.id}:`, err);
+          errors.push(`${item.name}: ${err instanceof Error ? err.message : "Database error"}`);
+        }
+      }
+
+      await writeAudit({
+        action: "CATALOGUE_BULK_APPROVE",
+        category: "CATALOGUE",
+        userId: userId,
+        details: `Bulk approve: ${successCount} successful, ${errors.length} failed.`,
+      });
+
+      revalidateTag("catalogue");
+      return NextResponse.json({ 
+        success: true, 
+        count: successCount, 
+        total: items.length,
+        errors: errors.length > 0 ? errors : undefined 
+      });
+    }
+
+    // OTHER ACTIONS (reject, archive, restore) - simple status updates
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let updateData: any = {};
-    let auditAction = "";
 
     switch (action) {
-      case "approve":
-        updateData = {
-          status: CatalogueStatus.LIVE,
-          approvedById: userId,
-          approvedAt: new Date(),
-          rejectedById: null,
-          rejectionReason: null,
-        };
-        auditAction = "CATALOGUE_BULK_APPROVE";
-        break;
       case "reject":
         updateData = {
           status: CatalogueStatus.DRAFT,
@@ -80,7 +148,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, count });
   } catch (error) {
-    console.error("[APPROVAL_QUEUE_BULK]", error);
+    console.error("[APPROVAL_QUEUE_BULK_GLOBAL_FAIL]", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

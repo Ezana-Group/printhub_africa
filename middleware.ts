@@ -3,8 +3,24 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
-  // --- CORS/Preflight Bypass ---
+  // --- CORS/Preflight Handling ---
   if (request.method === "OPTIONS") {
+    const origin = request.headers.get("origin");
+    const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL;
+    
+    // If the origin is authorized, return a proper preflight response
+    if (origin && (origin === adminUrl || origin.endsWith(".printhub.africa") || (origin.includes("localhost") && process.env.NODE_ENV !== "production"))) {
+      return new NextResponse(null, {
+        status: 204,
+        headers: {
+          "Access-Control-Allow-Origin": origin,
+          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization, x-printhub-signature, x-printhub-timestamp, x-api-key",
+          "Access-Control-Allow-Credentials": "true",
+          "Access-Control-Max-Age": "86400",
+        },
+      });
+    }
     return NextResponse.next();
   }
 

@@ -10,7 +10,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { action, productId, quoteId } = await req.json();
+    const reqBody = await req.json();
+    const { action, productId, quoteId, name, categoryId } = reqBody;
 
     if (!action) {
       return NextResponse.json({ error: "Action is required" }, { status: 400 });
@@ -45,6 +46,11 @@ export async function POST(req: NextRequest) {
       case "GENERATE_QUOTE_DRAFT":
         n8nPath = "ai-generate-quotedraft";
         payload.quoteId = quoteId;
+        break;
+      case "GENERATE_CATALOGUE_SUGGESTION":
+        n8nPath = "generate-catalogue-item-suggestion";
+        payload.name = name;
+        payload.categoryId = categoryId;
         break;
       default:
         return NextResponse.json({ error: "Invalid action" }, { status: 400 });

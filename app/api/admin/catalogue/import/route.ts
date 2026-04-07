@@ -101,7 +101,8 @@ export async function POST(req: Request) {
           },
         });
 
-        // 3. Trigger n8n enhancement workflow
+        /* 
+        // 3. Trigger n8n enhancement workflow (DISABLED: Use manual trigger on Review Page)
         await n8n.catalogueImportEnhance({
           importId: importQueue.id,
           sourceUrl: importUrl,
@@ -114,6 +115,12 @@ export async function POST(req: Request) {
           licenseType: scrapedData.licenseType,
           downloadCount: scrapedData.downloadCount,
           likeCount: scrapedData.likeCount
+        });
+        */
+        
+        await prisma.catalogueImportQueue.update({
+          where: { id: importQueue.id },
+          data: { aiEnhancementStatus: "idle" }
         });
         
         console.log(`[Import] Background process completed for: ${importQueue.id}`);

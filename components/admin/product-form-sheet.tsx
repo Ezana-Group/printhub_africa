@@ -259,14 +259,16 @@ export function ProductFormSheet({
         const data = await res.json();
         if (!res.ok) throw new Error(data.error?.slug?.[0] ?? data.error ?? "Create failed");
         
-        // AUTO-VISION TRIGGER: If creating a new product with images, trigger AI immediately
+        // AUTO-VISION TRIGGER: DISABLED (per user request for manual-first flow)
+        /*
         if (images && images.length > 0) {
           setIsAnalyzing(true);
-          // We don't await this so the UI can finish the submission flow
           handleAiGenerate("GENERATE_DESCRIPTION", data.product?.id);
         } else {
           onSuccess();
         }
+        */
+        onSuccess();
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -318,13 +320,20 @@ export function ProductFormSheet({
         if (statusRes.ok) {
           const statusData = await statusRes.json();
           if (statusData.complete) {
-            // Update fields based on what was generated
-            if (statusData.description) setDescription(statusData.description);
-            if (statusData.shortDescription) setShortDescription(statusData.shortDescription);
-            if (statusData.metaTitle) setMetaTitle(statusData.metaTitle);
-            if (statusData.metaDescription) setMetaDescription(statusData.metaDescription);
+            // Update fields based on what was generated, only if empty or user confirms
+            const updateIfEmptyOrConfirmed = (val: string, setter: (v: string) => void, current: string, label: string) => {
+              if (!val) return;
+              if (!current.trim() || confirm(`AI has generated a new ${label}. Overwrite existing?`)) {
+                setter(val);
+              }
+            };
+
+            updateIfEmptyOrConfirmed(statusData.description, setDescription, description, "description");
+            updateIfEmptyOrConfirmed(statusData.shortDescription, setShortDescription, shortDescription, "short description");
+            updateIfEmptyOrConfirmed(statusData.metaTitle, setMetaTitle, metaTitle, "SEO title");
+            updateIfEmptyOrConfirmed(statusData.metaDescription, setMetaDescription, metaDescription, "SEO description");
             
-            toast.success("AI Content Generated!");
+            toast.success("AI Content Suggested!");
             break;
           }
         }
@@ -609,22 +618,22 @@ export function ProductFormSheet({
                      <Button 
                        type="button" 
                        variant="outline" 
-                       className="gap-2 bg-white" 
+                       className="gap-2 bg-white border-primary/20 hover:bg-primary/5 text-primary" 
                        onClick={() => handleAiGenerate("GENERATE_DESCRIPTION")}
                        disabled={aiGenerating === "GENERATE_DESCRIPTION" || !isEdit}
                      >
-                       {aiGenerating === "GENERATE_DESCRIPTION" ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <Sparkles className="h-4 w-4 text-primary" />}
-                       AI Description
+                       {aiGenerating === "GENERATE_DESCRIPTION" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                       Auto-Draft All
                      </Button>
                      <Button 
                        type="button" 
                        variant="outline" 
-                       className="gap-2 bg-white" 
+                       className="gap-2 bg-white border-indigo-200 hover:bg-indigo-50 text-indigo-600" 
                        onClick={() => handleAiGenerate("GENERATE_AD_COPY")}
                        disabled={aiGenerating === "GENERATE_AD_COPY" || !isEdit}
                      >
-                        {aiGenerating === "GENERATE_AD_COPY" ? <Loader2 className="h-4 w-4 animate-spin text-indigo-500" /> : <Zap className="h-4 w-4 text-indigo-500" />}
-                        AI Ad Copy
+                        {aiGenerating === "GENERATE_AD_COPY" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+                        Social Ad Copy
                      </Button>
                   </div>
                   {!isEdit && <p className="text-[10px] text-amber-600 font-medium italic">Save the product first to enable AI generation.</p>}
