@@ -311,7 +311,7 @@ export function ProductFormSheet({
 
       // POLL FOR RESULT
       let attempts = 0;
-      const maxAttempts = 20; // 40 seconds max
+      const maxAttempts = 30; // 60 seconds max
       while (attempts < maxAttempts) {
         attempts++;
         await new Promise(r => setTimeout(r, 2000));
@@ -323,15 +323,28 @@ export function ProductFormSheet({
             // Update fields based on what was generated, only if empty or user confirms
             const updateIfEmptyOrConfirmed = (val: string, setter: (v: string) => void, current: string, label: string) => {
               if (!val) return;
-              if (!current.trim() || confirm(`AI has generated a new ${label}. Overwrite existing?`)) {
-                setter(val);
+              const cleanVal = val.trim();
+              const cleanCurrent = (current || "").trim();
+              
+              if (!cleanCurrent) {
+                setter(cleanVal);
+              } else if (cleanVal !== cleanCurrent) {
+                if (confirm(`AI has generated a new ${label}. Overwrite your current content?`)) {
+                  setter(cleanVal);
+                }
               }
             };
 
-            updateIfEmptyOrConfirmed(statusData.description, setDescription, description, "description");
-            updateIfEmptyOrConfirmed(statusData.shortDescription, setShortDescription, shortDescription, "short description");
-            updateIfEmptyOrConfirmed(statusData.metaTitle, setMetaTitle, metaTitle, "SEO title");
-            updateIfEmptyOrConfirmed(statusData.metaDescription, setMetaDescription, metaDescription, "SEO description");
+            // If we specifically requested SEO, we mainly care about titles/desc
+            if (action === "GENERATE_SEO") {
+              updateIfEmptyOrConfirmed(statusData.metaTitle, setMetaTitle, metaTitle, "SEO title");
+              updateIfEmptyOrConfirmed(statusData.metaDescription, setMetaDescription, metaDescription, "SEO description");
+            } else {
+              updateIfEmptyOrConfirmed(statusData.description, setDescription, description, "description");
+              updateIfEmptyOrConfirmed(statusData.shortDescription, setShortDescription, shortDescription, "short description");
+              updateIfEmptyOrConfirmed(statusData.metaTitle, setMetaTitle, metaTitle, "SEO title");
+              updateIfEmptyOrConfirmed(statusData.metaDescription, setMetaDescription, metaDescription, "SEO description");
+            }
             
             toast.success("AI Content Suggested!");
             break;

@@ -41,9 +41,10 @@ export async function POST(req: NextRequest) {
         payload.fieldOnly = "short_description";
         break;
       case "GENERATE_SEO":
-        n8nPath = "generate-seo-content";
+        // Map SEO to the main description workflow as AI-4 handles both
+        n8nPath = "generate-product-description";
         payload.productId = productId;
-        payload.target = "product";
+        payload.target = "seo"; 
         break;
       case "GENERATE_AD_COPY":
         n8nPath = "generate-ad-copy";

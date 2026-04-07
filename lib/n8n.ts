@@ -108,7 +108,7 @@ export const n8n = {
     triggerN8nWorkflow('corporate-application', payload),
 
   catalogueImportEnhance: (payload: CatalogueImportPayload) =>
-    triggerN8nWorkflow('enhance-catalogue-import', payload),
+    triggerN8nWorkflow('enhance-catalogue-import-v1', payload),
 
   deliveryStatusChanged: (payload: DeliveryStatusPayload) =>
     triggerN8nWorkflow('delivery-status-changed', payload),
