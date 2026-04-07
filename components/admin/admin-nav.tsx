@@ -160,12 +160,13 @@ export function AdminNav({
             <div className="space-y-0.5">
               {items.map((item) => {
                 const basePath = item.href.split("?")[0];
-                const isActive =
+                const isActive = pathname ? (
                   pathname === basePath ||
                   (basePath !== "/admin/dashboard" && 
                    basePath !== "/admin/catalogue" && 
                    basePath !== "/admin/marketing" &&
-                   pathname.startsWith(basePath + "/"));
+                   pathname.startsWith(basePath + "/"))
+                ) : false;
                 const showQuotesBadge = item.badge === "quotes" && newQuotesCount > 0;
                 const showApprovalBadge = item.badge === "approval" && pendingApprovalCount > 0;
                 const isExternal = item.href.startsWith("/api/admin/n8n");

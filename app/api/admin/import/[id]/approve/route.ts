@@ -59,28 +59,41 @@ export async function POST(
     }
 
     // 2. Create Product
-    const slug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    // Check slug uniqueness
-    let finalSlug = slug;
-    const existingProduct = await prisma.product.findUnique({ where: { slug: finalSlug } });
-    if (existingProduct) {
-      finalSlug = `${slug}-${Math.floor(Math.random() * 1000)}`;
+    const baseSlug = (data.name || "product").toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+    
+    // Auto-generate unique slug
+    let finalSlug = baseSlug || "imported-product";
+    let slugExists = await prisma.product.findUnique({ where: { slug: finalSlug } });
+    let counter = 1;
+    while (slugExists) {
+      finalSlug = `${baseSlug}-${counter++}`;
+      slugExists = await prisma.product.findUnique({ where: { slug: finalSlug } });
     }
+
+    // Auto-generate SKU
+    const { generateNextProductSku } = await import("@/lib/product-utils");
+    const sku = await generateNextProductSku(categoryId);
 
     const product = await prisma.product.create({
       data: {
         name: data.name,
         slug: finalSlug,
+        sku: sku,
         description: data.fullDescription || data.description,
         shortDescription: data.shortDescription,
         categoryId: categoryId,
         productType: "READYMADE_3D",
-        images: data.imageUrls,
+        images: data.imageUrls || [],
         basePrice: data.suggestedPriceMin || data.basePrice || 0,
         comparePrice: data.suggestedPriceMax || data.comparePrice || null,
         stock: 0,
-        isActive: true, // Show in shop immediately upon approval
-        tags: data.tags,
+        isActive: true,
+        tags: data.tags || [],
+        lastGoogleSync: null,
+        lastMetaSync: null,
+        lastTiktokSync: null,
       }
     });
 

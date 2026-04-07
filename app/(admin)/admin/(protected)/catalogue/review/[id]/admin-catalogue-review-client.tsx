@@ -125,17 +125,26 @@ export function AdminCatalogueReviewClient({ importItem, categories }: AdminCata
         body: JSON.stringify({
           ...formData,
           imageUrls: importItem.scrapedImageUrls,
-          // Add any other required fields for approve-route
         })
       });
+
       if (res.ok) {
         toast.success("Product approved and created successfully!");
         router.push("/admin/catalogue");
+        router.refresh();
       } else {
-        const err = await res.json();
-        toast.error(`Approval failed: ${err.detail || err.error}`);
+        // Handle non-JSON or malformed error responses
+        let errorMessage = "Approval failed";
+        try {
+          const err = await res.json();
+          errorMessage = err.detail || err.error || errorMessage;
+        } catch (e) {
+          console.error("Failed to parse error response:", e);
+        }
+        toast.error(`Approval failed: ${errorMessage}`);
       }
     } catch (e) {
+      console.error("Approval request failed:", e);
       toast.error("An error occurred during approval");
     } finally {
       setIsApproving(false);
