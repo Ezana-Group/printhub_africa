@@ -36,8 +36,8 @@ export async function middleware(request: NextRequest) {
   const ADMIN_COOKIE = isProduction ? "__Secure-printhub.admin.session" : "printhub.admin.session";
   const CUSTOMER_COOKIE = isProduction ? "__Secure-printhub.customer.session" : "printhub.customer.session";
 
-  // Rule: Pass through webhooks and payment callbacks
-  if (pathname.startsWith('/api/webhooks') || pathname.startsWith('/api/payments/callback')) {
+  // Rule: Pass through webhooks, payment callbacks and n8n API routes
+  if (pathname.startsWith('/api/webhooks') || pathname.startsWith('/api/payments/callback') || pathname.startsWith('/api/n8n')) {
     return NextResponse.next();
   }
 

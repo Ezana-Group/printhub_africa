@@ -8,8 +8,25 @@ export async function verifyN8nWebhook(req: Request): Promise<boolean> {
   const signature = req.headers.get('x-printhub-signature')
   const timestamp = req.headers.get('x-printhub-timestamp')
   
-  if (!signature || !timestamp) {
-    console.error('[n8n-verify] Missing signature or timestamp')
+  if (!signature) {
+    console.error('[n8n-verify] Missing x-printhub-signature header')
+    return false
+  }
+
+  const secret = process.env.N8N_WEBHOOK_SECRET
+  if (!secret) {
+    console.error('[n8n-verify] N8N_WEBHOOK_SECRET not set')
+    return false
+  }
+
+  // Fallback: Simple secret comparison if timestamp is missing or for basic nodes
+  if (!timestamp && signature === secret) {
+    console.warn('[n8n-verify] Using simple secret fallback (no timestamp)')
+    return true
+  }
+
+  if (!timestamp) {
+    console.error('[n8n-verify] Missing timestamp for HMAC verification')
     return false
   }
   
@@ -21,12 +38,6 @@ export async function verifyN8nWebhook(req: Request): Promise<boolean> {
     return false
   }
   
-  const secret = process.env.N8N_WEBHOOK_SECRET
-  if (!secret) {
-    console.error('[n8n-verify] N8N_WEBHOOK_SECRET not set')
-    return false
-  }
-
   // Clone the request to read body without consuming it for the actual handler
   const clonedReq = req.clone()
   const body = await clonedReq.text()
@@ -36,16 +47,22 @@ export async function verifyN8nWebhook(req: Request): Promise<boolean> {
     .update(body)
     .digest('hex')
     
-  const isValid = crypto.timingSafeEqual(
+  // Check if it's a valid HMAC
+  const isHmacValid = crypto.timingSafeEqual(
     Buffer.from(signature),
     Buffer.from(expectedSignature)
   )
 
-  if (!isValid) {
-    console.error('[n8n-verify] Signature mismatch')
+  if (isHmacValid) return true
+
+  // Final fallback: even if timestamp exists, if signature matches secret exactly, allow it (legacy)
+  if (signature === secret) {
+    console.warn('[n8n-verify] Signature matches static secret (HMAC failed)')
+    return true
   }
 
-  return isValid
+  console.error('[n8n-verify] Signature mismatch')
+  return false
 }
 
 /**
