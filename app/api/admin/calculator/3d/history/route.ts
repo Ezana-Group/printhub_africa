@@ -137,3 +137,38 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Failed to save" }, { status: 500 });
   }
 }
+
+export async function DELETE(req: Request) {
+  const session = await getServerSession(authOptionsAdmin);
+  const role = (session?.user as { role?: string })?.role;
+  if (!session?.user || !role || !ADMIN_ROLES.includes(role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    if (!id) {
+      return NextResponse.json({ error: "ID required" }, { status: 400 });
+    }
+
+    const config = await prisma.pricingConfig.findUnique({
+      where: { key: HISTORY_KEY },
+    });
+    if (!config?.valueJson) {
+      return NextResponse.json({ error: "No history found" }, { status: 404 });
+    }
+
+    const list: HistoryEntry[] = JSON.parse(config.valueJson);
+    const updated = list.filter((e) => e.id !== id);
+    
+    await prisma.pricingConfig.update({
+      where: { key: HISTORY_KEY },
+      data: { valueJson: JSON.stringify(updated) },
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    console.error("3D history DELETE error:", e);
+    return NextResponse.json({ error: "Failed to delete" }, { status: 500 });
+  }
+}

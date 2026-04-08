@@ -19,7 +19,7 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type MaterialWithColors = { code: string; name: string; color?: string; baseMaterial?: string; quantity?: number };
-import { Calculator, History, FileText, Plus, Trash2, Box } from "lucide-react";
+import { Calculator, History, FileText, Plus, Trash2, Box, RotateCcw } from "lucide-react";
 import { setQuoteDraft } from "@/lib/quote-draft";
 import { computeMultiPart3DEstimate } from "@/hooks/useCalculatorConfig";
 
@@ -36,6 +36,7 @@ type HistoryEntry = {
     printTimeHours: number;
     quantity: number;
     postProcessing: boolean;
+    postProcessingTimeHoursOverride?: number;
     productionCost: number;
     sellingPrice: number;
   }>;
@@ -303,6 +304,43 @@ export function AdminPrintCalculator() {
         e.parts?.some(p => p.materialCode.toLowerCase().includes(q))
     );
   }, [history, historyFilter]);
+
+  const handleDeleteHistory = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this calculation from history?")) return;
+    try {
+      const res = await fetch(`/api/admin/calculator/3d/history?id=${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        fetchHistory();
+      }
+    } catch (err) {
+      console.error("Delete history error:", err);
+    }
+  };
+
+  const handleLoadFromHistory = (entry: HistoryEntry) => {
+    setJobName(entry.jobName);
+    setMarginOverride(entry.marginPercent === config?.profitMargin ? "" : entry.marginPercent);
+    
+    const loadedParts = (entry.parts || []).map(p => {
+      const selectedFilament = config?.filaments?.find((f) => f.id === p.materialCode);
+      return {
+        name: p.name,
+        material: p.materialCode,
+        materialName: selectedFilament?.name || p.materialCode,
+        costPerKg: selectedFilament?.costPerKg || 0,
+        weightGrams: p.weightGrams,
+        printTimeHours: p.printTimeHours,
+        postProcessing: p.postProcessing,
+        postProcessingTimeHoursOverride: p.postProcessingTimeHoursOverride,
+        quantity: p.quantity,
+      };
+    });
+    
+    setParts(loadedParts);
+    setTab("calculator");
+  };
 
   if (configLoading || !config) {
     return (
@@ -784,12 +822,13 @@ export function AdminPrintCalculator() {
                       <th className="text-right p-2 font-medium">Cost</th>
                       <th className="text-right p-2 font-medium">Selling</th>
                       <th className="text-right p-2 font-medium">Margin %</th>
+                      <th className="text-right p-2 font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredHistory.map((e) => (
                       <tr key={e.id} className="border-b hover:bg-muted/50">
-                        <td className="p-2 text-muted-foreground">
+                        <td className="p-2 text-muted-foreground whitespace-nowrap">
                           {new Date(e.createdAt).toLocaleDateString()}
                         </td>
                         <td className="p-2">
@@ -807,6 +846,28 @@ export function AdminPrintCalculator() {
                           {Math.round(e.totalSellingPrice || 0).toLocaleString()}
                         </td>
                         <td className="p-2 text-right">{e.marginPercent}%</td>
+                        <td className="p-2 text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+                              title="Load as draft (edit)"
+                              onClick={() => handleLoadFromHistory(e)}
+                            >
+                              <RotateCcw className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              title="Delete history"
+                              onClick={() => handleDeleteHistory(e.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
