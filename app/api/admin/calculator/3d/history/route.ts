@@ -18,6 +18,7 @@ type HistoryEntry = {
     printTimeHours: number;
     quantity: number;
     postProcessing: boolean;
+    postProcessingTimeHoursOverride?: number;
     productionCost: number;
     sellingPrice: number;
   }>;
@@ -62,6 +63,7 @@ export async function GET(req: Request) {
             printTimeHours: e.printTimeHours || 0,
             quantity: e.quantity || 1,
             postProcessing: !!e.postProcessing,
+            postProcessingTimeHoursOverride: e.postProcessingTimeHoursOverride,
             productionCost: e.productionCost || 0,
             sellingPrice: e.sellingPrice || 0,
           }],
