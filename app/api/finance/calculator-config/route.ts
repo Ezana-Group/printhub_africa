@@ -15,8 +15,7 @@ const DEFAULT_MONTHLY_CAPACITY_HRS = 208; // 26 * 8
  */
 export async function GET() {
   try {
-    const [business, filaments, supportRemovalAddons, finishingAddons] = await Promise.all([
-      prisma.lFBusinessSettings.findFirst(),
+    const [filaments, supportRemovalAddons, finishingAddons] = await Promise.all([
       prisma.threeDConsumable.findMany({
         where: { kind: "FILAMENT", costPerKgKes: { not: null } },
         orderBy: [{ name: "asc" }, { specification: "asc" }],
@@ -24,6 +23,13 @@ export async function GET() {
       prisma.threeDAddon.findMany({ where: { category: "SUPPORT_REMOVAL", isActive: true } }),
       prisma.threeDAddon.findMany({ where: { category: "FINISHING", isActive: true } }),
     ]);
+
+    let business: any = null;
+    try {
+      business = await prisma.lFBusinessSettings.findFirst();
+    } catch (dbErr) {
+      console.warn("Could not fetch lFBusinessSettings (maybe column mismatch?):", dbErr);
+    }
 
     const labourRate = business?.labourRateKesPerHour ?? DEFAULT_LABOUR_RATE;
     const profitMargin = business?.defaultProfitMarginPct ?? DEFAULT_PROFIT_MARGIN;
