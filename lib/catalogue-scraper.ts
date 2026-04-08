@@ -103,11 +103,15 @@ async function scrapePrintables(url: string, data: ScrapedModelData): Promise<Sc
         const json = await res.json();
         const model = json.data?.print;
         if (model) {
-          // Ensure absolute image URLs
+          // Resolve images to their CDN URLs
           const imageUrls = (model.images || [])
             .map((img: any) => img.filePath)
             .filter(Boolean)
-            .map((path: string) => path.startsWith('http') ? path : `https://media.printables.com/${path}`);
+            .map((path: string) => {
+              if (path.startsWith('http')) return path;
+              // Some images use different subfolders; let's handle the common one
+              return `https://media.printables.com/${path}`;
+            });
 
           return {
             ...data,
@@ -154,7 +158,18 @@ async function scrapeThingiverse(url: string, data: ScrapedModelData): Promise<S
           originalDescription: thing.description,
           originalTags: thing.tags?.map((t: any) => t.name) || [],
           originalCategory: thing.category?.name || thing.category,
-          imageUrls: images.map((img: any) => img.sizes?.find((s: any) => s.type === "display" && s.size === "large")?.url || img.url).filter(Boolean),
+          imageUrls: images.map((img: any) => {
+            const sizes = img.sizes || [];
+            // Try different sizes, prioritizing 'large' display
+            const bestSize = 
+              sizes.find((s: any) => s.type === "display" && s.size === "large")?.url ||
+              sizes.find((s: any) => s.type === "display" && s.size === "medium")?.url ||
+              sizes.find((s: any) => s.type === "display" && s.size === "standard")?.url ||
+              img.url;
+            
+            if (!bestSize) return null;
+            return bestSize.startsWith("//") ? `https:${bestSize}` : bestSize;
+          }).filter(Boolean),
           designerName: thing.creator?.name,
           licenseType: thing.license,
           likeCount: thing.like_count,
@@ -170,7 +185,6 @@ async function scrapeThingiverse(url: string, data: ScrapedModelData): Promise<S
 }
 
 async function scrapeMyMiniFactory(url: string, data: ScrapedModelData): Promise<ScrapedModelData> {
-  // Regex for /object/8600 or /object/name-8600
   const objectId = url.match(/\/object\/(\d+)/)?.[1] || url.match(/-(\d+)$/)?.[1] || url.match(/\/(\d+)/)?.[1];
   
   if (objectId) {
@@ -190,7 +204,10 @@ async function scrapeMyMiniFactory(url: string, data: ScrapedModelData): Promise
           originalDescription: item.description,
           originalTags: item.tags || [],
           originalCategory: item.category,
-          imageUrls: (item.images || []).map((img: any) => img.original?.url || img.url) || [],
+          imageUrls: (item.images || []).map((img: any) => {
+            const url = img.original?.url || img.url;
+            return url?.startsWith("//") ? `https:${url}` : url;
+          }).filter(Boolean),
           designerName: item.designer?.name,
           licenseType: item.licence?.name,
           likeCount: item.likes_count,
@@ -206,20 +223,21 @@ async function scrapeMyMiniFactory(url: string, data: ScrapedModelData): Promise
 }
 
 async function scrapeCults3d(url: string, data: ScrapedModelData): Promise<ScrapedModelData> {
-  // Cults3D is mostly HTML/JSON-LD
+  // Cults3D is heavily protected but meta tags usually work in fallback
   return await scrapeUnknown(url, data);
 }
 
 async function scrapeMakerWorld(url: string, data: ScrapedModelData): Promise<ScrapedModelData> {
-  // MakerWorld uses a mix of static SSR and dynamic data. 
-  // We'll use a robust HTML fallback with JSON-LD extraction.
   try {
     const scraped = await scrapeUnknown(url, data);
     
-    // MakerWorld specific cleanup
-    if (scraped.originalName?.includes(" | MakerWorld")) {
-      scraped.originalName = scraped.originalName.replace(" | MakerWorld", "").trim();
+    // MakerWorld specific refinements
+    if (scraped.originalName?.includes(" - MakerWorld")) {
+      scraped.originalName = scraped.originalName.split(" - MakerWorld")[0].trim();
     }
+    
+    // Additional MakerWorld image resolution (often in JSON-LD or og:image)
+    // The scrapeUnknown will handle the JSON-LD Product image already.
     
     return scraped;
   } catch (e) {
@@ -235,7 +253,7 @@ async function scrapeUnknown(url: string, data: ScrapedModelData): Promise<Scrap
     const res = await fetch(url, { 
       headers: { 
         "User-Agent": USER_AGENT,
-        "Referer": "https://www.google.com/" // Use a neutral referer for generic scraping
+        "Referer": "https://www.google.com/"
       } 
     });
     if (!res.ok) return data;
@@ -243,16 +261,17 @@ async function scrapeUnknown(url: string, data: ScrapedModelData): Promise<Scrap
     const html = await res.text();
     const $ = load(html);
     
-    // 1. Domain Specific Extraction
-    if (url.includes("myminifactory.com")) {
+    // 1. Domain Specific Extraction (CSS Selectors)
+    if (url.includes("cults3d.com")) {
       data.originalName = $("h1").first().text().trim();
-      data.originalDescription = $(".description").text().trim() || $(".object-description").text().trim();
-    } else if (url.includes("cults3d.com")) {
+      data.originalDescription = $(".field-name-body").text().trim() || $(".product-description").text().trim();
+      data.designerName = $(".designer-link").text().trim();
+    } else if (url.includes("makerworld.com")) {
       data.originalName = $("h1").first().text().trim();
-      data.originalDescription = $(".field-name-body").text().trim();
+      data.originalDescription = $(".description-text").text().trim() || $(".description").text().trim();
     }
 
-    // 2. Generic Metadata Extraction (favors domain-specific if filled)
+    // 2. Generic Metadata
     const title = $('meta[property="og:title"]').attr('content') || 
                   $('meta[name="title"]').attr('content') || 
                   $("title").text();
@@ -263,37 +282,67 @@ async function scrapeUnknown(url: string, data: ScrapedModelData): Promise<Scrap
     if (!data.originalName) data.originalName = decodeHtml(title || null);
     if (!data.originalDescription) data.originalDescription = decodeHtml(description || null);
 
-    // 3. Image Extraction
+    // 3. Robust Image Extraction
     const images: string[] = [];
+    
+    // OG Image
     $('meta[property="og:image"]').each((_, el) => {
       const src = $(el).attr('content');
-      if (src) {
-        try {
-          images.push(new URL(src, url).href);
-        } catch {
-          images.push(src);
-        }
-      };
+      if (src) images.push(src);
     });
     
-    // JSON-LD fallback for images
+    // Twitter Image
+    $('meta[name="twitter:image"]').each((_, el) => {
+      const src = $(el).attr('content');
+      if (src) images.push(src);
+    });
+
+    // JSON-LD Extraction (Unified)
     $('script[type="application/ld+json"]').each((_, el) => {
       try {
         const json = JSON.parse($(el).html() || "{}");
-        if (json.image) {
-          const rawImages = Array.isArray(json.image) ? json.image : [json.image];
-          for (const img of rawImages) {
-            try {
-              images.push(new URL(img, url).href);
-            } catch {
-              images.push(img);
-            }
+        const processJson = (item: any) => {
+          if (!item) return;
+          
+          // Image Extraction from JSON-LD
+          if (item.image) {
+            const raw = Array.isArray(item.image) ? item.image : [item.image];
+            raw.forEach((img: any) => {
+              if (typeof img === 'string') images.push(img);
+              else if (img.url) images.push(img.url);
+            });
           }
-        }
+          
+          // If Product, pull more data
+          if (item["@type"] === "Product" || item.id?.includes("Product")) {
+            if (!data.originalName) data.originalName = item.name;
+            if (!data.originalDescription) data.originalDescription = item.description;
+            if (item.brand?.name) data.designerName = item.brand.name;
+          }
+        };
+
+        if (Array.isArray(json)) json.forEach(processJson);
+        else processJson(json);
       } catch {}
     });
 
-    data.imageUrls = [...new Set([...(data.imageUrls || []), ...images])].filter(Boolean);
+    // Clean up and resolve all images
+    const resolvedImages = images.map(src => {
+      try {
+        const fullUrl = new URL(src, url).href;
+        // Clean up common tracking/resize params if needed, but keep core R2 logic safe
+        return fullUrl;
+      } catch {
+        return src;
+      }
+    }).filter(src => {
+      if (!src) return false;
+      // Filter out obvious low-res icons/logos
+      const lowRes = ["favicon", "logo", "icon", "placeholder"].some(p => src.toLowerCase().includes(p));
+      return !lowRes;
+    });
+
+    data.imageUrls = [...new Set([...(data.imageUrls || []), ...resolvedImages])].filter(Boolean);
 
     return data;
   } catch (e) {
@@ -310,5 +359,6 @@ function decodeHtml(html: string | null): string | null {
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'");
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, " ");
 }

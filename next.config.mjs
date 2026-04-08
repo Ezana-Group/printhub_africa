@@ -61,6 +61,46 @@ const nextConfig = {
         hostname: "*.cloudflare.com",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "cdn.thingiverse.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "media.printables.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "cdn.myminifactory.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "files.cults3d.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.cults3d.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.makerworld.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.makerworld.com.cn",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.bambulab.com",
+        pathname: "/**",
+      },
     ],
   },
   compress: true,

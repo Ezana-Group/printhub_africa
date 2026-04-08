@@ -71,21 +71,77 @@ export async function POST(
     // Auto-generate SKU
     const sku = await generateNextProductSku(categoryId);
 
+    // 1.5 Ensure all images are re-hosted on R2 (Safety check)
+    const { downloadAndUploadImage } = await import("@/lib/import-utils");
+    const { PUBLIC_CDN_URL } = await import("@/lib/r2");
+    const finalImages: string[] = [];
+    const imageUrlsToProcess = data.imageUrls || [];
+
+    for (const imgUrl of imageUrlsToProcess) {
+      // If it's already on our CDN, skip re-hosting
+      if (PUBLIC_CDN_URL && imgUrl.startsWith(PUBLIC_CDN_URL)) {
+        finalImages.push(imgUrl);
+      } else {
+        try {
+          const newUrl = await downloadAndUploadImage(imgUrl);
+          finalImages.push(newUrl || imgUrl);
+        } catch (err) {
+          console.error(`[Approve] Image re-host fail for ${imgUrl}:`, err);
+          finalImages.push(imgUrl);
+        }
+      }
+    }
+
     const product = await prisma.product.create({
       data: {
         name: data.name,
-        slug: finalSlug,
+        slug: data.slug || finalSlug,
         sku: sku,
-        description: data.fullDescription || data.description,
+        description: data.description || data.fullDescription,
         shortDescription: data.shortDescription,
         categoryId: categoryId,
-        productType: "READYMADE_3D",
-        images: data.imageUrls || [],
-        basePrice: data.suggestedPriceMin || data.basePrice || 0,
-        comparePrice: data.suggestedPriceMax || data.comparePrice || null,
-        stock: 0,
-        isActive: true,
+        productType: data.productType || "READYMADE_3D",
+        images: finalImages,
+        basePrice: data.basePrice || data.suggestedPriceMin || 0,
+        comparePrice: data.comparePrice || data.suggestedPriceMax || null,
+        stock: parseInt(data.stock) || 0,
+        isActive: data.isActive !== undefined ? data.isActive : true,
+        isFeatured: data.isFeatured || false,
+        isPOD: data.isPOD || false,
+        metaTitle: data.metaTitle || data.seoTitle || null,
+        metaDescription: data.metaDescription || null,
         tags: data.tags || [],
+        keyFeatures: data.keyFeatures || [],
+        featuredThisWeek: data.featuredThisWeek || false,
+        
+        // Marketing Distribution Switches
+        exportToGoogle: data.exportToGoogle ?? true,
+        exportToGoogleBiz: data.exportToGoogleBiz ?? true,
+        exportToLinkedIn: data.exportToLinkedIn ?? false,
+        exportToMeta: data.exportToMeta ?? true,
+        exportToPinterest: data.exportToPinterest ?? false,
+        exportToTiktok: data.exportToTiktok ?? true,
+        exportToX: data.exportToX ?? false,
+        exportToGoogleDiscover: data.exportToGoogleDiscover ?? false,
+        exportToInstagramReels: data.exportToInstagramReels ?? false,
+        exportToInstagramStories: data.exportToInstagramStories ?? false,
+        exportToJiji: data.exportToJiji ?? false,
+        exportToTelegram: data.exportToTelegram ?? false,
+        exportToWhatsappChannel: data.exportToWhatsappChannel ?? false,
+        exportToWhatsappStatus: data.exportToWhatsappStatus ?? false,
+        exportToYoutubeShorts: data.exportToYoutubeShorts ?? false,
+        exportToAppleMaps: data.exportToAppleMaps ?? false,
+        exportToBingPlaces: data.exportToBingPlaces ?? false,
+        exportToGoogleMapsPost: data.exportToGoogleMapsPost ?? true,
+        exportToLinkedInNewsletter: data.exportToLinkedInNewsletter ?? false,
+        exportToMedium: data.exportToMedium ?? false,
+        exportToNextdoor: data.exportToNextdoor ?? false,
+        exportToOlxKenya: data.exportToOlxKenya ?? false,
+        exportToPigiaMe: data.exportToPigiaMe ?? false,
+        exportToReddit: data.exportToReddit ?? false,
+        exportToSnapchat: data.exportToSnapchat ?? false,
+        exportToYoutube: data.exportToYoutube ?? false,
+
         lastGoogleSync: null,
         lastMetaSync: null,
         lastTiktokSync: null,

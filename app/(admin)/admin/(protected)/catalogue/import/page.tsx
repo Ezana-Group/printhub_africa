@@ -23,6 +23,21 @@ export default function ImportDashboard() {
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">3D Model Import System</h1>
+        <button 
+          onClick={async () => {
+            const res = await fetch("/api/admin/catalogue/import", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ url: "" })
+            });
+            const data = await res.json();
+            if (data.id) window.location.href = `/admin/catalogue/review/${data.id}`;
+          }}
+          className="bg-white border-2 border-primary text-primary px-4 py-2 rounded-lg font-bold hover:bg-primary/5 transition-colors flex items-center gap-2"
+        >
+          <Layers className="w-4 h-4" />
+          Create Manual Entry
+        </button>
       </div>
 
       <Tabs defaultValue="url">
@@ -641,14 +656,26 @@ function ImportQueueSection() {
           {items.map((item) => (
             <tr key={item.id} className="hover:bg-gray-50 transition-colors">
               <td className="px-4 py-3">
-                <div className="w-12 h-12 rounded bg-gray-100 border overflow-hidden">
-                  {item.thumbnailUrl && <img src={proxiedImageUrl(item.thumbnailUrl)} alt={item.name} className="w-full h-full object-cover" />}
+                <div className="w-12 h-12 rounded bg-gray-100 border overflow-hidden flex items-center justify-center">
+                  {(item.thumbnailUrl || item.scrapedImageUrls?.[0]) ? (
+                    <img 
+                      src={proxiedImageUrl(item.thumbnailUrl || item.scrapedImageUrls?.[0])} 
+                      alt={item.name} 
+                      className="w-full h-full object-cover" 
+                    />
+                  ) : (
+                    <Layers className="w-4 h-4 text-gray-400" />
+                  )}
                 </div>
               </td>
-              <td className="px-4 py-3 font-medium">{item.name}</td>
-              <td className="px-4 py-3 text-muted-foreground uppercase text-[10px] font-bold tracking-wider">{item.platform}</td>
+              <td className="px-4 py-3 font-medium">
+                {item.name || item.scrapedName || <span className="text-gray-400 italic">Untitled Manual Draft</span>}
+              </td>
+              <td className="px-4 py-3 text-muted-foreground uppercase text-[10px] font-bold tracking-wider">
+                {item.platform || (item.isManual ? "MANUAL" : "EXTERNAL")}
+              </td>
               <td className="px-4 py-3">
-                <LicenceBadge licence={item.licenceType} size="sm" />
+                {item.licenceType ? <LicenceBadge licence={item.licenceType} size="sm" /> : <span className="text-xs text-gray-300">N/A</span>}
               </td>
               <td className="px-4 py-3 text-muted-foreground">{format(new Date(item.importedAt), "MMM d, yyyy")}</td>
               <td className="px-4 py-3 text-right">

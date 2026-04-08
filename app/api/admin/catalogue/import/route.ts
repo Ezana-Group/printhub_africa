@@ -10,8 +10,22 @@ export async function POST(req: Request) {
 
   try {
     const { url: importUrl } = await req.json();
+    
+    // MANUAL IMPORT HANDLING
     if (!importUrl) {
-      return NextResponse.json({ error: "URL_REQUIRED" }, { status: 400 });
+      const manualQueue = await prisma.catalogueImportQueue.create({
+        data: {
+          status: "PENDING_REVIEW",
+          isManual: true,
+          aiEnhancementStatus: "idle",
+        }
+      });
+      return NextResponse.json({ 
+        success: true, 
+        id: manualQueue.id,
+        isManual: true,
+        message: "Manual product draft created."
+      });
     }
 
     const ALLOWED_IMPORT_DOMAINS = [
@@ -102,6 +116,33 @@ export async function POST(req: Request) {
             status: "PROCESSING", // Moved from PENDING to PROCESSING
           },
         });
+
+        // 2.5. Re-host images on R2 to prevent broken links
+        try {
+          console.log(`[Import] Re-hosting images for: ${importQueue.id}`);
+          const { downloadAndUploadImage } = await import("@/lib/import-utils");
+          const rehostedImages: string[] = [];
+          
+          // Only re-host first 10 images to save time/bandwidth
+          for (const imgUrl of (scrapedData.imageUrls || []).slice(0, 10)) {
+            try {
+              const newUrl = await downloadAndUploadImage(imgUrl);
+              if (newUrl) rehostedImages.push(newUrl);
+            } catch (err) {
+              console.error(`[Import] Failed to re-host image ${imgUrl}:`, err);
+            }
+          }
+
+          if (rehostedImages.length > 0) {
+            await prisma.catalogueImportQueue.update({
+              where: { id: importQueue.id },
+              data: { scrapedImageUrls: rehostedImages }
+            });
+            console.log(`[Import] Successfully re-hosted ${rehostedImages.length} images.`);
+          }
+        } catch (rehostError) {
+          console.error(`[Import] Re-host process failed:`, rehostError);
+        }
 
         /* 
         // 3. Trigger n8n enhancement workflow (DISABLED: Use manual trigger on Review Page)

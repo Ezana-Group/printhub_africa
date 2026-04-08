@@ -2217,6 +2217,8 @@ model CatalogueImportQueue {
   scrapedImageUrls    String[]     @default([])
   scrapedName         String?
   scrapedTags         String[]     @default([])
+  editorData          Json?
+  isManual            Boolean      @default(false)
   productId           String?      @unique
   product             Product?     @relation(fields: [productId], references: [id])
 

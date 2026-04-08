@@ -7,40 +7,27 @@ export async function GET() {
   if (auth instanceof NextResponse) return auth;
 
   try {
-    const records = await prisma.catalogueItem.findMany({
+    const records = await prisma.catalogueImportQueue.findMany({
       where: {
         status: {
-          in: ["DRAFT", "PENDING_REVIEW"]
-        },
-        sourceType: {
-          not: "MANUAL"
+          in: ["PENDING_REVIEW", "FAILED", "PROCESSING"]
         }
       },
       orderBy: {
         createdAt: "desc",
       },
-      select: {
-        id: true,
-        name: true,
-        sourceType: true,
-        licenseType: true,
-        createdAt: true,
-        status: true,
-        photos: {
-          where: { isPrimary: true },
-          take: 1
-        }
-      }
     });
 
     const items = records.map(r => ({
       id: r.id,
-      name: r.name,
-      platform: r.sourceType,
-      licenceType: r.licenseType,
+      name: r.scrapedName || "Untitled manual draft",
+      platform: r.isManual ? "MANUAL" : (r.sourceUrl?.includes("printables") ? "PRINTABLES" : "EXTERNAL"),
+      licenceType: r.licenseType || "Unknown",
       importedAt: r.createdAt,
       status: r.status,
-      thumbnailUrl: r.photos.length > 0 ? r.photos[0].url : null
+      thumbnailUrl: r.scrapedImageUrls?.[0] || null,
+      isManual: r.isManual,
+      scrapedImageUrls: r.scrapedImageUrls
     }));
 
     return NextResponse.json({ items });
