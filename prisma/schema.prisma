@@ -58,6 +58,7 @@ model User {
   catalogueArchived        CatalogueItem[]            @relation("CatalogueArchivedBy")
   catalogueImported        CatalogueItem[]            @relation("CatalogueImportedBy")
   catalogueRejected        CatalogueItem[]            @relation("CatalogueRejectedBy")
+  catalogueSubmissions     CatalogueImportQueue[]     @relation("CatalogueSubmittedBy")
   primaryCorporateAccount  CorporateAccount?          @relation("CorporatePrimaryContact")
   corporateApplications    CorporateApplication[]
   corporateTeamMemberships CorporateTeamMember[]
@@ -2221,6 +2222,12 @@ model CatalogueImportQueue {
   isManual            Boolean      @default(false)
   productId           String?      @unique
   product             Product?     @relation(fields: [productId], references: [id])
+  
+  // Multi-stage workflow additions
+  reviewNotes         String?
+  submittedAt         DateTime?
+  submittedById       String?
+  submittedBy         User?        @relation("CatalogueSubmittedBy", fields: [submittedById], references: [id], onDelete: SetNull)
 
   @@index([status])
 }
@@ -3127,6 +3134,7 @@ enum ImportPlatform {
 enum ImportStatus {
   PENDING
   PROCESSING
+  DRAFT
   DONE
   FAILED
   PENDING_REVIEW

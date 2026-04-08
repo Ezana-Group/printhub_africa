@@ -35,6 +35,11 @@ import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 import { ProductMaterialSelector } from "@/components/admin/ProductMaterialSelector";
 import type { ProductType } from "@prisma/client";
 
+import { useSession } from "next-auth/react";
+import { 
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription 
+} from "@/components/ui/dialog";
+
 function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
@@ -46,15 +51,22 @@ interface AdminCatalogueReviewClientProps {
 
 export function AdminCatalogueReviewClient({ importItem, categories }: AdminCatalogueReviewClientProps) {
   const router = useRouter();
-  const [status, setStatus] = useState(importItem.aiEnhancementStatus);
+  const { data: session } = useSession();
+  const userRole = (session?.user as any)?.role || "STAFF";
+  const isAdmin = userRole === "SUPER_ADMIN" || userRole === "ADMIN";
+
+  const [aiStatus, setAiStatus] = useState(importItem.aiEnhancementStatus);
+  const [currentStatus, setCurrentStatus] = useState(importItem.status);
   const [isApproving, setIsApproving] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [loadingField, setLoadingField] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [rejectionNotes, setRejectionNotes] = useState("");
   
-  // FORM STATE (Initialize from editorData if exists, otherwise from scraped data)
+  // FORM STATE
   const [formData, setFormData] = useState<any>(() => {
     if (importItem.editorData) return importItem.editorData;
-    
     return {
       name: importItem.scrapedName || "",
       slug: slugify(importItem.scrapedName || ""),
@@ -74,8 +86,6 @@ export function AdminCatalogueReviewClient({ importItem, categories }: AdminCata
       tags: importItem.scrapedTags || [],
       keyFeatures: [],
       imageUrls: importItem.scrapedImageUrls || [],
-      
-      // Marketing Defaults
       exportToGoogle: true,
       exportToGoogleBiz: true,
       exportToLinkedIn: false,
@@ -107,51 +117,25 @@ export function AdminCatalogueReviewClient({ importItem, categories }: AdminCata
 
   const aiData = importItem.aiEnhancement as any;
 
-  // Poll for AI status if processing
+  // Poll for AI status
   useEffect(() => {
-    if (status === "processing") {
+    if (aiStatus === "processing") {
       const interval = setInterval(async () => {
         try {
           const res = await fetch(`/api/admin/catalogue/enhance-status/${importItem.id}`);
           if (res.ok) {
             const data = await res.json();
             if (data.status === "complete") {
-              setStatus("complete");
-              setLoadingField(null);
-              clearInterval(interval);
+              setAiStatus("complete");
               router.refresh();
-            } else if (data.status === "failed") {
-              setStatus("failed");
-              setLoadingField(null);
               clearInterval(interval);
-              toast.error("AI enhancement failed");
             }
           }
-        } catch (e) {
-          console.error("Polling error:", e);
-        }
+        } catch {}
       }, 5000);
       return () => clearInterval(interval);
     }
-  }, [status, importItem.id, router]);
-
-  // Sync AI results to form
-  useEffect(() => {
-    if (aiData && status === "complete" && !importItem.editorData) {
-      setFormData((prev: any) => ({
-        ...prev,
-        name: aiData.product_name || prev.name || importItem.scrapedName || "",
-        shortDescription: aiData.short_description || prev.shortDescription || "",
-        description: aiData.full_description || prev.description || "",
-        metaTitle: aiData.seo_title || prev.metaTitle || "",
-        metaDescription: aiData.meta_description || prev.metaDescription || "",
-        tags: aiData.suggested_tags || prev.tags || [],
-        keyFeatures: aiData.key_features || prev.keyFeatures || [],
-        basePrice: aiData.suggested_price_range?.min_kes || prev.basePrice || "0",
-        comparePrice: aiData.suggested_price_range?.max_kes || prev.comparePrice || "",
-      }));
-    }
-  }, [aiData, status, importItem.editorData, importItem.scrapedName]);
+  }, [aiStatus, importItem.id, router]);
 
   const handleSaveDraft = async () => {
     setIsSaving(true);
@@ -163,13 +147,27 @@ export function AdminCatalogueReviewClient({ importItem, categories }: AdminCata
       });
       if (res.ok) {
         toast.success("Draft saved successfully");
-      } else {
-        toast.error("Failed to save draft");
+        setCurrentStatus("DRAFT");
       }
-    } catch (e) {
-      toast.error("Error saving draft");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSubmitForReview = async () => {
+    setIsSubmitting(true);
+    try {
+      const res = await fetch(`/api/admin/import/${importItem.id}/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData)
+      });
+      if (res.ok) {
+        toast.success("Submitted for review!");
+        router.push("/admin/catalogue/import");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -181,19 +179,30 @@ export function AdminCatalogueReviewClient({ importItem, categories }: AdminCata
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
       });
-
       if (res.ok) {
-        toast.success("Product approved and live!");
-        router.push("/admin/catalogue/queue");
-        router.refresh();
-      } else {
-        const err = await res.json();
-        toast.error(`Approval failed: ${err.detail || err.error || "Unknown error"}`);
+        toast.success("Product published!");
+        router.push("/admin/catalogue/import");
       }
-    } catch (e) {
-      toast.error("An error occurred during approval");
     } finally {
       setIsApproving(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!rejectionNotes) return toast.error("Please provide feedback notes");
+    setIsRejecting(true);
+    try {
+      const res = await fetch(`/api/admin/import/${importItem.id}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes: rejectionNotes })
+      });
+      if (res.ok) {
+        toast.success("Submission rejected");
+        router.push("/admin/catalogue/import");
+      }
+    } finally {
+      setIsRejecting(false);
     }
   };
 
@@ -206,17 +215,42 @@ export function AdminCatalogueReviewClient({ importItem, categories }: AdminCata
 
   return (
     <div className="container max-w-7xl mx-auto py-6 px-4 pb-32">
+      {/* STATUS BANNER */}
+      {currentStatus === "REJECTED" && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-4">
+          <AlertIcon className="w-5 h-5 text-red-500 mt-1" />
+          <div>
+            <h3 className="font-bold text-red-800">Submission Rejected</h3>
+            <p className="text-red-700 text-sm mt-1">
+              Admin Feedback: "{importItem.reviewNotes || "Please review the data and re-submit."}"
+            </p>
+          </div>
+        </div>
+      )}
+      
+      {currentStatus === "PENDING_REVIEW" && (
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-4">
+          <Loader2Icon className="w-5 h-5 text-amber-500 mt-1 animate-spin" />
+          <div>
+            <h3 className="font-bold text-amber-800">Awaiting Final Approval</h3>
+            <p className="text-amber-700 text-sm mt-1">
+              This product has been submitted for review. {isAdmin ? "Please review and publish." : "Wait for an admin to approve it."}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => router.push("/admin/catalogue/queue")}>
+          <Button variant="ghost" size="sm" onClick={() => router.push("/admin/catalogue/import")}>
             <ArrowIcon className="w-4 h-4 mr-2" />
             Back to Queue
           </Button>
           <h1 className="text-2xl font-bold text-slate-900">
             {importItem.isManual ? "Manual Product Draft" : "Review Imported Model"}
           </h1>
-          <Badge variant={status === "complete" ? "success" : status === "processing" ? "warning" : "secondary"}>
-             {importItem.isManual ? "Manual Entry" : status === "complete" ? "AI Enhanced" : status === "processing" ? "AI Processing" : "Awaiting AI"}
+          <Badge variant={aiStatus === "complete" ? "success" : aiStatus === "processing" ? "warning" : "secondary"}>
+             {aiStatus === "complete" ? "AI Enhanced" : aiStatus === "processing" ? "AI Processing" : "Awaiting AI"}
           </Badge>
         </div>
         <div className="flex gap-3">
@@ -224,12 +258,53 @@ export function AdminCatalogueReviewClient({ importItem, categories }: AdminCata
              {isSaving ? <Loader2Icon className="w-4 h-4 animate-spin mr-2" /> : <SaveIcon className="w-4 h-4 mr-2" />}
              Save Draft
           </Button>
-          <Button className="bg-[#FF4D00] hover:bg-[#E64500]" onClick={handleApprove} disabled={isApproving}>
-             {isApproving ? <Loader2Icon className="w-4 h-4 animate-spin mr-2" /> : <CheckIcon className="w-4 h-4 mr-2" />}
-             Approve & Publish
-          </Button>
+          
+          {isAdmin && currentStatus === "PENDING_REVIEW" ? (
+            <>
+              <Button variant="destructive" onClick={() => setShowRejectDialog(true)} disabled={isRejecting}>
+                <TrashIcon className="w-4 h-4 mr-2" /> Reject
+              </Button>
+              <Button className="bg-[#FF4D00] hover:bg-[#E64500]" onClick={handleApprove} disabled={isApproving}>
+                {isApproving ? <Loader2Icon className="w-4 h-4 animate-spin mr-2" /> : <CheckIcon className="w-4 h-4 mr-2" />}
+                Approve & Publish
+              </Button>
+            </>
+          ) : (
+            <Button className="bg-primary hover:bg-primary/90" onClick={handleSubmitForReview} disabled={isSubmitting}>
+              {isSubmitting ? <Loader2Icon className="w-4 h-4 animate-spin mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
+              Submit for Review
+            </Button>
+          )}
         </div>
       </div>
+
+      {/* REJECT DIALOG */}
+      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Submission</DialogTitle>
+            <DialogDescription>
+              Please explain why this submission is being rejected so the staff can fix it.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label>Admin Feedback / Notes</Label>
+            <textarea 
+              className="w-full mt-2 p-3 border rounded-lg min-h-[120px] text-sm"
+              placeholder="e.g. Please add more descriptive tags and fix the pricing..."
+              value={rejectionNotes}
+              onChange={(e) => setRejectionNotes(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setShowRejectDialog(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleReject} disabled={isRejecting}>
+              {isRejecting ? <Loader2Icon className="w-4 h-4 animate-spin mr-2" /> : null}
+              Confirm Rejection
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* LEFT COLUMN: MAIN EDITOR (2/3) */}

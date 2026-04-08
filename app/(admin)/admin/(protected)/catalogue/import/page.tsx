@@ -616,18 +616,18 @@ function ApiSearchSection() {
 }
 
 function ImportQueueSection() {
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("review");
 
   useEffect(() => {
-    fetchQueue();
-  }, []);
+    fetchQueue(activeTab);
+  }, [activeTab]);
 
-  const fetchQueue = async () => {
+  const fetchQueue = async (tab: string) => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/import/queue");
+      const res = await fetch(`/api/admin/import/queue?tab=${tab}`);
       if (res.ok) {
         const data = await res.json();
         setItems(data.items || []);
@@ -640,58 +640,117 @@ function ImportQueueSection() {
   };
 
   return (
-    <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
-      <table className="w-full text-left text-sm">
-        <thead className="bg-gray-50 border-b">
-          <tr>
-            <th className="px-4 py-3 w-16 text-center">Preview</th>
-            <th className="px-4 py-3">Name</th>
-            <th className="px-4 py-3">Platform</th>
-            <th className="px-4 py-3">Licence</th>
-            <th className="px-4 py-3">Imported At</th>
-            <th className="px-4 py-3 text-right">Action</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y text-sm">
-          {items.map((item) => (
-            <tr key={item.id} className="hover:bg-gray-50 transition-colors">
-              <td className="px-4 py-3">
-                <div className="w-12 h-12 rounded bg-gray-100 border overflow-hidden flex items-center justify-center">
-                  {(item.thumbnailUrl || item.scrapedImageUrls?.[0]) ? (
-                    <img 
-                      src={proxiedImageUrl(item.thumbnailUrl || item.scrapedImageUrls?.[0])} 
-                      alt={item.name} 
-                      className="w-full h-full object-cover" 
-                    />
-                  ) : (
-                    <Layers className="w-4 h-4 text-gray-400" />
+    <div className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="bg-slate-100 p-1">
+          <TabsTrigger value="drafts" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            Drafts
+          </TabsTrigger>
+          <TabsTrigger value="review" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            Needs Review
+          </TabsTrigger>
+          <TabsTrigger value="rejected" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            Rejected
+          </TabsTrigger>
+          <TabsTrigger value="approved" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            Approved
+          </TabsTrigger>
+        </TabsList>
+
+        <div className="bg-white rounded-xl border shadow-sm overflow-hidden mt-4">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50 border-b">
+              <tr>
+                <th className="px-4 py-3 w-16 text-center text-[10px] uppercase font-bold text-slate-400">Preview</th>
+                <th className="px-4 py-3 text-[10px] uppercase font-bold text-slate-400">Name</th>
+                <th className="px-4 py-3 text-[10px] uppercase font-bold text-slate-400">Platform</th>
+                <th className="px-4 py-3 text-[10px] uppercase font-bold text-slate-400">
+                  {activeTab === "approved" ? "Published At" : activeTab === "review" ? "Submitted By" : "Last Updated"}
+                </th>
+                {activeTab === "rejected" && (
+                  <th className="px-4 py-3 text-[10px] uppercase font-bold text-slate-400">Admin Feedback</th>
+                )}
+                <th className="px-4 py-3 text-right text-[10px] uppercase font-bold text-slate-400">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y text-sm">
+              {items.map((item) => (
+                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-4 py-3">
+                    <div className="w-12 h-12 rounded-lg bg-slate-100 border overflow-hidden flex items-center justify-center">
+                      {(item.thumbnailUrl || item.scrapedImageUrls?.[0]) ? (
+                        <img 
+                          src={proxiedImageUrl(item.thumbnailUrl || item.scrapedImageUrls?.[0])} 
+                          alt={item.name} 
+                          className="w-full h-full object-cover" 
+                        />
+                      ) : (
+                        <Layers className="w-4 h-4 text-slate-300" />
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <p className="font-semibold text-slate-900">{item.name}</p>
+                    <p className="text-[10px] text-slate-400 font-mono uppercase tracking-tight">{item.licenceType}</p>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
+                      {item.platform}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-slate-500">
+                    {activeTab === "approved" ? (
+                      format(new Date(item.updatedAt), "MMM d, yyyy")
+                    ) : activeTab === "review" ? (
+                      <div className="flex flex-col">
+                        <span className="font-medium text-slate-700">{item.submittedBy || "Unknown Staff"}</span>
+                        <span className="text-[10px]">{item.submittedAt ? format(new Date(item.submittedAt), "MMM d, HH:mm") : "N/A"}</span>
+                      </div>
+                    ) : (
+                      format(new Date(item.updatedAt), "MMM d, HH:mm")
+                    )}
+                  </td>
+                  {activeTab === "rejected" && (
+                    <td className="px-4 py-3">
+                      <div className="bg-red-50 text-red-700 p-2 rounded text-xs border border-red-100 max-w-xs italic">
+                        "{item.reviewNotes || "No feedback provided."}"
+                      </div>
+                    </td>
                   )}
-                </div>
-              </td>
-              <td className="px-4 py-3 font-medium">
-                {item.name || item.scrapedName || <span className="text-gray-400 italic">Untitled Manual Draft</span>}
-              </td>
-              <td className="px-4 py-3 text-muted-foreground uppercase text-[10px] font-bold tracking-wider">
-                {item.platform || (item.isManual ? "MANUAL" : "EXTERNAL")}
-              </td>
-              <td className="px-4 py-3">
-                {item.licenceType ? <LicenceBadge licence={item.licenceType} size="sm" /> : <span className="text-xs text-gray-300">N/A</span>}
-              </td>
-              <td className="px-4 py-3 text-muted-foreground">{format(new Date(item.importedAt), "MMM d, yyyy")}</td>
-              <td className="px-4 py-3 text-right">
-                <Link href={`/admin/catalogue/review/${item.id}`} className="inline-block bg-primary text-white px-3 py-1.5 rounded-md text-xs hover:bg-primary/90">
-                  Review
-                </Link>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {loading ? (
-        <div className="p-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>
-      ) : items.length === 0 ? (
-        <div className="p-12 text-center text-muted-foreground">Queue is empty.</div>
-      ) : null}
+                  <td className="px-4 py-3 text-right">
+                    {activeTab === "approved" ? (
+                      <Link 
+                        href={`/admin/products/${item.productId}/edit`}
+                        className="inline-flex items-center gap-1 bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-800"
+                      >
+                        <Eye className="w-3.5 h-3.5" /> View Product
+                      </Link>
+                    ) : (
+                      <Link 
+                        href={`/admin/catalogue/review/${item.id}`} 
+                        className={cn(
+                          "inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold",
+                          activeTab === "review" ? "bg-amber-500 text-white hover:bg-amber-600" : "bg-primary text-white hover:bg-primary/90"
+                        )}
+                      >
+                        {activeTab === "review" ? "Review Now" : "Continue Editing"}
+                      </Link>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {loading ? (
+            <div className="p-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-slate-300" /></div>
+          ) : items.length === 0 ? (
+            <div className="p-16 text-center flex flex-col items-center justify-center space-y-3">
+              <Layers className="w-12 h-12 text-slate-100" />
+              <p className="text-slate-400 font-medium">No items found in {activeTab}.</p>
+            </div>
+          ) : null}
+        </div>
+      </Tabs>
     </div>
   );
 }

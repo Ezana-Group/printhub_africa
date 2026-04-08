@@ -6,6 +6,7 @@ import { Metadata } from "next";
 import { FeedStatusCard } from "./feed-status-card";
 import { ProductExportTable } from "./product-export-table";
 import { SyncFeedsButton } from "./sync-feeds-button";
+import { CatalogueFeedLinks } from "./catalogue-feed-links";
 
 export const metadata: Metadata = {
   title: "Social Export - PrintHub Admin",
@@ -72,6 +73,8 @@ export default async function SocialExportPage() {
         </div>
         <SyncFeedsButton />
       </div>
+
+      <CatalogueFeedLinks />
 
       <FeedStatusCard />
 

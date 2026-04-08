@@ -163,7 +163,10 @@ export async function POST(req: Request) {
         
         await prisma.catalogueImportQueue.update({
           where: { id: importQueue.id },
-          data: { aiEnhancementStatus: "idle" }
+          data: { 
+            aiEnhancementStatus: "idle",
+            status: "DRAFT" // Transition to DRAFT so it shows up in the UI
+          }
         });
         
         console.log(`[Import] Background process completed for: ${importQueue.id}`);

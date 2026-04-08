@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/admin-api-guard";
 
-export async function PATCH(
+export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -11,23 +11,26 @@ export async function PATCH(
 
   try {
     const { id } = await params;
-    const body = await req.json();
+    const { notes } = await req.json();
+
+    if (!notes) {
+      return NextResponse.json({ error: "Rejection notes are required" }, { status: 400 });
+    }
 
     const updated = await prisma.catalogueImportQueue.update({
       where: { id },
       data: {
-        editorData: body,
-        status: "DRAFT",
-        reviewNotes: null, // Clear feedback once staff starts editing again
+        status: "REJECTED",
+        reviewNotes: notes,
         updatedAt: new Date(),
       },
     });
 
     return NextResponse.json({ success: true, id: updated.id });
   } catch (error: any) {
-    console.error("[SAVE_DRAFT_ERROR]", error);
+    console.error("[REJECT_IMPORT_ERROR]", error);
     return NextResponse.json(
-      { error: "SAVE_FAILED", detail: error.message },
+      { error: "REJECTION_FAILED", detail: error.message },
       { status: 500 }
     );
   }
