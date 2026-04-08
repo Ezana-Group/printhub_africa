@@ -9,18 +9,31 @@ const MAX_HISTORY = 500;
 
 type HistoryEntry = {
   id: string;
-  staffUserId: string | null;
+  staffUserId?: string | null;
   jobName: string;
-  materialCode: string;
-  weightGrams: number;
-  printTimeHours: number;
-  quantity: number;
-  postProcessing: boolean;
-  productionCost: number;
-  sellingPrice: number;
+  parts?: Array<{
+    name: string;
+    materialCode: string;
+    weightGrams: number;
+    printTimeHours: number;
+    quantity: number;
+    postProcessing: boolean;
+    productionCost: number;
+    sellingPrice: number;
+  }>;
+  totalProductionCost: number;
+  totalSellingPrice: number;
   profitAmount: number;
   marginPercent: number;
   createdAt: string;
+  // Legacy fields (for backward compatibility during migration)
+  materialCode?: string; 
+  weightGrams?: number;
+  printTimeHours?: number;
+  quantity?: number;
+  postProcessing?: boolean;
+  productionCost?: number;
+  sellingPrice?: number;
 };
 
 export async function GET(req: Request) {
@@ -33,21 +46,49 @@ export async function GET(req: Request) {
     const config = await prisma.pricingConfig.findUnique({
       where: { key: HISTORY_KEY },
     });
-    const list: HistoryEntry[] = config?.valueJson
+    const list: any[] = config?.valueJson
       ? JSON.parse(config.valueJson)
       : [];
+    
+    // Normalize legacy entries to multi-part format for the UI
+    const normalized: HistoryEntry[] = list.map(e => {
+      if (!e.parts && e.materialCode) {
+        return {
+          ...e,
+          parts: [{
+            name: "Part 1",
+            materialCode: e.materialCode,
+            weightGrams: e.weightGrams || 0,
+            printTimeHours: e.printTimeHours || 0,
+            quantity: e.quantity || 1,
+            postProcessing: !!e.postProcessing,
+            productionCost: e.productionCost || 0,
+            sellingPrice: e.sellingPrice || 0,
+          }],
+          totalProductionCost: e.productionCost || 0,
+          totalSellingPrice: e.sellingPrice || 0,
+        };
+      }
+      return e;
+    });
+
     const { searchParams } = new URL(req.url);
     const material = searchParams.get("material");
     const from = searchParams.get("from");
     const to = searchParams.get("to");
     const search = searchParams.get("search");
-    let filtered = list;
-    if (material) filtered = filtered.filter((e) => e.materialCode === material);
+    let filtered = normalized;
+    if (material) {
+      filtered = filtered.filter((e) => 
+        e.parts?.some(p => p.materialCode === material) || e.materialCode === material
+      );
+    }
     if (from) filtered = filtered.filter((e) => e.createdAt >= from);
     if (to) filtered = filtered.filter((e) => e.createdAt <= to);
     if (search)
       filtered = filtered.filter((e) =>
-        e.jobName.toLowerCase().includes(search.toLowerCase())
+        e.jobName.toLowerCase().includes(search.toLowerCase()) ||
+        e.parts?.some(p => p.materialCode.toLowerCase().includes(search.toLowerCase()))
       );
     return NextResponse.json(filtered.reverse());
   } catch (e) {
@@ -68,13 +109,9 @@ export async function POST(req: Request) {
       id: `hist_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
       staffUserId: session.user?.id ?? null,
       jobName: String(body.jobName ?? "Unnamed job"),
-      materialCode: String(body.materialCode ?? ""),
-      weightGrams: Number(body.weightGrams) || 0,
-      printTimeHours: Number(body.printTimeHours) || 0,
-      quantity: Number(body.quantity) || 1,
-      postProcessing: Boolean(body.postProcessing),
-      productionCost: Number(body.productionCost) || 0,
-      sellingPrice: Number(body.sellingPrice) || 0,
+      parts: body.parts || [],
+      totalProductionCost: Number(body.totalProductionCost) || 0,
+      totalSellingPrice: Number(body.totalSellingPrice) || 0,
       profitAmount: Number(body.profitAmount) || 0,
       marginPercent: Number(body.marginPercent) || 0,
       createdAt: new Date().toISOString(),

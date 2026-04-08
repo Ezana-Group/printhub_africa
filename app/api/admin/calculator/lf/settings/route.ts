@@ -70,6 +70,7 @@ export async function PATCH(req: Request) {
         defaultProfitMarginPct: business.defaultProfitMarginPct ?? row?.defaultProfitMarginPct ?? 40,
         vatRatePct: business.vatRatePct ?? row?.vatRatePct ?? 16,
         minOrderValueKes: business.minOrderValueKes ?? row?.minOrderValueKes ?? 500,
+        postProcessingFeePerUnit: business.postProcessingFeePerUnit ?? row?.postProcessingFeePerUnit ?? 300,
       };
       if (row) {
         await prisma.lFBusinessSettings.update({

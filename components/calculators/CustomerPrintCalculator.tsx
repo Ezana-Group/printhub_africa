@@ -4,8 +4,8 @@ import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useCalculatorConfig, compute3DEstimateFromConfig } from "@/hooks/useCalculatorConfig";
-import { formatKes } from "@/lib/3d-calculator-engine";
+import { useCalculatorConfig, compute3DEstimateFromConfig, computeMultiPart3DEstimate } from "@/hooks/useCalculatorConfig";
+import { formatKes, type PrintJob } from "@/lib/3d-calculator-engine";
 import {
   COLOUR_PILLS,
   BRAND_COLOUR_HEX,
@@ -13,7 +13,7 @@ import {
   colorMatches,
   PREFERRED_MATERIAL_ORDER,
 } from "@/lib/3d-colour-utils";
-import { Printer, ChevronDown, ChevronUp, HelpCircle, Check } from "lucide-react";
+import { Printer, ChevronDown, ChevronUp, HelpCircle, Check, Plus, Trash2, Box } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const WEIGHT_GUIDE = `Rough weight guide:
@@ -42,11 +42,15 @@ type CustomerPrintCalculatorProps = {
   variant?: "light" | "dark";
   onEstimateChange?: (low: number | null, high: number | null) => void;
   onMaterialChange?: (code: string, name: string, color?: string) => void;
+  onPartsChange?: (parts: Array<PrintJob & { materialName: string; costPerKg: number }>) => void;
 };
 
-export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, onMaterialChange }: CustomerPrintCalculatorProps) {
+export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, onMaterialChange, onPartsChange }: CustomerPrintCalculatorProps) {
   const { data: config, loading: configLoading } = useCalculatorConfig();
 
+  const [parts, setParts] = useState<Array<PrintJob & { materialName: string; costPerKg: number }>>([]);
+  
+  // Form state for new part
   const [materialType, setMaterialType] = useState("");
   const [colorChoice, setColorChoice] = useState("");
   const [weightGrams, setWeightGrams] = useState<number | "">("");
@@ -145,20 +149,67 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
     [materials, effectiveMaterial]
   );
 
+  const handleAddPart = () => {
+    if (!effectiveMaterial || !weightGrams || !printTimeHours || !selectedFilament) return;
+    
+    setParts((prev) => [
+      ...prev,
+      {
+        name: `Part ${prev.length + 1}`,
+        material: effectiveMaterial,
+        materialName: selectedFilament.baseMaterial ?? selectedFilament.name,
+        costPerKg: selectedFilament.costPerKgKes,
+        weightGrams: Number(weightGrams) || 0,
+        printTimeHours: Number(printTimeHours) || 0,
+        postProcessing,
+        quantity: Math.max(1, quantity),
+      },
+    ]);
+    
+    // Reset part form (keep material/color preference)
+    setWeightGrams("");
+    setPrintTimeHours("");
+    // setQuantity(1); // Maybe user wants same qty
+  };
+
+  const handleRemovePart = (index: number) => {
+    setParts((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const breakdown = useMemo(() => {
-    if (!config || !selectedFilament) return null;
-    const w = Number(weightGrams) || 0;
-    const t = Number(printTimeHours) || 0;
-    const qty = Math.max(1, Math.min(999, quantity));
-    if (w <= 0 || t <= 0) return null;
-    return compute3DEstimateFromConfig(config, {
-      weightG: w,
-      printTimeHrs: t,
-      quantity: qty,
-      costPerKg: selectedFilament.costPerKgKes,
-      postProcessing,
-    });
-  }, [config, selectedFilament, weightGrams, printTimeHours, quantity, postProcessing]);
+    if (!config) return null;
+    
+    // We compute for BOTH the already added parts AND the current form if it has enough data
+    const activeParts = [...parts];
+    
+    // If form is valid, add current form contents to the breakdown temporarily 
+    // OR just show estimate for added parts.
+    // Let's show estimate for ALL added parts.
+    
+    if (activeParts.length === 0) {
+      // If nothing added yet, check if current form has enough to show a preview
+      const w = Number(weightGrams) || 0;
+      const t = Number(printTimeHours) || 0;
+      if (w > 0 && t > 0 && selectedFilament) {
+        return computeMultiPart3DEstimate(config, [{
+          weightG: w,
+          printTimeHrs: t,
+          quantity: Math.max(1, quantity),
+          costPerKg: selectedFilament.costPerKgKes,
+          postProcessing,
+        }]);
+      }
+      return null;
+    }
+
+    return computeMultiPart3DEstimate(config, activeParts.map(p => ({
+      weightG: p.weightGrams,
+      printTimeHrs: p.printTimeHours,
+      quantity: p.quantity,
+      costPerKg: p.costPerKg,
+      postProcessing: p.postProcessing,
+    })));
+  }, [config, parts, weightGrams, printTimeHours, quantity, postProcessing, selectedFilament]);
 
   const priceLow = breakdown?.rangeLow ?? null;
   const priceHigh = breakdown?.rangeHigh ?? null;
@@ -167,6 +218,10 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
   useEffect(() => {
     onEstimateChange?.(priceLow, priceHigh);
   }, [priceLow, priceHigh, onEstimateChange]);
+
+  useEffect(() => {
+    onPartsChange?.(parts);
+  }, [parts, onPartsChange]);
 
   const isLight = variant === "light";
   const cardClass = isLight
@@ -203,16 +258,64 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
         </span>
         <div>
           <h2 className={`font-display text-xl font-bold ${isLight ? "text-slate-900" : "text-white"}`}>
-            Get a 3D Print Estimate
+            3D Printing Quote Calculator
           </h2>
           <p className={`mt-0.5 text-sm ${isLight ? "text-slate-600" : "text-white/70"}`}>
-            Fill in your print details — we&apos;ll give you an instant estimate.
-            Our team confirms the final price.
+            Add your parts to get a total estimate.
           </p>
         </div>
       </div>
 
-      <div className="space-y-4">
+      {parts.length > 0 && (
+        <div className="mb-6 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className={`text-sm font-semibold uppercase tracking-wider ${isLight ? "text-slate-500" : "text-white/40"}`}>
+              Your Parts List ({parts.length})
+            </h3>
+          </div>
+          <div className="grid gap-3">
+            {parts.map((p, i) => (
+              <div 
+                key={i} 
+                className={cn(
+                  "group flex items-center justify-between p-3 rounded-xl border transition-all animate-in fade-in slide-in-from-top-2",
+                  isLight ? "bg-slate-50 border-slate-200" : "bg-white/5 border-white/10"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${accentBg} ${accentText}`}>
+                    <Box className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className={`text-sm font-medium ${isLight ? "text-slate-900" : "text-white"}`}>{p.name}</p>
+                    <p className={`text-xs ${isLight ? "text-slate-500" : "text-white/50"}`}>
+                      {p.materialName} • {p.weightGrams}g • {p.printTimeHours}h • x{p.quantity}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleRemovePart(i)}
+                  className={`p-2 rounded-lg transition-colors ${isLight ? "text-slate-400 hover:text-red-500 hover:bg-red-50" : "text-white/30 hover:text-red-400 hover:bg-red-950/30"}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className={cn(
+        "space-y-4",
+        parts.length > 0 && (isLight ? "border-t border-slate-200 pt-6" : "border-t border-white/10 pt-6")
+      )}>
+        {parts.length > 0 && (
+          <div className="flex items-center gap-2 mb-2">
+            <Plus className={`h-4 w-4 ${isLight ? "text-[#E8440A]" : "text-[#E8440A]"}`} />
+            <span className={`text-sm font-bold ${isLight ? "text-slate-900" : "text-white"}`}>Add another part</span>
+          </div>
+        )}
         <div>
           <Label className={labelClass}>What material do you need?</Label>
           <select
@@ -344,42 +447,6 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
           </div>
         </div>
 
-        <div>
-          <Label className={labelClass}>Quantity</Label>
-          <div className="mt-1.5 flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className={isLight ? "h-10 w-10 rounded-xl" : "h-10 w-10 rounded-xl border-white/20 bg-white/5 text-white hover:bg-white/10"}
-              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-            >
-              −
-            </Button>
-            <Input
-              type="number"
-              min={1}
-              max={999}
-              value={quantity}
-              onChange={(e) =>
-                setQuantity(
-                  Math.max(1, Math.min(999, parseInt(e.target.value, 10) || 1))
-                )
-              }
-              className={isLight ? "w-24 rounded-xl text-center" : "w-24 border-white/10 bg-white/5 text-center text-white"}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className={isLight ? "h-10 w-10 rounded-xl" : "h-10 w-10 rounded-xl border-white/20 bg-white/5 text-white hover:bg-white/10"}
-              onClick={() => setQuantity((q) => Math.min(999, q + 1))}
-            >
-              +
-            </Button>
-          </div>
-        </div>
-
         <details
           className={isLight ? "rounded-xl border border-slate-200 bg-slate-50/50" : "rounded-xl border border-white/10 bg-white/5"}
           open={addOnsOpen}
@@ -405,13 +472,23 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
             </label>
           </div>
         </details>
+
+        <Button
+          type="button"
+          onClick={handleAddPart}
+          disabled={!effectiveMaterial || !weightGrams || !printTimeHours}
+          className={`w-full h-12 rounded-xl font-bold gap-2 ${accentBg} ${accentText} hover:opacity-90 active:scale-[0.98] transition-all`}
+        >
+          <Plus className="h-5 w-5" />
+          Add this part to estimate
+        </Button>
       </div>
 
       {showEstimate && !onEstimateChange && (
         <div className={`mt-6 rounded-xl p-4 ${isLight ? "bg-[#E8440A]/10 text-[#E8440A] border border-[#E8440A]/30" : "bg-[#E8440A] text-white"}`}>
           <p className="text-sm font-medium opacity-90">Your Estimate</p>
           <p className="mt-1 text-2xl font-bold">
-            {formatKes(priceLow)} – {formatKes(priceHigh)}
+            {priceLow !== null && priceHigh !== null ? `${formatKes(priceLow)} – ${formatKes(priceHigh)}` : ""}
           </p>
           <p className="mt-0.5 text-xs opacity-90">(includes 16% VAT)</p>
         </div>

@@ -18,6 +18,7 @@ type BusinessSettings = {
   workingHoursPerDay?: number;
   defaultProfitMarginPct?: number;
   vatRatePct?: number;
+  postProcessingFeePerUnit?: number;
 };
 
 function formatNum(n: number | undefined): string {
@@ -38,6 +39,7 @@ const DEFAULT_BASELINE: BusinessSettings = {
   workingHoursPerDay: 8,
   defaultProfitMarginPct: 40,
   vatRatePct: 16,
+  postProcessingFeePerUnit: 300,
 };
 
 export function FinanceBusinessCostsForm({ canEdit = true }: { canEdit?: boolean }) {
@@ -83,6 +85,7 @@ export function FinanceBusinessCostsForm({ canEdit = true }: { canEdit?: boolean
         workingDaysPerMonth: business.workingDaysPerMonth ?? 0,
         workingHoursPerDay: business.workingHoursPerDay ?? 0,
         vatRatePct: business.vatRatePct ?? 0,
+        postProcessingFeePerUnit: business.postProcessingFeePerUnit ?? 0,
       },
     };
     const res = await fetch("/api/admin/calculator/lf/settings", {
@@ -224,6 +227,7 @@ export function FinanceBusinessCostsForm({ canEdit = true }: { canEdit?: boolean
             </CardHeader>
             <CardContent className="text-sm">
               <p>Standard rate: KES {formatNum(business.labourRateKesPerHour)}/hr</p>
+              <p className="mt-1">Flat post-processing: KES {formatNum(business.postProcessingFeePerUnit)}/part</p>
               <p className="mt-1 text-muted-foreground">
                 Days/month: {business.workingDaysPerMonth ?? "—"} · Hours/day: {business.workingHoursPerDay ?? "—"}
               </p>
@@ -321,8 +325,17 @@ export function FinanceBusinessCostsForm({ canEdit = true }: { canEdit?: boolean
                   onChange={(e) => update("labourRateKesPerHour", parseFloat(e.target.value) || 0)}
                 />
               </div>
+              <div className="space-y-1.5 max-w-xs">
+                <Label>Flat Post-processing fee (KES/unit)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={business.postProcessingFeePerUnit ?? ""}
+                  onChange={(e) => update("postProcessingFeePerUnit", parseFloat(e.target.value) || 0)}
+                />
+              </div>
               <p className="text-xs text-muted-foreground">
-                Used per print job. Not applied to shop orders.
+                Flat fee added per part when post-processing is selected.
               </p>
             </CardContent>
           </Card>

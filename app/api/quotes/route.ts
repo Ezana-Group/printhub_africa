@@ -209,7 +209,8 @@ export async function POST(req: NextRequest) {
           quoteType: typeDb,
           projectName: quote.projectName || undefined,
           reviewUrl: `${process.env.NEXT_PUBLIC_APP_URL}/admin/quotes/${quote.id}`,
-          pdfBase64
+          pdfBase64,
+          specifications: quote.specifications
         });
       })()
     ]).catch((err) => console.error("Quote triggers error:", err));

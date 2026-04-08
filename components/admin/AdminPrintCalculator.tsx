@@ -19,8 +19,9 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type MaterialWithColors = { code: string; name: string; color?: string; baseMaterial?: string; quantity?: number };
-import { Calculator, History, FileText } from "lucide-react";
+import { Calculator, History, FileText, Plus, Trash2, Box } from "lucide-react";
 import { setQuoteDraft } from "@/lib/quote-draft";
+import { computeMultiPart3DEstimate } from "@/hooks/useCalculatorConfig";
 
 type TabId = "calculator" | "history";
 type PrinterOption = { id: string; name: string; source?: string; status?: string; nextScheduledMaintDate?: string | null };
@@ -28,13 +29,18 @@ type PrinterOption = { id: string; name: string; source?: string; status?: strin
 type HistoryEntry = {
   id: string;
   jobName: string;
-  materialCode: string;
-  weightGrams: number;
-  printTimeHours: number;
-  quantity: number;
-  postProcessing: boolean;
-  productionCost: number;
-  sellingPrice: number;
+  parts: Array<{
+    name: string;
+    materialCode: string;
+    weightGrams: number;
+    printTimeHours: number;
+    quantity: number;
+    postProcessing: boolean;
+    productionCost: number;
+    sellingPrice: number;
+  }>;
+  totalProductionCost: number;
+  totalSellingPrice: number;
   profitAmount: number;
   marginPercent: number;
   createdAt: string;
@@ -50,11 +56,17 @@ export function AdminPrintCalculator() {
 
   // Calculator tab state
   const [jobName, setJobName] = useState("");
+  const [parts, setParts] = useState<Array<PrintJob & { materialName: string; costPerKg: number }>>([]);
+  
+  // Current part form state
+  const [partName, setPartName] = useState("");
   const [colorChoice, setColorChoice] = useState("");
   const [weightGrams, setWeightGrams] = useState<number | "">("");
   const [printTimeHours, setPrintTimeHours] = useState<number | "">("");
   const [quantity, setQuantity] = useState(1);
   const [postProcessing, setPostProcessing] = useState(false);
+  const [postProcessingHours, setPostProcessingHours] = useState<number | "">(0.5);
+  
   const [marginOverride, setMarginOverride] = useState<number | "">("");
   const [saveStatus, setSaveStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
 
@@ -150,17 +162,39 @@ export function AdminPrintCalculator() {
     }
   }, [materialType, availableColorsForType, byMaterialType, colorChoice]);
 
-  const job: PrintJob = useMemo(
-    () => ({
-      name: jobName || "Job",
-      material: effectiveMaterial,
-      weightGrams: Number(weightGrams) || 0,
-      printTimeHours: Number(printTimeHours) || 0,
-      postProcessing,
-      quantity: Math.max(1, Math.min(999, quantity)),
-    }),
-    [jobName, effectiveMaterial, weightGrams, printTimeHours, postProcessing, quantity]
-  );
+  const handleAddPart = () => {
+    if (!effectiveMaterial || !weightGrams || !printTimeHours) return;
+    
+    const mat = materials.find(m => m.code === effectiveMaterial);
+    const selectedFilament = config?.filaments?.find((f) => f.id === effectiveMaterial);
+
+    setParts((prev) => [
+      ...prev,
+      {
+        name: partName || `Part ${prev.length + 1}`,
+        material: effectiveMaterial,
+        materialName: mat?.name || effectiveMaterial,
+        costPerKg: selectedFilament?.costPerKg || 0,
+        weightGrams: Number(weightGrams) || 0,
+        printTimeHours: Number(printTimeHours) || 0,
+        postProcessing,
+        postProcessingTimeHoursOverride: postProcessing && postProcessingHours !== "" ? Number(postProcessingHours) : undefined,
+        quantity: Math.max(1, quantity),
+      },
+    ]);
+    
+    // Reset part form
+    setPartName("");
+    setWeightGrams("");
+    setPrintTimeHours("");
+    setQuantity(1);
+    setPostProcessing(false);
+    setPostProcessingHours(0.5);
+  };
+
+  const handleRemovePart = (index: number) => {
+    setParts((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const selectedFilament = useMemo(
     () => config?.filaments?.find((f) => f.id === effectiveMaterial),
@@ -168,20 +202,28 @@ export function AdminPrintCalculator() {
   );
 
   const breakdown = useMemo(() => {
-    if (!config || !selectedFilament) return null;
-    const w = Number(weightGrams) || 0;
-    const t = Number(printTimeHours) || 0;
-    const qty = Math.max(1, Math.min(999, quantity));
-    if (w <= 0 || t <= 0) return null;
-    return compute3DEstimateFromConfig(config, {
-      weightG: w,
-      printTimeHrs: t,
-      quantity: qty,
-      costPerKg: selectedFilament.costPerKg,
-      profitMarginOverride: effectiveMargin,
-      postProcessing,
-    });
-  }, [config, selectedFilament, weightGrams, printTimeHours, quantity, effectiveMargin, postProcessing]);
+    if (!config || parts.length === 0) return null;
+    
+    return computeMultiPart3DEstimate(
+      {
+        labourRate: config.labourRate,
+        vatPercent: config.vatPercent,
+        monthlyOverhead: config.monthlyOverhead,
+        monthlyCapacityHrs: config.monthlyCapacityHrs,
+        profitMargin: config.profitMargin,
+        postProcessingFeePerUnit: config.postProcessingFeePerUnit,
+      },
+      parts.map(p => ({
+        weightG: p.weightGrams,
+        printTimeHrs: p.printTimeHours,
+        quantity: p.quantity,
+        costPerKg: p.costPerKg,
+        postProcessing: p.postProcessing,
+        postProcessingTimeHoursOverride: p.postProcessingTimeHoursOverride,
+        profitMarginOverride: effectiveMargin,
+      }))
+    );
+  }, [config, parts, effectiveMargin]);
 
   const marginSensitivity = useMemo(() => {
     if (!breakdown || !config) return null;
@@ -224,15 +266,21 @@ export function AdminPrintCalculator() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           jobName: jobName.trim(),
-          materialCode: job.material,
-          weightGrams: job.weightGrams,
-          printTimeHours: job.printTimeHours,
-          quantity: job.quantity,
-          postProcessing: job.postProcessing,
-          productionCost: breakdown.subtotal,
-          sellingPrice: breakdown.finalPrice,
+          parts: parts.map((p, i) => ({
+            name: p.name,
+            materialCode: p.material,
+            weightGrams: p.weightGrams,
+            printTimeHours: p.printTimeHours,
+            quantity: p.quantity,
+            postProcessing: p.postProcessing,
+            postProcessingTimeHoursOverride: p.postProcessingTimeHoursOverride,
+            productionCost: breakdown.estimates[i].subtotal,
+            sellingPrice: breakdown.estimates[i].finalPrice,
+          })),
+          totalProductionCost: breakdown.subtotal,
+          totalSellingPrice: breakdown.finalPrice,
           profitAmount: breakdown.profit,
-          marginPercent: breakdown.profitMarginPct,
+          marginPercent: effectiveMargin,
         }),
       });
       if (res.ok) {
@@ -252,7 +300,7 @@ export function AdminPrintCalculator() {
     return history.filter(
       (e) =>
         e.jobName.toLowerCase().includes(q) ||
-        e.materialCode.toLowerCase().includes(q)
+        e.parts?.some(p => p.materialCode.toLowerCase().includes(q))
     );
   }, [history, historyFilter]);
 
@@ -321,15 +369,82 @@ export function AdminPrintCalculator() {
                   )}
                 </select>
               </div>
-              <div>
-                <Label>Job name</Label>
-                <Input
-                  value={jobName}
-                  onChange={(e) => setJobName(e.target.value)}
-                  placeholder="e.g. Phone stand"
-                  className="mt-1"
-                />
+              <div className="flex gap-4">
+                <div className="flex-1">
+                  <Label>Project name</Label>
+                  <Input
+                    value={jobName}
+                    onChange={(e) => setJobName(e.target.value)}
+                    placeholder="e.g. Mechanical Assembly"
+                    className="mt-1"
+                  />
+                </div>
+                <div className="w-32">
+                  <Label>Global margin %</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={marginOverride === "" ? "" : marginOverride}
+                    onChange={(e) =>
+                      setMarginOverride(
+                        e.target.value === ""
+                          ? ""
+                          : Math.max(0, Math.min(100, parseFloat(e.target.value) || 0))
+                      )
+                    }
+                    placeholder={String(config?.profitMargin ?? 40)}
+                    className="mt-1"
+                  />
+                </div>
               </div>
+
+              {parts.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Current Parts</Label>
+                  <div className="space-y-2">
+                    {parts.map((p, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30 text-sm">
+                        <div className="flex items-center gap-3">
+                          <Box className="h-4 w-4 text-primary" />
+                          <div>
+                            <p className="font-medium">{p.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {p.materialName} • {p.weightGrams}g • {p.printTimeHours}h • Qty: {p.quantity}
+                              {p.postProcessing ? ` • Post-proc (${p.postProcessingTimeHoursOverride ?? 0.5}h)` : ""}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleRemovePart(i)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-4 border-t space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="h-px flex-1 bg-border" />
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Add New Part</span>
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+                
+                <div>
+                  <Label>Part name</Label>
+                  <Input
+                    value={partName}
+                    onChange={(e) => setPartName(e.target.value)}
+                    placeholder="e.g. Outer Shell"
+                    className="mt-1"
+                  />
+                </div>
               <div>
                 <Label>Material</Label>
                 <select
@@ -437,58 +552,91 @@ export function AdminPrintCalculator() {
                   />
                 </div>
               </div>
-              <div>
-                <Label>Quantity</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={999}
-                  value={quantity}
-                  onChange={(e) =>
-                    setQuantity(
-                      Math.max(1, Math.min(999, parseInt(e.target.value, 10) || 1))
-                    )
-                  }
-                  className="mt-1 w-24"
-                />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Quantity</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={999}
+                      value={quantity}
+                      onChange={(e) =>
+                        setQuantity(
+                          Math.max(1, Math.min(999, parseInt(e.target.value, 10) || 1))
+                        )
+                      }
+                      className="mt-1"
+                    />
+                  </div>
+                  <div className="flex items-end pb-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={postProcessing}
+                        onChange={(e) => setPostProcessing(e.target.checked)}
+                        className="rounded border-input"
+                      />
+                      <span className="text-sm">Post-processing</span>
+                    </label>
+                  </div>
+                </div>
+
+                {postProcessing && (
+                  <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+                    <Label className="text-xs text-primary font-semibold uppercase tracking-wider">Post-processing adjustments (Staff Override)</Label>
+                    <div className="mt-1.5 p-3 rounded-lg border border-primary/20 bg-primary/5 space-y-3">
+                      <div>
+                        <Label>Labor time (hrs)</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Input
+                            type="number"
+                            min={0}
+                            step={0.1}
+                            value={postProcessingHours === "" ? "" : postProcessingHours}
+                            onChange={(e) =>
+                              setPostProcessingHours(
+                                e.target.value === ""
+                                  ? ""
+                                  : Math.max(0, parseFloat(e.target.value) || 0)
+                              )
+                            }
+                            className="bg-background"
+                          />
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">
+                            Default: 0.5 hrs
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          Adjust based on part complexity (e.g., support removal difficulty).
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleAddPart}
+                    disabled={!effectiveMaterial || !weightGrams || !printTimeHours}
+                    variant="secondary"
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add part to project
+                  </Button>
+                </div>
               </div>
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={postProcessing}
-                  onChange={(e) => setPostProcessing(e.target.checked)}
-                  className="rounded border-input"
-                />
-                <span className="text-sm">Post-processing</span>
-              </label>
-              <div>
-                <Label>Profit margin % (override)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={marginOverride === "" ? "" : marginOverride}
-                  onChange={(e) =>
-                    setMarginOverride(
-                      e.target.value === ""
-                        ? ""
-                        : Math.max(0, Math.min(100, parseFloat(e.target.value) || 0))
-                    )
-                  }
-                  placeholder={String(config?.profitMargin ?? 40)}
-                  className="mt-1 w-24"
-                />
-              </div>
-              <div className="flex gap-2">
+
+              <div className="pt-4 border-t flex gap-2">
                 <Button
                   onClick={handleSaveToHistory}
-                  disabled={!breakdown || saveStatus === "loading"}
+                  disabled={parts.length === 0 || saveStatus === "loading"}
                 >
                   {saveStatus === "loading"
                     ? "Saving…"
                     : saveStatus === "done"
                       ? "Saved"
-                      : "Save to history"}
+                      : "Save project history"}
                 </Button>
               </div>
             </CardContent>
@@ -532,7 +680,7 @@ export function AdminPrintCalculator() {
                       <span>{formatKes(breakdown.subtotal)}</span>
                     </div>
                     <div className="flex justify-between text-green-600">
-                      <span>Profit ({breakdown.profitMarginPct}%)</span>
+                      <span>Profit ({effectiveMargin}%)</span>
                       <span>{formatKes(breakdown.profit)}</span>
                     </div>
                     <div className="flex justify-between">
@@ -560,18 +708,17 @@ export function AdminPrintCalculator() {
                         type: "3d",
                         clientName: "",
                         validUntil: validUntil.toISOString().slice(0, 10),
-                        lines: [
-                          {
-                            description: jobName.trim() || "Item",
-                            materialCode: effectiveMaterial,
-                            color: colorChoice || "",
-                            weightGrams: Number(weightGrams) || 0,
-                            printTimeHours: Number(printTimeHours) || 0,
-                            quantity: Math.max(1, quantity),
-                            postProcessing,
-                            marginPercentOverride: marginOverride !== "" ? Number(marginOverride) : undefined,
-                          },
-                        ],
+                        lines: parts.map(p => ({
+                          description: p.name,
+                          materialCode: p.material,
+                          color: "", // colour choice per part not fully implemented in parts list yet, but could be added
+                          weightGrams: p.weightGrams,
+                          printTimeHours: p.printTimeHours,
+                          quantity: p.quantity,
+                          postProcessing: p.postProcessing,
+                          postProcessingTimeHoursOverride: p.postProcessingTimeHoursOverride,
+                          marginPercentOverride: marginOverride !== "" ? Number(marginOverride) : undefined,
+                        })),
                         globalMarginPercent: effectiveMargin,
                         discountType: "kes",
                         discountValue: 0,
@@ -633,11 +780,7 @@ export function AdminPrintCalculator() {
                   <thead>
                     <tr className="border-b">
                       <th className="text-left p-2 font-medium">Date</th>
-                      <th className="text-left p-2 font-medium">Job</th>
-                      <th className="text-left p-2 font-medium">Material</th>
-                      <th className="text-right p-2 font-medium">Weight</th>
-                      <th className="text-right p-2 font-medium">Time</th>
-                      <th className="text-right p-2 font-medium">Qty</th>
+                      <th className="text-left p-2 font-medium">Job / Parts</th>
                       <th className="text-right p-2 font-medium">Cost</th>
                       <th className="text-right p-2 font-medium">Selling</th>
                       <th className="text-right p-2 font-medium">Margin %</th>
@@ -649,16 +792,19 @@ export function AdminPrintCalculator() {
                         <td className="p-2 text-muted-foreground">
                           {new Date(e.createdAt).toLocaleDateString()}
                         </td>
-                        <td className="p-2">{e.jobName}</td>
-                        <td className="p-2">{e.materialCode}</td>
-                        <td className="p-2 text-right">{e.weightGrams}g</td>
-                        <td className="p-2 text-right">{e.printTimeHours}h</td>
-                        <td className="p-2 text-right">{e.quantity}</td>
-                        <td className="p-2 text-right">
-                          {Math.round(e.productionCost).toLocaleString()}
+                        <td className="p-2">
+                          <div className="font-medium">{e.jobName}</div>
+                          {e.parts && (
+                            <div className="text-xs text-muted-foreground">
+                              {e.parts.length} part{e.parts.length !== 1 ? "s" : ""}
+                            </div>
+                          )}
                         </td>
                         <td className="p-2 text-right">
-                          {Math.round(e.sellingPrice).toLocaleString()}
+                          {Math.round(e.totalProductionCost || 0).toLocaleString()}
+                        </td>
+                        <td className="p-2 text-right">
+                          {Math.round(e.totalSellingPrice || 0).toLocaleString()}
                         </td>
                         <td className="p-2 text-right">{e.marginPercent}%</td>
                       </tr>

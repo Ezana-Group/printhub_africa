@@ -39,7 +39,13 @@ export interface PrintJob {
   weightGrams: number;
   printTimeHours: number;
   postProcessing: boolean;
+  postProcessingTimeHoursOverride?: number;
   quantity: number;
+}
+
+export interface MultiPartJob {
+  name: string;
+  parts: PrintJob[];
 }
 
 export interface CostBreakdown {
@@ -95,7 +101,7 @@ export function calculatePrintCost(
     job.printTimeHours;
 
   const laborTimeHours = job.postProcessing
-    ? job.printTimeHours + settings.postProcessingTimeHours
+    ? job.printTimeHours + (job.postProcessingTimeHoursOverride ?? settings.postProcessingTimeHours)
     : job.printTimeHours;
   const laborCost = laborTimeHours * settings.laborRateKesPerHour;
 

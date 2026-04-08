@@ -264,6 +264,7 @@ export interface QuotePayload {
   estimatedValue?: number
   reviewUrl: string
   pdfBase64?: string // New: Base64 encoded Draft PDF
+  specifications?: any // Detailed specs for multi-part support
 }
 
 export interface QuoteReadyPayload {

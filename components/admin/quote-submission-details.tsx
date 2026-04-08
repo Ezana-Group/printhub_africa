@@ -92,6 +92,51 @@ export function QuoteSubmissionDetails({
   }
 
   if (type === "three_d_print") {
+    if (spec.isMultiPart && Array.isArray(spec.parts)) {
+      return (
+        <Card>
+          <CardHeader>
+            <h2 className="font-semibold">Submission details — 3D Print ({spec.parts.length} parts)</h2>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid gap-4">
+              {spec.parts.map((p: any, i: number) => {
+                const weight = p.weightGrams ?? p.weightG;
+                const time = p.printTimeHours ?? p.printTimeHrs;
+                const materialStr = p.materialName || p.material || p.materialSlug;
+
+                return (
+                  <div key={i} className="flex flex-col rounded-xl border border-border/50 bg-muted/30 p-4">
+                    <div className="flex items-center gap-2 mb-3 border-b border-border/50 pb-2">
+                       <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#E8440A]/10 text-[#E8440A]">
+                         <span className="text-xs font-bold">{i + 1}</span>
+                       </span>
+                       <span className="font-semibold text-sm">Part {i + 1}: {materialStr}</span>
+                    </div>
+                    <dl className="grid grid-cols-[minmax(8rem,auto)_1fr] gap-x-4 gap-y-0 text-xs">
+                      {materialStr && <DefRow label="Material" value={String(materialStr)} />}
+                      {p.color && <DefRow label="Colour" value={String(p.color)} />}
+                      {weight != null && <DefRow label="Weight" value={`${weight} g`} />}
+                      {time != null && <DefRow label="Print time" value={`${time} hours`} />}
+                      {p.quantity != null && <DefRow label="Quantity" value={String(p.quantity)} />}
+                      {p.postProcessing && <DefRow label="Post-processing" value="Yes" />}
+                      {p.infillPercent != null && <DefRow label="Infill" value={`${p.infillPercent}%`} />}
+                    </dl>
+                  </div>
+                );
+              })}
+            </div>
+            {description && (
+              <div className="rounded-lg border border-blue-200 bg-[#F0F9FF] p-3 mt-3">
+                <p className="text-xs font-medium text-muted-foreground mb-1">📝 Special instructions</p>
+                <p className="text-sm whitespace-pre-wrap">{description}</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      );
+    }
+
     const weight = spec.weightGrams ?? spec.weightG;
     const time = spec.printTimeHours ?? spec.printTimeHrs;
     const materialStr = spec.materialName || spec.material;

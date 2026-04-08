@@ -48,14 +48,17 @@ export async function GET() {
       };
     });
 
-    // Post-processing / support removal: default fee per unit (support removal + finishing) for 3D quote calculator
+    // Post-processing fees from addons (as fallbacks)
     const supportRemovalFee = Number(
       supportRemovalAddons.find((a) => a.code !== "SUP_RM_NONE")?.pricePerUnit ?? 200
     );
     const finishingFee = Number(
       finishingAddons.find((a) => a.code !== "FINISH_RAW")?.pricePerUnit ?? 100
     );
-    const postProcessingFeePerUnit = supportRemovalFee + finishingFee;
+
+    // Post-processing / support removal fee (from business settings if present, else fallback to addons)
+    const postProcessingFeePerUnit = 
+      (business as any)?.postProcessingFeePerUnit ?? (supportRemovalFee + finishingFee);
 
     return NextResponse.json({
       labourRate,
@@ -65,6 +68,8 @@ export async function GET() {
       monthlyCapacityHrs: monthlyCapacityHrs || DEFAULT_MONTHLY_CAPACITY_HRS,
       filaments: filamentsList,
       postProcessingFeePerUnit,
+      // Default extra labor time for post-processing (can be overridden in admin calculator)
+      postProcessingTimeHours: 0.5, 
     });
   } catch (e) {
     console.error("calculator-config GET error:", e);

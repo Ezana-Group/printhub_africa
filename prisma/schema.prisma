@@ -506,6 +506,7 @@ model LFBusinessSettings {
   defaultProfitMarginPct   Float    @default(40)
   vatRatePct               Float    @default(16)
   minOrderValueKes         Float    @default(500)
+  postProcessingFeePerUnit Float    @default(300)
   updatedBy                String?
   updatedAt                DateTime @updatedAt
 }

@@ -63,7 +63,18 @@ export default async function AdminInventoryPage() {
     }),
     prismaClient.printerAsset.findMany({
       where: { isActive: true },
-      select: { id: true, name: true },
+      select: { 
+        id: true, 
+        name: true, 
+        location: true, 
+        printerType: true, 
+        status: true, 
+        purchasePriceKes: true,
+        expectedLifespanHours: true,
+        powerWatts: true,
+        annualMaintenanceKes: true,
+        isActive: true,
+      },
       orderBy: { name: "asc" },
     }),
   ]);
@@ -197,7 +208,18 @@ export default async function AdminInventoryPage() {
         machines={serializeDecimal(machinesSerialized)}
         consumables={serializeDecimal(consumablesSerialized)}
         hardwareItems={serializeDecimal(hardwareItems)}
-        printerAssets={printerAssets.map((a: { id: string; name: string }) => ({ id: a.id, name: a.name }))}
+        printerAssets={printerAssets.map((a: any) => ({ 
+          id: a.id, 
+          name: a.name,
+          location: a.location,
+          printerType: a.printerType,
+          status: a.status,
+          priceKes: a.purchasePriceKes,
+          lifespanHours: a.expectedLifespanHours,
+          powerWatts: a.powerWatts,
+          maintenancePerYearKes: a.annualMaintenanceKes,
+          isActive: a.isActive,
+        }))}
       />
     </div>
   );

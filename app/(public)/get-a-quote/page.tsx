@@ -114,6 +114,7 @@ export default function GetAQuotePage() {
   const [finishingCode3d] = useState("FINISH_RAW");
   const [turnaroundCode3d] = useState("STD_3D");
   const [postProcessing3d] = useState(false);
+  const [parts3d, setParts3d] = useState<any[]>([]);
   const [selectedMaterialName3d, setSelectedMaterialName3d] = useState<string | null>(null);
   const [selectedColor3d, setSelectedColor3d] = useState<string | null>(null);
 
@@ -254,19 +255,30 @@ export default function GetAQuotePage() {
                   estimateHigh: estimateLfHigh ?? undefined,
                 }
               : {
-                  materialSlug: materialSlug3d,
-                  materialName: selectedMaterialName3d ?? undefined,
-                  color: selectedColor3d ?? undefined,
-                  quantity: quantity3d,
-                  weightG: typeof weightG === "number" ? weightG : Number(weightG) || 0,
-                  printTimeHrs: typeof printTimeHrs === "number" ? printTimeHrs : Number(printTimeHrs) || 0,
-                  infillPercent,
-                  layerHeightMm,
-                  supportCode,
-                  supportRemovalCode,
-                  finishingCode: finishingCode3d,
-                  turnaroundCode: turnaroundCode3d,
-                  postProcessing: postProcessing3d,
+                  isMultiPart: parts3d.length > 0,
+                  parts: parts3d.length > 0 ? parts3d.map(p => ({
+                    materialSlug: p.material,
+                    materialName: p.materialName,
+                    color: p.color || undefined,
+                    quantity: p.quantity,
+                    weightG: p.weightGrams,
+                    printTimeHrs: p.printTimeHours,
+                    postProcessing: p.postProcessing,
+                  })) : [{
+                    materialSlug: materialSlug3d,
+                    materialName: selectedMaterialName3d ?? undefined,
+                    color: selectedColor3d ?? undefined,
+                    quantity: quantity3d,
+                    weightG: typeof weightG === "number" ? weightG : Number(weightG) || 0,
+                    printTimeHrs: typeof printTimeHrs === "number" ? printTimeHrs : Number(printTimeHrs) || 0,
+                    infillPercent,
+                    layerHeightMm,
+                    supportCode,
+                    supportRemovalCode,
+                    finishingCode: finishingCode3d,
+                    turnaroundCode: turnaroundCode3d,
+                    postProcessing: postProcessing3d,
+                  }],
                   estimateLow: estimate3dLow ?? undefined,
                   estimateHigh: estimate3dHigh ?? undefined,
                 }),
@@ -759,6 +771,7 @@ export default function GetAQuotePage() {
                             setSelectedMaterialName3d(name);
                             setSelectedColor3d(color ?? null);
                           }}
+                          onPartsChange={setParts3d}
                         />
                       )}
                     </div>
