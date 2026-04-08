@@ -59,7 +59,8 @@ export async function GET(req: NextRequest) {
         },
       }),
       prisma.catalogueItem.findMany({
-        where: { status: CatalogueStatus.LIVE },
+        // Only show live catalogue items that ARE NOT yet shop products (prevents duplicates)
+        where: { status: CatalogueStatus.LIVE, productId: null },
         include: {
           category: { select: { name: true, slug: true } },
           photos: { where: { isPrimary: true }, take: 1 },
@@ -78,8 +79,8 @@ export async function GET(req: NextRequest) {
           baseUrl,
         },
         items: {
-          products: products.map(p => ({ id: p.id, name: p.name, isActive: p.isActive })),
-          catalogue: catalogueItems.map(c => ({ id: c.id, name: c.name, status: c.status })),
+          products: products.map(p => ({ id: p.id, name: p.name, isActive: p.isActive, images: p.images })),
+          catalogue: catalogueItems.map(c => ({ id: c.id, name: c.name, status: c.status, productId: c.productId })),
         }
       });
     }
@@ -101,32 +102,36 @@ export async function GET(req: NextRequest) {
     const allItems: FeedItem[] = [
       ...products.map((p) => {
         const img = p.productImages?.[0];
-        const imageUrl =
+        let imageUrl =
           (p.images?.[0]?.startsWith("http") ? p.images[0] : null)
           ?? (img?.storageKey ? safePublicFileUrl(img.storageKey) : null)
           ?? img?.url
-          ?? null;
+          ?? (p.images?.[0]?.startsWith("/") ? `${baseUrl}${p.images[0]}` : null); // Fix: handle relative paths
+
         return {
           id: `shop-${p.id}`,
           item_group_id: p.catalogueItemId ? `catalogue-${p.catalogueItemId}` : undefined,
           title: p.name || "Untitled Product",
           description: p.shortDescription || p.description || p.name || "No description available",
-          link: `${baseUrl}/shop/${p.slug}`,
+          link: `${baseUrl}/shop/product/${p.slug}`,
           imageLink: imageUrl,
           price: `${Number(p.basePrice || 0).toFixed(2)} KES`,
-          availability: (p.stock ?? 0) > 0 ? "in_stock" : "out_of_stock",
+          availability: (p.stock ?? 0) > 0 ? "in_stock" : (p.isPOD ? "in_stock" : "out_of_stock"),
           brand: p.brand || "PrintHub",
           category: "5267",
         };
       }),
       ...catalogueItems.map((item) => {
         const photo = item.photos[0];
-        const imageUrl =
+        let imageUrl =
           photo?.url?.startsWith("http")
             ? photo.url
             : photo?.storageKey
               ? safePublicFileUrl(photo.storageKey)
-              : null;
+              : photo?.url?.startsWith("/")
+                ? `${baseUrl}${photo.url}` // Fix: handle relative paths
+                : null;
+
         const priceKes = item.priceOverrideKes ?? item.basePriceKes ?? 0;
         return {
           id: `catalogue-${item.id}`,
