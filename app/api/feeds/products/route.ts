@@ -30,10 +30,29 @@ export async function GET(req: NextRequest) {
     const searchParams = req.nextUrl.searchParams;
     const isDebug = searchParams.get("debug") === "1" || searchParams.get("debug") === "true";
     const format = searchParams.get("format");
+    const channel = searchParams.get("channel")?.toLowerCase();
+
+    // Mapping of feed channels to DB boolean fields
+    const channelMap: Record<string, string> = {
+      meta: "exportToMeta",
+      google: "exportToGoogle",
+      tiktok: "exportToTiktok",
+      youtube: "exportToYoutube",
+      pinterest: "exportToPinterest",
+      linkedin: "exportToLinkedIn",
+      x: "exportToX",
+      instagram: "exportToInstagramStories",
+      jiji: "exportToJiji",
+    };
+
+    const productWhere: any = { isActive: true };
+    if (channel && channelMap[channel]) {
+      productWhere[channelMap[channel]] = true;
+    }
 
     const [products, catalogueItems] = await Promise.all([
       prisma.product.findMany({
-        where: { isActive: true },
+        where: productWhere,
         include: {
           category: { select: { name: true, slug: true } },
           productImages: { orderBy: { sortOrder: "asc" }, take: 1 },
