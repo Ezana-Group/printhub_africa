@@ -104,20 +104,44 @@ export const trackEvent = (eventName: string, params: Record<string, any> = {}, 
   }
 
   console.log(`[Tracking] Event: ${eventName} (ID: ${dedupeId})`, params);
+
+  // --- META CONVERSIONS API (Server-side) ---
+  // We trigger this from the client to the backend proxy
+  fetch("/api/track/meta", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      eventName,
+      params,
+      eventId: dedupeId,
+      url: window.location.href,
+    }),
+  }).catch((err) => console.error("[Tracking] Meta CAPI Error:", err));
+
   return dedupeId;
 };
 
+/**
+ * Formats an ID to match the Meta/Google catalog feed.
+ * Products are prefixed with 'shop-', CatalogueItems with 'catalogue-'.
+ */
+export const formatCatalogId = (id: string, type: "product" | "catalogue" = "product") => {
+  if (id.startsWith("shop-") || id.startsWith("catalogue-")) return id;
+  return type === "product" ? `shop-${id}` : `catalogue-${id}`;
+};
+
 // Standard e-commerce helpers
-export const trackViewContent = (item: { id: string; name: string; price: number; category?: string }) => {
+export const trackViewContent = (item: { id: string; name: string; price: number; category?: string; type?: "product" | "catalogue" }) => {
+  const formattedId = formatCatalogId(item.id, item.type);
   return trackEvent("ViewContent", {
-    content_ids: [item.id],
+    content_ids: [formattedId],
     content_name: item.name,
     content_type: "product",
     value: item.price,
     currency: "KES",
     content_category: item.category,
     items: [{
-      item_id: item.id,
+      item_id: formattedId,
       item_name: item.name,
       price: item.price,
       item_category: item.category,
@@ -126,16 +150,17 @@ export const trackViewContent = (item: { id: string; name: string; price: number
   });
 };
 
-export const trackAddToCart = (item: { id: string; name: string; price: number; quantity: number; category?: string }) => {
+export const trackAddToCart = (item: { id: string; name: string; price: number; quantity: number; category?: string; type?: "product" | "catalogue" }) => {
+  const formattedId = formatCatalogId(item.id, item.type);
   return trackEvent("AddToCart", {
-    content_ids: [item.id],
+    content_ids: [formattedId],
     content_name: item.name,
     content_type: "product",
     value: item.price * item.quantity,
     currency: "KES",
     quantity: item.quantity,
     items: [{
-      item_id: item.id,
+      item_id: formattedId,
       item_name: item.name,
       price: item.price,
       item_category: item.category,
@@ -146,14 +171,14 @@ export const trackAddToCart = (item: { id: string; name: string; price: number; 
 
 export const trackInitiateCheckout = (cart: { items: any[]; total: number }) => {
   return trackEvent("InitiateCheckout", {
-    content_ids: cart.items.map((i) => i.productId || i.id),
-    contents: cart.items.map((i) => ({ id: i.productId || i.id, quantity: i.quantity })),
+    content_ids: cart.items.map((i) => formatCatalogId(i.productId || i.id, i.variantId ? "product" : "product")), // Default to product for cart
+    contents: cart.items.map((i) => ({ id: formatCatalogId(i.productId || i.id), quantity: i.quantity })),
     content_type: "product",
     value: cart.total,
     currency: "KES",
     num_items: cart.items.length,
     items: cart.items.map(i => ({
-      item_id: i.productId || i.id,
+      item_id: formatCatalogId(i.productId || i.id),
       item_name: i.name,
       price: i.price,
       quantity: i.quantity
@@ -163,14 +188,14 @@ export const trackInitiateCheckout = (cart: { items: any[]; total: number }) => 
 
 export const trackPurchase = (order: { id: string; total: number; items: any[] }) => {
   return trackEvent("Purchase", {
-    content_ids: order.items.map((i) => i.productId || i.id),
-    contents: order.items.map((i) => ({ id: i.productId || i.id, quantity: i.quantity })),
+    content_ids: order.items.map((i) => formatCatalogId(i.productId || i.id)),
+    contents: order.items.map((i) => ({ id: formatCatalogId(i.productId || i.id), quantity: i.quantity })),
     content_type: "product",
     value: order.total,
     currency: "KES",
     transaction_id: order.id,
     items: order.items.map(i => ({
-      item_id: i.productId || i.id,
+      item_id: formatCatalogId(i.productId || i.id),
       item_name: i.name || i.product?.name,
       price: i.unitPrice || i.price,
       quantity: i.quantity

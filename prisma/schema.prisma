@@ -54,11 +54,11 @@ model User {
   adminSessions            AdminSession[]
   auditLogs                AuditLog[]
   backupRecords            BackupRecord[]
+  catalogueSubmissions     CatalogueImportQueue[]     @relation("CatalogueSubmittedBy")
   catalogueApproved        CatalogueItem[]            @relation("CatalogueApprovedBy")
   catalogueArchived        CatalogueItem[]            @relation("CatalogueArchivedBy")
   catalogueImported        CatalogueItem[]            @relation("CatalogueImportedBy")
   catalogueRejected        CatalogueItem[]            @relation("CatalogueRejectedBy")
-  catalogueSubmissions     CatalogueImportQueue[]     @relation("CatalogueSubmittedBy")
   primaryCorporateAccount  CorporateAccount?          @relation("CorporatePrimaryContact")
   corporateApplications    CorporateApplication[]
   corporateTeamMemberships CorporateTeamMember[]
@@ -250,8 +250,6 @@ model Product {
   exportToPinterest          Boolean                 @default(false)
   exportToTiktok             Boolean                 @default(true)
   exportToX                  Boolean                 @default(false)
-  totalViews                 Int                     @default(0)
-  weeklyViews                Int                     @default(0)
   lastExportedAt             DateTime?
   exportToGoogleDiscover     Boolean                 @default(false)
   exportToInstagramReels     Boolean                 @default(false)
@@ -261,9 +259,6 @@ model Product {
   exportToWhatsappChannel    Boolean                 @default(false)
   exportToWhatsappStatus     Boolean                 @default(false)
   exportToYoutubeShorts      Boolean                 @default(false)
-  lastGoogleSync             DateTime?
-  lastMetaSync               DateTime?
-  lastTiktokSync             DateTime?
   aiDescriptionGenerated     Boolean                 @default(false)
   aiGeneratedAt              DateTime?
   keyFeatures                String[]                @default([])
@@ -279,12 +274,17 @@ model Product {
   exportToSnapchat           Boolean                 @default(false)
   exportToYoutube            Boolean                 @default(false)
   featuredThisWeek           Boolean                 @default(false)
+  totalViews                 Int                     @default(0)
+  weeklyViews                Int                     @default(0)
+  lastGoogleSync             DateTime?
+  lastMetaSync               DateTime?
+  lastTiktokSync             DateTime?
+  adCopyVariations           AdCopyVariation[]
   catalogueImportQueue       CatalogueImportQueue?
   catalogueItem              CatalogueItem?          @relation("CatalogueProductLink")
   externalModel              ExternalModel?
   inventory                  Inventory[]
   orderItems                 OrderItem[]
-  adCopyVariations           AdCopyVariation[]
   catalogueSourceItem        CatalogueItem?          @relation("CataloguePODSource", fields: [catalogueItemId], references: [id])
   category                   Category                @relation(fields: [categoryId], references: [id])
   filamentColors             ProductFilamentColor[]
@@ -507,9 +507,9 @@ model LFBusinessSettings {
   defaultProfitMarginPct   Float    @default(40)
   vatRatePct               Float    @default(16)
   minOrderValueKes         Float    @default(500)
-  postProcessingFeePerUnit Float    @default(300)
   updatedBy                String?
   updatedAt                DateTime @updatedAt
+  postProcessingFeePerUnit Float    @default(300)
 }
 
 model LFStockItem {
@@ -2218,16 +2218,14 @@ model CatalogueImportQueue {
   scrapedImageUrls    String[]     @default([])
   scrapedName         String?
   scrapedTags         String[]     @default([])
+  productId           String?      @unique
   editorData          Json?
   isManual            Boolean      @default(false)
-  productId           String?      @unique
-  product             Product?     @relation(fields: [productId], references: [id])
-  
-  // Multi-stage workflow additions
   reviewNotes         String?
   submittedAt         DateTime?
   submittedById       String?
-  submittedBy         User?        @relation("CatalogueSubmittedBy", fields: [submittedById], references: [id], onDelete: SetNull)
+  product             Product?     @relation(fields: [productId], references: [id])
+  submittedBy         User?        @relation("CatalogueSubmittedBy", fields: [submittedById], references: [id])
 
   @@index([status])
 }
@@ -3127,19 +3125,19 @@ enum ImportPlatform {
   CULTS3D
   CREAZILLA
   THANGS
-  MAKERWORLD
   OTHER
+  MAKERWORLD
 }
 
 enum ImportStatus {
   PENDING
   PROCESSING
-  DRAFT
   DONE
   FAILED
   PENDING_REVIEW
   APPROVED
   REJECTED
+  DRAFT
 }
 
 enum JobStatus {
