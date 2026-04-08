@@ -12,16 +12,28 @@ import { CatalogueStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
-function getBaseUrl(req: Request): string {
-  // Always prioritize the production domain for public feeds to ensure reliability
-  const productionUrl = "https://printhub.africa";
-  try {
-    const u = new URL(req.url);
-    if (u.hostname === "localhost") return u.origin;
-    return productionUrl;
-  } catch {
-    return productionUrl;
+function getBaseUrl(req: NextRequest): string {
+  const searchParams = req.nextUrl.searchParams;
+  const forcedDomain = searchParams.get("domain");
+
+  // 1. Check for explicit domain override in query params
+  if (forcedDomain) {
+    const cleanDomain = forcedDomain.replace(/^https?:\/\//, "").replace(/\/$/, "");
+    return `https://${cleanDomain}`;
   }
+
+  // 2. Detect from request headers
+  const forwardedHost = req.headers.get("x-forwarded-host");
+  const host = req.headers.get("host");
+  const detectedHost = forwardedHost || host;
+
+  if (detectedHost && !detectedHost.includes("localhost") && !detectedHost.includes("railway.app")) {
+     return `https://${detectedHost}`;
+  }
+
+  // 3. Fallback to Env or Hardcoded
+  const envUrl = process.env.NEXT_PUBLIC_APP_URL || "https://printhub.africa";
+  return envUrl.replace(/\/$/, "");
 }
 
 export async function GET(req: NextRequest) {
