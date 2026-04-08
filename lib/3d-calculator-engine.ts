@@ -36,11 +36,14 @@ export interface MaterialRate {
 export interface PrintJob {
   name: string;
   material: string;
+  color?: string;
   weightGrams: number;
   printTimeHours: number;
   postProcessing: boolean;
   postProcessingTimeHoursOverride?: number;
   quantity: number;
+  infillPercent?: number;
+  layerHeightMm?: number;
 }
 
 export interface MultiPartJob {
@@ -177,18 +180,18 @@ export const DEFAULT_PRINTER_SETTINGS: PrinterSettings = {
   powerWatts: 270,
   electricityRateKesKwh: 24,
   printerPurchasePriceKes: 85000,
-  lifespanHours: 5000,
-  maintenancePerYearKes: 12000,
-  laborRateKesPerHour: 200,
+  lifespanHours: 10000,
+  maintenancePerYearKes: 6000,
+  laborRateKesPerHour: 50, // Aligned with Admin
   postProcessingTimeHours: 0.5,
-  postProcessingFeePerUnit: 300,
-  monthlyRentKes: 25000,
-  monthlyUtilitiesKes: 6000,
-  monthlyInsuranceKes: 3000,
+  postProcessingFeePerUnit: 200, // Aligned with Business Settings
+  monthlyRentKes: 10000, // Part of 13,500 overhead
+  monthlyUtilitiesKes: 2500, // Part of 13,500 overhead
+  monthlyInsuranceKes: 1000, // Part of 13,500 overhead
   workingDaysPerMonth: 26,
   workingHoursPerDay: 8,
   failedPrintRatePercent: 5,
-  packagingCostKes: 50,
+  packagingCostKes: 20,
   profitMarginPercent: 40,
   vatRatePercent: 16,
 };

@@ -37,6 +37,8 @@ type LineItem = {
   quantity: number;
   postProcessing: boolean;
   marginPercentOverride?: number;
+  infillPercent?: number;
+  layerHeightMm?: number;
 };
 
 function newLineItem(): LineItem {
@@ -49,6 +51,8 @@ function newLineItem(): LineItem {
     printTimeHours: 0,
     quantity: 1,
     postProcessing: false,
+    infillPercent: 20,
+    layerHeightMm: 0.2,
   };
 }
 
@@ -107,6 +111,8 @@ export function SalesPrintCalculator({
             quantity: l.quantity,
             postProcessing: l.postProcessing,
             marginPercentOverride: l.marginPercentOverride,
+            infillPercent: (l as any).infillPercent,
+            layerHeightMm: (l as any).layerHeightMm,
           }))
         : [newLineItem()]
     );
@@ -193,14 +199,16 @@ export function SalesPrintCalculator({
         overridePerLine && line.marginPercentOverride != null
           ? line.marginPercentOverride
           : globalMarginPercent;
-      const job: PrintJob = {
-        name: line.description || "Item",
-        material: line.materialCode || (materials[0]?.code ?? ""),
-        weightGrams: line.weightGrams,
-        printTimeHours: line.printTimeHours,
-        postProcessing: line.postProcessing,
-        quantity: line.quantity,
-      };
+        const job: PrintJob = {
+          name: line.description || "Item",
+          material: line.materialCode || (materials[0]?.code ?? ""),
+          weightGrams: line.weightGrams,
+          printTimeHours: line.printTimeHours,
+          postProcessing: line.postProcessing,
+          quantity: line.quantity,
+          infillPercent: line.infillPercent,
+          layerHeightMm: line.layerHeightMm,
+        };
       try {
         const b = calculatePrintCost(
           job,
@@ -369,6 +377,8 @@ export function SalesPrintCalculator({
                   <th className="text-left p-2">Colour</th>
                   <th className="text-right p-2 w-20">g</th>
                   <th className="text-right p-2 w-20">hrs</th>
+                  <th className="text-right p-2 w-16">Infill</th>
+                  <th className="text-right p-2 w-16">Layer</th>
                   <th className="text-right p-2 w-16">Qty</th>
                   {overridePerLine && (
                     <th className="text-right p-2 w-20">Margin %</th>
@@ -500,6 +510,35 @@ export function SalesPrintCalculator({
                             })
                           }
                           className="h-8 w-20 text-right text-sm"
+                        />
+                      </td>
+                      <td className="p-2 text-right">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={line.infillPercent ?? ""}
+                          onChange={(e) =>
+                            updateLine(line.id, {
+                              infillPercent: Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0)),
+                            })
+                          }
+                          className="h-8 w-16 text-right text-sm"
+                        />
+                      </td>
+                      <td className="p-2 text-right">
+                        <Input
+                          type="number"
+                          min={0.05}
+                          max={1.0}
+                          step={0.05}
+                          value={line.layerHeightMm ?? ""}
+                          onChange={(e) =>
+                            updateLine(line.id, {
+                              layerHeightMm: Math.max(0.05, parseFloat(e.target.value) || 0.2),
+                            })
+                          }
+                          className="h-8 w-16 text-right text-sm"
                         />
                       </td>
                       <td className="p-2 text-right">

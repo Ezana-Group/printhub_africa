@@ -65,6 +65,8 @@ export function AdminPrintCalculator() {
   const [weightGrams, setWeightGrams] = useState<number | "">("");
   const [printTimeHours, setPrintTimeHours] = useState<number | "">("");
   const [quantity, setQuantity] = useState(1);
+  const [infillPercent, setInfillPercent] = useState<number | "">(20);
+  const [layerHeightMm, setLayerHeightMm] = useState<number | "">(0.2);
   const [postProcessing, setPostProcessing] = useState(false);
   const [postProcessingHours, setPostProcessingHours] = useState<number | "">(0.5);
   
@@ -181,6 +183,9 @@ export function AdminPrintCalculator() {
         postProcessing,
         postProcessingTimeHoursOverride: postProcessing && postProcessingHours !== "" ? Number(postProcessingHours) : undefined,
         quantity: Math.max(1, quantity),
+        color: colorChoice, // Save the color selection
+        infillPercent: Number(infillPercent) || 20,
+        layerHeightMm: Number(layerHeightMm) || 0.2,
       },
     ]);
     
@@ -189,6 +194,8 @@ export function AdminPrintCalculator() {
     setWeightGrams("");
     setPrintTimeHours("");
     setQuantity(1);
+    setInfillPercent(20);
+    setLayerHeightMm(0.2);
     setPostProcessing(false);
     setPostProcessingHours(0.5);
   };
@@ -203,7 +210,30 @@ export function AdminPrintCalculator() {
   );
 
   const breakdown = useMemo(() => {
-    if (!config || parts.length === 0) return null;
+    if (!config) return null;
+    
+    // We combine added parts with the current form's "draft" part to show a live total.
+    const activeParts = [...parts];
+    
+    if (activeParts.length === 0) {
+      const w = Number(weightGrams) || 0;
+      const t = Number(printTimeHours) || 0;
+      if (w > 0 && t > 0 && selectedFilament) {
+        activeParts.push({
+          name: partName || "Part 1",
+          material: effectiveMaterial,
+          materialName: selectedFilament.name,
+          costPerKg: selectedFilament.costPerKg,
+          weightGrams: w,
+          printTimeHours: t,
+          postProcessing,
+          postProcessingTimeHoursOverride: postProcessing && postProcessingHours !== "" ? Number(postProcessingHours) : undefined,
+          quantity: Math.max(1, quantity),
+        });
+      }
+    }
+
+    if (activeParts.length === 0) return null;
     
     return computeMultiPart3DEstimate(
       {
@@ -214,7 +244,7 @@ export function AdminPrintCalculator() {
         profitMargin: config.profitMargin,
         postProcessingFeePerUnit: config.postProcessingFeePerUnit,
       },
-      parts.map(p => ({
+      activeParts.map(p => ({
         weightG: p.weightGrams,
         printTimeHrs: p.printTimeHours,
         quantity: p.quantity,
@@ -224,7 +254,7 @@ export function AdminPrintCalculator() {
         profitMarginOverride: effectiveMargin,
       }))
     );
-  }, [config, parts, effectiveMargin]);
+  }, [config, parts, effectiveMargin, weightGrams, printTimeHours, quantity, postProcessing, postProcessingHours, selectedFilament, effectiveMaterial]);
 
   const marginSensitivity = useMemo(() => {
     if (!breakdown || !config) return null;
@@ -590,6 +620,44 @@ export function AdminPrintCalculator() {
                   />
                 </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Infill %</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={infillPercent === "" ? "" : infillPercent}
+                    onChange={(e) =>
+                      setInfillPercent(
+                        e.target.value === ""
+                          ? ""
+                          : Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0))
+                      )
+                    }
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>Layer height (mm)</Label>
+                  <Input
+                    type="number"
+                    min={0.05}
+                    max={1.0}
+                    step={0.05}
+                    value={layerHeightMm === "" ? "" : layerHeightMm}
+                    onChange={(e) =>
+                      setLayerHeightMm(
+                        e.target.value === ""
+                          ? ""
+                          : Math.max(0.05, Math.min(1.0, parseFloat(e.target.value) || 0.2))
+                      )
+                    }
+                    className="mt-1"
+                  />
+                </div>
+              </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Quantity</Label>
@@ -749,13 +817,15 @@ export function AdminPrintCalculator() {
                         lines: parts.map(p => ({
                           description: p.name,
                           materialCode: p.material,
-                          color: "", // colour choice per part not fully implemented in parts list yet, but could be added
+                          color: p.color || "", // Now correctly passing the color
                           weightGrams: p.weightGrams,
                           printTimeHours: p.printTimeHours,
                           quantity: p.quantity,
                           postProcessing: p.postProcessing,
                           postProcessingTimeHoursOverride: p.postProcessingTimeHoursOverride,
                           marginPercentOverride: marginOverride !== "" ? Number(marginOverride) : undefined,
+                          infillPercent: p.infillPercent,
+                          layerHeightMm: p.layerHeightMm,
                         })),
                         globalMarginPercent: effectiveMargin,
                         discountType: "kes",

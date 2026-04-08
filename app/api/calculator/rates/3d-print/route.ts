@@ -18,7 +18,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const printerId = searchParams.get("printerId") ?? undefined;
 
-    const [printerAsset, inventoryPrinter, linkedItems, inventoryFilament, config, supportRemovalAddons, finishingAddons] = await Promise.all([
+    const [printerAsset, inventoryPrinter, linkedItems, inventoryFilament, config, business, supportRemovalAddons, finishingAddons] = await Promise.all([
       printerId ? prisma.printerAsset.findFirst({ where: { id: printerId, isActive: true, printerType: { in: ["FDM", "RESIN", "HYBRID"] } } }).catch(() => null) : Promise.resolve(null),
       printerId ? prisma.inventoryHardwareItem.findFirst({ where: { id: printerId, isActive: true, hardwareType: "THREE_D_PRINTER" } }).catch(() => null) : Promise.resolve(null),
       printerId
@@ -33,18 +33,34 @@ export async function GET(req: Request) {
       prisma.pricingConfig.findUnique({
         where: { key: "3dPrinterSettings" },
       }),
+      prisma.lFBusinessSettings.findFirst().catch(() => null),
       prisma.threeDAddon.findMany({ where: { category: "SUPPORT_REMOVAL", isActive: true } }),
       prisma.threeDAddon.findMany({ where: { category: "FINISHING", isActive: true } }),
     ]);
 
     let printerSettings: PrinterSettings = { ...DEFAULT_PRINTER_SETTINGS };
+    
+    // 1. Start with the "Pricing Config" overrides if they exist
     if (config?.valueJson) {
       try {
         const parsed = JSON.parse(config.valueJson) as Partial<PrinterSettings>;
-        printerSettings = { ...DEFAULT_PRINTER_SETTINGS, ...parsed };
+        printerSettings = { ...printerSettings, ...parsed };
       } catch {
-        // use defaults if invalid JSON
+        // use defaults
       }
+    }
+
+    // 2. Map verified Business Settings (Labour, Rent, VAT) - these take precedence for consistency
+    if (business) {
+      printerSettings = {
+        ...printerSettings,
+        laborRateKesPerHour: business.labourRateKesPerHour ?? printerSettings.laborRateKesPerHour,
+        monthlyRentKes: business.monthlyRentKes ?? printerSettings.monthlyRentKes,
+        monthlyUtilitiesKes: business.monthlyUtilitiesKes ?? printerSettings.monthlyUtilitiesKes,
+        monthlyInsuranceKes: business.monthlyInsuranceKes ?? printerSettings.monthlyInsuranceKes,
+        vatRatePercent: business.vatRatePct ?? printerSettings.vatRatePercent,
+        profitMarginPercent: business.defaultProfitMarginPct ?? printerSettings.profitMarginPercent,
+      };
     }
     const linkedMaintenanceKes = (linkedItems as Array<{ priceKes: number }>).reduce((s, i) => s + i.priceKes, 0);
     const linkedTimeHours = (linkedItems as Array<{ timeHours: number | null }>).reduce((s, i) => s + (i.timeHours ?? 0), 0);
@@ -91,13 +107,7 @@ export async function GET(req: Request) {
       };
     });
 
-    const supportRemovalFee = Number(
-      supportRemovalAddons.find((a) => a.code !== "SUP_RM_NONE")?.pricePerUnit ?? 200
-    );
-    const finishingFee = Number(
-      finishingAddons.find((a) => a.code !== "FINISH_RAW")?.pricePerUnit ?? 100
-    );
-    const postProcessingFeePerUnit = supportRemovalFee + finishingFee;
+    const postProcessingFeePerUnit = (business as any)?.postProcessingFeePerUnit ?? 200;
 
     const printerSettingsWithFee = {
       ...printerSettings,
