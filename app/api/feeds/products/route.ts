@@ -13,15 +13,14 @@ import { CatalogueStatus } from "@prisma/client";
 export const dynamic = "force-dynamic";
 
 function getBaseUrl(req: Request): string {
-  // Use public app URL if set, otherwise try to detect from request
-  const fallback = process.env.NEXT_PUBLIC_APP_URL || "https://printhub.africa";
+  // Always prioritize the production domain for public feeds to ensure reliability
+  const productionUrl = "https://printhub.africa";
   try {
     const u = new URL(req.url);
-    // If it's a localhost, keep it, otherwise prefer fallback
     if (u.hostname === "localhost") return u.origin;
-    return fallback;
+    return productionUrl;
   } catch {
-    return fallback;
+    return productionUrl;
   }
 }
 
@@ -80,7 +79,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Build the standardized items list
-    const feedItems: FeedItem[] = [
+    const allItems: FeedItem[] = [
       ...products.map((p) => {
         const img = p.productImages?.[0];
         const imageUrl =
@@ -116,13 +115,16 @@ export async function GET(req: NextRequest) {
           description: item.shortDescription || item.description || item.name || "No description available",
           link: `${baseUrl}/catalogue/${item.slug}`,
           imageLink: imageUrl,
-          price: `${Math.round(priceKes)}.00 KES`,
+          price: `${Number(priceKes).toFixed(2)} KES`,
           availability: "in_stock",
           brand: "PrintHub",
           category: "5267",
         };
       }),
     ];
+
+    // Meta/Google require images. Filter items without valid imageLinks.
+    const feedItems = allItems.filter(item => item.imageLink && item.imageLink.startsWith("http"));
 
     if (format === "xml" || format === "rss") {
       try {
@@ -131,14 +133,14 @@ export async function GET(req: NextRequest) {
   <channel>
     <title>PrintHub Africa Product Feed</title>
     <link>${baseUrl}</link>
-    <description>3D Printing Catalogue and Shop Products</description>
+    <description>3/D Printing Catalogue and Shop Products</description>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
     ${feedItems.map(item => `
     <item>
       <g:id>${escapeXml(item.id)}</g:id>
       ${item.item_group_id ? `<g:item_group_id>${escapeXml(item.item_group_id)}</g:item_group_id>` : ''}
-      <g:title>${escapeXml(item.title)}</g:title>
-      <g:description>${escapeXml(item.description)}</g:description>
+      <g:title><![CDATA[${item.title}]]></g:title>
+      <g:description><![CDATA[${item.description}]]></g:description>
       <g:link>${escapeXml(item.link)}</g:link>
       <g:image_link>${escapeXml(item.imageLink || "")}</g:image_link>
       <g:brand>${escapeXml(item.brand)}</g:brand>
@@ -171,7 +173,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       generatedAt: new Date().toISOString(),
       baseUrl,
-      itemCount: feedItems.length,
+      filteredItemCount: feedItems.length,
+      totalCount: allItems.length,
       items: feedItems,
     }, {
       headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
