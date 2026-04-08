@@ -4,10 +4,10 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const DEFAULT_LABOUR_RATE = 200;
+const DEFAULT_LABOUR_RATE = 50; // Aligned with current Admin Pricing
 const DEFAULT_PROFIT_MARGIN = 40;
 const DEFAULT_VAT_PCT = 16;
-const DEFAULT_MONTHLY_OVERHEAD = 50000;
+const DEFAULT_MONTHLY_OVERHEAD = 13500; // Aligned with Admin ~KES 65/hr Machine cost
 const DEFAULT_MONTHLY_CAPACITY_HRS = 208; // 26 * 8
 
 /** GET: Public config for 3D (and LF) calculators: business costs + filaments + post-processing fee.

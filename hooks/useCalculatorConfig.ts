@@ -22,10 +22,10 @@ export function useCalculatorConfig() {
         return;
       }
       setData({
-        labourRate: json.labourRate ?? 200,
+        labourRate: json.labourRate ?? 50,
         profitMargin: json.profitMargin ?? 40,
         vatPercent: json.vatPercent ?? 16,
-        monthlyOverhead: json.monthlyOverhead ?? 50000,
+        monthlyOverhead: json.monthlyOverhead ?? 13500,
         monthlyCapacityHrs: json.monthlyCapacityHrs ?? 208,
         filaments: Array.isArray(json.filaments) ? json.filaments : [],
         postProcessingFeePerUnit: typeof json.postProcessingFeePerUnit === "number" ? json.postProcessingFeePerUnit : undefined,
