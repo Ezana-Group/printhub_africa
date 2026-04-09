@@ -31,6 +31,7 @@ export async function POST(req: Request) {
       description,
       shortDescription,
       isPOD = true,
+      excludeColor = false,
       images = [],
       calculationData, // The full history entry or parts list
     } = body;
@@ -69,8 +70,14 @@ export async function POST(req: Request) {
         printTimeStr = `${totalHours.toFixed(1)} hours`;
       }
 
-      materials = Array.from(new Set(calculationData.parts.map((p: any) => p.materialCode)));
-      colors = Array.from(new Set(calculationData.parts.filter((p: any) => p.color).map((p: any) => p.color)));
+      if (!excludeColor) {
+        materials = Array.from(new Set(calculationData.parts.map((p: any) => p.materialCode)));
+        colors = Array.from(new Set(calculationData.parts.filter((p: any) => p.color).map((p: any) => p.color)));
+      } else {
+        // Still map materials if we want them, but the user specifically said "except the colour"
+        materials = Array.from(new Set(calculationData.parts.map((p: any) => p.materialCode)));
+        colors = [];
+      }
     }
 
     // 4. Create Product

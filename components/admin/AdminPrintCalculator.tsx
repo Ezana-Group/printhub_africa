@@ -19,7 +19,7 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type MaterialWithColors = { code: string; name: string; color?: string; baseMaterial?: string; quantity?: number };
-import { Calculator, History, FileText, Plus, Trash2, Box, RotateCcw, ShoppingCart } from "lucide-react";
+import { Calculator, History, FileText, Plus, Trash2, Box, RotateCcw, ShoppingCart, CheckCircle } from "lucide-react";
 import { ConvertToProductModal } from "./calculator/ConvertToProductModal";
 import { setQuoteDraft } from "@/lib/quote-draft";
 // Removed computeMultiPart3DEstimate import as we will use calculatePrintCost directly
@@ -44,7 +44,8 @@ type HistoryEntry = {
   totalProductionCost: number;
   totalSellingPrice: number;
   profitAmount: number;
-  marginPercent: number;
+   marginPercent: number;
+  isPrinted?: boolean;
   createdAt: string;
 };
 
@@ -339,7 +340,38 @@ export function AdminPrintCalculator() {
     if (tab === "history") fetchHistory();
   }, [tab, fetchHistory]);
 
-  const handleSaveToHistory = async () => {
+  const handleMarkAsPrinted = async (isPrinted: boolean = true) => {
+    if (!breakdown || parts.length === 0) return;
+    
+    // 1. Save to history
+    await handleSaveToHistory(isPrinted);
+    
+    // 2. Open product modal with current data
+    setPushProductEntry({
+      id: "calc_" + Date.now(),
+      jobName: jobName.trim() || "New Job",
+      parts: parts.map((p, i) => ({
+        name: p.name,
+        materialCode: p.material,
+        weightGrams: p.weightGrams,
+        printTimeHours: p.printTimeHours,
+        quantity: p.quantity,
+        color: p.color,
+        postProcessing: p.postProcessing,
+        postProcessingTimeHoursOverride: p.postProcessingTimeHoursOverride,
+        productionCost: breakdown.estimates[i].totalProductionCost,
+        sellingPrice: breakdown.estimates[i].sellingPriceIncVat,
+      })),
+      totalProductionCost: breakdown.subtotal,
+      totalSellingPrice: breakdown.finalPrice,
+      profitAmount: breakdown.profit,
+      marginPercent: effectiveMargin,
+      isPrinted,
+      createdAt: new Date().toISOString(),
+    });
+  };
+
+  const handleSaveToHistory = async (isPrinted: boolean = true) => {
     if (!jobName.trim()) {
       setSaveStatus("error");
       return;
@@ -352,6 +384,7 @@ export function AdminPrintCalculator() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           jobName: jobName.trim(),
+          isPrinted,
           parts: parts.map((p, i) => ({
             name: p.name,
             materialCode: p.material,
@@ -795,11 +828,9 @@ export function AdminPrintCalculator() {
                     Add part to project
                   </Button>
                 </div>
-              </div>
-
-              <div className="pt-4 border-t flex gap-2">
+                   <div className="pt-4 border-t flex gap-2">
                 <Button
-                  onClick={handleSaveToHistory}
+                  onClick={() => handleSaveToHistory(true)}
                   disabled={parts.length === 0 || saveStatus === "loading"}
                 >
                   {saveStatus === "loading"
@@ -809,6 +840,7 @@ export function AdminPrintCalculator() {
                       : "Save project history"}
                 </Button>
               </div>
+             </div>
             </CardContent>
           </Card>
 
@@ -875,8 +907,27 @@ export function AdminPrintCalculator() {
                       </Link>
                     </p>
                   )}
+                   <Button
+                    className="w-full mt-3 bg-green-600 hover:bg-green-700 text-white shadow-sm"
+                    onClick={() => handleMarkAsPrinted(true)}
+                    disabled={!breakdown || parts.length === 0 || saveStatus === "loading"}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Mark as Printed & Publish →
+                  </Button>
+
                   <Button
-                    className="w-full mt-3"
+                    className="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                    onClick={() => handleMarkAsPrinted(false)}
+                    disabled={!breakdown || parts.length === 0 || saveStatus === "loading"}
+                  >
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    Publish to Shop (POD Design) →
+                  </Button>
+
+                  <Button
+                    className="w-full mt-2"
+                    variant="outline"
                     onClick={() => {
                       const validUntil = new Date();
                       validUntil.setDate(validUntil.getDate() + 7);
@@ -962,8 +1013,9 @@ export function AdminPrintCalculator() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left p-2 font-medium">Date</th>
+                       <th className="text-left p-2 font-medium">Date</th>
                       <th className="text-left p-2 font-medium">Job / Parts</th>
+                      <th className="text-center p-2 font-medium">Status</th>
                       <th className="text-right p-2 font-medium">Cost</th>
                       <th className="text-right p-2 font-medium">Profit</th>
                       <th className="text-right p-2 font-medium">Selling (Ex VAT)</th>
@@ -983,7 +1035,18 @@ export function AdminPrintCalculator() {
                           {e.parts && (
                             <div className="text-xs text-muted-foreground">
                               {e.parts.length} part{e.parts.length !== 1 ? "s" : ""}
-                            </div>
+                             </div>
+                          )}
+                        </td>
+                        <td className="p-2 text-center">
+                          {e.isPrinted ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-800">
+                              Printed
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-800">
+                              POD / Est
+                            </span>
                           )}
                         </td>
                         <td className="p-2 text-right">

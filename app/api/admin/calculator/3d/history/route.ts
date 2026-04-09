@@ -29,6 +29,7 @@ type HistoryEntry = {
   totalSellingPrice: number;
   profitAmount: number;
   marginPercent: number;
+  isPrinted?: boolean;
   createdAt: string;
   // Legacy fields (for backward compatibility during migration)
   materialCode?: string; 
@@ -122,6 +123,7 @@ export async function POST(req: Request) {
       totalSellingPrice: Number(body.totalSellingPrice) || 0,
       profitAmount: Number(body.profitAmount) || 0,
       marginPercent: Number(body.marginPercent) || 0,
+      isPrinted: !!body.isPrinted,
       createdAt: new Date().toISOString(),
     };
     const config = await prisma.pricingConfig.findUnique({

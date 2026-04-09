@@ -30,12 +30,14 @@ interface HistoryEntry {
   }>;
   totalSellingPrice: number;
   marginPercent: number;
+  isPrinted?: boolean;
 }
 
 interface ConvertToProductModalProps {
   isOpen: boolean;
   onClose: () => void;
   entry: HistoryEntry | null;
+  isPrinted?: boolean; // Prop to override or set default
 }
 
 interface Category {
@@ -48,6 +50,7 @@ export function ConvertToProductModal({
   isOpen,
   onClose,
   entry,
+  isPrinted: isPrintedProp,
 }: ConvertToProductModalProps) {
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -60,6 +63,7 @@ export function ConvertToProductModal({
   const [shortDescription, setShortDescription] = useState("");
   const [description, setDescription] = useState("");
   const [isPOD, setIsPOD] = useState(true);
+  const [isPrinted, setIsPrinted] = useState(true);
   const [images, setImages] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,6 +71,8 @@ export function ConvertToProductModal({
     if (entry) {
       setName(entry.jobName);
       setBasePrice(Math.round(entry.totalSellingPrice));
+      setIsPrinted(isPrintedProp ?? entry.isPrinted ?? true);
+      setIsPOD(isPrintedProp === false ? true : !!entry.isPrinted === false);
       
       // Auto-generate a basic description from parts
       const partsSummary = entry.parts.map(p => 
@@ -111,8 +117,9 @@ export function ConvertToProductModal({
           shortDescription,
           description,
           isPOD,
+          excludeColor: !isPrinted,
           images,
-          calculationData: entry,
+          calculationData: { ...entry, isPrinted },
         }),
       });
 
