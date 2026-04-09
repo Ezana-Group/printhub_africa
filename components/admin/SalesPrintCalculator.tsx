@@ -19,7 +19,7 @@ import {
   colorMatches,
   PREFERRED_MATERIAL_ORDER,
 } from "@/lib/3d-colour-utils";
-import { Plus, Trash2, FileText, Copy, Check } from "lucide-react";
+import { Plus, Trash2, FileText, Copy, Check, Search, User, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clearQuoteDraft, type QuoteDraft3D } from "@/lib/quote-draft";
 
@@ -76,12 +76,36 @@ export function SalesPrintCalculator({
   const [discountValue, setDiscountValue] = useState<number | "">("");
   const [discountReason, setDiscountReason] = useState("");
   const [clientName, setClientName] = useState("");
+  const [clientPhone, setClientPhone] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [customerSearchResults, setCustomerSearchResults] = useState<any[]>([]);
+  const [showSearch, setShowSearch] = useState(false);
   const [whatsappDigits, setWhatsappDigits] = useState(DEFAULT_WA);
   const [validUntil, setValidUntil] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() + 7);
     return d.toISOString().slice(0, 10);
   });
+
+  // Debounced customer search
+  useEffect(() => {
+    if (!clientName || clientName.length < 2 || selectedCustomerId) {
+      setCustomerSearchResults([]);
+      return;
+    }
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/admin/customers/search?q=${encodeURIComponent(clientName)}`);
+        const data = await res.json();
+        setCustomerSearchResults(data.customers || []);
+        setShowSearch(true);
+      } catch (e) {
+        console.error("Customer search error:", e);
+      }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [clientName, selectedCustomerId]);
 
   useEffect(() => {
     fetch("/api/settings/business-public")
@@ -97,6 +121,8 @@ export function SalesPrintCalculator({
     if (!initialDraft || initialDraft.type !== "3d") return;
     const d = initialDraft;
     setClientName(d.clientName);
+    setClientPhone((d as any).clientPhone || "");
+    setClientEmail((d as any).clientEmail || "");
     setValidUntil(d.validUntil);
     setGlobalMarginPercent(d.globalMarginPercent);
     setDiscountType(d.discountType);
@@ -294,6 +320,53 @@ export function SalesPrintCalculator({
     setLines((prev) => [...prev, { ...line, id: newLineItem().id }]);
   };
 
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleGeneratePDF = async () => {
+    if (!clientName) {
+      alert("Please enter a customer name.");
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const res = await fetch("/api/admin/quotes/from-calculator", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientName,
+          clientPhone,
+          clientEmail,
+          selectedCustomerId,
+          validUntil,
+          lines,
+          totals: {
+            subtotalExVat,
+            vatAmount,
+            totalBeforeDiscount,
+            discountAmount,
+            finalTotal,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Redirect to the professional PDF route
+        window.open(`/api/pdf/quote/${data.quoteId}`, "_blank");
+      } else {
+        alert("Error saving quote: " + (data.error || "Unknown error"));
+      }
+    } catch (e) {
+      console.error("Save quote error:", e);
+      alert("Failed to save quote.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const whatsappHref = `https://wa.me/${(clientPhone || whatsappDigits).replace(/\D/g, "")}?text=${encodeURIComponent(
+    `Hello ${clientName || "there"},\n\nHere is your quote from PrintHub for ${lines[0]?.description || "your 3D printing project"}.\n\nTotal: ${formatKes(finalTotal)}\nValid until: ${validUntil}\n\nDetails: ${lines.map((l, i) => `${i + 1}. ${l.description || "Item"} × ${l.quantity} = ${lineResults.find((r) => r.lineId === l.id) ? formatKes(lineResults.find((r) => r.lineId === l.id)!.lineTotal) : "—"}`).join("\n")}`
+  )}`;
+
   if (ratesLoading || !rates) {
     return (
       <Card>
@@ -306,7 +379,7 @@ export function SalesPrintCalculator({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="flex items-center justify-between flex-wrap gap-4 print:hidden">
         <h2 className="font-display text-xl font-bold">New quote builder</h2>
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2">
@@ -334,15 +407,78 @@ export function SalesPrintCalculator({
               </Link>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 relative">
             <Label className="text-sm text-muted-foreground">Customer</Label>
+            <div className="relative">
+              <Input
+                value={clientName}
+                onChange={(e) => {
+                  setClientName(e.target.value);
+                  if (selectedCustomerId) setSelectedCustomerId(null);
+                }}
+                placeholder="Client name"
+                className="w-48 pr-8"
+              />
+              {selectedCustomerId ? (
+                <X 
+                  className="absolute right-2 top-2.5 h-4 w-4 text-muted-foreground cursor-pointer hover:text-destructive" 
+                  onClick={() => {
+                    setSelectedCustomerId(null);
+                    setClientName("");
+                    setClientPhone("");
+                    setClientEmail("");
+                  }}
+                />
+              ) : (
+                <Search className="absolute right-2 top-2.5 h-4 w-4 text-muted-foreground opacity-50" />
+              )}
+              
+              {showSearch && customerSearchResults.length > 0 && (
+                <div className="absolute top-full left-0 z-50 mt-1 w-64 rounded-md border bg-popover p-1 text-popover-foreground shadow-md outline-none">
+                  {customerSearchResults.map((c) => (
+                    <div
+                      key={c.id}
+                      className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => {
+                        setClientName(c.name);
+                        setClientPhone(c.phone || "");
+                        setClientEmail(c.email || "");
+                        setSelectedCustomerId(c.id);
+                        setShowSearch(false);
+                      }}
+                    >
+                      <User className="mr-2 h-4 w-4" />
+                      <div className="flex flex-col">
+                        <span className="font-medium">{c.name}</span>
+                        {c.email && <span className="text-[10px] opacity-70">{c.email}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Label className="text-sm text-muted-foreground">Phone</Label>
             <Input
-              value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
-              placeholder="Client name"
+              value={clientPhone}
+              onChange={(e) => setClientPhone(e.target.value)}
+              placeholder="07..."
+              className="w-40"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Label className="text-sm text-muted-foreground">Email</Label>
+            <Input
+              value={clientEmail}
+              onChange={(e) => setClientEmail(e.target.value)}
+              placeholder="email@..."
               className="w-48"
             />
           </div>
+
           <div className="flex items-center gap-2">
             <Label className="text-sm text-muted-foreground">Valid until</Label>
             <Input
@@ -815,17 +951,15 @@ export function SalesPrintCalculator({
               <Button
                 size="sm"
                 className="flex-1 min-w-[140px]"
-                onClick={() => window.print()}
+                onClick={handleGeneratePDF}
+                disabled={isSaving}
               >
                 <FileText className="h-4 w-4 mr-1" />
-                Generate PDF quote
+                {isSaving ? "Saving..." : "Generate PDF quote"}
               </Button>
               <Button size="sm" variant="outline" asChild className="min-w-[140px]">
-                {/* TODO: replace with template slug: 3d-print-quote-whatsapp */}
                 <a
-                  href={`https://wa.me/${whatsappDigits}?text=${encodeURIComponent(
-                    `PrintHub quote for ${clientName || "customer"}\nValid until: ${validUntil}\nTotal: ${formatKes(finalTotal)}\n\nDetails: ${lines.map((l, i) => `${i + 1}. ${l.description || "Item"} × ${l.quantity} = ${lineResults.find((r) => r.lineId === l.id) ? formatKes(lineResults.find((r) => r.lineId === l.id)!.lineTotal) : "—"}`).join("\n")}`
-                  )}`}
+                  href={whatsappHref}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
