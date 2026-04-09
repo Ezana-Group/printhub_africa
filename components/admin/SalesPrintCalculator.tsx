@@ -513,60 +513,76 @@ export function SalesPrintCalculator({
                         })()}
                       </td>
                       <td className="p-2 text-right">
-                        <Input
-                          type="number"
-                          min={0}
-                          value={line.weightGrams || ""}
-                          onChange={(e) =>
-                            updateLine(line.id, {
-                              weightGrams: Math.max(0, parseFloat(e.target.value) || 0),
-                            })
-                          }
-                          className="h-8 w-20 text-right text-sm"
-                        />
+                        {(!line.isEditing) ? (
+                            <span className="text-sm px-2 text-slate-600">{line.weightGrams}</span>
+                        ) : (
+                            <Input
+                            type="number"
+                            min={0}
+                            value={line.weightGrams || ""}
+                            onChange={(e) =>
+                                updateLine(line.id, {
+                                weightGrams: Math.max(0, parseFloat(e.target.value) || 0),
+                                })
+                            }
+                            className="h-8 w-20 text-right text-sm"
+                            />
+                        )}
                       </td>
                       <td className="p-2 text-right">
-                        <Input
-                          type="number"
-                          min={0}
-                          step={0.1}
-                          value={line.printTimeHours || ""}
-                          onChange={(e) =>
-                            updateLine(line.id, {
-                              printTimeHours: Math.max(0, parseFloat(e.target.value) || 0),
-                            })
-                          }
-                          className="h-8 w-20 text-right text-sm"
-                        />
+                        {(!line.isEditing) ? (
+                            <span className="text-sm px-2 text-slate-600">{line.printTimeHours}</span>
+                        ) : (
+                            <Input
+                            type="number"
+                            min={0}
+                            step={0.1}
+                            value={line.printTimeHours || ""}
+                            onChange={(e) =>
+                                updateLine(line.id, {
+                                printTimeHours: Math.max(0, parseFloat(e.target.value) || 0),
+                                })
+                            }
+                            className="h-8 w-20 text-right text-sm"
+                            />
+                        )}
                       </td>
                       <td className="p-2 text-right">
-                        <Input
-                          type="number"
-                          min={0}
-                          max={100}
-                          value={line.infillPercent ?? ""}
-                          onChange={(e) =>
-                            updateLine(line.id, {
-                              infillPercent: Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0)),
-                            })
-                          }
-                          className="h-8 w-16 text-right text-sm"
-                        />
+                        {(!line.isEditing) ? (
+                            <span className="text-sm px-2 text-slate-600">{line.infillPercent}%</span>
+                        ) : (
+                            <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={line.infillPercent ?? ""}
+                            onChange={(e) =>
+                                updateLine(line.id, {
+                                infillPercent: Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0)),
+                                })
+                            }
+                            className="h-8 w-16 text-right text-sm"
+                            />
+                        )}
                       </td>
                       <td className="p-2 text-right">
-                        <Input
-                          type="number"
-                          min={0.05}
-                          max={1.0}
-                          step={0.05}
-                          value={line.layerHeightMm ?? ""}
-                          onChange={(e) =>
-                            updateLine(line.id, {
-                              layerHeightMm: Math.max(0.05, parseFloat(e.target.value) || 0.2),
-                            })
-                          }
-                          className="h-8 w-16 text-right text-sm"
-                        />
+                        {(!line.isEditing) ? (
+                            <span className="text-sm px-2 text-slate-600">{line.layerHeightMm}mm</span>
+                        ) : (
+                            <Input
+                            type="number"
+                            min={0.05}
+                            max={1.0}
+                            step={0.05}
+                            value={line.layerHeightMm ?? ""}
+                            onChange={(e) =>
+                                updateLine(line.id, {
+                                layerHeightMm: Math.max(0.05, parseFloat(e.target.value) || 0.2),
+                                })
+                            }
+                            className="h-8 w-16 text-right text-sm"
+                            />
+                        )}
                       </td>
                       <td className="p-2 text-right">
                         <Input
