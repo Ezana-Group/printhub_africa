@@ -27,14 +27,22 @@ export async function POST(req: Request) {
       selectedCustomerId,
       validUntil,
       type = "3d_printing",
-      lines,
-      totals,
+      lines = [],
+      totals = {},
       notes,
       status = "quoted",
     } = body;
 
     if (!clientName) {
       return NextResponse.json({ error: "Customer name is required" }, { status: 400 });
+    }
+
+    if (!lines || !Array.isArray(lines) || lines.length === 0) {
+      return NextResponse.json({ error: "At least one line item is required" }, { status: 400 });
+    }
+
+    if (totals?.finalTotal === undefined) {
+      return NextResponse.json({ error: "Calculation totals (finalTotal) missing" }, { status: 400 });
     }
 
     const quoteNumber = await getNextQuotePdfNumber();

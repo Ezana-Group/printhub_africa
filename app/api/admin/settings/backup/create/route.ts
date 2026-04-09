@@ -13,16 +13,20 @@ export async function POST(req: Request) {
   if (auth instanceof NextResponse) return auth;
 
   try {
+    console.log("[BACKUP] Starting manual system backup trigger. User:", auth.userId);
     const user = await prisma.user.findUnique({
       where: { id: auth.userId },
       select: { email: true }
     });
 
     if (!user?.email) {
+      console.warn("[BACKUP] Auth user email missing. Cannot manifest backup.");
       throw new Error("User email not found");
     }
 
+    console.log("[BACKUP] Invoking createFullBackup utility...");
     const backupData = await createFullBackup(auth.userId, user.email);
+    console.log("[BACKUP] Zip generated and stored in R2 cache. Registering record...");
 
     const backup = await prisma.backupRecord.create({
       data: {
@@ -46,9 +50,10 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, backup });
   } catch (error: any) {
-    console.error("Backup creation failed:", error);
+    console.error("[BACKUP] CRITICAL FAILURE:", error);
     return NextResponse.json({ 
-      error: error.message || "Failed to create backup" 
+      error: error.message || "Failed to create backup",
+      details: error.stack?.split("\n")[0]
     }, { status: 500 });
   }
 }

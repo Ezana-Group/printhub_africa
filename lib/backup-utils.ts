@@ -18,45 +18,71 @@ export async function createFullBackup(userId: string, email: string) {
   const filename = `printhub-full-backup-${new Date().toISOString().split("T")[0]}-${new Date().getHours()}${new Date().getMinutes()}.zip`;
   const zip = new AdmZip();
 
+  console.log(`[BACKUP_UTIL] Initializing backup bundle: ${filename}`);
+
   // 1. Database Dump
+  console.log("[BACKUP_UTIL] Step 1: Exporting database via pg_dump...");
   const dbUrl = process.env.DATABASE_URL;
-  if (!dbUrl) throw new Error("DATABASE_URL not set");
+  if (!dbUrl) {
+    console.error("[BACKUP_UTIL] FAILED: DATABASE_URL environment variable is missing.");
+    throw new Error("DATABASE_URL not set");
+  }
   
   const dumpBuffer = await new Promise<Buffer>((resolve, reject) => {
     const pgDump = spawn("pg_dump", [dbUrl]);
     const chunks: Buffer[] = [];
     pgDump.stdout.on("data", (chunk) => chunks.push(chunk));
-    pgDump.stdout.on("error", (err) => console.error("pg_dump stdout error:", err));
-    pgDump.on("error", reject);
+    pgDump.stdout.on("error", (err) => {
+      console.error("[BACKUP_UTIL] pg_dump stdout error:", err);
+    });
+    pgDump.on("error", (err) => {
+      console.error("[BACKUP_UTIL] pg_dump spawn error:", err);
+      reject(err);
+    });
     pgDump.on("close", (code) => {
-      if (code !== 0) reject(new Error(`pg_dump failed with code ${code}`));
-      else resolve(Buffer.concat(chunks));
+      if (code !== 0) {
+        console.error(`[BACKUP_UTIL] pg_dump exited with error code ${code}`);
+        reject(new Error(`pg_dump failed with code ${code}`));
+      } else {
+        console.log(`[BACKUP_UTIL] Database dump completed successfully (${chunks.reduce((s, c) => s + c.length, 0)} bytes)`);
+        resolve(Buffer.concat(chunks));
+      }
     });
   });
   zip.addFile("db/dump.sql", dumpBuffer);
 
   // 2. R2 Files (Full Backup)
-  console.log("Backing up R2 files...");
+  console.log("[BACKUP_UTIL] Step 2: Fetching files from R2 buckets (private/public)...");
   const buckets: ("private" | "public")[] = ["private", "public"];
+  let fileCount = 0;
   for (const b of buckets) {
-    const objects = await listAllObjects(b);
-    for (const obj of objects) {
-      if (!obj.Key) continue;
-      // Skip existing backups to avoid recursion
-      if (obj.Key.startsWith("backups/")) continue;
-      
-      const buffer = await getObjectBuffer(b, obj.Key);
-      if (buffer) {
-        zip.addFile(`files/${b}/${obj.Key}`, buffer);
+    try {
+      const objects = await listAllObjects(b);
+      console.log(`[BACKUP_UTIL] Found ${objects.length} objects in ${b} bucket.`);
+      for (const obj of objects) {
+        if (!obj.Key) continue;
+        if (obj.Key.startsWith("backups/")) continue;
+        
+        const buffer = await getObjectBuffer(b, obj.Key);
+        if (buffer) {
+          zip.addFile(`files/${b}/${obj.Key}`, buffer);
+          fileCount++;
+        }
       }
+    } catch (err) {
+      console.error(`[BACKUP_UTIL] Error listing/fetching from bucket ${b}:`, err);
+      // We continue with DB-only if R2 fails? No, better to fail fast or log clearly.
     }
   }
+  console.log(`[BACKUP_UTIL] R2 file collection complete. Added ${fileCount} files.`);
 
   // 3. Env Keys (Non-sensitive placeholders)
+  console.log("[BACKUP_UTIL] Step 3: Generating environment manifest...");
   const envKeys = Object.keys(process.env).filter(k => !k.includes("SECRET") && !k.includes("KEY") && !k.includes("TOKEN"));
   zip.addFile("env-manifest.json", Buffer.from(JSON.stringify(envKeys, null, 2)));
 
   // 4. Manifest
+  console.log("[BACKUP_UTIL] Step 4: Finalizing manifest...");
   const pkgPath = path.join(process.cwd(), "package.json");
   const packageJson = JSON.parse(await fs.readFile(pkgPath, "utf-8").catch(() => '{"version":"0.0.0"}'));
   const manifest: BackupManifest = {
@@ -69,15 +95,22 @@ export async function createFullBackup(userId: string, email: string) {
   };
   zip.addFile("manifest.json", Buffer.from(JSON.stringify(manifest, null, 2)));
 
+  console.log("[BACKUP_UTIL] Step 5: Compressing bundle and uploading to R2 backups folder...");
   const zipBuffer = zip.toBuffer();
   const r2Key = `backups/${filename}`;
   
-  await putObjectBuffer({
-    bucket: "private",
-    key: r2Key,
-    body: zipBuffer,
-    contentType: "application/zip",
-  });
+  try {
+    await putObjectBuffer({
+      bucket: "private",
+      key: r2Key,
+      body: zipBuffer,
+      contentType: "application/zip",
+    });
+    console.log(`[BACKUP_UTIL] Backup successfully stored in R2: ${r2Key} (${(zipBuffer.length / (1024 * 1024)).toFixed(2)} MB)`);
+  } catch (err) {
+    console.error("[BACKUP_UTIL] FAILED to upload zip to R2:", err);
+    throw err;
+  }
 
   return {
     filename,
