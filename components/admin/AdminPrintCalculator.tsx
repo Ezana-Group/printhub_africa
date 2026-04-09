@@ -351,6 +351,9 @@ export function AdminPrintCalculator() {
             postProcessingTimeHoursOverride: p.postProcessingTimeHoursOverride,
             productionCost: breakdown.estimates[i].totalProductionCost,
             sellingPrice: breakdown.estimates[i].sellingPriceIncVat,
+            color: p.color,
+            infillPercent: p.infillPercent,
+            layerHeightMm: p.layerHeightMm,
           })),
           totalProductionCost: breakdown.subtotal,
           profitAmount: breakdown.profit,
@@ -410,6 +413,9 @@ export function AdminPrintCalculator() {
         postProcessing: p.postProcessing,
         postProcessingTimeHoursOverride: p.postProcessingTimeHoursOverride,
         quantity: p.quantity,
+        color: (p as any).color || "",
+        infillPercent: (p as any).infillPercent ?? 20,
+        layerHeightMm: (p as any).layerHeightMm ?? 0.2,
       };
     });
     

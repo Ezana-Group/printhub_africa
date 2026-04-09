@@ -21,6 +21,9 @@ type HistoryEntry = {
     postProcessingTimeHoursOverride?: number;
     productionCost: number;
     sellingPrice: number;
+    color?: string;
+    infillPercent?: number;
+    layerHeightMm?: number;
   }>;
   totalProductionCost: number;
   totalSellingPrice: number;
@@ -66,6 +69,9 @@ export async function GET(req: Request) {
             postProcessingTimeHoursOverride: e.postProcessingTimeHoursOverride,
             productionCost: e.productionCost || 0,
             sellingPrice: e.sellingPrice || 0,
+            color: (e as any).color,
+            infillPercent: (e as any).infillPercent,
+            layerHeightMm: (e as any).layerHeightMm,
           }],
           totalProductionCost: e.productionCost || 0,
           totalSellingPrice: e.sellingPrice || 0,
