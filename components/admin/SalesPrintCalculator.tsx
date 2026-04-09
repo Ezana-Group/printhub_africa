@@ -140,8 +140,8 @@ export function SalesPrintCalculator({
             quantity: l.quantity,
             postProcessing: l.postProcessing,
             marginPercentOverride: l.marginPercentOverride,
-            infillPercent: (l as any).infillPercent,
-            layerHeightMm: (l as any).layerHeightMm,
+            infillPercent: (l as any).infillPercent ?? 20,
+            layerHeightMm: (l as any).layerHeightMm ?? 0.2,
             isImported: true,
             isEditing: false,
           }))

@@ -343,8 +343,9 @@ export function AdminPrintCalculator() {
             sellingPrice: breakdown.estimates[i].sellingPriceIncVat,
           })),
           totalProductionCost: breakdown.subtotal,
-          totalSellingPrice: breakdown.finalPrice,
           profitAmount: breakdown.profit,
+          vatAmount: breakdown.vat,
+          totalSellingPrice: breakdown.finalPrice,
           marginPercent: effectiveMargin,
         }),
       });
@@ -924,8 +925,10 @@ export function AdminPrintCalculator() {
                       <th className="text-left p-2 font-medium">Date</th>
                       <th className="text-left p-2 font-medium">Job / Parts</th>
                       <th className="text-right p-2 font-medium">Cost</th>
-                      <th className="text-right p-2 font-medium">Selling</th>
+                      <th className="text-right p-2 font-medium">Profit</th>
+                      <th className="text-right p-2 font-medium">Selling (Ex VAT)</th>
                       <th className="text-right p-2 font-medium">Margin %</th>
+                      <th className="text-right p-2 font-medium text-primary">Total (Inc VAT)</th>
                       <th className="text-right p-2 font-medium">Actions</th>
                     </tr>
                   </thead>
@@ -946,10 +949,16 @@ export function AdminPrintCalculator() {
                         <td className="p-2 text-right">
                           {Math.round(e.totalProductionCost || 0).toLocaleString()}
                         </td>
+                        <td className="p-2 text-right text-green-600">
+                          {Math.round(e.profitAmount || 0).toLocaleString()}
+                        </td>
                         <td className="p-2 text-right">
+                          {Math.round((e.totalSellingPrice || 0) / (1 + (rates?.printerSettings?.vatRatePercent || 16) / 100)).toLocaleString()}
+                        </td>
+                        <td className="p-2 text-right font-medium">{e.marginPercent}%</td>
+                        <td className="p-2 text-right font-bold text-primary">
                           {Math.round(e.totalSellingPrice || 0).toLocaleString()}
                         </td>
-                        <td className="p-2 text-right">{e.marginPercent}%</td>
                         <td className="p-2 text-right">
                           <div className="flex justify-end gap-1">
                             <Button

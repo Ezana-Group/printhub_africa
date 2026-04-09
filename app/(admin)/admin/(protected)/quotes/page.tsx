@@ -43,15 +43,20 @@ export default async function AdminQuotesPage() {
         where: { status: { in: ["accepted", "in_production", "completed"] } },
         _sum: { quotedAmount: true },
       }),
+      prisma.quote.aggregate({
+        where: { status: "quoted" },
+        _sum: { quotedAmount: true },
+      }),
     ]),
   ]);
 
-  const stats: QuoteStats = {
+  const stats: QuoteStats & { potentialValueKes: number } = {
     total: statsResult[0],
     newCount: statsResult[1],
     quotedAwaiting: statsResult[2],
     acceptedThisMonth: statsResult[3],
     totalValueKes: Number(statsResult[4]._sum.quotedAmount ?? 0),
+    potentialValueKes: Number(statsResult[5]._sum.quotedAmount ?? 0),
   };
 
   const uploadsSerialized = uploads.map((u) => ({
