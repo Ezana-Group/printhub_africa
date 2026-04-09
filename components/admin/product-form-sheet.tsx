@@ -337,16 +337,23 @@ export function ProductFormSheet({
 
             // If we specifically requested SEO, we mainly care about titles/desc
             if (action === "GENERATE_SEO") {
-              updateIfEmptyOrConfirmed(statusData.metaTitle, setMetaTitle, metaTitle, "SEO title");
-              updateIfEmptyOrConfirmed(statusData.metaDescription, setMetaDescription, metaDescription, "SEO description");
+              if (statusData.metaTitle) setMetaTitle(statusData.metaTitle);
+              if (statusData.metaDescription) setMetaDescription(statusData.metaDescription);
             } else {
-              updateIfEmptyOrConfirmed(statusData.description, setDescription, description, "description");
-              updateIfEmptyOrConfirmed(statusData.shortDescription, setShortDescription, shortDescription, "short description");
-              updateIfEmptyOrConfirmed(statusData.metaTitle, setMetaTitle, metaTitle, "SEO title");
-              updateIfEmptyOrConfirmed(statusData.metaDescription, setMetaDescription, metaDescription, "SEO description");
+              // Direct update for descriptions if they are currently short or empty
+              const isShort = (s: string) => !s || s.length < 150;
+              
+              if (statusData.description && (isShort(description) || confirm("AI generated a new long description. Overwrite?"))) {
+                setDescription(statusData.description);
+              }
+              if (statusData.shortDescription && isShort(shortDescription)) {
+                setShortDescription(statusData.shortDescription);
+              }
+              if (statusData.metaTitle && isShort(metaTitle)) setMetaTitle(statusData.metaTitle);
+              if (statusData.metaDescription && isShort(metaDescription)) setMetaDescription(statusData.metaDescription);
             }
             
-            toast.success("AI Content Suggested!");
+            toast.success("AI Content Updated!");
             break;
           }
         }

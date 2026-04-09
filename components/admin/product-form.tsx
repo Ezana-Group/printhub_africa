@@ -172,15 +172,39 @@ export function ProductForm({ categories, product }: ProductFormProps) {
     setError(null);
     setSuccess(null);
     try {
-      const res = await fetch("/api/admin/ai/generate", {
+      const res = await fetch("/api/admin/ai/n8n/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, productId: product.id }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "AI generation failed");
-      setSuccess("AI generation triggered! Please refresh in a few seconds to see changes.");
-      router.refresh();
+      
+      setSuccess("AI Brain is thinking... results will appear here in 15-30 seconds.");
+
+      // Polling for results
+      let attempts = 0;
+      const maxAttempts = 30; // 60 seconds
+      while (attempts < maxAttempts) {
+        attempts++;
+        await new Promise(r => setTimeout(r, 2000));
+        
+        const statusRes = await fetch(`/api/admin/products/${product.id}/ai-status`);
+        if (statusRes.ok) {
+          const statusData = await statusRes.json();
+          if (statusData.complete) {
+            // Success! Update the local state
+            if (statusData.description) setDescription(statusData.description);
+            if (statusData.shortDescription) setShortDescription(statusData.shortDescription);
+            if (statusData.metaTitle) setMetaTitle(statusData.metaTitle);
+            if (statusData.metaDescription) setMetaDescription(statusData.metaDescription);
+            
+            setSuccess("AI Content generated! Fields updated.");
+            router.refresh();
+            break;
+          }
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "AI generation failed");
     } finally {

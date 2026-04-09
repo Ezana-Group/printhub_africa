@@ -13,6 +13,7 @@ interface Consumable {
   kind: string;
   brand: string;
   colourHex: string | null;
+  specification: string | null;
   quantity: number;
 }
 
@@ -65,35 +66,40 @@ export function ProductMaterialSelector({ productId }: ProductMaterialSelectorPr
   const handleToggle = (id: string) => {
     setSelected(prev => {
       const exists = prev.find(m => m.consumableId === id);
+      let next;
       if (exists) {
-        return prev.filter(m => m.consumableId !== id);
+        next = prev.filter(m => m.consumableId !== id);
+      } else {
+        next = [...prev, { consumableId: id, isDefault: prev.length === 0 }];
       }
-      return [...prev, { consumableId: id, isDefault: prev.length === 0 }];
+      saveMaterials(next);
+      return next;
     });
   };
 
   const handleSetDefault = (id: string) => {
-    setSelected(prev => prev.map(m => ({
-      ...m,
-      isDefault: m.consumableId === id
-    })));
+    setSelected(prev => {
+      const next = prev.map(m => ({
+        ...m,
+        isDefault: m.consumableId === id
+      }));
+      saveMaterials(next);
+      return next;
+    });
   };
 
-  const handleSave = async () => {
+  const saveMaterials = async (materials: { consumableId: string; isDefault: boolean }[]) => {
     setSaving(true);
     try {
       const res = await fetch(`/api/admin/products/${productId}/materials`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ materials: selected }),
+        body: JSON.stringify({ materials }),
       });
-      if (res.ok) {
-        toast.success("Materials updated successfully");
-      } else {
-        throw new Error("Update failed");
-      }
+      if (!res.ok) throw new Error("Update failed");
+      toast.success("Syncing materials...", { duration: 1000, position: "top-center" });
     } catch {
-      toast.error("Failed to save materials");
+      toast.error("Failed to sync materials");
     } finally {
       setSaving(false);
     }
@@ -107,12 +113,14 @@ export function ProductMaterialSelector({ productId }: ProductMaterialSelectorPr
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold">Printable Materials</h3>
-          <p className="text-xs text-muted-foreground">Select materials available for this product and pick a default.</p>
+          <p className="text-xs text-muted-foreground">Select materials available for this product. Changes are saved automatically.</p>
         </div>
-        <Button size="sm" onClick={handleSave} disabled={saving}>
-          {saving && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
-          Save Materials
-        </Button>
+        {saving && (
+          <div className="flex items-center gap-2 text-primary font-medium text-xs animate-pulse">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            Saving changes...
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-3 max-h-[400px] overflow-y-auto pr-2">
@@ -146,11 +154,18 @@ export function ProductMaterialSelector({ productId }: ProductMaterialSelectorPr
                 </div>
               </div>
               {c.colourHex && (
-                <div 
-                  className="h-5 w-5 rounded-full border border-black/10 shadow-sm" 
-                  style={{ backgroundColor: c.colourHex }}
-                  title={`Color: ${c.colourHex}`}
-                />
+                <div className="flex items-center gap-2">
+                  {c.specification && (
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">
+                      {c.specification}
+                    </span>
+                  )}
+                  <div 
+                    className="h-5 w-5 rounded-full border border-black/10 shadow-sm" 
+                    style={{ backgroundColor: c.colourHex }}
+                    title={`Color: ${c.specification || c.colourHex}`}
+                  />
+                </div>
               )}
               {isSel && (
                 <Button 

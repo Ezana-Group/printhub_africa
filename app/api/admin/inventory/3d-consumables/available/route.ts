@@ -18,6 +18,7 @@ export async function GET() {
         brand: true,
         colourHex: true,
         quantity: true,
+        specification: true,
         lowStockThreshold: true,
         costPerKgKes: true,
         weightPerSpoolKg: true,
