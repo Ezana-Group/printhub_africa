@@ -411,9 +411,9 @@ export function SalesPrintCalculator({
                       </td>
                       <td className="p-2">
                         <div className="flex flex-col">
-                          {(!line.isEditing && line.materialCode) ? (
-                            <div className="px-2 py-1 text-sm font-medium bg-slate-100 rounded border border-slate-200">
-                                {getMaterialTypeForCode(line.materialCode)}
+                          {!line.isEditing && line.materialCode ? (
+                            <div className="text-sm text-slate-600 whitespace-nowrap">
+                              Material: <span className="font-medium text-slate-900">{getMaterialTypeForCode(line.materialCode)}</span>
                             </div>
                           ) : (
                             <select
@@ -422,7 +422,9 @@ export function SalesPrintCalculator({
                                 const mt = e.target.value;
                                 const list = byMaterialType[mt] ?? [];
                                 const firstInStock = list.find((x) => x.quantity > 0) ?? list[0];
-                                const firstColor = firstInStock ? (COLOUR_PILLS.find((p) => colorMatches(firstInStock.color, p.id))?.id ?? firstInStock.color) : "";
+                                const firstColor = firstInStock
+                                  ? COLOUR_PILLS.find((p) => colorMatches(firstInStock.color, p.id))?.id ?? firstInStock.color
+                                  : "";
                                 updateLine(line.id, {
                                   materialCode: firstInStock?.code ?? "",
                                   color: firstColor,
@@ -435,7 +437,8 @@ export function SalesPrintCalculator({
                                 const totalSpools = list.reduce((s, x) => s + x.quantity, 0);
                                 return (
                                   <option key={mt} value={mt}>
-                                    {mt}{list.length ? ` — ${totalSpools} spool${totalSpools !== 1 ? "s" : ""}` : ""}
+                                    {mt}
+                                    {list.length ? ` — ${totalSpools} spool${totalSpools !== 1 ? "s" : ""}` : ""}
                                   </option>
                                 );
                               })}
@@ -449,16 +452,12 @@ export function SalesPrintCalculator({
                           const available = availableColorSet[mt] ?? new Set<string>();
                           const inStock = inStockColorSet[mt] ?? new Set<string>();
                           const list = byMaterialType[mt] ?? [];
-                          
+
                           if (!line.isEditing && line.color) {
-                            const pill = COLOUR_PILLS.find(p => p.id === line.color);
+                            const pill = COLOUR_PILLS.find((p) => p.id === line.color);
                             return (
-                              <div className="flex items-center gap-2 px-2 py-1 text-sm bg-slate-100 rounded border border-slate-200">
-                                <div 
-                                  className="w-4 h-4 rounded-full border border-slate-300"
-                                  style={{ backgroundColor: pill?.bg ?? '#ccc' }}
-                                />
-                                <span className="font-medium text-slate-700">{pill?.label ?? line.color}</span>
+                              <div className="text-sm text-slate-600 whitespace-nowrap">
+                                Colour: <span className="font-medium text-slate-900">{pill?.label ?? line.color}</span>
                               </div>
                             );
                           }
@@ -513,75 +512,75 @@ export function SalesPrintCalculator({
                         })()}
                       </td>
                       <td className="p-2 text-right">
-                        {(!line.isEditing) ? (
-                            <span className="text-sm px-2 text-slate-600">{line.weightGrams}</span>
+                        {!line.isEditing ? (
+                          <span className="text-sm px-2 text-slate-600">{line.weightGrams ?? 0}</span>
                         ) : (
-                            <Input
+                          <Input
                             type="number"
                             min={0}
-                            value={line.weightGrams || ""}
+                            value={line.weightGrams ?? ""}
                             onChange={(e) =>
-                                updateLine(line.id, {
+                              updateLine(line.id, {
                                 weightGrams: Math.max(0, parseFloat(e.target.value) || 0),
-                                })
+                              })
                             }
                             className="h-8 w-20 text-right text-sm"
-                            />
+                          />
                         )}
                       </td>
                       <td className="p-2 text-right">
-                        {(!line.isEditing) ? (
-                            <span className="text-sm px-2 text-slate-600">{line.printTimeHours}</span>
+                        {!line.isEditing ? (
+                          <span className="text-sm px-2 text-slate-600">{line.printTimeHours ?? 0}</span>
                         ) : (
-                            <Input
+                          <Input
                             type="number"
                             min={0}
                             step={0.1}
-                            value={line.printTimeHours || ""}
+                            value={line.printTimeHours ?? ""}
                             onChange={(e) =>
-                                updateLine(line.id, {
+                              updateLine(line.id, {
                                 printTimeHours: Math.max(0, parseFloat(e.target.value) || 0),
-                                })
+                              })
                             }
                             className="h-8 w-20 text-right text-sm"
-                            />
+                          />
                         )}
                       </td>
                       <td className="p-2 text-right">
-                        {(!line.isEditing) ? (
-                            <span className="text-sm px-2 text-slate-600">{line.infillPercent}%</span>
+                        {!line.isEditing ? (
+                          <span className="text-sm px-2 text-slate-600">{line.infillPercent ?? 0}%</span>
                         ) : (
-                            <Input
+                          <Input
                             type="number"
                             min={0}
                             max={100}
                             value={line.infillPercent ?? ""}
                             onChange={(e) =>
-                                updateLine(line.id, {
+                              updateLine(line.id, {
                                 infillPercent: Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0)),
-                                })
+                              })
                             }
                             className="h-8 w-16 text-right text-sm"
-                            />
+                          />
                         )}
                       </td>
                       <td className="p-2 text-right">
-                        {(!line.isEditing) ? (
-                            <span className="text-sm px-2 text-slate-600">{line.layerHeightMm}mm</span>
+                        {!line.isEditing ? (
+                          <span className="text-sm px-2 text-slate-600">{line.layerHeightMm ?? 0.2}mm</span>
                         ) : (
-                            <Input
+                          <Input
                             type="number"
                             min={0.05}
                             max={1.0}
                             step={0.05}
                             value={line.layerHeightMm ?? ""}
                             onChange={(e) =>
-                                updateLine(line.id, {
+                              updateLine(line.id, {
                                 layerHeightMm: Math.max(0.05, parseFloat(e.target.value) || 0.2),
-                                })
+                              })
                             }
                             className="h-8 w-16 text-right text-sm"
-                            />
+                          />
                         )}
                       </td>
                       <td className="p-2 text-right">
@@ -621,16 +620,6 @@ export function SalesPrintCalculator({
                       </td>
                       <td className="p-2 text-right font-medium">
                         {result ? formatKes(result.lineTotal) : "—"}
-                        {result?.lowMargin && (
-                          <span className="ml-1 text-amber-600 text-xs">
-                            Low margin
-                          </span>
-                        )}
-                        {result?.veryLowMargin && (
-                          <span className="ml-1 text-red-600 text-xs">
-                            Below min
-                          </span>
-                        )}
                       </td>
                       <td className="p-2">
                         <div className="flex gap-1">
@@ -789,10 +778,17 @@ export function SalesPrintCalculator({
                     key={line.id}
                     className="flex justify-between"
                   >
-                    <span>
-                      {idx + 1}. {line.description || "Item"} ×{line.quantity}
-                    </span>
-                    <span>{result ? formatKes(result.lineTotal) : "—"}</span>
+                    <div className="flex flex-col">
+                      <span className="font-medium">
+                        {idx + 1}. {line.description || "Item"} ×{line.quantity}
+                      </span>
+                      {line.materialCode && (
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                          {getMaterialTypeForCode(line.materialCode)} — {COLOUR_PILLS.find(p => p.id === line.color)?.label ?? line.color}
+                        </span>
+                      )}
+                    </div>
+                    <span className="font-medium">{result ? formatKes(result.lineTotal) : "—"}</span>
                   </div>
                 );
               })}
