@@ -39,6 +39,8 @@ type LineItem = {
   marginPercentOverride?: number;
   infillPercent?: number;
   layerHeightMm?: number;
+  isImported?: boolean;
+  isEditing?: boolean;
 };
 
 function newLineItem(): LineItem {
@@ -53,6 +55,7 @@ function newLineItem(): LineItem {
     postProcessing: false,
     infillPercent: 20,
     layerHeightMm: 0.2,
+    isEditing: true,
   };
 }
 
@@ -113,6 +116,8 @@ export function SalesPrintCalculator({
             marginPercentOverride: l.marginPercentOverride,
             infillPercent: (l as any).infillPercent,
             layerHeightMm: (l as any).layerHeightMm,
+            isImported: true,
+            isEditing: false,
           }))
         : [newLineItem()]
     );
@@ -405,30 +410,38 @@ export function SalesPrintCalculator({
                         />
                       </td>
                       <td className="p-2">
-                        <select
-                          value={getMaterialTypeForCode(line.materialCode)}
-                          onChange={(e) => {
-                            const mt = e.target.value;
-                            const list = byMaterialType[mt] ?? [];
-                            const firstInStock = list.find((x) => x.quantity > 0) ?? list[0];
-                            const firstColor = firstInStock ? (COLOUR_PILLS.find((p) => colorMatches(firstInStock.color, p.id))?.id ?? firstInStock.color) : "";
-                            updateLine(line.id, {
-                              materialCode: firstInStock?.code ?? "",
-                              color: firstColor,
-                            });
-                          }}
-                          className="h-8 w-full rounded border bg-background text-sm"
-                        >
-                          {materialTypes.map((mt) => {
-                            const list = byMaterialType[mt] ?? [];
-                            const totalSpools = list.reduce((s, x) => s + x.quantity, 0);
-                            return (
-                              <option key={mt} value={mt}>
-                                {mt}{list.length ? ` — ${totalSpools} spool${totalSpools !== 1 ? "s" : ""}` : ""}
-                              </option>
-                            );
-                          })}
-                        </select>
+                        <div className="flex flex-col">
+                          {(!line.isEditing && line.materialCode) ? (
+                            <div className="px-2 py-1 text-sm font-medium bg-slate-100 rounded border border-slate-200">
+                                {getMaterialTypeForCode(line.materialCode)}
+                            </div>
+                          ) : (
+                            <select
+                              value={getMaterialTypeForCode(line.materialCode)}
+                              onChange={(e) => {
+                                const mt = e.target.value;
+                                const list = byMaterialType[mt] ?? [];
+                                const firstInStock = list.find((x) => x.quantity > 0) ?? list[0];
+                                const firstColor = firstInStock ? (COLOUR_PILLS.find((p) => colorMatches(firstInStock.color, p.id))?.id ?? firstInStock.color) : "";
+                                updateLine(line.id, {
+                                  materialCode: firstInStock?.code ?? "",
+                                  color: firstColor,
+                                });
+                              }}
+                              className="h-8 w-full rounded border bg-background text-sm"
+                            >
+                              {materialTypes.map((mt) => {
+                                const list = byMaterialType[mt] ?? [];
+                                const totalSpools = list.reduce((s, x) => s + x.quantity, 0);
+                                return (
+                                  <option key={mt} value={mt}>
+                                    {mt}{list.length ? ` — ${totalSpools} spool${totalSpools !== 1 ? "s" : ""}` : ""}
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          )}
+                        </div>
                       </td>
                       <td className="p-2">
                         {(() => {
@@ -436,6 +449,20 @@ export function SalesPrintCalculator({
                           const available = availableColorSet[mt] ?? new Set<string>();
                           const inStock = inStockColorSet[mt] ?? new Set<string>();
                           const list = byMaterialType[mt] ?? [];
+                          
+                          if (!line.isEditing && line.color) {
+                            const pill = COLOUR_PILLS.find(p => p.id === line.color);
+                            return (
+                              <div className="flex items-center gap-2 px-2 py-1 text-sm bg-slate-100 rounded border border-slate-200">
+                                <div 
+                                  className="w-4 h-4 rounded-full border border-slate-300"
+                                  style={{ backgroundColor: pill?.bg ?? '#ccc' }}
+                                />
+                                <span className="font-medium text-slate-700">{pill?.label ?? line.color}</span>
+                              </div>
+                            );
+                          }
+
                           if (available.size === 0) return <span className="text-muted-foreground text-xs">—</span>;
                           return (
                             <div className="flex flex-wrap gap-1">
@@ -591,6 +618,16 @@ export function SalesPrintCalculator({
                       </td>
                       <td className="p-2">
                         <div className="flex gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className={cn("h-8 w-8", line.isEditing ? "text-[#E8440A] bg-[#E8440A]/10" : "text-slate-400")}
+                            onClick={() => updateLine(line.id, { isEditing: !line.isEditing })}
+                            title={line.isEditing ? "Finish editing" : "Edit item"}
+                          >
+                            {line.isEditing ? <Check className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+                          </Button>
                           <Button
                             type="button"
                             variant="ghost"
