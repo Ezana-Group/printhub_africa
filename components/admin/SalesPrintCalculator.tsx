@@ -322,7 +322,7 @@ export function SalesPrintCalculator({
 
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleGeneratePDF = async () => {
+  const handleSaveQuote = async (status: "new" | "quoted") => {
     if (!clientName) {
       alert("Please enter a customer name.");
       return;
@@ -339,6 +339,7 @@ export function SalesPrintCalculator({
           selectedCustomerId,
           validUntil,
           lines,
+          status,
           totals: {
             subtotalExVat,
             vatAmount,
@@ -350,8 +351,12 @@ export function SalesPrintCalculator({
       });
       const data = await res.json();
       if (data.success) {
-        // Redirect to the professional PDF route
-        window.open(`/api/pdf/quote/${data.quoteId}`, "_blank");
+        if (status === "quoted") {
+          // Redirect to the professional PDF route
+          window.open(`/api/pdf/quote/${data.quoteId}`, "_blank");
+        } else {
+          alert("Quote saved as draft successfully!");
+        }
       } else {
         alert("Error saving quote: " + (data.error || "Unknown error"));
       }
@@ -893,78 +898,102 @@ export function SalesPrintCalculator({
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Client view preview</CardTitle>
-            <p className="text-xs text-muted-foreground">
-              What the customer will see
-            </p>
+          <CardHeader className="pb-2 border-b">
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500">Official Quotation</CardTitle>
+                <div className="mt-2 space-y-0.5">
+                  <p className="text-[10px] text-muted-foreground">Quote for: <span className="text-slate-900 font-medium">{clientName || "[Client name]"}</span></p>
+                  <p className="text-[10px] text-muted-foreground">Valid until: <span className="text-slate-900 font-medium">{validUntil}</span></p>
+                </div>
+              </div>
+              <div className="text-right">
+                 <div className="h-8 w-16 bg-slate-100 rounded flex items-center justify-center text-[10px] font-bold text-slate-400">LOGO</div>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-3 bg-muted/30 rounded-lg p-4">
-            <p className="text-xs text-muted-foreground">
-              Quote for: {clientName || "[Client name]"}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Valid until: {validUntil}
-            </p>
-            <div className="border-t pt-2 space-y-1 text-sm">
+          <CardContent className="pt-4 space-y-4">
+            <div className="space-y-3">
               {lines.map((line, idx) => {
                 const result = lineResults.find((r) => r.lineId === line.id);
                 return (
                   <div
                     key={line.id}
-                    className="flex justify-between"
+                    className="flex justify-between items-start border-b border-dashed pb-2 last:border-0"
                   >
                     <div className="flex flex-col">
-                      <span className="font-medium">
-                        {idx + 1}. {line.description || "Item"} ×{line.quantity}
+                      <span className="text-xs font-bold text-slate-800">
+                        {idx + 1}. {line.description || "Item"}
                       </span>
-                      {line.materialCode && (
-                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                          {getMaterialTypeForCode(line.materialCode)} — {COLOUR_PILLS.find(p => p.id === line.color)?.label ?? line.color}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">
+                        <span>QTY: {line.quantity}</span>
+                        {line.materialCode && (
+                          <>
+                            <span>•</span>
+                            <span>{getMaterialTypeForCode(line.materialCode)}</span>
+                            <span>•</span>
+                            <span>{COLOUR_PILLS.find(p => p.id === line.color)?.label ?? line.color}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <span className="font-medium">{result ? formatKes(result.lineTotal) : "—"}</span>
+                    <span className="text-xs font-bold text-slate-900">{result ? formatKes(result.lineTotal) : "—"}</span>
                   </div>
                 );
               })}
             </div>
-            <div className="border-t pt-2 flex justify-between text-sm">
-              <span>Subtotal</span>
-              <span>{formatKes(subtotalExVat)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span>VAT (16%)</span>
-              <span>{formatKes(vatAmount)}</span>
-            </div>
-            {discountAmount > 0 && (
-              <div className="flex justify-between text-sm text-green-600">
-                <span>Discount</span>
-                <span>- {formatKes(discountAmount)}</span>
+
+            <div className="space-y-1.5 pt-2">
+              <div className="flex justify-between text-[11px] text-slate-600">
+                <span>Subtotal (Net)</span>
+                <span>{formatKes(subtotalExVat)}</span>
               </div>
-            )}
-            <div className="flex justify-between font-bold">
-              <span>TOTAL</span>
-              <span>{formatKes(finalTotal)}</span>
+              <div className="flex justify-between text-[11px] text-slate-600">
+                <span>VAT (16%)</span>
+                <span>{formatKes(vatAmount)}</span>
+              </div>
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-[11px] text-green-600 font-medium">
+                  <span>Discount</span>
+                  <span>- {formatKes(discountAmount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-base font-black text-slate-900 pt-1 border-t-2 border-slate-900 mt-2">
+                <span>TOTAL ESTIMATE</span>
+                <span>{formatKes(finalTotal)}</span>
+              </div>
             </div>
-            <div className="pt-2 flex flex-wrap gap-2">
+
+            <div className="pt-6 flex flex-col gap-2">
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="font-bold h-10"
+                  onClick={() => handleSaveQuote("new")}
+                  disabled={isSaving}
+                >
+                  Save as Draft
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  asChild
+                  className="font-bold h-10"
+                >
+                  <a href={whatsappHref} target="_blank" rel="noopener noreferrer">
+                    WhatsApp Client
+                  </a>
+                </Button>
+              </div>
               <Button
                 size="sm"
-                className="flex-1 min-w-[140px]"
-                onClick={handleGeneratePDF}
+                className="w-full font-bold h-10 shadow-lg shadow-orange-500/20"
+                onClick={() => handleSaveQuote("quoted")}
                 disabled={isSaving}
               >
-                <FileText className="h-4 w-4 mr-1" />
-                {isSaving ? "Saving..." : "Generate PDF quote"}
-              </Button>
-              <Button size="sm" variant="outline" asChild className="min-w-[140px]">
-                <a
-                  href={whatsappHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Send via WhatsApp
-                </a>
+                <FileText className="h-4 w-4 mr-2" />
+                {isSaving ? "Creating Document..." : "Generate Professional PDF"}
               </Button>
             </div>
           </CardContent>

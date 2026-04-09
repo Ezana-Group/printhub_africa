@@ -30,6 +30,7 @@ export async function POST(req: Request) {
       lines,
       totals,
       notes,
+      status = "quoted",
     } = body;
 
     if (!clientName) {
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
       data: {
         quoteNumber,
         type: type === "3d" ? "three_d_print" : "large_format",
-        status: "quoted",
+        status: status || "quoted",
         customerId: selectedCustomerId || null,
         customerName: clientName,
         customerEmail: clientEmail || "no-email@printhub.africa",

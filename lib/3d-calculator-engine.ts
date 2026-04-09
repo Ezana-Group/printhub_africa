@@ -136,10 +136,10 @@ export function calculatePrintCost(
     failedPrintBuffer +
     packagingCost;
 
-  const profitAmountPerUnit =
-    totalProductionCostPerUnit * (marginPercent / 100);
-  const sellingPriceExVatPerUnit =
-    totalProductionCostPerUnit + profitAmountPerUnit;
+  const sellingPriceExVatPerUnit = marginPercent >= 100
+    ? totalProductionCostPerUnit * 2 // Fallback for 100% margin (unrealistic)
+    : totalProductionCostPerUnit / (1 - marginPercent / 100);
+  const profitAmountPerUnit = sellingPriceExVatPerUnit - totalProductionCostPerUnit;
   const vatAmountPerUnit =
     sellingPriceExVatPerUnit * (settings.vatRatePercent / 100);
   const sellingPriceIncVatPerUnit = sellingPriceExVatPerUnit + vatAmountPerUnit;

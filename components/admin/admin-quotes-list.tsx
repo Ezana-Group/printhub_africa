@@ -57,14 +57,14 @@ const TYPE_BADGE_CLASS: Record<string, string> = {
 };
 
 const STATUS_BADGE_CLASS: Record<string, string> = {
-  new: "bg-red-100 text-red-800 border-0",
+  new: "bg-slate-100 text-slate-600 border-0", // Draft
   reviewing: "bg-amber-100 text-amber-800 border-0",
   quoted: "bg-orange-100 text-orange-800 border-0",
   accepted: "bg-green-100 text-green-800 border-0",
   in_production: "bg-orange-100 text-orange-800 border-0",
   completed: "bg-emerald-700 text-white border-0",
   cancelled: "bg-slate-100 text-slate-600 border-0",
-  rejected: "bg-slate-100 text-slate-600 border-0",
+  rejected: "bg-red-100 text-red-800 border-0",
 };
 
 function buildQuery(f: QuoteFiltersState) {
@@ -253,7 +253,7 @@ export function AdminQuotesList({
                               STATUS_BADGE_CLASS[q.status] ?? "bg-slate-100 text-slate-700"
                             }`}
                           >
-                            {q.status.replace("_", " ")}
+                            {q.status === "new" ? "DRAFT" : q.status === "quoted" ? "SENT" : q.status.replace("_", " ")}
                           </span>
                           {q.closedBy === "CUSTOMER" && (
                             <span title="Closed by customer — read only">

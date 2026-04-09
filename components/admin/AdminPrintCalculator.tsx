@@ -141,12 +141,14 @@ export function AdminPrintCalculator() {
       .then((data: { printers?: PrinterOption[]; threeDPrinters?: PrinterOption[] }) => {
         const list = data.printers ?? data.threeDPrinters ?? [];
         setPrinterOptions(Array.isArray(list) ? list : []);
+        
+        // If we have printers but none selected, select the first one
         if (Array.isArray(list) && list.length > 0 && !selectedPrinterId) {
           setSelectedPrinterId(list[0].id);
         }
       })
       .catch(() => setPrinterOptions([]));
-  }, [selectedPrinterId]);
+  }, []); // Run on mount
 
   useEffect(() => {
     if (materialTypes.length && !materialType) {
