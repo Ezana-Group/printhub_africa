@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import type { CalculatorConfig } from "@/lib/calculator-config";
 import { CALCULATOR_CONFIG_INVALIDATE_EVENT } from "@/lib/calculator-config";
+import { calculatePrintCost, type PrinterSettings, type MaterialRate, DEFAULT_PRINTER_SETTINGS } from "@/lib/3d-calculator-engine";
+import { formatKes } from "@/lib/3d-calculator-engine";
 
 export function useCalculatorConfig() {
   const [data, setData] = useState<CalculatorConfig | null>(null);
@@ -78,49 +80,55 @@ export function compute3DEstimateFromConfig(
   rangeLow: number;
   rangeHigh: number;
 } {
-  const { labourRate, vatPercent, monthlyOverhead, monthlyCapacityHrs } = config;
   const { weightG, printTimeHrs, quantity, costPerKg, profitMarginOverride, postProcessing, postProcessingTimeHoursOverride } = params;
-  const profitMargin = profitMarginOverride ?? config.profitMargin;
-
-  const materialCostPerUnit = (weightG / 1000) * costPerKg;
-  const capacityHrs = monthlyCapacityHrs > 0 ? monthlyCapacityHrs : 208;
-  const machineCostPerUnit = printTimeHrs * (monthlyOverhead / capacityHrs);
   
-  // Labor includes print time + post-processing time (if selected)
-  const effectiveLabourTime = postProcessing 
-    ? printTimeHrs + (postProcessingTimeHoursOverride ?? (config as any).postProcessingTimeHours ?? 0.5)
-    : printTimeHrs;
-  const labourCostPerUnit = effectiveLabourTime * labourRate;
+  const settings: PrinterSettings = {
+    ...DEFAULT_PRINTER_SETTINGS,
+    laborRateKesPerHour: config.labourRate,
+    profitMarginPercent: profitMarginOverride ?? config.profitMargin,
+    vatRatePercent: config.vatPercent,
+    // Map overhead to business rent/util/ins for consistency with engine math
+    monthlyRentKes: config.monthlyOverhead,
+    monthlyUtilitiesKes: 0,
+    monthlyInsuranceKes: 0,
+    workingDaysPerMonth: 26,
+    workingHoursPerDay: 8, // 208 hrs/month
+    postProcessingTimeHours: postProcessingTimeHoursOverride ?? 0.5,
+    postProcessingFeePerUnit: config.postProcessingFeePerUnit ?? 200,
+  };
 
-  const postProcessingFeePerUnit = postProcessing ? (config.postProcessingFeePerUnit ?? 300) : 0;
-  const postProcessingCost = postProcessingFeePerUnit * quantity;
+  const material: MaterialRate = {
+    name: "Material",
+    code: "MAT",
+    costPerKgKes: costPerKg,
+  };
 
-  const subtotal = (materialCostPerUnit + machineCostPerUnit + labourCostPerUnit) * quantity + postProcessingCost;
-  const profit = subtotal * (profitMargin / 100);
-  const marginPct = profitMargin;
-  const priceBeforeVAT = subtotal + profit;
-  const vat = priceBeforeVAT * (vatPercent / 100);
-  const finalPrice = priceBeforeVAT + vat;
+  const job = {
+    name: "Estimate",
+    material: "MAT",
+    weightGrams: weightG,
+    printTimeHours: printTimeHrs,
+    postProcessing: postProcessing ?? false,
+    postProcessingTimeHoursOverride,
+    quantity,
+  };
 
-  const minOrder = 800;
-  const finalWithMin = Math.max(finalPrice, minOrder);
-  const rangeLow = Math.round(finalWithMin * 0.85);
-  const rangeHigh = Math.round(finalWithMin * 1.25);
+  const cost = calculatePrintCost(job, settings, [material]);
 
   return {
-    materialCost: materialCostPerUnit * quantity,
-    machineCost: machineCostPerUnit * quantity,
-    labourCost: labourCostPerUnit * quantity,
-    postProcessingCost,
-    subtotal,
-    profit,
-    profitMarginPct: marginPct,
-    priceBeforeVAT,
-    vat,
-    vatPercent,
-    finalPrice: finalWithMin,
-    rangeLow,
-    rangeHigh,
+    materialCost: cost.materialCost,
+    machineCost: (cost.electricityCost + cost.depreciationCost + cost.maintenanceCost + cost.overheadCost + cost.failedPrintBuffer),
+    labourCost: cost.laborCost,
+    postProcessingCost: postProcessing ? (settings.postProcessingFeePerUnit ?? 200) * quantity : 0,
+    subtotal: cost.totalProductionCost,
+    profit: cost.profitAmount,
+    profitMarginPct: settings.profitMarginPercent,
+    priceBeforeVAT: cost.sellingPriceExVat,
+    vat: cost.vatAmount,
+    vatPercent: settings.vatRatePercent,
+    finalPrice: cost.sellingPriceIncVat,
+    rangeLow: Math.round(cost.sellingPriceIncVat * 0.85),
+    rangeHigh: Math.round(cost.sellingPriceIncVat * 1.25),
   };
 }
 

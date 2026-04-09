@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useCalculatorConfig, compute3DEstimateFromConfig } from "@/hooks/useCalculatorConfig";
-import { formatKes, type PrintJob } from "@/lib/3d-calculator-engine";
+import { use3DRates } from "@/hooks/use3DRates";
+import { formatKes, type PrintJob, calculatePrintCost, type PrinterSettings, type MaterialRate } from "@/lib/3d-calculator-engine";
 import {
   COLOUR_PILLS,
   BRAND_COLOUR_HEX,
@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 type MaterialWithColors = { code: string; name: string; color?: string; baseMaterial?: string; quantity?: number };
 import { Calculator, History, FileText, Plus, Trash2, Box, RotateCcw } from "lucide-react";
 import { setQuoteDraft } from "@/lib/quote-draft";
-import { computeMultiPart3DEstimate } from "@/hooks/useCalculatorConfig";
+// Removed computeMultiPart3DEstimate import as we will use calculatePrintCost directly
 
 type TabId = "calculator" | "history";
 type PrinterOption = { id: string; name: string; source?: string; status?: string; nextScheduledMaintDate?: string | null };
@@ -51,7 +51,7 @@ const MARGIN_PRESETS = [20, 30, 40, 50, 60];
 
 export function AdminPrintCalculator() {
   const [selectedPrinterId, setSelectedPrinterId] = useState<string | "">("");
-  const { data: config, loading: configLoading } = useCalculatorConfig();
+  const { data: rates, loading: ratesLoading } = use3DRates(selectedPrinterId || undefined);
   const [tab, setTab] = useState<TabId>("calculator");
   const [printerOptions, setPrinterOptions] = useState<PrinterOption[]>([]);
 
@@ -79,15 +79,15 @@ export function AdminPrintCalculator() {
   const [historyFilter, setHistoryFilter] = useState("");
 
   const materials: MaterialWithColors[] = useMemo(() => {
-    if (!config?.filaments?.length) return [];
-    return config.filaments.map((f) => ({
-      code: f.id,
-      name: f.name,
-      baseMaterial: f.material,
-      color: canonicalColorFromSpec(f.colour ?? ""),
-      quantity: 1,
+    if (!rates?.materials?.length) return [];
+    return rates.materials.map((m) => ({
+      code: m.code,
+      name: m.name,
+      baseMaterial: (m as any).baseMaterial ?? (m.name.replace(/\s*\([^)]*\)\s*$/, "").trim() || m.name),
+      color: (m as any).color ?? canonicalColorFromSpec(m.name),
+      quantity: (m as any).quantity ?? 1,
     }));
-  }, [config?.filaments]);
+  }, [rates?.materials]);
 
   const { materialTypes, byMaterialType, availableColorSet, inStockColorSet } = useMemo(() => {
     const byBase: Record<string, { code: string; name: string; color: string; quantity: number }[]> = {};
@@ -133,7 +133,7 @@ export function AdminPrintCalculator() {
   const inStockForType = useMemo(() => inStockColorSet[materialType] ?? new Set<string>(), [materialType, inStockColorSet]);
 
   const effectiveMargin =
-    marginOverride !== "" ? Number(marginOverride) : (config?.profitMargin ?? 40);
+    marginOverride !== "" ? Number(marginOverride) : (rates?.printerSettings?.profitMarginPercent ?? 40);
 
   useEffect(() => {
     fetch("/api/admin/inventory/assets/printers?type=THREE_D")
@@ -169,7 +169,7 @@ export function AdminPrintCalculator() {
     if (!effectiveMaterial || !weightGrams || !printTimeHours) return;
     
     const mat = materials.find(m => m.code === effectiveMaterial);
-    const selectedFilament = config?.filaments?.find((f) => f.id === effectiveMaterial);
+    const selectedMaterial = rates?.materials?.find((m) => m.code === effectiveMaterial);
 
     setParts((prev) => [
       ...prev,
@@ -177,7 +177,7 @@ export function AdminPrintCalculator() {
         name: partName || `Part ${prev.length + 1}`,
         material: effectiveMaterial,
         materialName: mat?.name || effectiveMaterial,
-        costPerKg: selectedFilament?.costPerKg || 0,
+        costPerKg: selectedMaterial?.costPerKgKes || 3500,
         weightGrams: Number(weightGrams) || 0,
         printTimeHours: Number(printTimeHours) || 0,
         postProcessing,
@@ -204,26 +204,25 @@ export function AdminPrintCalculator() {
     setParts((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const selectedFilament = useMemo(
-    () => config?.filaments?.find((f) => f.id === effectiveMaterial),
-    [config?.filaments, effectiveMaterial]
+  const selectedMaterial = useMemo(
+    () => rates?.materials?.find((m) => m.code === effectiveMaterial),
+    [rates?.materials, effectiveMaterial]
   );
 
   const breakdown = useMemo(() => {
-    if (!config) return null;
+    if (!rates?.printerSettings || !rates.materials.length) return null;
     
-    // We combine added parts with the current form's "draft" part to show a live total.
     const activeParts = [...parts];
     
     if (activeParts.length === 0) {
       const w = Number(weightGrams) || 0;
       const t = Number(printTimeHours) || 0;
-      if (w > 0 && t > 0 && selectedFilament) {
+      if (w > 0 && t > 0 && selectedMaterial) {
         activeParts.push({
           name: partName || "Part 1",
           material: effectiveMaterial,
-          materialName: selectedFilament.name,
-          costPerKg: selectedFilament.costPerKg,
+          materialName: selectedMaterial.name,
+          costPerKg: selectedMaterial.costPerKgKes,
           weightGrams: w,
           printTimeHours: t,
           postProcessing,
@@ -235,35 +234,68 @@ export function AdminPrintCalculator() {
 
     if (activeParts.length === 0) return null;
     
-    return computeMultiPart3DEstimate(
-      {
-        labourRate: config.labourRate,
-        vatPercent: config.vatPercent,
-        monthlyOverhead: config.monthlyOverhead,
-        monthlyCapacityHrs: config.monthlyCapacityHrs,
-        profitMargin: config.profitMargin,
-        postProcessingFeePerUnit: config.postProcessingFeePerUnit,
-      },
-      activeParts.map(p => ({
-        weightG: p.weightGrams,
-        printTimeHrs: p.printTimeHours,
-        quantity: p.quantity,
-        costPerKg: p.costPerKg,
+    const estimates = activeParts.map(p => {
+      const job: PrintJob = {
+        name: p.name,
+        material: p.material,
+        weightGrams: p.weightGrams,
+        printTimeHours: p.printTimeHours,
         postProcessing: p.postProcessing,
         postProcessingTimeHoursOverride: p.postProcessingTimeHoursOverride,
-        profitMarginOverride: effectiveMargin,
-      }))
-    );
-  }, [config, parts, effectiveMargin, weightGrams, printTimeHours, quantity, postProcessing, postProcessingHours, selectedFilament, effectiveMaterial]);
+        quantity: p.quantity,
+      };
+      return calculatePrintCost(
+        job,
+        { ...rates.printerSettings, profitMarginPercent: effectiveMargin },
+        rates.materials
+      );
+    });
+
+    const total = estimates.reduce((acc, est) => ({
+      materialCost: acc.materialCost + est.materialCost,
+      machineCost: acc.machineCost + (est.electricityCost + est.depreciationCost + est.maintenanceCost + est.overheadCost + est.failedPrintBuffer),
+      labourCost: acc.labourCost + est.laborCost,
+      postProcessingCost: acc.postProcessingCost + (est.perUnitSellingPrice - est.perUnitCost < 0 ? 0 : 0), // wait
+      totalProductionCost: acc.totalProductionCost + est.totalProductionCost,
+      profitAmount: acc.profitAmount + est.profitAmount,
+      sellingPriceExVat: acc.sellingPriceExVat + est.sellingPriceExVat,
+      vatAmount: acc.vatAmount + est.vatAmount,
+      sellingPriceIncVat: acc.sellingPriceIncVat + est.sellingPriceIncVat,
+    }), {
+      materialCost: 0, machineCost: 0, labourCost: 0, postProcessingCost: 0, totalProductionCost: 0, profitAmount: 0, sellingPriceExVat: 0, vatAmount: 0, sellingPriceIncVat: 0
+    });
+
+    // Re-calculate postProcessingCost specifically for the breakdown view
+    const totalPostProc = estimates.reduce((s, e) => {
+        // In the granular engine, postProcessingFeePerUnit is added to totalProductionCostPerUnit
+        // We'll estimate it here for visibility
+        return s + (estimates[0].quantity * (rates.printerSettings.postProcessingFeePerUnit ?? 200));
+    }, 0);
+
+    return {
+      estimates,
+      materialCost: total.materialCost,
+      machineCost: total.machineCost,
+      labourCost: total.labourCost,
+      postProcessingCost: activeParts.reduce((s, p) => s + (p.postProcessing ? (rates.printerSettings.postProcessingFeePerUnit ?? 200) * p.quantity : 0), 0),
+      subtotal: total.totalProductionCost,
+      profit: total.profitAmount,
+      vat: total.vatAmount,
+      vatPercent: rates.printerSettings.vatRatePercent,
+      finalPrice: total.sellingPriceIncVat,
+      rangeLow: Math.round(total.sellingPriceIncVat * 0.85),
+      rangeHigh: Math.round(total.sellingPriceIncVat * 1.25),
+    };
+  }, [rates, parts, effectiveMargin, weightGrams, printTimeHours, quantity, postProcessing, postProcessingHours, selectedMaterial, effectiveMaterial]);
 
   const marginSensitivity = useMemo(() => {
-    if (!breakdown || !config) return null;
+    if (!breakdown || !rates) return null;
     const baseCost = breakdown.subtotal;
     return MARGIN_PRESETS.map((pct) => ({
       pct,
-      selling: baseCost * (1 + pct / 100) * (1 + config.vatPercent / 100),
+      selling: baseCost * (1 + pct / 100) * (1 + rates.printerSettings.vatRatePercent / 100),
     }));
-  }, [breakdown, config]);
+  }, [breakdown, rates]);
 
   const fetchHistory = useCallback(async () => {
     setHistoryLoading(true);
@@ -305,8 +337,8 @@ export function AdminPrintCalculator() {
             quantity: p.quantity,
             postProcessing: p.postProcessing,
             postProcessingTimeHoursOverride: p.postProcessingTimeHoursOverride,
-            productionCost: breakdown.estimates[i].subtotal,
-            sellingPrice: breakdown.estimates[i].finalPrice,
+            productionCost: breakdown.estimates[i].totalProductionCost,
+            sellingPrice: breakdown.estimates[i].sellingPriceIncVat,
           })),
           totalProductionCost: breakdown.subtotal,
           totalSellingPrice: breakdown.finalPrice,
@@ -351,15 +383,15 @@ export function AdminPrintCalculator() {
 
   const handleLoadFromHistory = (entry: HistoryEntry) => {
     setJobName(entry.jobName);
-    setMarginOverride(entry.marginPercent === config?.profitMargin ? "" : entry.marginPercent);
+    setMarginOverride(entry.marginPercent === rates?.printerSettings?.profitMarginPercent ? "" : entry.marginPercent);
     
     const loadedParts = (entry.parts || []).map(p => {
-      const selectedFilament = config?.filaments?.find((f) => f.id === p.materialCode);
+      const selectedMaterial = rates?.materials?.find((m) => m.code === p.materialCode);
       return {
         name: p.name,
         material: p.materialCode,
-        materialName: selectedFilament?.name || p.materialCode,
-        costPerKg: selectedFilament?.costPerKg || 0,
+        materialName: selectedMaterial?.name || p.materialCode,
+        costPerKg: selectedMaterial?.costPerKgKes || 3500,
         weightGrams: p.weightGrams,
         printTimeHours: p.printTimeHours,
         postProcessing: p.postProcessing,
@@ -372,7 +404,7 @@ export function AdminPrintCalculator() {
     setTab("calculator");
   };
 
-  if (configLoading || !config) {
+  if (ratesLoading || !rates) {
     return (
       <Card>
         <CardContent className="py-10 text-center text-muted-foreground">
@@ -461,7 +493,7 @@ export function AdminPrintCalculator() {
                           : Math.max(0, Math.min(100, parseFloat(e.target.value) || 0))
                       )
                     }
-                    placeholder={String(config?.profitMargin ?? 40)}
+                    placeholder={String(rates?.printerSettings?.profitMarginPercent ?? 40)}
                     className="mt-1"
                   />
                 </div>

@@ -1,0 +1,5 @@
+Issue Type,Event Name,Total Received,Sample Value,Sample Type,More Info,How To Fix
+Events not received,ADD_TO_CART,0,,,Your app might not be sending events. Check that your SDK is integrated correctly.,: 
+Events not received,VIEW_CONTENT,0,,,Your app might not be sending events. Check that your SDK is integrated correctly.,: 
+Events not received,PURCHASE,0,,,Your app might not be sending events. Check that your SDK is integrated correctly.,: 
+,,0,,,Your app isn't set up for Aggregated Event Measurement. Delivery or reporting may be reduced for people using iOS 14.5 or later devices.,Go to Events Manager: /events_manager2/list/app/1763268931304918/settings?eligibility_check_result=false

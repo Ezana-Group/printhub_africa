@@ -4,8 +4,8 @@ import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useCalculatorConfig, compute3DEstimateFromConfig, computeMultiPart3DEstimate } from "@/hooks/useCalculatorConfig";
-import { formatKes, type PrintJob } from "@/lib/3d-calculator-engine";
+import { use3DRates } from "@/hooks/use3DRates";
+import { formatKes, type PrintJob, calculatePrintCost } from "@/lib/3d-calculator-engine";
 import {
   COLOUR_PILLS,
   BRAND_COLOUR_HEX,
@@ -46,7 +46,7 @@ type CustomerPrintCalculatorProps = {
 };
 
 export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, onMaterialChange, onPartsChange }: CustomerPrintCalculatorProps) {
-  const { data: config, loading: configLoading } = useCalculatorConfig();
+  const { data: rates, loading: ratesLoading } = use3DRates();
 
   const [parts, setParts] = useState<Array<PrintJob & { materialName: string; costPerKg: number }>>([]);
   
@@ -60,16 +60,16 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
   const [addOnsOpen, setAddOnsOpen] = useState(false);
 
   const materials: MaterialWithColors[] = useMemo(() => {
-    if (!config?.filaments?.length) return [];
-    return config.filaments.map((f) => ({
-      code: f.id,
-      name: f.name,
-      costPerKgKes: f.costPerKg,
-      baseMaterial: f.material,
-      color: canonicalColorFromSpec(f.colour ?? ""),
-      quantity: 1,
+    if (!rates?.materials?.length) return [];
+    return rates.materials.map((m) => ({
+      code: m.code,
+      name: m.name,
+      costPerKgKes: m.costPerKgKes,
+      baseMaterial: (m as any).baseMaterial ?? (m.name.replace(/\s*\([^)]*\)\s*$/, "").trim() || m.name),
+      color: (m as any).color ?? canonicalColorFromSpec(m.name),
+      quantity: (m as any).quantity ?? 1,
     }));
-  }, [config?.filaments]);
+  }, [rates?.materials]);
 
   const { materialTypes, byMaterialType, availableColorSet, inStockColorSet } = useMemo(() => {
     const byBase: Record<string, { code: string; name: string; color: string; quantity: number }[]> = {};
@@ -177,39 +177,52 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
   };
 
   const breakdown = useMemo(() => {
-    if (!config) return null;
+    if (!rates?.printerSettings || !rates.materials.length) return null;
     
-    // We compute for BOTH the already added parts AND the current form if it has enough data
     const activeParts = [...parts];
     
-    // If form is valid, add current form contents to the breakdown temporarily 
-    // OR just show estimate for added parts.
-    // Let's show estimate for ALL added parts.
-    
     if (activeParts.length === 0) {
-      // If nothing added yet, check if current form has enough to show a preview
       const w = Number(weightGrams) || 0;
       const t = Number(printTimeHours) || 0;
       if (w > 0 && t > 0 && selectedFilament) {
-        return computeMultiPart3DEstimate(config, [{
-          weightG: w,
-          printTimeHrs: t,
-          quantity: Math.max(1, quantity),
-          costPerKg: selectedFilament.costPerKgKes,
+        const job: PrintJob = {
+          name: "Part 1",
+          material: selectedFilament.code,
+          weightGrams: w,
+          printTimeHours: t,
           postProcessing,
-        }]);
+          quantity: Math.max(1, quantity),
+        };
+        const est = calculatePrintCost(job, rates.printerSettings, rates.materials);
+        return {
+          finalPrice: est.sellingPriceIncVat,
+          rangeLow: Math.round(est.sellingPriceIncVat * 0.85),
+          rangeHigh: Math.round(est.sellingPriceIncVat * 1.25),
+        };
       }
       return null;
     }
 
-    return computeMultiPart3DEstimate(config, activeParts.map(p => ({
-      weightG: p.weightGrams,
-      printTimeHrs: p.printTimeHours,
-      quantity: p.quantity,
-      costPerKg: p.costPerKg,
-      postProcessing: p.postProcessing,
-    })));
-  }, [config, parts, weightGrams, printTimeHours, quantity, postProcessing, selectedFilament]);
+    const estimates = activeParts.map(p => {
+      const job: PrintJob = {
+        name: p.name,
+        material: p.material,
+        weightGrams: p.weightGrams,
+        printTimeHours: p.printTimeHours,
+        postProcessing: p.postProcessing,
+        quantity: p.quantity,
+      };
+      return calculatePrintCost(job, rates.printerSettings, rates.materials);
+    });
+
+    const totalFinalPrice = estimates.reduce((s, e) => s + e.sellingPriceIncVat, 0);
+
+    return {
+      finalPrice: totalFinalPrice,
+      rangeLow: Math.round(totalFinalPrice * 0.85),
+      rangeHigh: Math.round(totalFinalPrice * 1.25),
+    };
+  }, [rates, parts, weightGrams, printTimeHours, quantity, postProcessing, selectedFilament]);
 
   const priceLow = breakdown?.rangeLow ?? null;
   const priceHigh = breakdown?.rangeHigh ?? null;
@@ -234,7 +247,7 @@ export function CustomerPrintCalculator({ variant = "dark", onEstimateChange, on
   const accentBg = isLight ? "bg-[#E8440A]" : "bg-[#E8440A]";
   const accentText = isLight ? "text-white" : "text-white";
 
-  if (configLoading || !config) {
+  if (ratesLoading || !rates) {
     return (
       <div className={isLight ? "rounded-2xl border border-slate-200 bg-card p-8 text-center text-slate-600" : "rounded-2xl border border-[#E8440A]/20 bg-[#0A0A0A] p-8 text-center text-white/60"}>
         Loading calculator…
