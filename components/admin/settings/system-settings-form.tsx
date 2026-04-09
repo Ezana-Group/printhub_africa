@@ -129,6 +129,47 @@ export function SystemSettingsForm() {
         </div>
       </SectionCard>
       <SectionCard
+        title="Backup & Maintenance"
+        description="Configure automated system backups and manual snapshots."
+      >
+        <div className="grid gap-4">
+          <div className="space-y-1.5">
+            <Label>Auto-Backup Frequency</Label>
+            <select
+              name="backupFrequencyHours"
+              className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              defaultValue={val("backupFrequencyHours", "24")}
+            >
+              <option value="6">Every 6 Hours</option>
+              <option value="12">Every 12 Hours</option>
+              <option value="24">Daily (Every 24 Hours)</option>
+              <option value="48">Every 2 Days</option>
+              <option value="168">Weekly (Every 7 Days)</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-4 pt-2">
+            <Button
+              type="button"
+              variant="default"
+              onClick={async () => {
+                const res = await fetch("/api/admin/settings/backup/create", { method: "POST" });
+                if (res.ok) {
+                  alert("Backup initiated successfully!");
+                  router.refresh();
+                } else {
+                  alert("Failed to initiate backup.");
+                }
+              }}
+            >
+              Run Manual System Backup Now
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Last backup: {val("lastBackupAt", "Never")}
+            </p>
+          </div>
+        </div>
+      </SectionCard>
+      <SectionCard
         title="Feature Flags"
         description="Toggle experimental or optional features."
       >

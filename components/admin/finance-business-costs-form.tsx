@@ -10,6 +10,7 @@ import { CALCULATOR_CONFIG_INVALIDATE_EVENT } from "@/lib/calculator-config";
 
 type BusinessSettings = {
   labourRateKesPerHour?: number;
+  threeDLabourRateKesPerHour?: number;
   monthlyRentKes?: number;
   monthlyUtilitiesKes?: number;
   monthlyInsuranceKes?: number;
@@ -31,6 +32,7 @@ const UTILISATION_PCT = 70; // 70% machine utilisation for effective hours
 /** Default baseline values (same as API/seed). Use as starting point so you can edit and save your own. */
 const DEFAULT_BASELINE: BusinessSettings = {
   labourRateKesPerHour: 200,
+  threeDLabourRateKesPerHour: 50,
   monthlyRentKes: 35000,
   monthlyUtilitiesKes: 8000,
   monthlyInsuranceKes: 4000,
@@ -77,6 +79,7 @@ export function FinanceBusinessCostsForm({ canEdit = true }: { canEdit?: boolean
     const payload = {
       business: {
         labourRateKesPerHour: business.labourRateKesPerHour ?? 0,
+        threeDLabourRateKesPerHour: business.threeDLabourRateKesPerHour ?? 0,
         defaultProfitMarginPct: business.defaultProfitMarginPct ?? 0,
         monthlyRentKes: business.monthlyRentKes ?? 0,
         monthlyUtilitiesKes: business.monthlyUtilitiesKes ?? 0,
@@ -227,6 +230,7 @@ export function FinanceBusinessCostsForm({ canEdit = true }: { canEdit?: boolean
             </CardHeader>
             <CardContent className="text-sm">
               <p>Standard rate: KES {formatNum(business.labourRateKesPerHour)}/hr</p>
+              <p className="mt-1">3D Printing rate: KES {formatNum(business.threeDLabourRateKesPerHour)}/hr</p>
               <p className="mt-1">Flat post-processing: KES {formatNum(business.postProcessingFeePerUnit)}/part</p>
               <p className="mt-1 text-muted-foreground">
                 Days/month: {business.workingDaysPerMonth ?? "—"} · Hours/day: {business.workingHoursPerDay ?? "—"}
@@ -323,6 +327,15 @@ export function FinanceBusinessCostsForm({ canEdit = true }: { canEdit?: boolean
                   min={0}
                   value={business.labourRateKesPerHour ?? ""}
                   onChange={(e) => update("labourRateKesPerHour", parseFloat(e.target.value) || 0)}
+                />
+              </div>
+              <div className="space-y-1.5 max-w-xs">
+                <Label>3D Printing rate (KES/hr)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={business.threeDLabourRateKesPerHour ?? ""}
+                  onChange={(e) => update("threeDLabourRateKesPerHour", parseFloat(e.target.value) || 0)}
                 />
               </div>
               <div className="space-y-1.5 max-w-xs">

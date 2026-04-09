@@ -510,6 +510,11 @@ model LFBusinessSettings {
   updatedBy                String?
   updatedAt                DateTime @updatedAt
   postProcessingFeePerUnit Float    @default(300)
+  
+  // 3D Printing Unified Settings
+  threeDLabourRateKesPerHour     Float    @default(200)
+  threeDFailedPrintBufferPct     Float    @default(5.0)
+  threeDPackagingFeeKes          Float    @default(20.0)
 }
 
 model LFStockItem {
@@ -1421,6 +1426,10 @@ model PrinterAsset {
   depreciationPerHourKes   Float?
   maintenancePerHourKes    Float?
   maintenanceLogs          MaintenanceLog[]
+
+  // Calculator Overrides
+  failedPrintBufferPct     Float?
+  packagingFeeKes          Float?
 }
 
 model MaintenanceLog {
@@ -1989,6 +1998,10 @@ model SystemSettings {
   factoryResetInitiatedBy String?
   quoteCounter            Int?      @default(0)
   updatedAt               DateTime  @updatedAt
+
+  // System Backup Configuration
+  backupFrequencyHours    Int       @default(24)
+  lastBackupAt            DateTime?
 }
 
 model FaqCategory {
@@ -3248,3 +3261,6 @@ enum WarrantyStatus {
   CLAIMED
   VOID
 }
+
+// Extended Business Settings for 3D Printing
+// Note: We use LFBusinessSettings as the unified store for calculator overheads.

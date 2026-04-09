@@ -48,11 +48,30 @@ export async function POST(
     const body = await req.json().catch(() => ({}));
     const key = `adminSettings:${firstSegment}`;
     const valueJson = JSON.stringify(body);
+    
+    // Standard JSON persistence
     await prisma.pricingConfig.upsert({
       where: { key },
       update: { valueJson },
       create: { key, valueJson },
     });
+
+    // Special handling for System model synchronization
+    if (firstSegment === "system") {
+      const bFrequency = body.backupFrequencyHours ? parseInt(body.backupFrequencyHours, 10) : 24;
+      const existing = await prisma.systemSettings.findFirst();
+      if (existing) {
+        await prisma.systemSettings.update({
+          where: { id: existing.id },
+          data: { backupFrequencyHours: bFrequency },
+        });
+      } else {
+        await prisma.systemSettings.create({
+          data: { backupFrequencyHours: bFrequency },
+        });
+      }
+    }
+
     return NextResponse.json({ success: true });
   } catch (e) {
     console.error("Settings save error:", e);

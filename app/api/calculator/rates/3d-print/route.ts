@@ -54,12 +54,16 @@ export async function GET(req: Request) {
     if (business) {
       printerSettings = {
         ...printerSettings,
-        laborRateKesPerHour: business.labourRateKesPerHour ?? printerSettings.laborRateKesPerHour,
+        // Use the new separate 3D labor rate
+        laborRateKesPerHour: (business as any).threeDLabourRateKesPerHour ?? business.labourRateKesPerHour ?? printerSettings.laborRateKesPerHour,
         monthlyRentKes: business.monthlyRentKes ?? printerSettings.monthlyRentKes,
         monthlyUtilitiesKes: business.monthlyUtilitiesKes ?? printerSettings.monthlyUtilitiesKes,
         monthlyInsuranceKes: business.monthlyInsuranceKes ?? printerSettings.monthlyInsuranceKes,
         vatRatePercent: business.vatRatePct ?? printerSettings.vatRatePercent,
         profitMarginPercent: business.defaultProfitMarginPct ?? printerSettings.profitMarginPercent,
+        // Unified 3D-specific settings
+        failedPrintRatePercent: (business as any).threeDFailedPrintBufferPct ?? printerSettings.failedPrintRatePercent,
+        packagingCostKes: (business as any).threeDPackagingFeeKes ?? printerSettings.packagingCostKes,
       };
     }
     const linkedMaintenanceKes = (linkedItems as Array<{ priceKes: number }>).reduce((s, i) => s + i.priceKes, 0);
@@ -75,6 +79,9 @@ export async function GET(req: Request) {
         lifespanHours: printerAsset.expectedLifespanHours,
         maintenancePerYearKes: printerAsset.annualMaintenanceKes + linkedMaintenanceKes,
         postProcessingTimeHours: (printerAsset.postProcessingTimeHours ?? printerSettings.postProcessingTimeHours) + linkedTimeHours,
+        // Printer-level overrides
+        failedPrintRatePercent: (printerAsset as any).failedPrintBufferPct ?? printerSettings.failedPrintRatePercent,
+        packagingCostKes: (printerAsset as any).packagingFeeKes ?? printerSettings.packagingCostKes,
       };
     } else if (inventoryPrinter) {
       printerSettings = {

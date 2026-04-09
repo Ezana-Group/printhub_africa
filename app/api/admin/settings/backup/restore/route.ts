@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/settings-api";
-import { restoreDatabase } from "@/lib/backup-utils";
+import { restoreFullSystem } from "@/lib/backup-utils";
 import { writeAudit } from "@/lib/audit";
 
 export async function POST(req: Request) {
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
 
         const buffer = Buffer.from(await file.arrayBuffer());
         
-        const manifest = await restoreDatabase(buffer, (step, status) => {
+        const manifest = await restoreFullSystem(buffer, (step: string, status: string) => {
           sendProgress(step, status === "in_progress" ? "in_progress" : "done");
         });
 
