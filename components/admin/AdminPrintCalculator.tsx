@@ -19,7 +19,8 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type MaterialWithColors = { code: string; name: string; color?: string; baseMaterial?: string; quantity?: number };
-import { Calculator, History, FileText, Plus, Trash2, Box, RotateCcw } from "lucide-react";
+import { Calculator, History, FileText, Plus, Trash2, Box, RotateCcw, ShoppingCart } from "lucide-react";
+import { ConvertToProductModal } from "./calculator/ConvertToProductModal";
 import { setQuoteDraft } from "@/lib/quote-draft";
 // Removed computeMultiPart3DEstimate import as we will use calculatePrintCost directly
 
@@ -77,6 +78,7 @@ export function AdminPrintCalculator() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyFilter, setHistoryFilter] = useState("");
+  const [pushProductEntry, setPushProductEntry] = useState<HistoryEntry | null>(null);
 
   const materials: MaterialWithColors[] = useMemo(() => {
     if (!rates?.materials?.length) return [];
@@ -1011,6 +1013,15 @@ export function AdminPrintCalculator() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              className="h-8 w-8 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                              title="Push to Shop Product"
+                              onClick={() => setPushProductEntry(e)}
+                            >
+                              <ShoppingCart className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                               title="Delete history"
                               onClick={() => handleDeleteHistory(e.id)}
@@ -1029,6 +1040,11 @@ export function AdminPrintCalculator() {
         </Card>
       )}
 
+      <ConvertToProductModal
+        isOpen={!!pushProductEntry}
+        onClose={() => setPushProductEntry(null)}
+        entry={pushProductEntry}
+      />
     </div>
   );
 }
