@@ -126,7 +126,7 @@ export function ConvertToProductModal({
       const data = await res.json();
       if (res.ok) {
         // Success!
-        window.location.href = `/admin/inventory/products/${data.productId}`;
+        window.location.href = `/admin/products/${data.productId}`;
       } else {
         setError(data.error || "Failed to create product");
       }
