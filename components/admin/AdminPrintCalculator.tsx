@@ -135,23 +135,32 @@ export function AdminPrintCalculator() {
   const effectiveMargin =
     marginOverride !== "" ? Number(marginOverride) : (rates?.printerSettings?.profitMarginPercent ?? 40);
 
+  const [printersLoading, setPrintersLoading] = useState(true);
+
   useEffect(() => {
+    setPrintersLoading(true);
     fetch("/api/admin/inventory/assets/printers?type=THREE_D")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP error! status: ${r.status}`);
+        return r.json();
+      })
       .then((data: { printers?: PrinterOption[]; threeDPrinters?: PrinterOption[] }) => {
         const list = data.printers ?? data.threeDPrinters ?? [];
-        setPrinterOptions(Array.isArray(list) ? list : []);
+        const validList = Array.isArray(list) ? list : [];
+        setPrinterOptions(validList);
         
         // AUTO-SELECT REAL HARDWARE:
-        // If we have real inventory printers and haven't manually selected one yet, 
-        // select the first real one instead of the 'Default' placeholder.
-        if (Array.isArray(list) && list.length > 0) {
-          if (!selectedPrinterId || selectedPrinterId === "") {
-            setSelectedPrinterId(list[0].id);
-          }
+        if (validList.length > 0 && !selectedPrinterId) {
+          // Priority: ACTIVE > first in list
+          const activePrinter = validList.find(p => p.status === "ACTIVE") || validList[0];
+          setSelectedPrinterId(activePrinter.id);
         }
       })
-      .catch(() => setPrinterOptions([]));
+      .catch((err) => {
+        console.error("Failed to fetch 3D printers:", err);
+        setPrinterOptions([]);
+      })
+      .finally(() => setPrintersLoading(false));
   }, []); // Run on mount
 
   useEffect(() => {
@@ -475,8 +484,10 @@ export function AdminPrintCalculator() {
                   onChange={(e) => setSelectedPrinterId(e.target.value)}
                   className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2"
                 >
-                  {printerOptions.length === 0 ? (
-                    <option value="">Default (no inventory printer)</option>
+                  {printersLoading ? (
+                    <option value="">Loading printers...</option>
+                  ) : printerOptions.length === 0 ? (
+                    <option value="">No inventory printers found</option>
                   ) : (
                     printerOptions.map((p) => (
                       <option key={p.id} value={p.id}>

@@ -84,6 +84,7 @@ export async function GET(req: Request) {
         packagingCostKes: (printerAsset as any).packagingFeeKes ?? printerSettings.packagingCostKes,
       };
     } else if (inventoryPrinter) {
+      const annualMaint = inventoryPrinter.annualMaintenanceKes ?? inventoryPrinter.maintenancePerYearKes ?? 0;
       printerSettings = {
         ...printerSettings,
         printerModel: inventoryPrinter.name,
@@ -91,7 +92,7 @@ export async function GET(req: Request) {
         electricityRateKesKwh: inventoryPrinter.electricityRateKesKwh ?? printerSettings.electricityRateKesKwh,
         printerPurchasePriceKes: inventoryPrinter.priceKes,
         lifespanHours: inventoryPrinter.lifespanHours ?? printerSettings.lifespanHours,
-        maintenancePerYearKes: (inventoryPrinter.maintenancePerYearKes ?? printerSettings.maintenancePerYearKes) + linkedMaintenanceKes,
+        maintenancePerYearKes: annualMaint + linkedMaintenanceKes,
         postProcessingTimeHours: (inventoryPrinter.postProcessingTimeHours ?? printerSettings.postProcessingTimeHours) + linkedTimeHours,
       };
     }

@@ -45,7 +45,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const type = searchParams.get("type"); // LARGE_FORMAT | THREE_D (or both)
 
-    const [business, assets, inventoryPrinters] = await Promise.all([
+    const [business, assetsRows, inventoryPrintersRows] = await Promise.all([
       prisma.lFBusinessSettings.findFirst().catch(() => null),
       prisma.printerAsset.findMany({
         where: {
@@ -53,6 +53,9 @@ export async function GET(req: Request) {
           ...(type === "LARGE_FORMAT" ? { printerType: "LARGE_FORMAT" } : type === "THREE_D" ? { printerType: { in: ["FDM", "RESIN", "HYBRID"] } } : {}),
         },
         orderBy: [{ printerType: "asc" }, { assetTag: "asc" }],
+      }).catch(err => {
+        console.error("PrinterAsset query failed:", err);
+        return [];
       }),
       prisma.inventoryHardwareItem.findMany({
         where: {
@@ -61,8 +64,14 @@ export async function GET(req: Request) {
           hardwareType: type === "LARGE_FORMAT" ? "LARGE_FORMAT_PRINTER" : type === "THREE_D" ? "THREE_D_PRINTER" : { in: ["LARGE_FORMAT_PRINTER", "THREE_D_PRINTER"] },
         },
         orderBy: { name: "asc" },
+      }).catch(err => {
+        console.error("InventoryHardwareItem query failed:", err);
+        return [];
       }),
     ]);
+
+    const assets = Array.isArray(assetsRows) ? assetsRows : [];
+    const inventoryPrinters = Array.isArray(inventoryPrintersRows) ? inventoryPrintersRows : [];
 
     const workingHoursPerMonth = (business?.workingDaysPerMonth ?? 26) * (business?.workingHoursPerDay ?? 8);
 
@@ -99,40 +108,58 @@ export async function GET(req: Request) {
 
     const largeFormatAssets = assets.filter((a) => a.printerType === "LARGE_FORMAT").map(toListItem);
     const threeDAssets = assets.filter((a) => ["FDM", "RESIN", "HYBRID"].includes(a.printerType)).map(toListItem);
-    const largeFormatInventory = (type === "THREE_D" ? [] : inventoryPrinters.filter((p) => p.hardwareType === "LARGE_FORMAT_PRINTER")).map((p) => ({
-      id: p.id,
-      name: p.name,
-      source: "InventoryHardwareItem" as const,
-      assetTag: null,
-      printerType: "LARGE_FORMAT",
-      status: "ACTIVE",
-      location: p.location,
-      hoursUsedTotal: null,
-      remainingLifespanHours: p.lifespanHours,
-      depreciationPerHourKes: p.lifespanHours && p.lifespanHours > 0 ? p.priceKes / p.lifespanHours : null,
-      maintenancePerHourKes: null,
-      electricityPerHourKes: null,
-      totalMachinePerHourKes: null,
-      nextScheduledMaintDate: null,
-      isDefault: false,
-    }));
-    const threeDInventory = (type === "LARGE_FORMAT" ? [] : inventoryPrinters.filter((p) => p.hardwareType === "THREE_D_PRINTER")).map((p) => ({
-      id: p.id,
-      name: p.name,
-      source: "InventoryHardwareItem" as const,
-      assetTag: null,
-      printerType: "FDM",
-      location: p.location,
-      status: "ACTIVE",
-      hoursUsedTotal: null,
-      remainingLifespanHours: p.lifespanHours,
-      depreciationPerHourKes: null,
-      maintenancePerHourKes: null,
-      electricityPerHourKes: null,
-      totalMachinePerHourKes: null,
-      nextScheduledMaintDate: null,
-      isDefault: false,
-    }));
+    const largeFormatInventory = (type === "THREE_D" ? [] : inventoryPrinters.filter((p) => p.hardwareType === "LARGE_FORMAT_PRINTER")).map((p) => {
+      const annualMaintenance = p.annualMaintenanceKes ?? p.maintenancePerYearKes ?? 0;
+      const maintenancePerHour = workingHoursPerMonth > 0 ? annualMaintenance / (workingHoursPerMonth * 12) : 0;
+      const depreciationPerHour = p.lifespanHours && p.lifespanHours > 0 ? p.priceKes / p.lifespanHours : 0;
+      const powerKw = (p.powerWatts ?? 0) / 1000;
+      const electricityPrice = p.electricityRateKesKwh ?? 24;
+      const electricityPerHour = powerKw * electricityPrice;
+
+      return {
+        id: p.id,
+        name: p.name,
+        source: "InventoryHardwareItem" as const,
+        assetTag: null,
+        printerType: "LARGE_FORMAT",
+        status: p.isActive ? "ACTIVE" : "INACTIVE",
+        location: p.location,
+        hoursUsedTotal: null,
+        remainingLifespanHours: p.lifespanHours,
+        depreciationPerHourKes: depreciationPerHour,
+        maintenancePerHourKes: maintenancePerHour,
+        electricityPerHourKes: electricityPerHour,
+        totalMachinePerHourKes: depreciationPerHour + maintenancePerHour + electricityPerHour,
+        nextScheduledMaintDate: null,
+        isDefault: false,
+      };
+    });
+    const threeDInventory = (type === "LARGE_FORMAT" ? [] : inventoryPrinters.filter((p) => p.hardwareType === "THREE_D_PRINTER")).map((p) => {
+      const annualMaintenance = p.annualMaintenanceKes ?? p.maintenancePerYearKes ?? 0;
+      const maintenancePerHour = workingHoursPerMonth > 0 ? annualMaintenance / (workingHoursPerMonth * 12) : 0;
+      const depreciationPerHour = p.lifespanHours && p.lifespanHours > 0 ? p.priceKes / p.lifespanHours : 0;
+      const powerKw = (p.powerWatts ?? 0) / 1000;
+      const electricityPrice = p.electricityRateKesKwh ?? 24;
+      const electricityPerHour = powerKw * electricityPrice;
+
+      return {
+        id: p.id,
+        name: p.name,
+        source: "InventoryHardwareItem" as const,
+        assetTag: null,
+        printerType: p.printerSubType ?? "FDM",
+        status: p.isActive ? "ACTIVE" : "INACTIVE",
+        location: p.location,
+        hoursUsedTotal: null,
+        remainingLifespanHours: p.lifespanHours,
+        depreciationPerHourKes: depreciationPerHour,
+        maintenancePerHourKes: maintenancePerHour,
+        electricityPerHourKes: electricityPerHour,
+        totalMachinePerHourKes: depreciationPerHour + maintenancePerHour + electricityPerHour,
+        nextScheduledMaintDate: null,
+        isDefault: false,
+      };
+    });
 
     return NextResponse.json({
       largeFormatPrinters: [...largeFormatAssets, ...largeFormatInventory],
