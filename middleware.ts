@@ -6,10 +6,19 @@ export async function middleware(request: NextRequest) {
   // --- CORS/Preflight Handling ---
   if (request.method === "OPTIONS") {
     const origin = request.headers.get("origin");
-    const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL;
+    const isProduction = process.env.NODE_ENV === "production";
     
-    // If the origin is authorized, return a proper preflight response
-    if (origin && (origin === adminUrl || origin.endsWith(".printhub.africa") || (origin.includes("localhost") && process.env.NODE_ENV !== "production"))) {
+    const allowedOrigins = [
+      process.env.NEXT_PUBLIC_ADMIN_URL,       // https://admin.printhub.africa
+      process.env.NEXT_PUBLIC_APP_URL,         // https://printhub.africa
+      "https://printhub.africa",
+      "https://www.printhub.africa",
+      "https://admin.printhub.africa",
+      "https://test.ovid.co.ke",
+      ...(!isProduction ? ["http://localhost:3000", "http://127.0.0.1:3000"] : []),
+    ].filter(Boolean);
+    
+    if (origin && allowedOrigins.includes(origin)) {
       return new NextResponse(null, {
         status: 204,
         headers: {
@@ -20,6 +29,10 @@ export async function middleware(request: NextRequest) {
           "Access-Control-Max-Age": "86400",
         },
       });
+    }
+    // Blocked origin — return 403 explicitly (not NextResponse.next() which confuses browsers)
+    if (origin) {
+      return new NextResponse(null, { status: 403 });
     }
     return NextResponse.next();
   }

@@ -169,7 +169,7 @@ export default function CorporateBrandAssetsPage() {
                 
                 <div className="flex-1 w-full pt-2">
                     <FileUploader 
-                        context="corporate-brand"
+                        context="CUSTOMER_GENERAL"
                         accept={["image/png", "image/jpeg", "image/svg+xml"]}
                         maxSizeMB={10}
                         onUploadComplete={onLogoUpload}
@@ -201,7 +201,7 @@ export default function CorporateBrandAssetsPage() {
                  )}
 
                  <FileUploader 
-                    context="corporate-guidelines"
+                    context="CUSTOMER_GENERAL"
                     accept={["application/pdf"]}
                     maxSizeMB={50}
                     onUploadComplete={onGuidelineUpload}

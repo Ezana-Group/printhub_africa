@@ -41,6 +41,10 @@ function getClient(): S3Client | null {
       accessKeyId: R2_ACCESS_KEY_ID,
       secretAccessKey: R2_SECRET_ACCESS_KEY,
     },
+    // AWS SDK v3 >=3.700 adds x-amz-checksum-crc32 to every PutObject by default.
+    // Cloudflare R2 rejects these headers in CORS preflights — disable checksums.
+    requestChecksumCalculation: "when_required",
+    responseChecksumValidation: "when_required",
   });
   return _client;
 }

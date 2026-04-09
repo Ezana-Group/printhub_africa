@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 import { authOptionsCustomer } from "@/lib/auth-customer";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import {
   createPresignedUploadUrl,
@@ -129,7 +130,12 @@ export async function POST(req: Request) {
   try {
     let session: SessionLike = null;
     try {
-      session = (await getServerSession(authOptionsCustomer)) as SessionLike;
+      // Try admin session first (for ADMIN_* contexts uploaded from the admin portal),
+      // then fall back to the customer session.
+      const adminSession = (await getServerSession(authOptionsAdmin)) as SessionLike;
+      const customerSession = (await getServerSession(authOptionsCustomer)) as SessionLike;
+      // Prefer whichever session has a role set; admin session wins if both exist.
+      session = adminSession?.user?.role ? adminSession : customerSession;
     } catch (authErr) {
       console.error("Presign auth error:", authErr);
       return NextResponse.json(

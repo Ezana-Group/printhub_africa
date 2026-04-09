@@ -238,7 +238,7 @@ export function ConvertToProductModal({
           <div className="space-y-2">
             <Label>Product Images (Optional)</Label>
             <FileUploader
-              context="products/images"
+              context="ADMIN_PRODUCT_IMAGE"
               accept={["image/png", "image/jpeg", "image/webp"]}
               maxFiles={5}
               onUploadComplete={handleUploadComplete}

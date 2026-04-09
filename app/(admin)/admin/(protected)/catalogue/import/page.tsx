@@ -982,7 +982,7 @@ function ManualFallbackForm({ initialUrl, onSuccess }: { initialUrl: string; onS
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground uppercase">Option A: Upload Files (Recommended)</Label>
             <FileUploader 
-              context="catalogue_import"
+              context="ADMIN_CATALOGUE_PHOTO"
               accept={["image/png", "image/jpeg", "image/webp"]}
               maxFiles={10}
               onUploadComplete={(files: UploadedFileResult[]) => {

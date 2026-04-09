@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptionsCustomer } from "@/lib/auth-customer";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import {
   createPresignedDownloadUrl,
@@ -12,7 +13,10 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptionsCustomer);
+  // Try both sessions — admin downloads originate from the admin portal (different session cookie)
+  const adminSession = await getServerSession(authOptionsAdmin);
+  const customerSession = await getServerSession(authOptionsCustomer);
+  const session = adminSession?.user?.id ? adminSession : customerSession;
   const { id } = await params;
 
   const file = await prisma.uploadedFile.findUnique({

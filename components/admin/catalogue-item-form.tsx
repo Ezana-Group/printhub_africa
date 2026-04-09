@@ -206,7 +206,7 @@ export function CatalogueItemForm({ categories }: CatalogueItemFormProps) {
             ))}
           </div>
           <FileUploader
-            context="CATALOGUE_ITEM"
+            context="ADMIN_CATALOGUE_PHOTO"
             accept={["image/png", "image/jpeg", "image/webp"]}
             maxFiles={10}
             onUploadComplete={(files) => {
@@ -225,7 +225,7 @@ export function CatalogueItemForm({ categories }: CatalogueItemFormProps) {
             </div>
           )}
           <FileUploader
-            context="CATALOGUE_ITEM"
+            context="ADMIN_CATALOGUE_STL"
             accept={["application/octet-stream", ".stl", ".3mf", ".obj"]}
             maxFiles={1}
             onUploadComplete={(files) => {

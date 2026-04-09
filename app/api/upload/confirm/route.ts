@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptionsCustomer } from "@/lib/auth-customer";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import { getObjectBuffer, headObject, publicFileUrl, isR2Configured } from "@/lib/r2";
 import { scanFile } from "@/lib/virustotal";
@@ -145,8 +146,11 @@ export async function POST(req: Request) {
 
     // When upload has an owner, only that user may confirm (defence in depth; presign is session-gated).
     if (file.userId) {
-      const session = await getServerSession(authOptionsCustomer);
-      if (!session?.user?.id || file.userId !== session.user.id) {
+      // Try both sessions — admin uploads originate from the admin portal (different session cookie)
+      const adminSession = await getServerSession(authOptionsAdmin);
+      const customerSession = await getServerSession(authOptionsCustomer);
+      const userId = adminSession?.user?.id || customerSession?.user?.id;
+      if (!userId || file.userId !== userId) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
     }
