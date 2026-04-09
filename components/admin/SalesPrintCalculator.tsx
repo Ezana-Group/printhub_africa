@@ -594,11 +594,11 @@ export function SalesPrintCalculator({
                           const inStock = inStockColorSet[mt] ?? new Set<string>();
                           const list = byMaterialType[mt] ?? [];
 
-                          if (!line.isEditing && line.color) {
+                          if (!line.isEditing) {
                             const pill = COLOUR_PILLS.find((p) => p.id === line.color);
                             return (
                               <div className="text-sm text-slate-600 whitespace-nowrap">
-                                Colour: <span className="font-medium text-slate-900">{pill?.label ?? line.color}</span>
+                                <span className="font-medium text-slate-900">{pill?.label || line.color || "No color specified"}</span>
                               </div>
                             );
                           }

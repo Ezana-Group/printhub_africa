@@ -142,9 +142,13 @@ export function AdminPrintCalculator() {
         const list = data.printers ?? data.threeDPrinters ?? [];
         setPrinterOptions(Array.isArray(list) ? list : []);
         
-        // If we have printers but none selected, select the first one
-        if (Array.isArray(list) && list.length > 0 && !selectedPrinterId) {
-          setSelectedPrinterId(list[0].id);
+        // AUTO-SELECT REAL HARDWARE:
+        // If we have real inventory printers and haven't manually selected one yet, 
+        // select the first real one instead of the 'Default' placeholder.
+        if (Array.isArray(list) && list.length > 0) {
+          if (!selectedPrinterId || selectedPrinterId === "") {
+            setSelectedPrinterId(list[0].id);
+          }
         }
       })
       .catch(() => setPrinterOptions([]));
@@ -274,20 +278,26 @@ export function AdminPrintCalculator() {
         return s + (estimates[0].quantity * (rates.printerSettings.postProcessingFeePerUnit ?? 200));
     }, 0);
 
-    return {
+    const summary = {
       estimates,
-      materialCost: total.materialCost,
-      machineCost: total.machineCost,
-      labourCost: total.labourCost,
-      postProcessingCost: activeParts.reduce((s, p) => s + (p.postProcessing ? (rates.printerSettings.postProcessingFeePerUnit ?? 200) * p.quantity : 0), 0),
-      subtotal: total.totalProductionCost,
-      profit: total.profitAmount,
-      vat: total.vatAmount,
+      materialCost: estimates.reduce((s: any, e: any) => s + e.materialCost, 0),
+      machineCost: estimates.reduce((s: any, e: any) => s + (e.electricityCost + e.depreciationCost + e.maintenanceCost), 0),
+      electricityCost: estimates.reduce((s: any, e: any) => s + e.electricityCost, 0),
+      labourCost: estimates.reduce((s: any, e: any) => s + e.laborCost, 0),
+      postProcessingCost: estimates.reduce((s: any, e: any) => s + (e as any).postProcessingFeePerUnit * (e.quantity || 1), 0), 
+      packagingCost: estimates.reduce((s: any, e: any) => s + e.packagingCost, 0),
+      overheadCost: estimates.reduce((s: any, e: any) => s + e.overheadCost, 0),
+      failedPrintBuffer: estimates.reduce((s: any, e: any) => s + e.failedPrintBuffer, 0),
+      subtotal: estimates.reduce((s: any, e: any) => s + e.totalProductionCost, 0),
+      profit: estimates.reduce((s: any, e: any) => s + e.profitAmount, 0),
+      vat: estimates.reduce((s: any, e: any) => s + e.vatAmount, 0),
       vatPercent: rates.printerSettings.vatRatePercent,
-      finalPrice: total.sellingPriceIncVat,
-      rangeLow: Math.round(total.sellingPriceIncVat * 0.85),
-      rangeHigh: Math.round(total.sellingPriceIncVat * 1.25),
+      finalPrice: estimates.reduce((s: any, e: any) => s + e.sellingPriceIncVat, 0),
+      rangeLow: estimates.reduce((s: any, e: any) => s + e.sellingPriceIncVat, 0) * 0.95,
+      rangeHigh: estimates.reduce((s: any, e: any) => s + e.sellingPriceIncVat, 0) * 1.05,
     };
+
+    return summary;
   }, [rates, parts, effectiveMargin, weightGrams, printTimeHours, quantity, postProcessing, postProcessingHours, selectedMaterial, effectiveMaterial]);
 
   const marginSensitivity = useMemo(() => {
@@ -797,31 +807,33 @@ export function AdminPrintCalculator() {
                 </p>
               ) : (
                 <>
-                  <div className="space-y-1 text-sm">
+                  <div className="space-y-1.5 text-xs text-muted-foreground">
                     <div className="flex justify-between">
-                      <span>Material cost</span>
+                      <span>Materials</span>
                       <span>{formatKes(breakdown.materialCost)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Machine cost</span>
-                      <span>{formatKes(breakdown.machineCost)}</span>
+                      <span>Machine & Electricity</span>
+                      <span>{formatKes(breakdown.machineCost + (breakdown as any).electricityCost)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Labour cost</span>
+                      <span>Labour</span>
                       <span>{formatKes(breakdown.labourCost)}</span>
                     </div>
-                    {breakdown.postProcessingCost > 0 && (
-                      <div className="flex justify-between">
-                        <span>Post-processing / support removal</span>
-                        <span>{formatKes(breakdown.postProcessingCost)}</span>
-                      </div>
-                    )}
-                    <div className="border-t pt-2 flex justify-between font-medium">
-                      <span>Subtotal</span>
+                    <div className="flex justify-between text-slate-400">
+                      <span>Packaging & Delivery Prep</span>
+                      <span>{formatKes(breakdown.packagingCost)}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-400">
+                      <span>Overhead & Failed print buffer</span>
+                      <span>{formatKes(breakdown.overheadCost + breakdown.failedPrintBuffer)}</span>
+                    </div>
+                    <div className="border-t pt-2 flex justify-between font-bold text-slate-900 border-dashed">
+                      <span>SUBTOTAL (Internal Cost)</span>
                       <span>{formatKes(breakdown.subtotal)}</span>
                     </div>
-                    <div className="flex justify-between text-green-600">
-                      <span>Profit ({effectiveMargin}%)</span>
+                    <div className="flex justify-between text-green-600 font-medium">
+                      <span>Net Profit ({effectiveMargin}%)</span>
                       <span>{formatKes(breakdown.profit)}</span>
                     </div>
                     <div className="flex justify-between">
@@ -829,10 +841,14 @@ export function AdminPrintCalculator() {
                       <span>{formatKes(breakdown.vat)}</span>
                     </div>
                   </div>
-                  <div className="border-t pt-3 font-bold flex justify-between text-primary">
-                    <span>Total estimate</span>
-                    <span>{formatKes(breakdown.rangeLow)} — {formatKes(breakdown.rangeHigh)}</span>
+                  <div className="border-t-2 pt-3 font-black flex justify-between text-orange-600 text-lg">
+                    <span className="uppercase tracking-tight">Total Estimate</span>
+                    <span>{formatKes(breakdown.finalPrice)}</span>
                   </div>
+                  <div className="text-[10px] text-muted-foreground text-center mt-1">
+                    ESTIMATED RANGE: {formatKes(breakdown.finalPrice * 0.95)} — {formatKes(breakdown.finalPrice * 1.05)}
+                  </div>
+
                   {selectedPrinterId && printerOptions.find((p) => p.id === selectedPrinterId)?.source === "PrinterAsset" && (
                     <p className="pt-1">
                       <Link href={`/admin/inventory/hardware/printers/${selectedPrinterId}`} className="text-xs text-primary hover:underline">
@@ -880,15 +896,20 @@ export function AdminPrintCalculator() {
                         What if margin changes?
                       </p>
                       <div className="space-y-1 text-xs">
-                        {marginSensitivity.map(({ pct, selling }) => (
-                          <div
-                            key={pct}
-                            className={`flex justify-between ${pct === effectiveMargin ? "font-medium text-primary" : ""}`}
-                          >
-                            <span>{pct}% margin</span>
-                            <span>{formatKes(selling)}</span>
-                          </div>
-                        ))}
+                        {[20, 30, 40, 50, 60].map((pct) => {
+                          // USE TRUE MARGIN FORMULA: Selling = Cost / (1 - Margin%)
+                          const sellingExVat = breakdown.subtotal / (1 - pct / 100);
+                          const totalIncVat = sellingExVat * (1 + breakdown.vatPercent / 100);
+                          return (
+                            <div
+                              key={pct}
+                              className={`flex justify-between ${pct === effectiveMargin ? "font-bold text-orange-600" : ""}`}
+                            >
+                              <span>{pct}% margin</span>
+                              <span>{formatKes(totalIncVat)}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
