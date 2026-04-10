@@ -76,7 +76,6 @@ export async function middleware(request: NextRequest) {
     host.startsWith('admin.localhost') ||
     (host.includes('localhost') && (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')));
 
-  const isProduction = process.env.NODE_ENV === "production";
   const ADMIN_COOKIE = isProduction ? "__Secure-printhub.admin.session" : "printhub.admin.session";
   const CUSTOMER_COOKIE = isProduction ? "__Secure-printhub.customer.session" : "printhub.customer.session";
 
@@ -99,7 +98,6 @@ export async function middleware(request: NextRequest) {
     const isTelemetry = pathname.includes("/envelope"); // Sentry/telemetry
 
     if (isMutation && !isTelemetry) {
-      const origin = request.headers.get("origin");
       const adminUrl = process.env.NEXT_PUBLIC_ADMIN_URL; // e.g. https://admin.printhub.africa
       
       // Robust check: origin must match adminUrl or be part of the core domain
