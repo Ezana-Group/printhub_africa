@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
       const availability = AVAILABILITY_MAP[p.availability] || "in stock";
 
       return {
-        id: p.id,
+        id: `shop-${p.id}`,
         title: p.name,
         description: p.description || p.shortDescription || p.name,
         price: `${Number(p.basePrice)} KES`,

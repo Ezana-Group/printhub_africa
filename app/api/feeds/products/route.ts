@@ -125,7 +125,7 @@ export async function GET(req: NextRequest) {
           item_group_id: p.catalogueItemId ? `catalogue-${p.catalogueItemId}` : undefined,
           title: p.name || "Untitled Product",
           description: p.shortDescription || p.description || p.name || "No description available",
-          link: `${baseUrl}/shop/product/${p.slug}`,
+          link: `${baseUrl}/shop/${p.slug}`,
           imageLink: imageUrl,
           price: `${Number(p.basePrice || 0).toFixed(2)} KES`,
           availability: (p.stock ?? 0) > 0 ? "in_stock" : (p.isPOD ? "in_stock" : "out_of_stock"),
