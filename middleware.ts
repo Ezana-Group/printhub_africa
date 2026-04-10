@@ -24,7 +24,7 @@ export async function middleware(request: NextRequest) {
         headers: {
           "Access-Control-Allow-Origin": origin,
           "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, Authorization, x-printhub-signature, x-printhub-timestamp, x-api-key",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization, x-printhub-signature, x-printhub-timestamp, x-api-key, rsc, next-router-prefetch, next-router-state-tree, next-url",
           "Access-Control-Allow-Credentials": "true",
           "Access-Control-Max-Age": "86400",
         },
