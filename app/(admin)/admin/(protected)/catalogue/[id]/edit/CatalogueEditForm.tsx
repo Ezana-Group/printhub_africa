@@ -306,7 +306,7 @@ export function CatalogueEditForm({
     } catch (err) {
       console.error("Delete STL error:", err);
     } finally {
-      setLoading(true);
+      setLoading(false);
     }
   };
 

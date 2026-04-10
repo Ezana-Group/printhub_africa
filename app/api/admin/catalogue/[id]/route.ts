@@ -4,6 +4,7 @@ import { requireAdminApi } from "@/lib/admin-api-guard";
 import { z } from "zod";
 import { CatalogueLicense } from "@prisma/client";
 import { revalidateTag } from "next/cache";
+import { createPresignedDownloadUrl } from "@/lib/r2";
 
 export async function GET(
   _req: NextRequest,
@@ -22,6 +23,16 @@ export async function GET(
     },
   });
   if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // Generate a presigned download URL for the STL if it's in a private bucket
+  if (item.modelStorageKey) {
+    try {
+      (item as any).modelUrl = await createPresignedDownloadUrl(item.modelStorageKey);
+    } catch (e) {
+      console.error("Failed to generate presigned download URL for model:", e);
+    }
+  }
+
   return NextResponse.json(item);
 }
 
@@ -82,7 +93,7 @@ export async function PATCH(
     const item = await prisma.catalogueItem.update({
       where: { id },
       data: update as Parameters<typeof prisma.catalogueItem.update>[0]["data"],
-      include: { photos: { where: { isPrimary: true }, take: 1 } }
+      include: { photos: { orderBy: { sortOrder: "asc" } } }
     });
 
     // Sync to Product if LIVE

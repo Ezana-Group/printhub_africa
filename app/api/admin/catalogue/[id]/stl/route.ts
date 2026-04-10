@@ -34,6 +34,12 @@ export async function POST(
       },
     });
 
+    // Mark the file as used in catalogue
+    await prisma.uploadedFile.update({
+      where: { id: fileId },
+      data: { uploadContext: "ADMIN_CATALOGUE_STL" }
+    });
+
     revalidatePath(`/admin/catalogue/${id}/edit`);
     revalidatePath("/admin/catalogue");
 

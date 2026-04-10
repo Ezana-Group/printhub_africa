@@ -56,16 +56,28 @@ export async function POST(
   const createdCount = toCreate.length;
 
   for (let i = 0; i < createdCount; i++) {
-    const item = toCreate[i];
+    const photoItem = toCreate[i];
     await prisma.catalogueItemPhoto.create({
       data: {
         catalogueItemId: id,
-        url: item.url,
-        storageKey: item.storageKey,
+        url: photoItem.url,
+        storageKey: photoItem.storageKey,
         sortOrder: existingCount + i,
         isPrimary: existingCount === 0 && i === 0,
       },
     });
+  }
+
+  // Link UploadedFile records to this catalogue item (if possible/needed)
+  if (fileIds.length > 0) {
+    try {
+      await prisma.uploadedFile.updateMany({
+        where: { id: { in: fileIds } },
+        data: { uploadContext: "ADMIN_CATALOGUE_PHOTO" }
+      });
+    } catch (e) {
+      console.error("Failed to update uploaded files context:", e);
+    }
   }
 
   return NextResponse.json({
