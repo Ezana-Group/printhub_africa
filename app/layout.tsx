@@ -134,7 +134,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* Meta Domain Verification - Required for Aggregated Event Measurement */}
-        <meta name="facebook-domain-verification" content="971832828620341" />
+        <meta name="facebook-domain-verification" content="2035196960739715" />
       </head>
       <body
         className={`${syne.variable} ${dmSans.variable} ${jetbrainsMono.variable} ${playfairDisplay.variable} font-body antialiased`}
