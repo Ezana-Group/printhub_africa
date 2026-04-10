@@ -11,6 +11,12 @@ export function withRateLimit(
   options: { limit: number; windowMs: number; keyPrefix: string; byUserId?: boolean }
 ) {
   return async (req: any, context?: any) => {
+    // Next.js 15 compatibility: await params if it's a promise
+    if (context?.params && typeof context.params.then === "function") {
+      const resolvedParams = await context.params;
+      context = { ...context, params: resolvedParams };
+    }
+
     let identifier = getRateLimitClientIp(req) || "unknown";
     
     if (options.byUserId) {
