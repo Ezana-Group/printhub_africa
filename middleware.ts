@@ -2,31 +2,62 @@ import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+const CORS_ALLOWED_HEADERS = [
+  "Content-Type",
+  "Authorization",
+  "x-printhub-signature",
+  "x-printhub-timestamp",
+  "x-api-key",
+  // Next.js RSC / navigation headers
+  "RSC",
+  "Next-Router-Prefetch",
+  "Next-Router-State-Tree",
+  "Next-Url",
+  "Next-HMR-Refresh",
+  // Sentry distributed tracing headers
+  "sentry-trace",
+  "baggage",
+].join(", ");
+
+function getAllowedOrigins(isProduction: boolean): string[] {
+  return [
+    process.env.NEXT_PUBLIC_ADMIN_URL,       // https://admin.printhub.africa
+    process.env.NEXT_PUBLIC_APP_URL,         // https://printhub.africa
+    "https://printhub.africa",
+    "https://www.printhub.africa",
+    "https://admin.printhub.africa",
+    "https://test.ovid.co.ke",
+    ...(!isProduction ? ["http://localhost:3000", "http://127.0.0.1:3000"] : []),
+  ].filter(Boolean) as string[];
+}
+
+function applyCors(response: NextResponse, origin: string | null, allowedOrigins: string[]): void {
+  if (origin && allowedOrigins.includes(origin)) {
+    response.headers.set("Access-Control-Allow-Origin", origin);
+    response.headers.set("Access-Control-Allow-Credentials", "true");
+    response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+    response.headers.set("Access-Control-Allow-Headers", CORS_ALLOWED_HEADERS);
+    response.headers.set("Vary", "Origin");
+  }
+}
+
 export async function middleware(request: NextRequest) {
+  const isProduction = process.env.NODE_ENV === "production";
+  const allowedOrigins = getAllowedOrigins(isProduction);
+  const origin = request.headers.get("origin");
+
   // --- CORS/Preflight Handling ---
   if (request.method === "OPTIONS") {
-    const origin = request.headers.get("origin");
-    const isProduction = process.env.NODE_ENV === "production";
-    
-    const allowedOrigins = [
-      process.env.NEXT_PUBLIC_ADMIN_URL,       // https://admin.printhub.africa
-      process.env.NEXT_PUBLIC_APP_URL,         // https://printhub.africa
-      "https://printhub.africa",
-      "https://www.printhub.africa",
-      "https://admin.printhub.africa",
-      "https://test.ovid.co.ke",
-      ...(!isProduction ? ["http://localhost:3000", "http://127.0.0.1:3000"] : []),
-    ].filter(Boolean);
-    
     if (origin && allowedOrigins.includes(origin)) {
       return new NextResponse(null, {
         status: 204,
         headers: {
           "Access-Control-Allow-Origin": origin,
           "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type, Authorization, x-printhub-signature, x-printhub-timestamp, x-api-key, rsc, next-router-prefetch, next-router-state-tree, next-url",
+          "Access-Control-Allow-Headers": CORS_ALLOWED_HEADERS,
           "Access-Control-Allow-Credentials": "true",
           "Access-Control-Max-Age": "86400",
+          "Vary": "Origin",
         },
       });
     }
@@ -165,6 +196,8 @@ export async function middleware(request: NextRequest) {
 
     response.headers.set("Content-Security-Policy", "frame-ancestors 'none'");
     response.headers.set("X-Frame-Options", "DENY");
+    // Apply CORS headers for cross-origin requests (e.g. printhub.africa fetching admin.printhub.africa RSC)
+    applyCors(response, origin, allowedOrigins);
     return response;
 
   } else {
@@ -206,7 +239,10 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  return NextResponse.next();
+  const finalResponse = NextResponse.next();
+  // Apply CORS headers on the fallthrough response (e.g., main domain API calls from admin origin)
+  applyCors(finalResponse, origin, allowedOrigins);
+  return finalResponse;
 }
 
 export const config = {
