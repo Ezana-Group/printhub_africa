@@ -41,6 +41,33 @@ function applyCors(response: NextResponse, origin: string | null, allowedOrigins
   }
 }
 
+/** Redirect with CORS headers so browsers allow cross-origin redirects */
+function corsRedirect(
+  url: string | URL,
+  origin: string | null,
+  allowedOrigins: string[],
+  status = 307
+): NextResponse {
+  const response = NextResponse.redirect(url, status);
+  applyCors(response, origin, allowedOrigins);
+  return response;
+}
+
+/**
+ * Returns true when a request is a Next.js internal RSC/prefetch fetch
+ * (i.e. from the router, not a top-level browser navigation).
+ * These are cross-origin fetches that must NOT be redirected to a different
+ * origin — the browser will block them. We let them fall through instead so
+ * Next.js handles them gracefully (it falls back to full navigation itself).
+ */
+function isRscOrPrefetch(request: NextRequest): boolean {
+  return (
+    request.headers.has("RSC") ||
+    request.headers.has("Next-Router-Prefetch") ||
+    request.headers.has("Next-Router-State-Tree")
+  );
+}
+
 export async function middleware(request: NextRequest) {
   const isProduction = process.env.NODE_ENV === "production";
   const allowedOrigins = getAllowedOrigins(isProduction);
@@ -122,57 +149,31 @@ export async function middleware(request: NextRequest) {
     const isLoginPage = pathname === "/login" || pathname === "/admin/login";
     const isAuthApi = pathname.startsWith("/api/auth");
 
-    // Redirect to login if no session and not on auth pages or telemetry
+    // Redirect to login if no session and not on auth pages or telemetry.
+    // RSC/prefetch fetches must NOT be redirected cross-origin — let them fall through
+    // so Next.js can handle the fallback to full navigation gracefully.
     if (!token && !isLoginPage && !isAuthApi && !isTelemetry) {
+      if (isRscOrPrefetch(request)) {
+        // Return a CORS-aware 401 so Next.js falls back to browser navigation without a CORS error
+        const rscFallback = new NextResponse(null, { status: 401 });
+        applyCors(rscFallback, origin, allowedOrigins);
+        return rscFallback;
+      }
       console.log(`[Middleware] No admin token for: ${pathname}. Domain: ${host}`);
       const loginUrl = new URL("/login", request.url);
       if (host.includes('localhost') && pathname.startsWith('/admin')) {
           loginUrl.pathname = '/admin/login';
       }
-      return NextResponse.redirect(loginUrl);
+      return corsRedirect(loginUrl, origin, allowedOrigins);
     }
-
-    /* 
-    // --- DB VALIDATION (Step 8 fix) ---
-    // CAUTION: Prisma in middleware might cause Edge runtime errors in production
-    if (token && !isAuthApi && !isLoginPage) {
-      const sessionId = token.sessionId as string;
-      if (sessionId) {
-        const dbSession = await prisma.adminSession.findUnique({
-          where: { id: sessionId },
-          select: { revokedAt: true, expiresAt: true }
-        });
-
-        if (!dbSession || dbSession.revokedAt || new Date() > dbSession.expiresAt) {
-          console.warn(`[Security] Admin session ${sessionId} is invalid or revoked. Redirecting to login.`);
-          
-          if (isLoginPage) {
-            // Already on login page, just clear the stale cookie and continue
-            const response = NextResponse.next();
-            response.cookies.delete(ADMIN_COOKIE);
-            return response;
-          }
-
-          const loginUrl = new URL("/login", request.url);
-          if (host.includes('localhost') && pathname.startsWith('/admin')) {
-            loginUrl.pathname = '/admin/login';
-          }
-          const response = NextResponse.redirect(loginUrl);
-          // Ensure we delete with domain if in production
-          response.cookies.delete({
-            name: ADMIN_COOKIE,
-            domain: isProduction ? ".printhub.africa" : undefined,
-            path: "/",
-          });
-          return response;
-        }
-      }
-    }
-    */
 
     // Block CUSTOMER sessions entirely on admin domain
     if (token && token.role === "CUSTOMER") {
-      return NextResponse.redirect(new URL(process.env.NEXT_PUBLIC_APP_URL || "https://printhub.africa", request.url));
+      return corsRedirect(
+        new URL(process.env.NEXT_PUBLIC_APP_URL || "https://printhub.africa", request.url),
+        origin,
+        allowedOrigins
+      );
     }
 
     // Response with security headers
@@ -206,7 +207,8 @@ export async function middleware(request: NextRequest) {
       return new NextResponse(null, { status: 404 });
     }
 
-    // 2. Detect STAFF/ADMIN/SUPER_ADMIN session on /login -> redirect to admin portal
+    // 2. Detect STAFF/ADMIN/SUPER_ADMIN session on /login → redirect to admin portal.
+    //    RSC prefetches must NOT redirect cross-origin — skip the redirect for them.
     if (pathname === "/login") {
       const adminToken = await getToken({ 
         req: request, 
@@ -214,7 +216,18 @@ export async function middleware(request: NextRequest) {
         cookieName: ADMIN_COOKIE 
       });
       if (adminToken && ["STAFF", "ADMIN", "SUPER_ADMIN"].includes(adminToken.role as string)) {
-        return NextResponse.redirect(new URL(process.env.NEXT_PUBLIC_ADMIN_URL || "https://admin.printhub.africa", request.url));
+        if (isRscOrPrefetch(request)) {
+          // Let Next.js handle this — it will fall back to a full navigation which
+          // the browser handles correctly without a cross-origin CORS restriction
+          const finalResponse = NextResponse.next();
+          applyCors(finalResponse, origin, allowedOrigins);
+          return finalResponse;
+        }
+        return corsRedirect(
+          new URL(process.env.NEXT_PUBLIC_ADMIN_URL || "https://admin.printhub.africa", request.url),
+          origin,
+          allowedOrigins
+        );
       }
     }
 
@@ -227,12 +240,12 @@ export async function middleware(request: NextRequest) {
       });
 
       if (!token) {
-        return NextResponse.redirect(new URL("/login", request.url));
+        return corsRedirect(new URL("/login", request.url), origin, allowedOrigins);
       }
 
       // Enforce corporate membership for /corporate
       if (pathname.startsWith("/corporate") && !token.isCorporate && !pathname.startsWith("/corporate/apply")) {
-        return NextResponse.redirect(new URL("/corporate/apply", request.url));
+        return corsRedirect(new URL("/corporate/apply", request.url), origin, allowedOrigins);
       }
     }
   }
