@@ -52,7 +52,19 @@ export async function POST(
     if (url.trim()) itemsToAdd.push({ url: url.trim(), storageKey: null });
   }
 
-  const toCreate = itemsToAdd.slice(0, maxNew);
+  const existingPhotos = await prisma.catalogueItemPhoto.findMany({
+    where: { catalogueItemId: id },
+    select: { storageKey: true, url: true }
+  });
+  
+  const existingKeys = new Set(existingPhotos.map(p => p.storageKey).filter(Boolean));
+  const existingUrls = new Set(existingPhotos.map(p => p.url));
+
+  const toCreate = itemsToAdd.filter(item => 
+    (item.storageKey && !existingKeys.has(item.storageKey)) || 
+    (!item.storageKey && !existingUrls.has(item.url))
+  ).slice(0, maxNew);
+  
   const createdCount = toCreate.length;
 
   for (let i = 0; i < createdCount; i++) {
