@@ -41,10 +41,13 @@ export default function ImportDashboard() {
       </div>
 
       <Tabs defaultValue="url">
-        <TabsList>
-          <TabsTrigger value="url">Import by URL</TabsTrigger>
-          <TabsTrigger value="api">Search API Sources</TabsTrigger>
-          <TabsTrigger value="queue">Import Queue</TabsTrigger>
+        <TabsList className="bg-slate-100 p-1">
+          <TabsTrigger value="url" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">Import by URL</TabsTrigger>
+          <TabsTrigger value="api" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">Search API Sources</TabsTrigger>
+          <Link href="/admin/catalogue/approval-queue" className="px-3 py-1.5 text-sm font-medium hover:bg-white rounded-md transition-all flex items-center gap-2 text-slate-600 hover:text-primary">
+            <ListTodo className="w-4 h-4" />
+            Approval Queue
+          </Link>
         </TabsList>
 
         <TabsContent value="url" className="pt-6">
@@ -53,10 +56,6 @@ export default function ImportDashboard() {
 
         <TabsContent value="api" className="pt-6">
           <ApiSearchSection />
-        </TabsContent>
-
-        <TabsContent value="queue" className="pt-6">
-          <ImportQueueSection />
         </TabsContent>
       </Tabs>
     </div>
@@ -615,145 +614,7 @@ function ApiSearchSection() {
   }
 }
 
-function ImportQueueSection() {
-  const [items, setItems] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("review");
-
-  useEffect(() => {
-    fetchQueue(activeTab);
-  }, [activeTab]);
-
-  const fetchQueue = async (tab: string) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/admin/import/queue?tab=${tab}`);
-      if (res.ok) {
-        const data = await res.json();
-        setItems(data.items || []);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-slate-100 p-1">
-          <TabsTrigger value="drafts" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            Drafts
-          </TabsTrigger>
-          <TabsTrigger value="review" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            Needs Review
-          </TabsTrigger>
-          <TabsTrigger value="rejected" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            Rejected
-          </TabsTrigger>
-          <TabsTrigger value="approved" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            Approved
-          </TabsTrigger>
-        </TabsList>
-
-        <div className="bg-white rounded-xl border shadow-sm overflow-hidden mt-4">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 border-b">
-              <tr>
-                <th className="px-4 py-3 w-16 text-center text-[10px] uppercase font-bold text-slate-400">Preview</th>
-                <th className="px-4 py-3 text-[10px] uppercase font-bold text-slate-400">Name</th>
-                <th className="px-4 py-3 text-[10px] uppercase font-bold text-slate-400">Platform</th>
-                <th className="px-4 py-3 text-[10px] uppercase font-bold text-slate-400">
-                  {activeTab === "approved" ? "Published At" : activeTab === "review" ? "Submitted By" : "Last Updated"}
-                </th>
-                {activeTab === "rejected" && (
-                  <th className="px-4 py-3 text-[10px] uppercase font-bold text-slate-400">Admin Feedback</th>
-                )}
-                <th className="px-4 py-3 text-right text-[10px] uppercase font-bold text-slate-400">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y text-sm">
-              {items.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="w-12 h-12 rounded-lg bg-slate-100 border overflow-hidden flex items-center justify-center">
-                      {(item.thumbnailUrl || item.scrapedImageUrls?.[0]) ? (
-                        <img 
-                          src={proxiedImageUrl(item.thumbnailUrl || item.scrapedImageUrls?.[0])} 
-                          alt={item.name} 
-                          className="w-full h-full object-cover" 
-                        />
-                      ) : (
-                        <Layers className="w-4 h-4 text-slate-300" />
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <p className="font-semibold text-slate-900">{item.name}</p>
-                    <p className="text-[10px] text-slate-400 font-mono uppercase tracking-tight">{item.licenceType}</p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
-                      {item.platform}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-slate-500">
-                    {activeTab === "approved" ? (
-                      format(new Date(item.updatedAt), "MMM d, yyyy")
-                    ) : activeTab === "review" ? (
-                      <div className="flex flex-col">
-                        <span className="font-medium text-slate-700">{item.submittedBy || "Unknown Staff"}</span>
-                        <span className="text-[10px]">{item.submittedAt ? format(new Date(item.submittedAt), "MMM d, HH:mm") : "N/A"}</span>
-                      </div>
-                    ) : (
-                      format(new Date(item.updatedAt), "MMM d, HH:mm")
-                    )}
-                  </td>
-                  {activeTab === "rejected" && (
-                    <td className="px-4 py-3">
-                      <div className="bg-red-50 text-red-700 p-2 rounded text-xs border border-red-100 max-w-xs italic">
-                        "{item.reviewNotes || "No feedback provided."}"
-                      </div>
-                    </td>
-                  )}
-                  <td className="px-4 py-3 text-right">
-                    {activeTab === "approved" ? (
-                      <Link 
-                        href={`/admin/products/${item.productId}/edit`}
-                        className="inline-flex items-center gap-1 bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-800"
-                      >
-                        <Eye className="w-3.5 h-3.5" /> View Product
-                      </Link>
-                    ) : (
-                      <Link 
-                        href={`/admin/catalogue/review/${item.id}`} 
-                        className={cn(
-                          "inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold",
-                          activeTab === "review" ? "bg-amber-500 text-white hover:bg-amber-600" : "bg-primary text-white hover:bg-primary/90"
-                        )}
-                      >
-                        {activeTab === "review" ? "Review Now" : "Continue Editing"}
-                      </Link>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {loading ? (
-            <div className="p-12 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-slate-300" /></div>
-          ) : items.length === 0 ? (
-            <div className="p-16 text-center flex flex-col items-center justify-center space-y-3">
-              <Layers className="w-12 h-12 text-slate-100" />
-              <p className="text-slate-400 font-medium">No items found in {activeTab}.</p>
-            </div>
-          ) : null}
-        </div>
-      </Tabs>
-    </div>
-  );
-}
+      {/* ImportQueueSection removed in favor of Unified Approval Queue */}
 
 function ManualFallbackForm({ initialUrl, onSuccess }: { initialUrl: string; onSuccess: (id: string) => void }) {
   const [loading, setLoading] = React.useState(false);

@@ -8,31 +8,30 @@ export async function GET() {
   if (auth instanceof NextResponse) return auth;
 
   try {
-    const [pending, approved, archived] = await Promise.all([
-      prisma.catalogueItem.count({
-        where: { status: CatalogueStatus.PENDING_REVIEW },
-      }),
-      prisma.catalogueItem.count({
-        where: {
-          status: {
-            in: [CatalogueStatus.LIVE, CatalogueStatus.PAUSED],
-          },
-        },
-      }),
-      prisma.catalogueItem.count({
-        where: {
-          status: {
-            in: [CatalogueStatus.ARCHIVED, CatalogueStatus.RETIRED],
-          },
-        },
-      }),
+    const [
+      pendingCat, pendingImp,
+      liveCat,
+      archivedCat,
+      draftCat, draftImp,
+      rejectedCat, rejectedImp
+    ] = await Promise.all([
+      prisma.catalogueItem.count({ where: { status: CatalogueStatus.PENDING_REVIEW } }),
+      prisma.catalogueImportQueue.count({ where: { status: "PENDING_REVIEW" } }),
+      prisma.catalogueItem.count({ where: { status: { in: [CatalogueStatus.LIVE, CatalogueStatus.PAUSED] } } }),
+      prisma.catalogueItem.count({ where: { status: { in: [CatalogueStatus.ARCHIVED, CatalogueStatus.RETIRED] } } }),
+      prisma.catalogueItem.count({ where: { status: CatalogueStatus.DRAFT } }),
+      prisma.catalogueImportQueue.count({ where: { status: "DRAFT" } }),
+      prisma.catalogueItem.count({ where: { status: CatalogueStatus.REJECTED } }),
+      prisma.catalogueImportQueue.count({ where: { status: "REJECTED" } }),
     ]);
 
     return NextResponse.json({
       counts: {
-        PENDING_REVIEW: pending,
-        LIVE: approved,
-        ARCHIVED: archived,
+        PENDING_REVIEW: pendingCat + pendingImp,
+        LIVE: liveCat,
+        ARCHIVED: archivedCat,
+        DRAFT: draftCat + draftImp,
+        REJECTED: rejectedCat + rejectedImp,
       }
     });
   } catch (error) {

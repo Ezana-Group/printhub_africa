@@ -20,25 +20,32 @@ export async function POST(req: Request) {
 
   try {
     let auditAction = "";
+    const results = {
+      success: 0,
+      failed: 0,
+      errors: [] as string[]
+    };
     
-    // ACTION: APPROVE (Requires creating Product records)
+    // 1. Partition IDs into CatalogueItems and ImportQueueItems
+    // For now, we'll try to find them in both tables
+    const [catalogueItems, importItems] = await Promise.all([
+      prisma.catalogueItem.findMany({ where: { id: { in: ids } } }),
+      prisma.catalogueImportQueue.findMany({ where: { id: { in: ids } } })
+    ]);
+
+    const catalogueIds = catalogueItems.map(i => i.id);
+    const importIds = importItems.map(i => i.id);
+
+    // ACTION: APPROVE
     if (action === "approve") {
-      const items = await prisma.catalogueItem.findMany({
-        where: { id: { in: ids }, status: { not: CatalogueStatus.LIVE } },
-        include: { photos: { orderBy: { sortOrder: "asc" } } }
-      });
-
-      let successCount = 0;
-      const errors: string[] = [];
-
-      for (const item of items) {
+      // Handle CatalogueItems (existing logic)
+      for (const item of catalogueItems) {
+        if (item.status === CatalogueStatus.LIVE) continue;
         try {
           await prisma.$transaction(async (tx) => {
-             // 1. Generate unique identifiers
              const uniqueSlug = await generateUniqueProductSlug(item.slug || item.name.toLowerCase().replace(/ /g, "-"));
              const uniqueSku = await generateNextProductSku(item.categoryId);
              
-             // 2. Create the store Product
              const product = await tx.product.create({
                data: {
                  name: item.name,
@@ -47,20 +54,17 @@ export async function POST(req: Request) {
                  shortDescription: item.shortDescription,
                  categoryId: item.categoryId,
                  sku: uniqueSku,
-                 images: item.photos.map(p => p.url),
+                 images: item.photos ? (item.photos as any).map((p: any) => p.url) : [],
                  basePrice: item.basePriceKes || 0,
                  productType: ProductType.PRINT_ON_DEMAND,
                  availability: ProductAvailability.IN_STOCK,
                  isPOD: true,
                  catalogueItemId: item.id,
                  isActive: true,
-                 metaTitle: item.metaTitle,
-                 metaDescription: item.metaDescription,
-                 tags: item.tags,
+                 tags: item.tags || [],
                }
              });
 
-             // 3. Link back and update status
              await tx.catalogueItem.update({
                where: { id: item.id },
                data: {
@@ -68,87 +72,75 @@ export async function POST(req: Request) {
                  approvedById: userId,
                  approvedAt: new Date(),
                  productId: product.id,
-                 rejectedById: null,
-                 rejectionReason: null,
                }
              });
           });
-          successCount++;
-        } catch (err) {
-          console.error(`[BulkApprove] Failed for ${item.id}:`, err);
-          errors.push(`${item.name}: ${err instanceof Error ? err.message : "Database error"}`);
+          results.success++;
+        } catch (err: any) {
+          results.failed++;
+          results.errors.push(`Catalogue ${item.name}: ${err.message}`);
         }
       }
 
-      await writeAudit({
-        action: "CATALOGUE_BULK_APPROVE",
-        category: "CATALOGUE",
-        userId: userId,
-        details: `Bulk approve: ${successCount} successful, ${errors.length} failed.`,
-      });
+      // Handle Imports (Notice: Imports usually need manual review for pricing/category)
+      if (importIds.length > 0) {
+        results.failed += importIds.length;
+        results.errors.push(`${importIds.length} imports skipped: Bulk approval for imports requires manual review step.`);
+      }
 
-      revalidateTag("catalogue");
-      return NextResponse.json({ 
-        success: true, 
-        count: successCount, 
-        total: items.length,
-        errors: errors.length > 0 ? errors : undefined 
-      });
+      auditAction = "CATALOGUE_BULK_APPROVE";
     }
 
-    // OTHER ACTIONS (reject, archive, restore) - simple status updates
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let updateData: any = {};
+    // ACTION: REJECT
+    else if (action === "reject") {
+      const [catUpdate, impUpdate] = await Promise.all([
+        prisma.catalogueItem.updateMany({
+          where: { id: { in: catalogueIds } },
+          data: {
+            status: CatalogueStatus.REJECTED,
+            rejectedById: userId,
+            rejectionReason: reason || "Bulk rejection",
+          }
+        }),
+        prisma.catalogueImportQueue.updateMany({
+          where: { id: { in: importIds } },
+          data: {
+            status: "REJECTED",
+            reviewNotes: reason || "Bulk rejection",
+          }
+        })
+      ]);
+      results.success = catUpdate.count + impUpdate.count;
+      auditAction = "CATALOGUE_BULK_REJECT";
+    }
 
-    switch (action) {
-      case "reject":
-        updateData = {
-          status: CatalogueStatus.DRAFT,
-          rejectedById: userId,
-          rejectionReason: reason || "Bulk rejection",
-          approvedById: null,
-          approvedAt: null,
-        };
-        auditAction = "CATALOGUE_BULK_REJECT";
-        break;
-      case "archive":
-        updateData = {
+    // ACTION: ARCHIVE
+    else if (action === "archive") {
+      const catUpdate = await prisma.catalogueItem.updateMany({
+        where: { id: { in: catalogueIds } },
+        data: {
           status: CatalogueStatus.RETIRED,
           archivedById: userId,
           archivedAt: new Date(),
-        };
-        auditAction = "CATALOGUE_BULK_ARCHIVE";
-        break;
-      case "restore":
-        updateData = {
-          status: CatalogueStatus.LIVE,
-          archivedById: null,
-          archivedAt: null,
-        };
-        auditAction = "CATALOGUE_BULK_RESTORE";
-        break;
-      default:
-        return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+        }
+      });
+      results.success = catUpdate.count;
+      // Imports don't have RETIRED, move to DRAFT if archived? 
+      // Or just ignore.
+      auditAction = "CATALOGUE_BULK_ARCHIVE";
     }
-
-    const { count } = await prisma.catalogueItem.updateMany({
-      where: { id: { in: ids } },
-      data: updateData,
-    });
 
     await writeAudit({
       action: auditAction,
       category: "CATALOGUE",
       userId: userId,
-      details: `Bulk ${action} for ${count} items. Reason: ${reason || "N/A"}`,
+      details: `Bulk ${action}: ${results.success} success, ${results.failed} failed. Reason: ${reason || "N/A"}`,
     });
 
     revalidateTag("catalogue");
-    revalidatePath("/catalogue");
-
-    return NextResponse.json({ success: true, count });
+    return NextResponse.json(results);
   } catch (error) {
-    console.error("[APPROVAL_QUEUE_BULK_GLOBAL_FAIL]", error);
+    console.error("[APPROVAL_QUEUE_BULK]", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

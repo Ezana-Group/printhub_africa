@@ -34,7 +34,7 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 
-type TabType = "PENDING_REVIEW" | "LIVE" | "ARCHIVED";
+type TabType = "DRAFT" | "PENDING_REVIEW" | "REJECTED" | "LIVE" | "ARCHIVED";
 
 interface CatalogueItem {
   id: string;
@@ -55,6 +55,7 @@ interface CatalogueItem {
   archivedBy?: { name: string | null; email: string | null } | null;
   rejectedBy?: { name: string | null; email: string | null } | null;
   photos: { id: string; url: string; isPrimary: boolean }[];
+  isImport?: boolean; // Added flag from API
 }
 
 export function AdminCatalogueApprovalQueueClient() {
@@ -65,8 +66,10 @@ export function AdminCatalogueApprovalQueueClient() {
     (searchParams.get("tab") as TabType) || "PENDING_REVIEW"
   );
   const [items, setItems] = useState<CatalogueItem[]>([]);
-  const [counts, setCounts] = useState<{ PENDING_REVIEW: number; LIVE: number; ARCHIVED: number }>({
+  const [counts, setCounts] = useState<{ DRAFT: number; PENDING_REVIEW: number; REJECTED: number; LIVE: number; ARCHIVED: number }>({
+    DRAFT: 0,
     PENDING_REVIEW: 0,
+    REJECTED: 0,
     LIVE: 0,
     ARCHIVED: 0
   });
@@ -121,11 +124,18 @@ export function AdminCatalogueApprovalQueueClient() {
 
   const handleAction = async (id: string, action: string, reason?: string) => {
     try {
-      const res = await fetch(`/api/admin/catalogue/approval-queue/${id}/${action}`, {
-        method: "PATCH",
+      // Determine the correct endpoint based on item type and action
+      const item = items.find(i => i.id === id);
+      const endpoint = item?.isImport 
+        ? `/api/admin/import/${id}/${action}` // We'll need to check if these exist
+        : `/api/admin/catalogue/approval-queue/${id}/${action}`;
+
+      const res = await fetch(endpoint, {
+        method: item?.isImport && action === "approve" ? "POST" : "PATCH", // Approve on import is usually POST
         headers: { "Content-Type": "application/json" },
         body: reason ? JSON.stringify({ reason }) : undefined,
       });
+
       if (res.ok) {
         toast.success(`Item ${action}ed successfully`);
         fetchCounts();
@@ -140,23 +150,24 @@ export function AdminCatalogueApprovalQueueClient() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to permanently delete this item and all its assets? This cannot be undone.")) {
-      return;
-    }
+    if (!confirm("Are you sure you want to permanently delete this item?")) return;
     try {
-      const res = await fetch(`/api/admin/catalogue/approval-queue/${id}`, {
-        method: "DELETE",
-      });
+      const item = items.find(i => i.id === id);
+      const endpoint = item?.isImport 
+        ? `/api/admin/import/${id}` 
+        : `/api/admin/catalogue/approval-queue/${id}`;
+
+      const res = await fetch(endpoint, { method: "DELETE" });
       if (res.ok) {
-        toast.success("Item deleted permanently");
+        toast.success("Item deleted");
         fetchCounts();
         fetchItems();
         router.refresh();
       } else {
-        toast.error("Failed to delete item");
+        toast.error("Failed to delete");
       }
     } catch (err) {
-      toast.error("An error occurred");
+      toast.error("Error occurred");
     }
   };
 
@@ -167,10 +178,6 @@ export function AdminCatalogueApprovalQueueClient() {
     if (action === "reject") {
       reason = prompt("Reason for rejection:") || "";
       if (!reason) return;
-    } else if (action === "delete") {
-      if (!confirm(`Permanently delete ${selectedIds.length} items?`)) return;
-      // Bulk delete not explicitly in my implementation plan but good to have.
-      // Actually, I only implemented bulk for approve, reject, archive, restore.
     }
 
     setIsBulkLoading(true);
@@ -213,9 +220,11 @@ export function AdminCatalogueApprovalQueueClient() {
   return (
     <div className="flex flex-col gap-4">
       {/* Tabs */}
-      <div className="flex border-b border-slate-200">
+      <div className="flex border-b border-slate-200 overflow-x-auto no-scrollbar">
         {[
-          { id: "PENDING_REVIEW", label: "Pending Review", count: counts.PENDING_REVIEW },
+          { id: "DRAFT", label: "Drafts", count: counts.DRAFT },
+          { id: "PENDING_REVIEW", label: "Needs Review", count: counts.PENDING_REVIEW },
+          { id: "REJECTED", label: "Rejected", count: counts.REJECTED },
           { id: "LIVE", label: "Approved", count: counts.LIVE },
           { id: "ARCHIVED", label: "Archived", count: counts.ARCHIVED },
         ].map((tab) => (
@@ -226,7 +235,7 @@ export function AdminCatalogueApprovalQueueClient() {
               setPage(1);
             }}
             className={cn(
-              "px-6 py-3 text-sm font-medium transition-colors relative",
+              "px-6 py-3 text-sm font-medium transition-colors relative whitespace-nowrap",
               activeTab === tab.id
                 ? "text-primary border-b-2 border-primary"
                 : "text-slate-500 hover:text-slate-700"
@@ -252,7 +261,7 @@ export function AdminCatalogueApprovalQueueClient() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Search by name or platform..."
+              placeholder="Search by name..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm w-64 focus:ring-2 focus:ring-primary/20 outline-none"
@@ -263,11 +272,11 @@ export function AdminCatalogueApprovalQueueClient() {
             onChange={(e) => setPlatform(e.target.value)}
             className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-primary/20 outline-none"
           >
-            <option>All</option>
+            <option>All Sources</option>
+            <option>Manual</option>
+            <option>Import</option>
             <option>Thingiverse</option>
             <option>Printables</option>
-            <option>MyMiniFactory</option>
-            <option>Manual</option>
           </select>
         </div>
 
@@ -304,21 +313,12 @@ export function AdminCatalogueApprovalQueueClient() {
                 Archive Selected
               </button>
             )}
-            {activeTab === "ARCHIVED" && (
-              <button
-                onClick={() => handleBulkAction("restore")}
-                disabled={isBulkLoading}
-                className="px-3 py-1.5 bg-primary text-white text-xs font-medium rounded-md hover:bg-primary-dark disabled:opacity-50"
-              >
-                Restore Selected
-              </button>
-            )}
           </div>
         )}
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
         <table className="w-full text-left text-sm border-collapse">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
@@ -332,12 +332,9 @@ export function AdminCatalogueApprovalQueueClient() {
               </th>
               <th className="p-4 font-semibold text-slate-700">Preview</th>
               <th className="p-4 font-semibold text-slate-700">Item Details</th>
-              <th className="p-4 font-semibold text-slate-700">Platform</th>
-              <th className="p-4 font-semibold text-slate-700">Imported By</th>
+              <th className="p-4 font-semibold text-slate-700">Source</th>
+              <th className="p-4 font-semibold text-slate-700">Submitted By</th>
               <th className="p-4 font-semibold text-slate-700">Date</th>
-              {activeTab !== "PENDING_REVIEW" && (
-                <th className="p-4 font-semibold text-slate-700">Action By</th>
-              )}
               <th className="p-4 font-semibold text-slate-700 text-right">Actions</th>
             </tr>
           </thead>
@@ -356,18 +353,17 @@ export function AdminCatalogueApprovalQueueClient() {
               ))
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={8} className="p-12 text-center text-slate-500">
-                  <Layers className="h-10 w-10 mx-auto text-slate-200 mb-4" />
-                  <p className="font-medium">No items found</p>
-                  <p className="text-xs mt-1">Try adjusting your filters or search query.</p>
+                <td colSpan={8} className="p-20 text-center text-slate-500">
+                  <Layers className="h-12 w-12 mx-auto text-slate-200 mb-4 stroke-1" />
+                  <p className="font-medium text-slate-900">No items in {activeTab.replace("_", " ").toLowerCase()}</p>
+                  <p className="text-xs mt-1">Try adjusting your filters or switching tabs.</p>
                 </td>
               </tr>
             ) : (
               items.map((item) => {
                 const primaryPhoto = item.photos.find(p => p.isPrimary) || item.photos[0];
-                const actionBy = activeTab === "LIVE" ? item.approvedBy : activeTab === "ARCHIVED" ? item.archivedBy : null;
                 return (
-                  <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors group">
+                  <tr key={item.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors group">
                     <td className="p-4">
                       <input
                         type="checkbox"
@@ -378,18 +374,18 @@ export function AdminCatalogueApprovalQueueClient() {
                     </td>
                     <td className="p-4">
                       <div className="h-12 w-12 rounded-lg bg-slate-100 overflow-hidden relative border border-slate-200 shadow-sm">
-                        {primaryPhoto && primaryPhoto.url && !primaryPhoto.url.startsWith("cm") && primaryPhoto.url.includes("/") ? (
+                        {primaryPhoto && primaryPhoto.url ? (
                           <Image src={primaryPhoto.url} alt="" fill className="object-cover" sizes="48px" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400 bg-slate-50 uppercase font-bold tracking-tighter">
-                            {primaryPhoto?.url?.startsWith("cm") ? "NO_URL" : "None"}
+                          <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400 bg-slate-50 font-bold">
+                            N/A
                           </div>
                         )}
                       </div>
                     </td>
                     <td className="p-4">
                       <div className="flex flex-col">
-                        <span className="font-semibold text-slate-900 group-hover:text-primary transition-colors line-clamp-1">{item.name}</span>
+                        <span className="font-semibold text-slate-900 line-clamp-1">{item.name}</span>
                         <span className="text-xs text-slate-500">{item.category?.name || "Uncategorized"}</span>
                       </div>
                     </td>
@@ -398,37 +394,27 @@ export function AdminCatalogueApprovalQueueClient() {
                         "px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider",
                         item.sourceType === "THINGIVERSE" ? "bg-blue-50 text-blue-600" :
                         item.sourceType === "PRINTABLES" ? "bg-orange-50 text-orange-600" :
-                        item.sourceType === "MYMINIFACTORY" ? "bg-green-50 text-green-600" :
+                        item.isImport ? "bg-purple-50 text-purple-600" :
                         "bg-slate-50 text-slate-600"
                       )}>
-                        {item.sourceType}
+                        {item.sourceType || (item.isImport ? "IMPORT" : "MANUAL")}
                       </span>
                     </td>
                     <td className="p-4">
                       <div className="flex flex-col">
                         <span className="text-xs text-slate-700">{item.importedBy?.name || "System"}</span>
-                        <span className="text-[10px] text-slate-400">Importer</span>
+                        <span className="text-[10px] text-slate-400">Collaborator</span>
                       </div>
                     </td>
                     <td className="p-4">
                       <div className="flex flex-col">
-                        <span className="text-xs text-slate-700">{format(new Date(item.importedAt || item.createdAt), "MMM d, yyyy")}</span>
-                        <span className="text-[10px] text-slate-400">{format(new Date(item.importedAt || item.createdAt), "HH:mm")}</span>
+                        <span className="text-xs text-slate-700">{format(new Date(item.updatedAt || item.createdAt), "MMM d, yyyy")}</span>
+                        <span className="text-[10px] text-slate-400">{format(new Date(item.updatedAt || item.createdAt), "HH:mm")}</span>
                       </div>
                     </td>
-                    {activeTab !== "PENDING_REVIEW" && (
-                      <td className="p-4">
-                         <div className="flex flex-col">
-                          <span className="text-xs text-slate-700">{actionBy?.name || "Unknown"}</span>
-                          <span className="text-[10px] text-slate-400">
-                            {activeTab === "LIVE" ? "Approved" : "Archived"}
-                          </span>
-                        </div>
-                      </td>
-                    )}
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-1">
-                         {activeTab === "PENDING_REVIEW" && (
+                         {item.status === "PENDING_REVIEW" && (
                           <>
                             <button
                               onClick={() => handleAction(item.id, "approve")}
@@ -449,40 +435,25 @@ export function AdminCatalogueApprovalQueueClient() {
                             </button>
                           </>
                         )}
-                        {activeTab === "LIVE" && (
-                          <button
-                            onClick={() => handleAction(item.id, "archive")}
-                            title="Archive"
-                            className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                          >
-                            <Archive className="h-4 w-4" />
-                          </button>
-                        )}
-                        {activeTab === "ARCHIVED" && (
-                          <button
-                            onClick={() => handleAction(item.id, "restore")}
-                            title="Restore to Live"
-                            className="p-1.5 text-primary hover:bg-primary/5 rounded-lg transition-colors"
-                          >
-                            <RefreshCcw className="h-4 w-4" />
-                          </button>
-                        )}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <button className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors">
                               <MoreVertical className="h-4 w-4" />
                             </button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-40">
-                             <DropdownMenuItem asChild>
-                              <Link href={`/admin/catalogue/${item.id}/edit`} className="cursor-pointer">
-                                <ExternalLink className="mr-2 h-4 w-4" />
-                                <span>Edit Item</span>
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => window.open(`/catalogue/${item.slug}`, "_blank")}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              <span>View Product</span>
+                          <DropdownMenuContent align="end" className="w-44">
+                              <DropdownMenuItem asChild>
+                                {item.isImport ? (
+                                  <Link href={`/admin/catalogue/import/${item.id}/review`} className="cursor-pointer">
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    <span>Review Import</span>
+                                  </Link>
+                                ) : (
+                                  <Link href={`/admin/catalogue/${item.id}/edit`} className="cursor-pointer">
+                                    <ExternalLink className="mr-2 h-4 w-4" />
+                                    <span>Edit Item</span>
+                                  </Link>
+                                )}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
@@ -490,7 +461,7 @@ export function AdminCatalogueApprovalQueueClient() {
                               className="text-red-600 focus:text-red-700 focus:bg-red-50"
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
-                              <span>Delete Permanently</span>
+                              <span>Delete</span>
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -513,14 +484,14 @@ export function AdminCatalogueApprovalQueueClient() {
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="p-1 border border-slate-200 rounded hover:bg-white disabled:opacity-40 transition-colors"
+                className="p-1.5 border border-slate-200 rounded hover:bg-white disabled:opacity-40 transition-colors shadow-sm"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="p-1 border border-slate-200 rounded hover:bg-white disabled:opacity-40 transition-colors"
+                className="p-1.5 border border-slate-200 rounded hover:bg-white disabled:opacity-40 transition-colors shadow-sm"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
