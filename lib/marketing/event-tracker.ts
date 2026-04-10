@@ -113,9 +113,9 @@ export const trackEvent = (eventName: string, params: Record<string, any> = {}, 
     body: JSON.stringify({
       eventName,
       params,
-      eventId: dedupeId,
-      url: window.location.href,
-    }),
+    eventId,
+    url: window.location.href,
+    testEventCode: new URLSearchParams(window.location.search).get("test_event_code") || undefined,
   }).catch((err) => console.error("[Tracking] Meta CAPI Error:", err));
 
   return dedupeId;

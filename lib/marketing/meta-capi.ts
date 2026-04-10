@@ -30,9 +30,10 @@ interface CapiEvent {
     num_items?: number;
     transaction_id?: string;
   };
+  test_event_code?: string;
 }
 
-export async function sendMetaCapiEvent(event: Partial<CapiEvent>) {
+export async function sendMetaCapiEvent(event: Partial<CapiEvent> & { test_event_code?: string }) {
   if (!MARKETING_CONFIG.META_CONVERSIONS_API_ENABLED || !MARKETING_CONFIG.META_ACCESS_TOKEN) {
     // Silently skip if disabled or no token
     return { success: false, message: "CAPI disabled or token missing" };
@@ -57,6 +58,7 @@ export async function sendMetaCapiEvent(event: Partial<CapiEvent>) {
         custom_data: event.custom_data,
       },
     ],
+    test_event_code: event.test_event_code,
   };
 
   try {

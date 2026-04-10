@@ -4,7 +4,7 @@ import { sendMetaCapiEvent } from "@/lib/marketing/meta-capi";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { eventName, params, eventId, url } = body;
+    const { eventName, params, eventId, url, testEventCode } = body;
 
     if (!eventName) {
       return NextResponse.json({ error: "Event name is required" }, { status:400 });
@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
         fbc,
       },
       custom_data: params,
+      test_event_code: testEventCode,
     });
 
     return NextResponse.json(result);
