@@ -86,6 +86,15 @@ export function AddToCartButton({
 
   const handleBuyNow = () => {
     const item = prepareItem();
+    
+    // Fire AddToCart event (Buy Now still implies an add-to-cart intent)
+    trackAddToCart({
+      id: productId,
+      name: name,
+      price: price,
+      quantity: quantity,
+    });
+
     addItem(item);
     router.push("/checkout");
   };

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useCartStore, isCatalogueCartItem } from "@/store/cart-store";
 import { useCheckoutStore } from "@/store/checkout-store";
+import { trackInitiateCheckout, trackEvent } from "@/lib/marketing/event-tracker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -187,7 +188,21 @@ export default function CheckoutPage() {
         );
 
   useEffect(() => {
-    if (items.length === 0) router.push("/cart");
+    if (items.length === 0) {
+      router.push("/cart");
+      return;
+    }
+
+    // Fire InitiateCheckout event
+    trackInitiateCheckout({
+      items: items.map(i => ({
+        id: i.productId || (i as any).catalogueItemId,
+        name: i.name,
+        price: i.unitPrice,
+        quantity: i.quantity
+      })),
+      total: totals.total
+    });
   }, [items.length, router]);
 
   useEffect(() => {
@@ -1046,7 +1061,16 @@ export default function CheckoutPage() {
                     </Button>
                     <Button
                       className="flex-1 bg-primary hover:bg-primary/90"
-                      onClick={() => setStep(3)}
+                      onClick={() => {
+                        setStep(3);
+                        // Fire AddPaymentInfo event
+                        trackEvent("AddPaymentInfo", {
+                          currency: "KES",
+                          value: totals.total,
+                          content_type: "product",
+                          content_ids: items.map(i => i.productId || (i as any).catalogueItemId)
+                        });
+                      }}
                       disabled={!canContinueStep2}
                     >
                       Continue to Payment →

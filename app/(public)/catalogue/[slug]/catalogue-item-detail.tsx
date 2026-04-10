@@ -8,6 +8,8 @@ import { ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useCartStore } from "@/store/cart-store";
+import { trackViewContent, trackAddToCart } from "@/lib/marketing/event-tracker";
+import { ViewContentTracker } from "@/components/marketing/ViewContentTracker";
 
 interface Photo {
   id: string;
@@ -136,6 +138,16 @@ export function CatalogueItemDetail({ slug }: CatalogueItemDetailProps) {
         ...data.cartItem,
         type: "CATALOGUE",
       });
+      
+      // Fire AddToCart event
+      trackAddToCart({
+        id: item.id,
+        name: item.name,
+        price: unitPrice || 0,
+        quantity,
+        type: "catalogue"
+      });
+
       router.push("/cart");
     } catch (e) {
       console.error(e);
@@ -174,6 +186,14 @@ export function CatalogueItemDetail({ slug }: CatalogueItemDetailProps) {
 
   return (
     <div className="bg-white min-h-screen">
+      <ViewContentTracker 
+        product={{ 
+          id: item.id, 
+          name: item.name, 
+          price: unitPrice || (item.basePriceKes ?? 0), 
+          category: item.category?.name 
+        }} 
+      />
       <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-[55%_1fr] gap-10">
           {/* Gallery */}

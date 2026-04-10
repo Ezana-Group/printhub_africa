@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { ProductCard } from "@/components/shop/product-card";
+import { trackSearch } from "@/lib/marketing/event-tracker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -188,6 +189,15 @@ export function ShopContent() {
        window.history.replaceState(null, "", newUrl);
     }
   }, [q, category, sort, inStock, selectedTags, minPrice, maxPrice, page]);
+
+  // Track Search Event
+  useEffect(() => {
+    if (!q || q.length < 3) return;
+    const timer = setTimeout(() => {
+      trackSearch(q);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [q]);
 
   // Derived Values
   const allAvailableTags = useMemo(() => {

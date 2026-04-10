@@ -202,3 +202,10 @@ export const trackPurchase = (order: { id: string; total: number; items: any[] }
     }))
   });
 };
+
+export const trackSearch = (query: string) => {
+  return trackEvent("Search", {
+    search_string: query,
+    content_category: "Product Search"
+  });
+};

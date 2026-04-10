@@ -57,7 +57,7 @@ export default function OrderConfirmationPage() {
           setOrder(data);
           
           // Fire Purchase Event once order is loaded
-          if (!trackedRef.current && data.status !== "PENDING_PAYMENT" && data.status !== "CANCELLED") {
+          if (!trackedRef.current && data.status !== "CANCELLED") {
              trackPurchase({
                id: data.id,
                total: data.total,
