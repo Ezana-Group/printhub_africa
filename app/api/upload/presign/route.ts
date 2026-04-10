@@ -18,7 +18,7 @@ const ALLOWED_TYPES: Record<
 > = {
   "model/stl": { ext: ["stl"], maxMB: 500, bucket: "private" },
   "application/octet-stream": {
-    ext: ["stl", "obj", "3mf", "step"],
+    ext: ["stl", "obj", "3mf", "step", "stp"],
     maxMB: 500,
     bucket: "private",
   },
@@ -93,6 +93,7 @@ function extToFileType(ext: string): UploadedFileType {
     fbx: "FBX",
     "3mf": "THREE_MF",
     step: "STEP",
+    stp: "STEP",
     ai: "AI",
     pdf: "PDF",
     psd: "PSD",

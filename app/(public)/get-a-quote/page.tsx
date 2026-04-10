@@ -486,11 +486,19 @@ export default function GetAQuotePage() {
                           <Label className="text-slate-700">Reference images or inspiration</Label>
                           <FileUploader
                             context="CUSTOMER_QUOTE"
-                            accept={["image/jpeg", "image/png", "image/webp", "application/pdf"]}
-                            maxSizeMB={20}
-                            maxFiles={5}
+                            accept={[
+                              "image/jpeg",
+                              "image/png",
+                              "image/webp",
+                              "application/pdf",
+                              "application/postscript",
+                              "image/vnd.adobe.photoshop",
+                              "image/svg+xml"
+                            ]}
+                            maxSizeMB={200}
+                            maxFiles={10}
                             label="Reference images or inspiration"
-                            hint="Upload photos, sketches, or anything that shows what you have in mind"
+                            hint="Photos, sketches, AI, PDF, PSD, EPS, SVG · Max 200MB each"
                             onUploadComplete={setReferenceUploadedFiles}
                           />
                         </div>

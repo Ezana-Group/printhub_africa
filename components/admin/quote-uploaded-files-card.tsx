@@ -37,7 +37,7 @@ function formatDate(iso: Date | string): string {
 }
 
 function is3DFile(name: string, mime: string): boolean {
-  return /\.(stl|obj|fbx|3mf|step)(\?|$)/i.test(name) || /model\/|stl|obj|3mf|step/i.test(mime);
+  return /\.(stl|obj|fbx|3mf|step|stp)(\?|$)/i.test(name) || /model\/|stl|obj|3mf|step/i.test(mime);
 }
 
 export function QuoteUploadedFilesCard({ files }: { files: QuoteUploadedFile[] }) {
