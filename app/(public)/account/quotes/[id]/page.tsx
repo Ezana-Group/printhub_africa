@@ -42,6 +42,7 @@ export default async function AccountQuoteDetailPage({
         },
       },
     }),
+    userEmail
       ? prisma.quote.findFirst({
           where: {
             id,
