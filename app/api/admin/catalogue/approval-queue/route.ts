@@ -80,20 +80,37 @@ export async function GET(req: NextRequest) {
 
     // Normalize ImportItems to match CatalogueItem structure
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const normalizedImports = importItems.map((item: any) => ({
-      id: item.id,
-      name: item.scrapedName || "Unnamed Import",
-      slug: `import-${item.id}`,
-      status: item.status,
-      sourceType: item.isManual ? "MANUAL" : "IMPORT",
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
-      importedAt: item.createdAt,
-      category: item.scrapedCategory ? { name: item.scrapedCategory, slug: "" } : null,
-      importedBy: item.submittedBy,
-      photos: item.scrapedImageUrls ? item.scrapedImageUrls.slice(0, 1).map((url: string) => ({ url, isPrimary: true })) : [],
-      isImport: true, // Flag for UI
-    }));
+    const normalizedImports = importItems.map((item: any) => {
+      // Resolve the best available display name
+      let displayName: string = item.scrapedName || item.editorData?.name || "";
+      if (!displayName && item.sourceUrl) {
+        try {
+          const hostname = new URL(item.sourceUrl).hostname.replace("www.", "");
+          displayName = `${hostname} import`;
+        } catch {}
+      }
+      displayName = displayName || (item.isManual ? "Manual Draft" : "Unnamed Import");
+
+      return {
+        id: item.id,
+        name: displayName,
+        slug: `import-${item.id}`,
+        status: item.status,
+        sourceType: item.isManual ? "MANUAL" : "IMPORT",
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+        importedAt: item.createdAt,
+        category: (item.scrapedCategory || item.editorData?.categoryId)
+          ? { name: item.scrapedCategory || "Pending", slug: "" }
+          : null,
+        importedBy: item.submittedBy,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        photos: item.scrapedImageUrls?.length
+          ? item.scrapedImageUrls.slice(0, 1).map((url: string) => ({ url, isPrimary: true }))
+          : [],
+        isImport: true,
+      };
+    });
 
     const combinedItems = [...catalogueItems, ...normalizedImports].sort((a, b) => 
       new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()

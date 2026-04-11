@@ -94,24 +94,26 @@ export default function ReviewPage() {
       
       if (modelRes.ok) {
         const data = await modelRes.json();
-        const m = data.model as ExternalModelData;
+        const m = data.model as any;
         setModel(m);
+        // CatalogueImportQueue uses different field names than ExternalModel
+        const isQueue = data.isImportQueue;
         setFormData({
-          name: m.name || "",
-          shortDescription: m.description?.slice(0, 300) || "",
-          description: m.description || "",
+          name: m.scrapedName || m.name || "",
+          shortDescription: (m.scrapedDescription || m.description || "").slice(0, 300),
+          description: m.scrapedDescription || m.description || "",
           printInfo: m.printInfo || "",
-          categoryId: m.categoryId || "",
-          tags: m.tags || [],
+          categoryId: m.scrapedCategory || m.categoryId || "",
+          tags: m.scrapedTags || m.tags || [],
           basePrice: 0,
           comparePrice: 0,
-          licenceType: m.licenceType || "",
+          licenceType: m.licenseType || m.licenceType || "",
           licenceVerified: m.licenceVerified || false,
           designerCreditRequired: true,
           creditText: `Design by ${m.designerName || "Unknown"}`,
-          internalNotes: m.notes || "",
-          thumbnailUrl: m.thumbnailUrl || "",
-          imageUrls: m.imageUrls || [],
+          internalNotes: m.notes || m.reviewNotes || "",
+          thumbnailUrl: (m.scrapedImageUrls || m.imageUrls || [])[0] || m.thumbnailUrl || "",
+          imageUrls: m.scrapedImageUrls || m.imageUrls || [],
         });
       }
       

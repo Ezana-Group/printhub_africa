@@ -2,12 +2,12 @@ import React from "react";
 import { cn } from "@/lib/utils";
 
 interface LicenceBadgeProps {
-  licence: string;
+  licence: string | null | undefined;
   size?: "sm" | "md";
 }
 
 export const LicenceBadge = ({ licence, size = "md" }: LicenceBadgeProps) => {
-  const l = licence.toLowerCase();
+  const l = (licence ?? "").toLowerCase();
   
   let label = "Verify Licence";
   let tooltip = "Licence unclear — verify before selling prints.";
