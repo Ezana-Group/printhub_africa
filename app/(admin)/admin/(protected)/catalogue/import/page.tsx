@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { LicenceBadge } from "@/components/catalogue/LicenceBadge";
-import { Loader2, Search, ExternalLink, CheckCircle, AlertCircle, Eye, Layers } from "lucide-react";
+import { Loader2, Search, ExternalLink, CheckCircle, AlertCircle, Eye, Layers, ListTodo } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";

@@ -128,7 +128,7 @@ export function AdminCatalogueClient() {
       {data?.pendingReviewCount ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           {data.pendingReviewCount} item(s) awaiting approval.{" "}
-          <Link href="/admin/catalogue/queue" className="font-medium underline">
+          <Link href="/admin/catalogue/approval-queue" className="font-medium underline">
             Review now →
           </Link>
         </div>

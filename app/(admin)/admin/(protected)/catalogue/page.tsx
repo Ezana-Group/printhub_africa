@@ -34,7 +34,7 @@ export default async function AdminCataloguePage() {
             Import from Printables
           </Link>
           <Link
-            href="/admin/catalogue/queue"
+            href="/admin/catalogue/approval-queue"
             className="text-sm font-medium text-amber-600 hover:text-amber-700"
           >
             Approval queue →
