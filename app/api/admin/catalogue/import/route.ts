@@ -72,7 +72,6 @@ export async function POST(req: Request) {
     const validation = validateImportUrl(importUrl);
     if (!validation.valid) {
       // Log the attempt for security monitoring
-      // Log the attempt for security monitoring
       await prisma.auditLog.create({
         data: {
           userId: (auth.session.user as any).id,
@@ -83,6 +82,46 @@ export async function POST(req: Request) {
       });
       return NextResponse.json({ error: validation.reason }, { status: 400 });
     }
+
+    // --- DEDUPLICATION CHECK ---
+    const normalizedUrl = importUrl.replace(/\/$/, ""); // Remove trailing slash for better matching
+    
+    // Check in Queue (any status except REJECTED)
+    const existingInQueue = await prisma.catalogueImportQueue.findFirst({
+      where: { 
+        sourceUrl: { contains: normalizedUrl, mode: 'insensitive' },
+        status: { not: "REJECTED" }
+      },
+      select: { id: true, status: true }
+    });
+
+    if (existingInQueue) {
+      return NextResponse.json({ 
+        error: "ALREADY_IMPORTED", 
+        existingId: existingInQueue.id,
+        context: "QUEUE",
+        status: existingInQueue.status,
+        message: "This URL is already in the processing queue."
+      }, { status: 409 });
+    }
+
+    // Check in Catalogue
+    const existingInCatalogue = await prisma.catalogueItem.findFirst({
+      where: { sourceUrl: { contains: normalizedUrl, mode: 'insensitive' } },
+      select: { id: true, status: true, slug: true }
+    });
+
+    if (existingInCatalogue) {
+      return NextResponse.json({ 
+        error: "ALREADY_IMPORTED", 
+        existingId: existingInCatalogue.id,
+        context: "CATALOGUE",
+        status: existingInCatalogue.status,
+        slug: existingInCatalogue.slug,
+        message: "This URL has already been imported and finalized."
+      }, { status: 409 });
+    }
+    // ---------------------------
 
     // 1. Create CatalogueImportQueue entry immediately (PENDING)
     const importQueue = await prisma.catalogueImportQueue.create({

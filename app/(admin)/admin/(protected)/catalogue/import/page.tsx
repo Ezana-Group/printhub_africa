@@ -149,7 +149,18 @@ function UrlImportSection() {
               <p className="font-semibold">Import Failed</p>
               <div className="text-sm space-y-1">
                 {error.error === "ALREADY_IMPORTED" ? (
-                  <p>This model was already imported. <Link href={`/admin/catalogue/${error.existingId}/edit`} className="underline">View existing record</Link></p>
+                  <p>
+                    {error.message}{" "}
+                    {error.context === "QUEUE" ? (
+                      <Link href={`/admin/catalogue/review/${error.existingId}`} className="underline font-bold">
+                        Finish review here →
+                      </Link>
+                    ) : (
+                      <Link href={`/admin/catalogue/${error.existingId}/edit`} className="underline font-bold">
+                        Edit existing record →
+                      </Link>
+                    )}
+                  </p>
                 ) : error.error === "FETCH_FAILED" || error.error === "API_FETCH_FAILED" ? (
                   <p>Could not connect to the platform API. Please check your API credentials in Settings or try manual entry below.</p>
                 ) : error.error === "API_CONFIG_MISSING" ? (
@@ -161,7 +172,7 @@ function UrlImportSection() {
                 ) : error.error === "NAME_NOT_FOUND" ? (
                   <p>Could not extract product name automatically. Please fill it in manually below.</p>
                 ) : (
-                  <p>Could not auto-import from this URL. Please use the manual form below.</p>
+                  <p>{error.message || "Could not auto-import from this URL. Please use the manual form below."}</p>
                 )}
                 
                 {error.detail && (
