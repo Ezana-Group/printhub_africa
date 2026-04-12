@@ -4,7 +4,7 @@
  * When Meilisearch is disabled or not configured, callers should fall back to DB search.
  */
 
-import { MeiliSearch } from "meilisearch";
+import { Meilisearch } from "meilisearch";
 
 const host = process.env.MEILISEARCH_URL;
 const apiKey = process.env.MEILISEARCH_KEY || process.env.MEILI_MASTER_KEY;
@@ -32,7 +32,7 @@ export async function searchProducts(
   const limit = Math.min(100, Math.max(1, options?.limit ?? 12));
 
   try {
-    const client = new MeiliSearch({ host: host!, apiKey: apiKey! });
+    const client = new Meilisearch({ host: host!, apiKey: apiKey! });
     const index = client.index(indexName);
 
     const res = await index.search(query, {
@@ -54,7 +54,7 @@ export async function searchProducts(
  */
 export async function indexProducts(products: any[]) {
   if (!isAlgoliaConfigured()) return;
-  const client = new MeiliSearch({ host: host!, apiKey: apiKey! });
+  const client = new Meilisearch({ host: host!, apiKey: apiKey! });
   const index = client.index(indexName);
 
   try {

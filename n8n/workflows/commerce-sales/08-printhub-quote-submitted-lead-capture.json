@@ -81,6 +81,43 @@
     },
     {
       "parameters": {
+        "url": "https://a.klaviyo.com/api/events/",
+        "method": "POST",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Klaviyo-API-Key {{$env.KLAVIYO_API_KEY}}"
+            },
+            {
+              "name": "revision",
+              "value": "2024-02-15"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonParameters": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "data",
+              "value": "={{ { \"type\": \"event\", \"attributes\": { \"profile\": { \"data\": { \"type\": \"profile\", \"attributes\": { \"email\": $json.customerEmail } } }, \"metric\": { \"data\": { \"type\": \"metric\", \"attributes\": { \"name\": \"Submitted Quote\" } } }, \"properties\": { \"customerName\": $json.customerName, \"projectName\": $json.projectName } } } }}"
+            }
+          ]
+        }
+      },
+      "id": "klaviyo-lead-capture",
+      "name": "Klaviyo: Add Lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        750,
+        450
+      ]
+    },
+    {
+      "parameters": {
         "url": "={{$env['LISTMONK_URL']}}/api/subscribers",
         "method": "POST",
         "authentication": "genericCredentialType",
@@ -116,7 +153,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        760,
+        960,
         300
       ]
     }
@@ -145,6 +182,17 @@
       ]
     },
     "Email: Draft Quote": {
+      "main": [
+        [
+          {
+            "node": "Klaviyo: Add Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Klaviyo: Add Lead": {
       "main": [
         [
           {

@@ -543,6 +543,9 @@ export function AdminPrintCalculator() {
               <div className="flex gap-4">
                 <div className="flex-1">
                   <Label>Project name</Label>
+                  <Input
+                    value={jobName}
+                    onChange={(e) => setJobName(e.target.value)}
                     placeholder="e.g. Mechanical Assembly"
                     className="mt-1"
                   />
