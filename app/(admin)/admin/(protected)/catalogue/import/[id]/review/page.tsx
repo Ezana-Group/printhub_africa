@@ -3,14 +3,15 @@ export const dynamic = 'force-dynamic'
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Loader2, ArrowLeft, ExternalLink, Save, CheckCircle, AlertCircle, Trash2 } from "lucide-react";
+import { Loader2, ArrowLeft, ExternalLink, Save, CheckCircle, AlertCircle, Trash2, Paperclip, X } from "lucide-react";
 import Link from "next/link";
 import { LicenceBadge } from "@/components/catalogue/LicenceBadge";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { FileUploader } from "@/components/upload/FileUploader";
 
 const proxiedImageUrl = (url: string) => {
-  if (!url) return "";
+  if (!url || url.trim() === "") return "";
   if (url.startsWith("/") || url.startsWith("blob:") || url.startsWith("data:")) return url;
   return `/api/proxy/image?url=${encodeURIComponent(url)}`;
 };
@@ -31,6 +32,7 @@ interface ImportFormData {
   internalNotes: string;
   thumbnailUrl: string;
   imageUrls: string[];
+  productionFiles: string[];
 }
 
 interface Category {
@@ -41,7 +43,7 @@ interface Category {
 interface ExternalModelData {
   id: string;
   platform: string;
-  externalUrl: string;
+  sourceUrl: string;
   name: string;
   description?: string;
   printInfo?: string;
@@ -53,6 +55,7 @@ interface ExternalModelData {
   designerUrl?: string;
   thumbnailUrl?: string;
   imageUrls: string[];
+  scrapedImageUrls?: string[];
   importedAt: string;
   notes?: string;
 }
@@ -82,6 +85,7 @@ export default function ReviewPage() {
     internalNotes: "",
     thumbnailUrl: "",
     imageUrls: [],
+    productionFiles: [],
   });
 
   const fetchData = useCallback(async () => {
@@ -98,6 +102,7 @@ export default function ReviewPage() {
         setModel(m);
         // CatalogueImportQueue uses different field names than ExternalModel
         const isQueue = data.isImportQueue;
+        const allImages: string[] = m.scrapedImageUrls || m.imageUrls || [];
         setFormData({
           name: m.scrapedName || m.name || "",
           shortDescription: (m.scrapedDescription || m.description || "").slice(0, 300),
@@ -112,8 +117,9 @@ export default function ReviewPage() {
           designerCreditRequired: true,
           creditText: `Design by ${m.designerName || "Unknown"}`,
           internalNotes: m.notes || m.reviewNotes || "",
-          thumbnailUrl: (m.scrapedImageUrls || m.imageUrls || [])[0] || m.thumbnailUrl || "",
-          imageUrls: m.scrapedImageUrls || m.imageUrls || [],
+          thumbnailUrl: allImages[0] || m.thumbnailUrl || "",
+          imageUrls: allImages,
+          productionFiles: m.productionFiles || [],
         });
       }
       
@@ -188,14 +194,20 @@ export default function ReviewPage() {
             </p>
           </div>
         </div>
-        <a 
-          href={model.externalUrl} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 text-sm text-primary hover:underline bg-primary/5 px-4 py-2 rounded-lg"
-        >
-          Check Original Source <ExternalLink className="w-4 h-4" />
-        </a>
+        {model.sourceUrl ? (
+          <a 
+            href={model.sourceUrl} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 text-sm text-primary hover:underline bg-primary/5 px-4 py-2 rounded-lg"
+          >
+            Check Original Source <ExternalLink className="w-4 h-4" />
+          </a>
+        ) : (
+          <span className="flex items-center gap-2 text-sm text-slate-400 bg-slate-50 px-4 py-2 rounded-lg cursor-not-allowed">
+            No Source URL <ExternalLink className="w-4 h-4" />
+          </span>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -206,26 +218,44 @@ export default function ReviewPage() {
               Media Preview
             </h3>
             <div className="aspect-square rounded-md overflow-hidden bg-gray-100 border relative group">
-              <img 
-                src={proxiedImageUrl(formData.thumbnailUrl)} 
-                className="w-full h-full object-cover transition-transform group-hover:scale-105" 
-                alt="Preview"
-              />
+              {proxiedImageUrl(formData.thumbnailUrl) ? (
+                <img 
+                  src={proxiedImageUrl(formData.thumbnailUrl)} 
+                  className="w-full h-full object-cover transition-transform group-hover:scale-105" 
+                  alt="Preview"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">No preview</div>
+              )}
             </div>
-            <div className="grid grid-cols-4 gap-2 mt-2">
-              {formData.imageUrls.slice(0, 8).map((url, i) => (
-                <div 
-                  key={i} 
-                  className={cn(
-                    "aspect-square rounded border bg-gray-50 overflow-hidden cursor-pointer hover:border-primary transition-colors",
-                    formData.thumbnailUrl === url && "border-2 border-primary"
-                  )}
-                  onClick={() => setFormData({ ...formData, thumbnailUrl: url })}
-                >
-                  <img src={proxiedImageUrl(url)} className="w-full h-full object-cover" alt={`Preview ${i}`} />
-                </div>
-              ))}
-            </div>
+            {formData.imageUrls.length > 0 && (
+              <div className="grid grid-cols-4 gap-2 mt-2">
+                {formData.imageUrls.slice(0, 8).map((url, i) => (
+                  <div 
+                    key={i} 
+                    className={cn(
+                      "aspect-square rounded border bg-gray-50 overflow-hidden cursor-pointer hover:border-primary transition-colors",
+                      formData.thumbnailUrl === url && "border-2 border-primary"
+                    )}
+                    onClick={() => setFormData({ ...formData, thumbnailUrl: url })}
+                  >
+                    {proxiedImageUrl(url) ? (
+                      <img 
+                        src={proxiedImageUrl(url)} 
+                        className="w-full h-full object-cover" 
+                        alt={`Preview ${i + 1}`}
+                        referrerPolicy="no-referrer"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-100" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-4">
@@ -298,6 +328,44 @@ export default function ReviewPage() {
                 />
               </div>
             </div>
+          </div>
+
+          {/* Production Files Upload */}
+          <div className="bg-white p-6 rounded-lg border shadow-sm space-y-4">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <Paperclip className="w-5 h-5 text-primary" />
+              Production Files
+            </h3>
+            <p className="text-sm text-slate-500">
+              Attach the STL, OBJ, 3MF, or STEP files for 3D printing. These are kept private and shown only to staff when fulfilling orders.
+            </p>
+            <FileUploader
+              context="ADMIN_CATALOGUE_PRODUCTION"
+              accept={[".stl", ".obj", ".3mf", ".sla", ".stp", ".step", "application/octet-stream", "application/pdf", ".ai", ".psd", "image/png", "image/svg+xml", ".svg", "image/tiff", ".tiff"]}
+              maxFiles={10}
+              onUploadComplete={(files) => {
+                const newUrls = files.map((f) => f.publicUrl).filter(Boolean) as string[];
+                setFormData(prev => ({ ...prev, productionFiles: [...(prev.productionFiles || []), ...newUrls] }));
+              }}
+            />
+            {(formData.productionFiles?.length ?? 0) > 0 && (
+              <ul className="mt-3 space-y-2">
+                {formData.productionFiles.map((url, i) => (
+                  <li key={i} className="flex items-center justify-between p-2 bg-slate-50 border rounded-md">
+                    <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate flex-1">
+                      {url.split('/').pop()}
+                    </a>
+                    <button
+                      type="button"
+                      className="ml-2 text-slate-400 hover:text-red-500 transition-colors"
+                      onClick={() => setFormData(prev => ({ ...prev, productionFiles: prev.productionFiles.filter((_, idx) => idx !== i) }))}
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           <div className="bg-white p-6 rounded-lg border shadow-sm space-y-4">
