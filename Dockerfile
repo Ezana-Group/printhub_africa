@@ -41,8 +41,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Install prisma CLI + tsx + bcryptjs for migrations & seeding at runtime
+# Use same version range as package.json (^7.x) so it matches what was generated in builder
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-RUN npm install --no-save prisma@7.5.0 @prisma/client@7.5.0 tsx bcryptjs
+RUN npm install --no-save "prisma@^7.5.0" "@prisma/client@^7.5.0" tsx bcryptjs
 
 # Make start script executable
 USER root
