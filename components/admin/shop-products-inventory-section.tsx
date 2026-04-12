@@ -9,7 +9,10 @@ import { Button } from "@/components/ui/button";
 import { TableToolbar, type FilterConfig } from "@/components/admin/ui/TableToolbar";
 import { TableEmptyState } from "@/components/admin/ui/TableEmptyState";
 import { useTableUrlState } from "@/hooks/useTableUrlState";
-import { Package, Plus } from "lucide-react";
+import { Package, Plus, Globe } from "lucide-react";
+import { ProductFormSheet } from "@/components/admin/product-form-sheet";
+import { useState } from "react";
+import { toast } from "sonner";
 
 export type ShopProductRow = {
   id: string;
@@ -42,7 +45,14 @@ function StockBadge({ stock, lowStockThreshold }: { stock: number; lowStockThres
   return <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">{stock} units</Badge>;
 }
 
-export function ShopProductsInventorySection({ products }: { products: ShopProductRow[] }) {
+export function ShopProductsInventorySection({ 
+  products,
+  categories = [] 
+}: { 
+  products: ShopProductRow[];
+  categories?: { id: string; name: string; slug: string }[];
+}) {
+  const [showAddModal, setShowAddModal] = useState(false);
   const url = useTableUrlState({ defaultPerPage: 50 });
   const categoryFilter = url.get("category", "");
   const stockStatusFilter = url.get("stockStatus", "");
@@ -112,9 +122,23 @@ export function ShopProductsInventorySection({ products }: { products: ShopProdu
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Unit counts of finished products for the shop. Stock deducts when shop orders are confirmed. Raw materials for print services are under Print Materials.
-      </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <p className="text-sm text-muted-foreground max-w-2xl">
+          Unit counts of finished products for the shop. Stock deducts when shop orders are confirmed. Raw materials for print services are under Print Materials.
+        </p>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button variant="outline" size="sm" className="gap-2" asChild>
+            <Link href="/admin/catalogue/import">
+              <Globe className="h-4 w-4" />
+              Import from URL
+            </Link>
+          </Button>
+          <Button size="sm" className="gap-2" onClick={() => setShowAddModal(true)}>
+            <Plus className="h-4 w-4" />
+            Add New Product
+          </Button>
+        </div>
+      </div>
       {(lowCount > 0 || outOfStockCount > 0) && (
         <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20">
           <CardContent className="py-3 px-4 flex items-center justify-between flex-wrap gap-2">
@@ -212,6 +236,17 @@ export function ShopProductsInventorySection({ products }: { products: ShopProdu
           )}
         </CardContent>
       </Card>
+      <ProductFormSheet
+        open={showAddModal}
+        onOpenChange={setShowAddModal}
+        product={null} // null means new product
+        categories={categories}
+        onSuccess={() => {
+          setShowAddModal(false);
+          toast.success("Product created! Refreshing inventory...");
+          window.location.reload();
+        }}
+      />
     </div>
   );
 }

@@ -25,6 +25,7 @@ export default async function AdminProductsPage() {
         isActive: true,
         isFeatured: true,
         images: true,
+        productionFiles: true,
         createdAt: true,
         category: { select: { id: true, name: true } },
         variants: { select: { id: true } }, // Minimal to replace _count
@@ -59,6 +60,7 @@ export default async function AdminProductsPage() {
     isActive: p.isActive ?? false,
     isFeatured: p.isFeatured ?? false,
     images: p.images ?? [],
+    productionFiles: p.productionFiles ?? [],
     createdAt: p.createdAt,
     _variantsCount: (p as any).variants?.length || 0,
   }));

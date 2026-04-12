@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -55,6 +54,11 @@ export function AdminUploadsClient({
 }) {
   const [uploads] = useState(initialUploads);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const filtered =
     statusFilter === "all"
@@ -177,7 +181,7 @@ export function AdminUploadsClient({
                     )}
                   </td>
                   <td className="p-3 text-slate-500 text-xs">
-                    {formatDate(u.createdAt)}
+                    {mounted ? formatDate(u.createdAt) : "—"}
                   </td>
                   <td className="p-3 text-right">
                     <div className="flex items-center justify-end gap-1">

@@ -2,7 +2,8 @@
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Box, Download } from "lucide-react";
+import { FileText, Box, Download, Eye, Trash2, Loader2 } from "lucide-react";
+import { useState } from "react";
 
 export type QuoteUploadedFile = {
   id: string;
@@ -41,7 +42,25 @@ function is3DFile(name: string, mime: string): boolean {
 }
 
 export function QuoteUploadedFilesCard({ files }: { files: QuoteUploadedFile[] }) {
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const list = files ?? [];
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) return;
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/admin/uploads/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        window.location.reload();
+      } else {
+        alert("Failed to delete file.");
+      }
+    } catch {
+      alert("Something went wrong.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <Card>
@@ -82,17 +101,43 @@ export function QuoteUploadedFilesCard({ files }: { files: QuoteUploadedFile[] }
                   <p className="text-xs text-muted-foreground">
                     {file.fileType} · {formatSize(file.size)} · {formatDate(file.createdAt)}
                   </p>
-                  <Button variant="outline" size="sm" className="mt-2" asChild>
-                    <a
-                      href={`/api/upload/${file.id}/download?redirect=1`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      download={file.originalName}
+                  <div className="flex flex-wrap items-center gap-2 mt-3">
+                    <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5" asChild>
+                      <a
+                        href={`/api/upload/${file.id}/download?redirect=1`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        View
+                      </a>
+                    </Button>
+                    <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5" asChild>
+                      <a
+                        href={`/api/upload/${file.id}/download?redirect=1`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download={file.originalName}
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Download
+                      </a>
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 text-xs gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => handleDelete(file.id, file.originalName)}
+                      disabled={deletingId === file.id}
                     >
-                      <Download className="mr-1.5 h-4 w-4" />
-                      Download
-                    </a>
-                  </Button>
+                      {deletingId === file.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               </div>
             );

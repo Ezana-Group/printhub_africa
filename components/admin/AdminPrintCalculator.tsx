@@ -42,6 +42,7 @@ type HistoryEntry = {
     postProcessingTimeHoursOverride?: number;
     productionCost: number;
     sellingPrice: number;
+    fileUrl?: string; // Added per-part fileUrl
   }>;
   totalProductionCost: number;
   totalSellingPrice: number;
@@ -63,8 +64,8 @@ export function AdminPrintCalculator() {
 
   // Calculator tab state
   const [jobName, setJobName] = useState("");
-  const [fileUrl, setFileUrl] = useState<string | null>(null);
-  const [parts, setParts] = useState<Array<PrintJob & { materialName: string; costPerKg: number }>>([]);
+  const [fileUrl, setFileUrl] = useState<string | null>(null); // Keep for backwards compatibility
+  const [parts, setParts] = useState<Array<PrintJob & { materialName: string; costPerKg: number; fileUrl?: string }>>([]);
 
   
   // Current part form state
@@ -77,6 +78,7 @@ export function AdminPrintCalculator() {
   const [layerHeightMm, setLayerHeightMm] = useState<number | "">(0.2);
   const [postProcessing, setPostProcessing] = useState(false);
   const [postProcessingHours, setPostProcessingHours] = useState<number | "">(0.5);
+  const [partFileUrl, setPartFileUrl] = useState<string | null>(null);
   
   const [marginOverride, setMarginOverride] = useState<number | "">("");
   const [saveStatus, setSaveStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
@@ -210,6 +212,7 @@ export function AdminPrintCalculator() {
         color: colorChoice, // Save the color selection
         infillPercent: Number(infillPercent) || 20,
         layerHeightMm: Number(layerHeightMm) || 0.2,
+        fileUrl: partFileUrl || undefined,
       },
     ]);
     
@@ -222,6 +225,7 @@ export function AdminPrintCalculator() {
     setLayerHeightMm(0.2);
     setPostProcessing(false);
     setPostProcessingHours(0.5);
+    setPartFileUrl(null);
   };
 
   const handleRemovePart = (index: number) => {
@@ -374,6 +378,7 @@ export function AdminPrintCalculator() {
       marginPercent: effectiveMargin,
       isPrinted,
       createdAt: new Date().toISOString(),
+      fileUrl: fileUrl || undefined, // Project level is now optional
     });
   };
 
@@ -404,6 +409,7 @@ export function AdminPrintCalculator() {
             color: p.color,
             infillPercent: p.infillPercent,
             layerHeightMm: p.layerHeightMm,
+            fileUrl: p.fileUrl,
           })),
           totalProductionCost: breakdown.subtotal,
           totalSellingPrice: breakdown.finalPrice,
@@ -466,6 +472,7 @@ export function AdminPrintCalculator() {
         color: (p as any).color || "",
         infillPercent: (p as any).infillPercent ?? 20,
         layerHeightMm: (p as any).layerHeightMm ?? 0.2,
+        fileUrl: (p as any).fileUrl,
       };
     });
     
@@ -550,26 +557,7 @@ export function AdminPrintCalculator() {
                     className="mt-1"
                   />
                 </div>
-                <div className="flex-1">
-                  <Label className="mb-2 block">Model File (Optional)</Label>
-                  <FileUploader
-                    context="ADMIN_3D_CALC"
-                    accept={["application/octet-stream", ".stl", ".obj", ".3mf", ".sla", ".stp", ".step"]}
-                    maxFiles={1}
-                    onUploadComplete={(files) => {
-                      if (files.length > 0) {
-                        setFileUrl(files[0].publicUrl);
-                      }
-                    }}
-                  />
-                  {fileUrl && (
-                    <p className="text-xs text-green-600 mt-1 truncate">
-                      Uploaded: {fileUrl.split('/').pop()}
-                    </p>
-                  )}
-                </div>
-
-                <div className="w-32">
+                <div className="w-48">
                   <Label>Global margin %</Label>
                   <Input
                     type="number"
@@ -602,6 +590,14 @@ export function AdminPrintCalculator() {
                             <p className="text-xs text-muted-foreground">
                               {p.materialName} • {p.weightGrams}g • {p.printTimeHours}h • Qty: {p.quantity}
                               {p.postProcessing ? ` • Post-proc (${p.postProcessingTimeHoursOverride ?? 0.5}h)` : ""}
+                              {p.fileUrl && (
+                                <span className="flex items-center gap-1 mt-1 text-primary font-medium">
+                                  <FileText className="h-3 w-3" />
+                                  <a href={p.fileUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                                    {p.fileUrl.split("/").pop()}
+                                  </a>
+                                </span>
+                              )}
                             </p>
                           </div>
                         </div>
@@ -626,14 +622,34 @@ export function AdminPrintCalculator() {
                   <div className="h-px flex-1 bg-border" />
                 </div>
                 
-                <div>
-                  <Label>Part name</Label>
-                  <Input
-                    value={partName}
-                    onChange={(e) => setPartName(e.target.value)}
-                    placeholder="e.g. Outer Shell"
-                    className="mt-1"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Part name</Label>
+                    <Input
+                      value={partName}
+                      onChange={(e) => setPartName(e.target.value)}
+                      placeholder="e.g. Outer Shell"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="mb-1 block">Model File (Part)</Label>
+                    <FileUploader
+                      context="ADMIN_3D_CALC"
+                      accept={["application/octet-stream", ".stl", ".obj", ".3mf", ".sla", ".stp", ".step"]}
+                      maxFiles={1}
+                      onUploadComplete={(files) => {
+                        if (files.length > 0) {
+                          setPartFileUrl(files[0].publicUrl);
+                        }
+                      }}
+                    />
+                    {partFileUrl && (
+                      <p className="text-[10px] text-green-600 mt-0.5 truncate bg-green-50 px-1 py-0.5 rounded">
+                        Ready: {partFileUrl.split('/').pop()}
+                      </p>
+                    )}
+                  </div>
                 </div>
               <div>
                 <Label>Material</Label>

@@ -68,6 +68,7 @@ export function InventoryTabs({
   consumables,
   hardwareItems,
   printerAssets = [],
+  categories = [],
 }: {
   shopProducts?: ShopProductRow[];
   lfStockItems: LFStockItemSerialized[];
@@ -75,6 +76,7 @@ export function InventoryTabs({
   consumables: ThreeDConsumable[];
   hardwareItems: HardwareItemSerialized[];
   printerAssets?: { id: string; name: string }[];
+  categories?: { id: string; name: string; slug: string }[];
 }) {
   void _machines;
   const [topTab, setTopTab] = useState<"shop" | "print-materials" | "hardware">("shop");
@@ -100,7 +102,7 @@ export function InventoryTabs({
       </div>
 
       {topTab === "shop" && (
-        <ShopProductsInventorySection products={shopProducts} />
+        <ShopProductsInventorySection products={shopProducts} categories={categories} />
       )}
 
       {topTab === "print-materials" && (

@@ -47,7 +47,7 @@ export function ProductFormSheet({
   const isEdit = !!product && product.id !== "new";
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"details" | "pricing" | "images" | "materials" | "seo" | "marketing">("details");
+  const [activeTab, setActiveTab] = useState<"details" | "pricing" | "images" | "materials" | "files" | "seo" | "marketing">("details");
 
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -62,6 +62,7 @@ export function ProductFormSheet({
   const [isFeatured, setIsFeatured] = useState(false);
   const [isPOD, setIsPOD] = useState(false);
   const [imagesStr, setImagesStr] = useState("");
+  const [productionFiles, setProductionFiles] = useState<string[]>([]);
   const [metaTitle, setMetaTitle] = useState("");
   const [metaDescription, setMetaDescription] = useState("");
   const [featuredThisWeek, setFeaturedThisWeek] = useState(false);
@@ -109,6 +110,7 @@ export function ProductFormSheet({
       setIsFeatured((product as Record<string, unknown>).isFeatured as boolean ?? false);
       setIsPOD(product.isPOD ?? false);
       setImagesStr(Array.isArray(product.images) ? product.images.join("\n") : "");
+      setProductionFiles(Array.isArray(product.productionFiles) ? product.productionFiles : []);
       setMetaTitle((product as any).metaTitle ?? "");
       setMetaDescription((product as any).metaDescription ?? "");
       setFeaturedThisWeek((product as any).featuredThisWeek ?? false);
@@ -152,6 +154,7 @@ export function ProductFormSheet({
       setIsFeatured(false);
       setIsPOD(false);
       setImagesStr("");
+      setProductionFiles([]);
       setMetaTitle("");
       setMetaDescription("");
       setFeaturedThisWeek(false);
@@ -239,6 +242,7 @@ export function ProductFormSheet({
       exportToSnapchat,
       exportToYoutube,
       ...(images != null && { images }),
+      productionFiles,
     };
     try {
       if (isEdit && product && product.id !== "new") {
@@ -282,6 +286,7 @@ export function ProductFormSheet({
     { id: "pricing" as const, label: "Pricing" },
     { id: "images" as const, label: "Images" },
     { id: "materials" as const, label: "Materials" },
+    { id: "files" as const, label: "Production Files" },
     { id: "seo" as const, label: "SEO" },
     { id: "marketing" as const, label: "Marketing" },
   ];
@@ -558,6 +563,56 @@ export function ProductFormSheet({
               <ProductMaterialSelector 
                 productId={isEdit && product && product.id !== "new" ? product.id : ""} 
               />
+            )}
+
+            {activeTab === "files" && (
+              <div className="space-y-6">
+                <div className="bg-muted/30 border rounded-lg p-4">
+                  <h3 className="text-sm font-semibold mb-2">Internal Production Files</h3>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    Attach source files (STL, OBJ, PDF, etc.) for internal production use. 
+                    These are not shown to customers.
+                  </p>
+                  
+                  <div className="space-y-4">
+                    <FileUploader
+                      context="ADMIN_CATALOGUE_PRODUCTION"
+                      accept={productType === "LARGE_FORMAT" ? [".pdf", ".ai", ".eps", ".tiff"] : [".stl", ".obj", ".3mf", ".step"]}
+                      maxFiles={5}
+                      onUploadComplete={(files) => {
+                        const urls = files.map(f => f.publicUrl);
+                        setProductionFiles(prev => [...new Set([...prev, ...urls])]);
+                      }}
+                    />
+                    
+                    {productionFiles.length > 0 && (
+                      <div className="space-y-2 mt-4">
+                        <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Attached Files</Label>
+                        <div className="grid gap-2">
+                          {productionFiles.map((url, i) => (
+                            <div key={i} className="flex items-center justify-between p-2 bg-white border rounded text-xs">
+                              <span className="truncate flex-1 mr-2">{url.split('/').pop()}</span>
+                              <div className="flex items-center gap-1">
+                                <Button variant="ghost" size="sm" className="h-7 px-2 text-primary" asChild>
+                                  <a href={url} target="_blank" rel="noopener noreferrer">View</a>
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => setProductionFiles(prev => prev.filter((_, idx) => idx !== i))}
+                                >
+                                  Remove
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             )}
 
             {activeTab === "seo" && (

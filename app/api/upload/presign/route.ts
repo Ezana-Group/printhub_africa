@@ -57,6 +57,11 @@ const CONTEXT_TO_FOLDER: Record<string, { folder: UploadFolder; bucket: "private
   USER_AVATAR: { folder: "avatars", bucket: "public" },
   STAFF_AVATAR: { folder: "avatars", bucket: "public" },
   STAFF_PROFILE_PHOTO: { folder: "staff-profile", bucket: "public" },
+  ADMIN_CATALOGUE_PRODUCTION: { folder: "catalogue/production", bucket: "private" },
+  ADMIN_3D_CALC: { folder: "designs/3d", bucket: "private" },
+  ADMIN_LF_CALC: { folder: "designs/large-format", bucket: "private" },
+  SALES_QUOTE_3D: { folder: "designs/3d", bucket: "private" },
+  SALES_QUOTE_LF: { folder: "designs/large-format", bucket: "private" },
 };
 
 const CONTEXTS = [
@@ -76,6 +81,11 @@ const CONTEXTS = [
   "USER_AVATAR",
   "STAFF_AVATAR",
   "STAFF_PROFILE_PHOTO",
+  "ADMIN_CATALOGUE_PRODUCTION",
+  "ADMIN_3D_CALC",
+  "ADMIN_LF_CALC",
+  "SALES_QUOTE_3D",
+  "SALES_QUOTE_LF",
 ] as const;
 
 const schema = z.object({

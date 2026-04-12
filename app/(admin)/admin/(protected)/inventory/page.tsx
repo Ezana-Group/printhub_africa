@@ -18,7 +18,7 @@ export default async function AdminInventoryPage() {
     inventoryHardwareItem: { findMany: (args: object) => Promise<HardwareRow[]> };
     printerAsset: { findMany: (args: object) => Promise<Array<{ id: string; name: string }>> };
   };
-  const [shopProducts, lfStockItems, machines, consumables, hardwareItems, printerAssets] = await Promise.all([
+  const [shopProducts, lfStockItems, machines, consumables, hardwareItems, printerAssets, categories] = await Promise.all([
     prisma.product.findMany({
       orderBy: { name: "asc" },
       select: {
@@ -76,6 +76,11 @@ export default async function AdminInventoryPage() {
         isActive: true,
       },
       orderBy: { name: "asc" },
+    }),
+    prisma.category.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: "asc" },
+      select: { id: true, name: true, slug: true },
     }),
   ]);
 
@@ -203,6 +208,7 @@ export default async function AdminInventoryPage() {
       </div>
 
       <InventoryTabs
+        categories={categories}
         shopProducts={serializeDecimal(shopProductsSerialized)}
         lfStockItems={serializeDecimal(lfItemsSerialized)}
         machines={serializeDecimal(machinesSerialized)}

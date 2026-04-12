@@ -63,6 +63,7 @@ export type ProductRow = {
   isActive: boolean;
   isPOD: boolean;
   images: string[];
+  productionFiles: string[];
   createdAt: Date;
   _variantsCount?: number;
 };
