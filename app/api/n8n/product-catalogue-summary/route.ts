@@ -12,7 +12,17 @@ export async function GET(req: NextRequest) {
 
   try {
     const products = await prisma.product.findMany({
-      where: { isActive: true },
+      where: { 
+        isActive: true,
+        OR: [
+          { exportToMeta: true },
+          { exportToTiktok: true },
+          { exportToLinkedin: true },
+          { exportToX: true },
+          { exportToTelegram: true },
+          { exportToYoutube: true }
+        ]
+      },
       select: {
         id: true,
         name: true,
@@ -21,9 +31,25 @@ export async function GET(req: NextRequest) {
         category: { select: { name: true } },
         shortDescription: true,
         availability: true,
+        exportToMeta: true,
+        exportToTiktok: true,
+        exportToLinkedin: true,
+        exportToX: true,
+        exportToTelegram: true,
+        exportToYoutube: true,
+        productImages: {
+          where: { isPrimary: true },
+          select: { storageKey: true },
+          take: 1
+        },
+        videos: {
+          where: { status: "APPROVED" },
+          select: { videoUrl: true },
+          take: 1
+        }
       },
-      orderBy: { soldThisMonth: "desc" },
-      take: 20,
+      orderBy: { createdAt: "desc" },
+      take: 5,
     });
 
     return NextResponse.json({
@@ -35,6 +61,16 @@ export async function GET(req: NextRequest) {
         basePriceKes: Number(p.basePrice),
         availability: p.availability,
         shortDescription: p.shortDescription ?? "",
+        exportFlags: {
+          meta: p.exportToMeta,
+          tiktok: p.exportToTiktok,
+          linkedin: p.exportToLinkedin,
+          twitter: p.exportToX,
+          telegram: p.exportToTelegram,
+          youtube: p.exportToYoutube
+        },
+        image_key: p.productImages[0]?.storageKey ?? null,
+        video_url: p.videos[0]?.videoUrl ?? null
       })),
       total: products.length,
     });

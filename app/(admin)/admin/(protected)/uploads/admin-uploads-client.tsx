@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { File, ImageIcon, Box, Download, ExternalLink } from "lucide-react";
+import { File, ImageIcon, Box, Download, ExternalLink, Eye, Trash2 } from "lucide-react";
 
 type UploadWithRelations = {
   id: string;
@@ -60,6 +60,25 @@ export function AdminUploadsClient({
     statusFilter === "all"
       ? uploads
       : uploads.filter((u) => u.status === statusFilter);
+
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this upload? This action cannot be undone.")) return;
+    setIsDeleting(id);
+    try {
+      const res = await fetch(`/api/admin/uploads/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        window.location.reload();
+      } else {
+        alert("Failed to delete upload.");
+      }
+    } catch (err) {
+      alert("Error deleting upload.");
+    } finally {
+      setIsDeleting(null);
+    }
+  };
 
   const handleDownload = async (id: string) => {
     const res = await fetch(`/api/upload/${id}/download`);
@@ -167,10 +186,23 @@ export function AdminUploadsClient({
                         size="sm"
                         className="rounded-lg h-8"
                         onClick={() => handleDownload(u.id)}
+                        disabled={isDeleting === u.id}
                       >
                         <Download className="h-4 w-4 mr-1" />
                         Download
                       </Button>
+                      {u.mimeType.startsWith("image/") && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="rounded-lg h-8"
+                          onClick={() => handleDownload(u.id)}
+                          disabled={isDeleting === u.id}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
+                      )}
                       {u.quote && (
                         <Button variant="ghost" size="sm" className="rounded-lg h-8" asChild>
                           <Link href={`/admin/quotes/${u.quote.id}`}>
@@ -179,6 +211,15 @@ export function AdminUploadsClient({
                           </Link>
                         </Button>
                       )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="rounded-lg h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => handleDelete(u.id)}
+                        disabled={isDeleting === u.id}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </td>
                 </tr>

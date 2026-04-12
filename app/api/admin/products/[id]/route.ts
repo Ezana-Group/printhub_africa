@@ -22,6 +22,7 @@ const updateSchema = z.object({
   minOrderQty: z.number().int().min(1).optional(),
   maxOrderQty: z.number().int().min(1).nullable().optional(),
   images: z.array(z.string()).optional(),
+  productionFiles: z.array(z.string()).optional(),
   materials: z.array(z.string()).optional(),
   colors: z.array(z.string()).optional(),
   isActive: z.boolean().optional(),
@@ -123,6 +124,7 @@ export async function PATCH(
     if (data.minOrderQty !== undefined) updateData.minOrderQty = data.minOrderQty;
     if (data.maxOrderQty !== undefined) updateData.maxOrderQty = data.maxOrderQty;
     if (data.images !== undefined) updateData.images = data.images;
+    if (data.productionFiles !== undefined) updateData.productionFiles = data.productionFiles;
     if (data.materials !== undefined) updateData.materials = data.materials;
     if (data.colors !== undefined) updateData.colors = data.colors;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;

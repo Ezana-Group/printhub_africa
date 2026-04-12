@@ -67,7 +67,7 @@
           "parameters": [
             {
               "name": "body",
-              "value": "={{ JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: 'You are a marketing specialist for PrintHub Africa. Write a single SMS (max 160 chars) highlighting these deals. Use professional marketing tone.' }, { role: 'user', content: 'Deals: ' + JSON.stringify($json) }] }) }}"
+              "value": "={{ JSON.stringify({ model: 'claude-opus-4-6-mini', messages: [{ role: 'system', content: 'You are a marketing specialist for PrintHub Africa. Write a single SMS (max 160 chars) highlighting these deals. Use professional marketing tone.' }, { role: 'user', content: 'Deals: ' + JSON.stringify($json) }] }) }}"
             }
           ]
         }

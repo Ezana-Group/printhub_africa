@@ -493,7 +493,7 @@
         "parameters": {
           "url": "https://api.openai.com/v1/chat/completions",
           "method": "POST",
-          "bodyParametersJson": "={ \"model\": \"gpt-4o-mini\", \"messages\": [{ \"role\": \"system\", \"content\": \"Write a fresh Google Maps post...\" }, { \"role\": \"user\", \"content\": \"Product: {{ $json.name }}\" }] }"
+          "bodyParametersJson": "={ \"model\": \"claude-opus-4-6-mini\", \"messages\": [{ \"role\": \"system\", \"content\": \"Write a fresh Google Maps post...\" }, { \"role\": \"user\", \"content\": \"Product: {{ $json.name }}\" }] }"
         },
         "name": "GPT-4o: Maps Copy",
         "type": "n8n-nodes-base.httpRequest",
@@ -1268,7 +1268,7 @@
             "parameters": [
               {
                 "name": "body",
-                "value": "={{ JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: 'You are a marketing specialist for PrintHub Africa. Write a single SMS (max 160 chars) highlighting these deals. Use professional marketing tone.' }, { role: 'user', content: 'Deals: ' + JSON.stringify($json) }] }) }}"
+                "value": "={{ JSON.stringify({ model: 'claude-opus-4-6-mini', messages: [{ role: 'system', content: 'You are a marketing specialist for PrintHub Africa. Write a single SMS (max 160 chars) highlighting these deals. Use professional marketing tone.' }, { role: 'user', content: 'Deals: ' + JSON.stringify($json) }] }) }}"
               }
             ]
           }
@@ -1481,7 +1481,7 @@
             "parameters": [
               {
                 "name": "body",
-                "value": "={{ JSON.stringify({ model: 'gpt-4o', messages: [{ role: 'system', content: 'Create a detailed blog outline.' }, { role: 'user', content: $json.choices[0].message.content }] }) }}"
+                "value": "={{ JSON.stringify({ model: 'claude-opus-4-6', messages: [{ role: 'system', content: 'Create a detailed blog outline.' }, { role: 'user', content: $json.choices[0].message.content }] }) }}"
               }
             ]
           }
@@ -1516,7 +1516,7 @@
             "parameters": [
               {
                 "name": "body",
-                "value": "={{ JSON.stringify({ model: 'claude-3-opus-20240229', max_tokens: 4000, messages: [{ role: 'user', content: 'Write a 1500 word SEO blog post based on this outline: ' + $json.choices[0].message.content }] }) }}"
+                "value": "={{ JSON.stringify({ model: 'claude-opus-4-6', max_tokens: 4000, messages: [{ role: 'user', content: 'Write a 1500 word SEO blog post based on this outline: ' + $json.choices[0].message.content }] }) }}"
               }
             ]
           }

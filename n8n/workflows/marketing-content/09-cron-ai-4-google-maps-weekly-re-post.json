@@ -50,7 +50,7 @@
       "parameters": {
         "url": "https://api.openai.com/v1/chat/completions",
         "method": "POST",
-        "bodyParametersJson": "={ \"model\": \"gpt-4o-mini\", \"messages\": [{ \"role\": \"system\", \"content\": \"Write a fresh Google Maps post...\" }, { \"role\": \"user\", \"content\": \"Product: {{ $json.name }}\" }] }"
+        "bodyParametersJson": "={ \"model\": \"claude-opus-4-6-mini\", \"messages\": [{ \"role\": \"system\", \"content\": \"Write a fresh Google Maps post...\" }, { \"role\": \"user\", \"content\": \"Product: {{ $json.name }}\" }] }"
       },
       "name": "GPT-4o: Maps Copy",
       "type": "n8n-nodes-base.httpRequest",

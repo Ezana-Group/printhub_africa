@@ -16,7 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Clock, CheckCircle2, AlertCircle } from "lucide-react";
+import { Clock, CheckCircle2, AlertCircle, FileText, Box, Download } from "lucide-react";
 
 interface OrderDetail {
   id: string;
@@ -36,8 +36,13 @@ interface OrderDetail {
   items: Array<{
     id: string;
     quantity: number;
-    unitPrice: number;
-    product: { name: string; slug: string; images: string[] } | null;
+    product: { name: string; slug: string; images: string[]; productionFiles?: string[] } | null;
+    uploadedFile?: {
+      id: string;
+      originalName: string;
+      filename: string;
+      url?: string;
+    } | null;
   }>;
   shippingAddress: { fullName: string; email: string; phone: string; street: string; city: string; county: string; postalCode?: string } | null;
   delivery?: {
@@ -139,11 +144,43 @@ export default function OrderDetailPage() {
             <h2 className="font-semibold text-slate-900">Items</h2>
             <ul className="mt-4 space-y-3">
               {order.items.map((item) => (
-                <li key={item.id} className="flex justify-between text-sm">
-                  <span>
-                    {item.product?.name ?? "Product"} × {item.quantity}
-                  </span>
-                  <span>{formatPrice(item.unitPrice * item.quantity)}</span>
+                <li key={item.id} className="flex flex-col border-b last:border-0 pb-4 pt-2 first:pt-0">
+                  <div className="flex justify-between text-sm">
+                    <span className="font-medium text-slate-800">
+                      {item.product?.name ?? "Custom Product"} <span className="text-slate-500 font-normal">× {item.quantity}</span>
+                    </span>
+                    <span className="font-semibold text-slate-900">{formatPrice(item.unitPrice * item.quantity)}</span>
+                  </div>
+                  {(item.uploadedFile || (item.product?.productionFiles && item.product.productionFiles.length > 0)) && (
+                    <div className="mt-2 space-y-2 pl-2 border-l-2 border-slate-100">
+                      {item.uploadedFile && (
+                        <div className="flex items-center justify-between text-sm rounded bg-slate-50 p-2">
+                          <div className="flex items-center gap-2 text-slate-700 min-w-0">
+                            <FileText className="w-4 h-4 shrink-0 text-slate-400" />
+                            <span className="truncate" title={item.uploadedFile.originalName}>
+                              {item.uploadedFile.originalName || item.uploadedFile.filename}
+                            </span>
+                          </div>
+                          <a href={item.uploadedFile.url || `/api/upload/${item.uploadedFile.id}/download?redirect=1`} target="_blank" rel="noopener noreferrer" className="ml-4 shrink-0 text-primary hover:underline flex items-center gap-1 font-medium">
+                            <Download className="w-3.5 h-3.5" /> Download
+                          </a>
+                        </div>
+                      )}
+                      {item.product?.productionFiles?.map((url, i) => (
+                        <div key={i} className="flex items-center justify-between text-sm rounded bg-indigo-50/50 p-2 border border-indigo-100">
+                          <div className="flex items-center gap-2 text-indigo-800 min-w-0">
+                            <Box className="w-4 h-4 shrink-0 text-indigo-400" />
+                            <span className="truncate" title={url.split('/').pop()}>
+                              {url.split('/').pop()}
+                            </span>
+                          </div>
+                          <a href={url} target="_blank" rel="noopener noreferrer" className="ml-4 shrink-0 text-primary hover:underline flex items-center gap-1 font-medium">
+                            <Download className="w-3.5 h-3.5" /> Download
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

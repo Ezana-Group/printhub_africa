@@ -292,7 +292,7 @@
             }
           ]
         },
-        "bodyParametersJson": "={ \"model\": \"gpt-4o\", \"messages\": [{ \"role\": \"system\", \"content\": \"You write Reddit posts for PrintHub Africa...\" }, { \"role\": \"user\", \"content\": \"Write a Reddit post about {{ $json.productName }} for r/Kenya. Return JSON { title, body }.\" }] }"
+        "bodyParametersJson": "={ \"model\": \"claude-opus-4-6\", \"messages\": [{ \"role\": \"system\", \"content\": \"You write Reddit posts for PrintHub Africa...\" }, { \"role\": \"user\", \"content\": \"Write a Reddit post about {{ $json.productName }} for r/Kenya. Return JSON { title, body }.\" }] }"
       },
       "name": "GPT-4o: Reddit Content",
       "type": "n8n-nodes-base.httpRequest",

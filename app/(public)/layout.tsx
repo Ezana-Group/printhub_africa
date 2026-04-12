@@ -77,6 +77,12 @@ export default async function PublicLayout({
         visible={business.whatsappFloatingButton}
       />
       <CookieBanner />
+      <Script
+        defer
+        data-domain="printhub.africa"
+        src="https://analytics.printhub.africa/js/script.js"
+        strategy="lazyOnload"
+      />
       <TawkTo />
     </>
   );

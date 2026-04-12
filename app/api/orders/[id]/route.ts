@@ -27,7 +27,7 @@ export async function GET(
       include: {
         items: {
           include: {
-            product: { select: { name: true, slug: true, images: true } },
+            product: { select: { name: true, slug: true, images: true, productionFiles: true } },
           },
         },
         shippingAddress: true,
@@ -38,6 +38,14 @@ export async function GET(
       },
     });
     if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const fileIds = order.items.map((item) => item.uploadedFileId).filter(Boolean) as string[];
+    let uploadedFiles: any[] = [];
+    if (fileIds.length > 0) {
+      uploadedFiles = await prisma.uploadedFile.findMany({
+        where: { id: { in: fileIds } },
+      });
+    }
     return NextResponse.json({
       ...order,
       subtotal: Number(order.subtotal),
@@ -52,6 +60,7 @@ export async function GET(
         ...i,
         unitPrice: Number(i.unitPrice),
         product: i.product,
+        uploadedFile: i.uploadedFileId ? uploadedFiles.find((uf) => uf.id === i.uploadedFileId) || null : null,
       })),
       delivery: order.delivery
         ? {

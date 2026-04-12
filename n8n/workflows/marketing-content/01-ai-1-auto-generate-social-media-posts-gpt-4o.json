@@ -71,9 +71,9 @@
             }
           ]
         },
-        "bodyParametersJson": "={ \"model\": \"gpt-4o\", \"messages\": [{ \"role\": \"system\", \"content\": \"You are a social media and advertising copywriter for PrintHub Africa. Your style is punchy, engaging, and high-energy. You use emojis effectively. You understand Nairobi's trends and slang (Sheng) where appropriate for Gen Z audiences, but remain professional for LinkedIn. You always include targeted hashtags. British English only. No Americanisms.\" }, { \"role\": \"user\", \"content\": \"Create short, punchy social media posts for this product: {{ $json.name }}. Description: {{ $json.description }}. Category: {{ $json.category }}. Write unique versions for: 1. Instagram (visual, emoji-heavy), 2. TikTok (hook-driven, trendy), 3. LinkedIn (professional, B2B value). Return valid JSON: { 'instagram': '...', 'tiktok': '...', 'linkedin': '...' }\" }] }"
+        "bodyParametersJson": "={ \"model\": \"claude-opus-4-6\", \"messages\": [{ \"role\": \"system\", \"content\": \"You are a professional social media strategist for PrintHub Africa, Nairobi. Tone: punchy, high-energy. British English. \\n\\nPLATFORM ROUTING (via exportFlags):\\n- exportMeta -> FB + IG\\n- exportTiktok -> TikTok\\n- exportLinkedin -> LinkedIn\\n- exportX -> Twitter\\n- exportTelegram -> Telegram\\n- exportYoutube (if video_url present) -> YT Community\\n\\nIMAGE FORMAT: {{$env.R2_PUBLIC_URL}}/products/images/{image_key}. \\n\\nOUTPUT: JSON with fields (instagram, facebook, tiktok, linkedin, twitter, telegram, youtube, video). Default to IG/FB/Twitter if flags null.\" }, { \"role\": \"user\", \"content\": \"Generate posts for product: {{ $json.name }}. Description: {{ $json.description }}. exportFlags: {{ JSON.stringify($json.exportFlags) }}. primary_image_key: {{ $json.image_key }}. video_url: {{ $json.video_url || 'null' }}.\" }] }"
       },
-      "name": "GPT-4o: Generate Social Posts",
+      "name": "Claude: Generate Social Posts",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [

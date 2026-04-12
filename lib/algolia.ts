@@ -1,17 +1,17 @@
 /**
- * Algolia search for products (server-side).
- * Env: NEXT_PUBLIC_ALGOLIA_APP_ID, NEXT_PUBLIC_ALGOLIA_SEARCH_KEY, ALGOLIA_INDEX_NAME.
- * When Algolia is disabled or not configured, callers should fall back to DB search.
+ * Meilisearch search for products (server-side).
+ * Env: MEILISEARCH_URL, MEILISEARCH_KEY, ALGOLIA_INDEX_NAME.
+ * When Meilisearch is disabled or not configured, callers should fall back to DB search.
  */
 
-import { algoliasearch } from "algoliasearch";
+import { MeiliSearch } from "meilisearch";
 
-const appId = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID;
-const searchKey = process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_KEY;
+const host = process.env.MEILISEARCH_URL;
+const apiKey = process.env.MEILISEARCH_KEY || process.env.MEILI_MASTER_KEY;
 const indexName = process.env.ALGOLIA_INDEX_NAME ?? process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME ?? "products";
 
 export function isAlgoliaConfigured(): boolean {
-  return Boolean(appId && searchKey && indexName);
+  return Boolean(host && apiKey && indexName);
 }
 
 export interface AlgoliaSearchProductsResult {
@@ -20,7 +20,7 @@ export interface AlgoliaSearchProductsResult {
 }
 
 /**
- * Search products in Algolia. Returns hit objectIDs (product ids) and total count.
+ * Search products in Meilisearch. Returns hit objectIDs (product ids) and total count.
  * objectID in the index should be the product id.
  */
 export async function searchProducts(
@@ -32,32 +32,34 @@ export async function searchProducts(
   const limit = Math.min(100, Math.max(1, options?.limit ?? 12));
 
   try {
-    const client = algoliasearch(appId!, searchKey!);
-    const res = await client.searchSingleIndex<{ objectID?: string }>({
-      indexName,
-      searchParams: {
-        query,
-        page: page - 1,
-        hitsPerPage: limit,
-        attributesToRetrieve: ["objectID"],
-      },
+    const client = new MeiliSearch({ host: host!, apiKey: apiKey! });
+    const index = client.index(indexName);
+
+    const res = await index.search(query, {
+      hitsPerPage: limit,
+      page: page,
+      attributesToRetrieve: ["id", "objectID"],
     });
-    const hits = (res.hits ?? []).map((h) => ({ objectID: h.objectID ?? "" }));
-    return { hits, nbHits: res.nbHits ?? 0 };
+
+    const hits = res.hits.map((h) => ({ objectID: h.id ?? h.objectID ?? "" }));
+    return { hits, nbHits: res.estimatedTotalHits ?? res.totalHits ?? 0 };
   } catch (e) {
-    console.error("Algolia search error:", e);
+    console.error("Meilisearch search error:", e);
     return { hits: [], nbHits: 0 };
   }
 }
 
 /**
- * Push products to Algolia index.
+ * Push products to Meilisearch index.
  */
 export async function indexProducts(products: any[]) {
   if (!isAlgoliaConfigured()) return;
-  const client = algoliasearch(appId!, process.env.ALGOLIA_ADMIN_KEY!); // Admin key required for indexing
+  const client = new MeiliSearch({ host: host!, apiKey: apiKey! });
+  const index = client.index(indexName);
+
   try {
     const records = products.map((p) => ({
+      id: p.id,
       objectID: p.id,
       name: p.name,
       slug: p.slug,
@@ -73,12 +75,9 @@ export async function indexProducts(products: any[]) {
       updatedAt: p.updatedAt,
     }));
 
-    await client.saveObjects({
-      indexName,
-      objects: records,
-    });
+    await index.addDocuments(records, { primaryKey: "id" });
   } catch (e) {
-    console.error("Algolia indexing error:", e);
+    console.error("Meilisearch indexing error:", e);
     throw e;
   }
 }

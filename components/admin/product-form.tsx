@@ -38,6 +38,7 @@ interface ProductFormProps {
     minOrderQty: number;
     maxOrderQty: number | null;
     images: string[];
+    productionFiles?: string[];
     materials: string[];
     colors: string[];
     isActive: boolean;
@@ -107,6 +108,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
   const [minOrderQty, setMinOrderQty] = useState(String(product?.minOrderQty ?? 1));
   const [maxOrderQty, setMaxOrderQty] = useState(product?.maxOrderQty != null ? String(product.maxOrderQty) : "");
   const [imagesStr, setImagesStr] = useState((product?.images ?? []).join("\n"));
+  const [productionFiles, setProductionFiles] = useState<string[]>(product?.productionFiles ?? []);
   const [materialsStr, setMaterialsStr] = useState((product?.materials ?? []).join(", "));
   const [colorsStr, setColorsStr] = useState((product?.colors ?? []).join(", "));
   const [isActive, setIsActive] = useState(product?.isActive ?? true);
@@ -239,6 +241,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       metaTitle: metaTitle || undefined,
       metaDescription: metaDescription || undefined,
       ...exportSettings,
+      productionFiles,
       ...(images != null && { images }),
     };
     try {
@@ -479,6 +482,55 @@ export function ProductForm({ categories, product }: ProductFormProps) {
               </div>
             </>
           )}
+
+          <div className="pt-4 border-t border-slate-200">
+            <h3 className="text-lg font-medium mb-4">Production Files</h3>
+            <p className="text-sm text-slate-500 mb-4">
+              Upload STL, OBJ, STEP, or PDF files. These files are kept private and are only shown to staff when fulfilling orders.
+            </p>
+            <FileUploader
+              context="ADMIN_CATALOGUE_PRODUCTION"
+              accept={[
+                "application/octet-stream",
+                ".stl",
+                ".3mf",
+                ".obj",
+                ".step",
+                ".stp",
+                "application/pdf",
+              ]}
+              maxFiles={10}
+              onUploadComplete={(files) => {
+                const newUrls = files.map((f) => f.publicUrl).filter(Boolean) as string[];
+                setProductionFiles((prev) => [...prev, ...newUrls]);
+              }}
+            />
+            {productionFiles.length > 0 && (
+              <div className="mt-4 space-y-2">
+                <h4 className="text-sm font-medium">Uploaded Files:</h4>
+                <ul className="space-y-1">
+                  {productionFiles.map((url: string, i: number) => (
+                    <li key={i} className="flex flex-col gap-1 p-2 border rounded-md">
+                      <span className="text-sm text-slate-600 truncate">{url.split('/').pop()}</span>
+                      <div className="flex gap-2 text-xs">
+                        <a href={url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Download</a>
+                        <button
+                          type="button"
+                          className="text-destructive hover:underline"
+                          onClick={() => {
+                            setProductionFiles((prev) => prev.filter((_, idx) => idx !== i));
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
           <div>
             <Label htmlFor="materials">Materials (comma-separated)</Label>
             <Input
