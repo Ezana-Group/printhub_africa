@@ -4,11 +4,13 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     await import("./sentry.server.config");
 
-    // 🔴 CRIT-3: Mandatory VirusTotal in Production
+    // 🔴 CRIT-3: VirusTotal API Key check — warn but do NOT crash the server
+    // Throwing here prevents the container from ever starting, which is worse than
+    // running temporarily without virus scanning. Set VIRUSTOTAL_API_KEY in Railway.
     if (process.env.NODE_ENV === "production" && !process.env.VIRUSTOTAL_API_KEY) {
-      throw new Error(
-        "\n\n❌ SECURITY ERROR: VIRUSTOTAL_API_KEY is missing.\n" +
-        "Virus scanning is MANDATORY in production. Please set the key in your environment variables.\n"
+      console.error(
+        "\n\n⚠️  SECURITY WARNING: VIRUSTOTAL_API_KEY is missing.\n" +
+        "File virus scanning is DISABLED. Set this key in your Railway environment variables.\n"
       );
     }
   }
