@@ -66,7 +66,9 @@ const updateSchema = z.object({
   sortOrder: z.number().int().optional(),
   metaTitle: z.string().max(200).optional().nullable(),
   metaDescription: z.string().max(500).optional().nullable(),
+  productionFiles: z.array(z.string()).optional(),
   internalNotes: z.string().optional().nullable(),
+
 });
 
 export async function PATCH(
@@ -138,7 +140,9 @@ export async function PATCH(
           comparePrice: item.priceOverrideKes && item.basePriceKes ? item.basePriceKes : null,
           isActive: true,
           images: item.photos.map(p => p.url),
+          productionFiles: item.productionFiles,
           tags: item.tags,
+
         }
       });
       revalidateTag("products");

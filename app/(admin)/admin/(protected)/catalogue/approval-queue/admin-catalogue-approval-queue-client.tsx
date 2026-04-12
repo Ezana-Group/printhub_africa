@@ -55,7 +55,9 @@ interface CatalogueItem {
   archivedBy?: { name: string | null; email: string | null } | null;
   rejectedBy?: { name: string | null; email: string | null } | null;
   photos: { id: string; url: string; isPrimary: boolean }[];
+  productionFiles?: string[];
   isImport?: boolean; // Added flag from API
+
 }
 
 export function AdminCatalogueApprovalQueueClient() {
@@ -334,7 +336,9 @@ export function AdminCatalogueApprovalQueueClient() {
               <th className="p-4 font-semibold text-slate-700">Item Details</th>
               <th className="p-4 font-semibold text-slate-700">Source</th>
               <th className="p-4 font-semibold text-slate-700">Submitted By</th>
+              <th className="p-4 font-semibold text-slate-700 text-center">Files</th>
               <th className="p-4 font-semibold text-slate-700">Date</th>
+
               <th className="p-4 font-semibold text-slate-700 text-right">Actions</th>
             </tr>
           </thead>
@@ -406,7 +410,34 @@ export function AdminCatalogueApprovalQueueClient() {
                         <span className="text-[10px] text-slate-400">Collaborator</span>
                       </div>
                     </td>
+                    <td className="p-4 text-center">
+                      {(item.productionFiles?.length ?? 0) > 0 ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-orange-50 text-orange-600 hover:bg-orange-100 transition-colors">
+                              <Download className="h-3.5 w-3.5" />
+                              <span className="text-[10px] font-bold">{item.productionFiles?.length}</span>
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="center" className="w-56">
+                            <p className="px-2 py-1.5 text-[10px] font-bold uppercase text-slate-400 tracking-wider">Download Files</p>
+                            <DropdownMenuSeparator />
+                            {item.productionFiles?.map((url, idx) => (
+                              <DropdownMenuItem key={idx} asChild>
+                                <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center cursor-pointer">
+                                  <ExternalLink className="mr-2 h-3 w-3" />
+                                  <span className="truncate flex-1">{url.split('/').pop()}</span>
+                                </a>
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : (
+                        <span className="text-slate-300">-</span>
+                      )}
+                    </td>
                     <td className="p-4">
+
                       <div className="flex flex-col">
                         <span className="text-xs text-slate-700">{format(new Date(item.updatedAt || item.createdAt), "MMM d, yyyy")}</span>
                         <span className="text-[10px] text-slate-400">{format(new Date(item.updatedAt || item.createdAt), "HH:mm")}</span>

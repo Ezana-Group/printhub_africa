@@ -455,8 +455,12 @@ export function AdminCatalogueReviewClient({ importItem, categories }: AdminCata
                 <CardContent className="pt-6">
                   <h3 className="text-lg font-medium mb-4">Production Files</h3>
                   <p className="text-sm text-slate-500 mb-4">
-                    Upload STL, OBJ, STEP, or PDF files. These files are kept private and are only shown to staff when fulfilling orders.
+                    {categories.find(c => c.id === formData.categoryId)?.name?.toLowerCase().includes("3d") || categories.find(c => c.id === formData.categoryId)?.name?.toLowerCase().includes("print") 
+                      ? "Attach STL, OBJ, 3MF, or STEP files for 3D printing."
+                      : "Attach PDF, AI, PSD, or SVG files for large format printing."}
+                    {" "}These files are kept private and are only shown to staff when fulfilling orders.
                   </p>
+
                   <FileUploader
                     context="ADMIN_CATALOGUE_PRODUCTION"
                     accept={[

@@ -1,5 +1,5 @@
 {
-  "name": "AI-11 — Extended Platform Posting",
+  "name": "AI-11 \u2014 Extended Platform Posting",
   "nodes": [
     {
       "parameters": {
@@ -194,7 +194,7 @@
             }
           ]
         },
-        "bodyParametersJson": "={ \"title\": \"{{ $node['Execute Trigger'].json.productName }} — PrintHub Africa\", \"description\": \"{{ $node['Execute Trigger'].json.shortDescription }}\\n\\nProfessional quality. Fast turnaround.\\nOrder online: printhub.africa\\nWhatsApp: +254XXXXXXXXX\\nNairobi CBD and delivery available.\", \"price\": {{ $node['Execute Trigger'].json.price }}, \"location\": \"Nairobi\", \"phone\": \"{{ $env.BUSINESS_PHONE }}\" }"
+        "bodyParametersJson": "={ \"title\": \"{{ $node['Execute Trigger'].json.productName }} \u2014 PrintHub Africa\", \"description\": \"{{ $node['Execute Trigger'].json.shortDescription }}\\n\\nProfessional quality. Fast turnaround.\\nOrder online: printhub.africa\\nWhatsApp: +254XXXXXXXXX\\nNairobi CBD and delivery available.\", \"price\": {{ $node['Execute Trigger'].json.price }}, \"location\": \"Nairobi\", \"phone\": \"{{ $env.BUSINESS_PHONE }}\" }"
       },
       "name": "PigiaMe: Post",
       "type": "n8n-nodes-base.httpRequest",
@@ -250,7 +250,7 @@
             }
           ]
         },
-        "bodyParametersJson": "={ \"ad\": { \"title\": \"{{ $node['Execute Trigger'].json.productName }} | PrintHub Africa | Nairobi\", \"description\": \"{{ $node['Execute Trigger'].json.description }}\\n\\n✅ Professional quality\\n✅ Fast turnaround\\n✅ Delivery available in Nairobi\\n🌐 printhub.africa\\n📱 WhatsApp: +254XXXXXXXXX\", \"price\": {{ $node['Execute Trigger'].json.price }}, \"currency\": \"KES\", \"location\": { \"city_id\": 1, \"region_id\": 1 }, \"phone_hidden\": false } }"
+        "bodyParametersJson": "={ \"ad\": { \"title\": \"{{ $node['Execute Trigger'].json.productName }} | PrintHub Africa | Nairobi\", \"description\": \"{{ $node['Execute Trigger'].json.description }}\\n\\n\u2705 Professional quality\\n\u2705 Fast turnaround\\n\u2705 Delivery available in Nairobi\\n\ud83c\udf10 printhub.africa\\n\ud83d\udcf1 WhatsApp: +254XXXXXXXXX\", \"price\": {{ $node['Execute Trigger'].json.price }}, \"currency\": \"KES\", \"location\": { \"city_id\": 1, \"region_id\": 1 }, \"phone_hidden\": false } }"
       },
       "name": "OLX: Post",
       "type": "n8n-nodes-base.httpRequest",
@@ -258,63 +258,6 @@
       "position": [
         650,
         700
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "boolean": [
-            {
-              "value1": "={{ $json.exportFlags.reddit }}",
-              "value2": true
-            }
-          ]
-        }
-      },
-      "name": "If Reddit?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
-      "position": [
-        200,
-        850
-      ]
-    },
-    {
-      "parameters": {
-        "url": "https://api.openai.com/v1/chat/completions",
-        "method": "POST",
-        "authentication": "none",
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{$env.OPENAI_API_KEY}}"
-            }
-          ]
-        },
-        "bodyParametersJson": "={ \"model\": \"claude-opus-4-6\", \"messages\": [{ \"role\": \"system\", \"content\": \"You write Reddit posts for PrintHub Africa...\" }, { \"role\": \"user\", \"content\": \"Write a Reddit post about {{ $json.productName }} for r/Kenya. Return JSON { title, body }.\" }] }"
-      },
-      "name": "GPT-4o: Reddit Content",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [
-        450,
-        850
-      ]
-    },
-    {
-      "parameters": {
-        "url": "https://oauth.reddit.com/api/submit",
-        "method": "POST",
-        "authentication": "oAuth2",
-        "bodyParametersJson": "={ \"sr\": \"Kenya\", \"kind\": \"image\", \"title\": \"{{ JSON.parse($json.choices[0].message.content).title }}\", \"url\": \"{{ $node['Execute Trigger'].json.approvedMockupUrl }}\", \"text\": \"{{ JSON.parse($json.choices[0].message.content).body }}\" }"
-      },
-      "name": "Reddit: Post",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.1,
-      "position": [
-        650,
-        850
       ]
     },
     {
@@ -376,44 +319,25 @@
     },
     {
       "parameters": {
-        "conditions": {
-          "boolean": [
-            {
-              "value1": "={{ $json.exportFlags.medium }}",
-              "value2": true
-            }
-          ]
-        }
-      },
-      "name": "If Medium?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
-      "position": [
-        200,
-        1150
-      ]
-    },
-    {
-      "parameters": {
-        "url": "https://api.medium.com/v1/users/{{$env.MEDIUM_USER_ID}}/posts",
+        "url": "{{$env.POSTIZ_BASE_URL}}/api/posts",
         "method": "POST",
         "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer {{$env.MEDIUM_INTEGRATION_TOKEN}}"
+              "value": "Bearer {{$env.POSTIZ_API_KEY}}"
             }
           ]
         },
-        "bodyParametersJson": "={ \"title\": \"{{ JSON.parse($node['Claude: LinkedIn Article'].json.content[0].text).headline }}\", \"contentFormat\": \"html\", \"content\": \"{{ JSON.parse($node['Claude: LinkedIn Article'].json.content[0].text).body_html }}\", \"publishStatus\": \"public\", \"canonicalUrl\": \"https://printhub.africa/shop/{{$json.productSlug}}\" }"
+        "bodyParametersJson": "={ \"post\": {{ JSON.stringify($node['Execute Trigger'].json.postizDraft) }} }"
       },
-      "name": "Medium: Article",
+      "name": "Postiz: Publish All",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        450,
-        1150
+        200,
+        1300
       ]
     }
   ],
@@ -447,17 +371,12 @@
             "index": 0
           },
           {
-            "node": "If Reddit?",
-            "type": "main",
-            "index": 0
-          },
-          {
             "node": "If LinkedIn newsletter?",
             "type": "main",
             "index": 0
           },
           {
-            "node": "If Medium?",
+            "node": "Postiz: Publish All",
             "type": "main",
             "index": 0
           }
@@ -552,28 +471,6 @@
         ]
       ]
     },
-    "If Reddit?": {
-      "main": [
-        [
-          {
-            "node": "GPT-4o: Reddit Content",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "GPT-4o: Reddit Content": {
-      "main": [
-        [
-          {
-            "node": "Reddit: Post",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "If LinkedIn newsletter?": {
       "main": [
         [
@@ -590,17 +487,6 @@
         [
           {
             "node": "LinkedIn: Article",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "If Medium?": {
-      "main": [
-        [
-          {
-            "node": "Medium: Article",
             "type": "main",
             "index": 0
           }

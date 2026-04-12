@@ -67,8 +67,10 @@ export async function GET(req: NextRequest) {
           photos: { orderBy: { sortOrder: "asc" }, take: 1 },
           importedBy: { select: { name: true, email: true } },
           category: { select: { name: true, slug: true } },
+          productionFiles: true, // Type safe way to ensure it's selected if needed, though default
         },
       }),
+
       importWhere.status === "NOT_APPLICABLE" ? [] : prisma.catalogueImportQueue.findMany({
         where: importWhere,
         orderBy: { updatedAt: "desc" },
@@ -108,8 +110,10 @@ export async function GET(req: NextRequest) {
         photos: item.scrapedImageUrls?.length
           ? item.scrapedImageUrls.slice(0, 1).map((url: string) => ({ url, isPrimary: true }))
           : [],
+        productionFiles: item.productionFiles || [],
         isImport: true,
       };
+
     });
 
     const combinedItems = [...catalogueItems, ...normalizedImports].sort((a, b) => 

@@ -22,7 +22,9 @@ export type LFHistoryEntry = {
   profitAmount: number;
   marginPercent: number;
   totalJobTimeHours: number;
+  fileUrl?: string;
   createdAt: string;
+
 };
 
 export async function GET(req: Request) {
@@ -81,7 +83,9 @@ export async function POST(req: Request) {
       profitAmount: Number(body.profitAmount) || 0,
       marginPercent: Number(body.marginPercent) || 0,
       totalJobTimeHours: Number(body.totalJobTimeHours) || 0,
+      fileUrl: body.fileUrl,
       createdAt: new Date().toISOString(),
+
     };
     const config = await prisma.pricingConfig.findUnique({
       where: { key: HISTORY_KEY },

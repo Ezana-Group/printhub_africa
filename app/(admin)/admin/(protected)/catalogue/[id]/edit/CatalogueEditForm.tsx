@@ -12,7 +12,8 @@ import { Loader2, Box } from "lucide-react";
 import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 import { CategoryCascadingSelect } from "@/components/admin/CategoryCascadingSelect";
 
-type TabId = "details" | "photos" | "stl";
+type TabId = "details" | "photos" | "production-files";
+
 
 function ImportPhotosFromPrintablesButton({
   itemId,
@@ -118,9 +119,12 @@ interface Item {
   status?: string;
   category?: { id: string; name: string; slug: string };
   photos: Photo[];
+  photos: Photo[];
   modelUrl?: string | null;
   modelStorageKey?: string | null;
+  productionFiles?: string[];
 }
+
 
 interface CatalogueEditFormProps {
   item: Item;
@@ -135,8 +139,9 @@ export function CatalogueEditForm({
 }: CatalogueEditFormProps) {
   const router = useRouter();
   const [tab, setTab] = useState<TabId>(
-    (defaultTab === "photos" || defaultTab === "stl" ? defaultTab : "details") as TabId
+    (defaultTab === "photos" || defaultTab === "production-files" || defaultTab === "stl" ? (defaultTab === "stl" ? "production-files" : defaultTab) : "details") as TabId
   );
+
   const [item, setItem] = useState<Item>(initialItem);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -161,7 +166,9 @@ export function CatalogueEditForm({
   const [isNewArrival, setIsNewArrival] = useState(initialItem.isNewArrival ?? false);
   const [isStaffPick, setIsStaffPick] = useState(initialItem.isStaffPick ?? false);
   const [isPopular, setIsPopular] = useState(initialItem.isPopular ?? false);
+  const [productionFiles, setProductionFiles] = useState<string[]>(initialItem.productionFiles ?? []);
   const [manualUrls, setManualUrls] = useState("");
+
   const [savingPhotos, setSavingPhotos] = useState(false);
 
   useEffect(() => {
@@ -185,7 +192,9 @@ export function CatalogueEditForm({
     setIsNewArrival(initialItem.isNewArrival ?? false);
     setIsStaffPick(initialItem.isStaffPick ?? false);
     setIsPopular(initialItem.isPopular ?? false);
+    setProductionFiles(initialItem.productionFiles ?? []);
   }, [initialItem]);
+
 
   const refetchItem = useCallback(async () => {
     const res = await fetch(`/api/admin/catalogue/${initialItem.id}`);
@@ -219,7 +228,9 @@ export function CatalogueEditForm({
           isNewArrival,
           isStaffPick,
           isPopular,
+          productionFiles,
         }),
+
       });
       if (!res.ok) {
         const data = await res.json();
@@ -289,8 +300,9 @@ export function CatalogueEditForm({
   const tabs: { id: TabId; label: string }[] = [
     { id: "details", label: "Details" },
     { id: "photos", label: "Photos" },
-    { id: "stl", label: "3D Model (STL)" },
+    { id: "production-files", label: "Production Files" },
   ];
+
 
   const handleDeleteStl = async () => {
     if (!confirm("Remove the 3D model file from this item?")) return;
@@ -592,80 +604,105 @@ export function CatalogueEditForm({
         </div>
       )}
 
-      {tab === "stl" && (
+      {tab === "production-files" && (
         <div className="space-y-6">
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-6">
-            <h3 className="text-sm font-semibold text-slate-900 mb-1">3D Model File</h3>
+            <h3 className="text-sm font-semibold text-slate-900 mb-1">Production Files</h3>
             <p className="text-xs text-slate-500 mb-4">
-              Attach an STL, OBJ, or 3MF file. This file is used for volume/weight calculations and can be provided to customers.
+              {item.category?.name?.toLowerCase().includes("3d") || item.category?.name?.toLowerCase().includes("print") 
+                ? "Attach STL, OBJ, 3MF, or STEP files for 3D printing."
+                : "Attach PDF, AI, PSD, or SVG files for large format printing."}
+              {" "}These files are kept private and used for production.
             </p>
 
-            {item.modelUrl || item.modelStorageKey ? (
-              <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-200">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
-                    <Box className="w-5 h-5 text-[#FF4D00]" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-slate-900">
-                      3D Model Attached
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      {item.modelStorageKey?.split("/").pop() || "Attached file"}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {item.modelUrl && (
-                    <Button variant="ghost" size="sm" asChild>
-                      <a href={item.modelUrl} target="_blank" rel="noopener noreferrer">
-                        Download
-                      </a>
-                    </Button>
-                  )}
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    onClick={handleDeleteStl}
-                  >
-                    Remove
-                  </Button>
-                </div>
-              </div>
-            ) : (
+            <div className="space-y-4">
               <FileUploader
-                context="ADMIN_CATALOGUE_STL"
-                accept={["application/octet-stream", ".stl", ".obj", ".3mf", ".sla", ".stp", ".step"]}
+                context="ADMIN_CATALOGUE_PRODUCTION"
+                accept={[
+                  "application/octet-stream", ".stl", ".obj", ".3mf", ".sla", ".stp", ".step", 
+                  "application/pdf", ".ai", ".psd", "application/postscript", "image/png", 
+                  "image/svg+xml", ".svg", "image/tiff", ".tiff", ".tif", ".dxf", "image/jpeg"
+                ]}
                 maxSizeMB={100}
-                maxFiles={1}
-                hint="STL, OBJ, 3MF, STEP · Max 100MB"
-                onUploadComplete={async (files) => {
-                  const fileId = files[0]?.uploadId;
-                  if (!fileId) return;
-                  
-                  setLoading(true);
-                  try {
-                    const res = await fetch(`/api/admin/catalogue/${initialItem.id}/stl`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ fileId }),
-                    });
-                    if (res.ok) {
-                      await refetchItem();
-                      router.refresh();
-                    }
-                  } catch (err) {
-                    console.error("Upload STL error:", err);
-                  } finally {
-                    setLoading(false);
-                  }
+                maxFiles={10}
+                hint="Max 100MB per file. Multi-file support enabled."
+                onUploadComplete={(files) => {
+                  const newUrls = files.map((f) => f.publicUrl).filter(Boolean) as string[];
+                  setProductionFiles((prev) => [...prev, ...newUrls]);
                 }}
               />
-            )}
+
+              {productionFiles.length > 0 && (
+                <div className="space-y-2 mt-4">
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Current Production Files</p>
+                  <div className="grid gap-2">
+                    {productionFiles.map((url, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+                            <Box className="w-4 h-4 text-[#FF4D00]" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-slate-900 truncate max-w-[200px]">
+                              {url.split("/").pop()}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button variant="ghost" size="sm" asChild>
+                            <a href={url} target="_blank" rel="noopener noreferrer">
+                              Download
+                            </a>
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => {
+                              setProductionFiles(prev => prev.filter((_, idx) => idx !== i));
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Legacy STL Support Display */}
+              {(item.modelUrl || item.modelStorageKey) && !productionFiles.includes(item.modelUrl!) && (
+                <div className="mt-6 pt-6 border-t border-slate-200">
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Legacy 3D Model Attachment</p>
+                  <div className="flex items-center justify-between p-3 bg-amber-50 rounded-xl border border-amber-200">
+                    <div className="flex items-center gap-3">
+                      <Box className="w-4 h-4 text-amber-600" />
+                      <p className="text-sm text-amber-900">{item.modelStorageKey?.split("/").pop() || "Legacy File"}</p>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-amber-700 hover:text-amber-800 hover:bg-amber-100"
+                      onClick={handleDeleteStl}
+                    >
+                      Remove Legacy File
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-amber-600 mt-1">Recommended: Remove legacy attachment and re-upload under Production Files for unified management.</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-6 pt-6 border-t border-slate-200">
+              <Button onClick={handleSaveDetails} disabled={loading} className="w-full sm:w-auto rounded-xl">
+                {loading ? "Saving…" : "Save all changes"}
+              </Button>
+            </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }

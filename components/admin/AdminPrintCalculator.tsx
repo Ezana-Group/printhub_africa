@@ -19,8 +19,10 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type MaterialWithColors = { code: string; name: string; color?: string; baseMaterial?: string; quantity?: number };
-import { Calculator, History, FileText, Plus, Trash2, Box, RotateCcw, ShoppingCart, CheckCircle } from "lucide-react";
+import { Calculator, History, FileText, Plus, Trash2, Box, RotateCcw, ShoppingCart, CheckCircle, ExternalLink } from "lucide-react";
+import { FileUploader } from "@/components/upload/FileUploader";
 import { ConvertToProductModal } from "./calculator/ConvertToProductModal";
+
 import { setQuoteDraft } from "@/lib/quote-draft";
 // Removed computeMultiPart3DEstimate import as we will use calculatePrintCost directly
 
@@ -44,9 +46,11 @@ type HistoryEntry = {
   totalProductionCost: number;
   totalSellingPrice: number;
   profitAmount: number;
-   marginPercent: number;
+  marginPercent: number;
   isPrinted?: boolean;
+  fileUrl?: string;
   createdAt: string;
+
 };
 
 const MARGIN_PRESETS = [20, 30, 40, 50, 60];
@@ -59,7 +63,9 @@ export function AdminPrintCalculator() {
 
   // Calculator tab state
   const [jobName, setJobName] = useState("");
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [parts, setParts] = useState<Array<PrintJob & { materialName: string; costPerKg: number }>>([]);
+
   
   // Current part form state
   const [partName, setPartName] = useState("");
@@ -400,11 +406,11 @@ export function AdminPrintCalculator() {
             layerHeightMm: p.layerHeightMm,
           })),
           totalProductionCost: breakdown.subtotal,
-          profitAmount: breakdown.profit,
-          vatAmount: breakdown.vat,
           totalSellingPrice: breakdown.finalPrice,
           marginPercent: effectiveMargin,
+          fileUrl: fileUrl,
         }),
+
       });
       if (res.ok) {
         setSaveStatus("done");
@@ -537,13 +543,29 @@ export function AdminPrintCalculator() {
               <div className="flex gap-4">
                 <div className="flex-1">
                   <Label>Project name</Label>
-                  <Input
-                    value={jobName}
-                    onChange={(e) => setJobName(e.target.value)}
                     placeholder="e.g. Mechanical Assembly"
                     className="mt-1"
                   />
                 </div>
+                <div className="flex-1">
+                  <Label className="mb-2 block">Model File (Optional)</Label>
+                  <FileUploader
+                    context="ADMIN_3D_CALC"
+                    accept={["application/octet-stream", ".stl", ".obj", ".3mf", ".sla", ".stp", ".step"]}
+                    maxFiles={1}
+                    onUploadComplete={(files) => {
+                      if (files.length > 0) {
+                        setFileUrl(files[0].publicUrl);
+                      }
+                    }}
+                  />
+                  {fileUrl && (
+                    <p className="text-xs text-green-600 mt-1 truncate">
+                      Uploaded: {fileUrl.split('/').pop()}
+                    </p>
+                  )}
+                </div>
+
                 <div className="w-32">
                   <Label>Global margin %</Label>
                   <Input
@@ -1021,7 +1043,9 @@ export function AdminPrintCalculator() {
                       <th className="text-right p-2 font-medium">Selling (Ex VAT)</th>
                       <th className="text-right p-2 font-medium">Margin %</th>
                       <th className="text-right p-2 font-medium text-primary">Total (Inc VAT)</th>
+                      <th className="text-center p-2 font-medium">File</th>
                       <th className="text-right p-2 font-medium">Actions</th>
+
                     </tr>
                   </thead>
                   <tbody>
@@ -1062,7 +1086,23 @@ export function AdminPrintCalculator() {
                         <td className="p-2 text-right font-bold text-primary">
                           {Math.round(e.totalSellingPrice || 0).toLocaleString()}
                         </td>
+                        <td className="p-2 text-center">
+                          {e.fileUrl ? (
+                            <a 
+                              href={e.fileUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center text-primary hover:underline hover:scale-110 transition-transform"
+                              title="Download File"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </td>
                         <td className="p-2 text-right">
+
                           <div className="flex justify-end gap-1">
                             <Button
                               variant="ghost"

@@ -2170,7 +2170,9 @@ model CatalogueItem {
   modelUrl           String?
   productId          String?                 @unique
   rejectedById       String?
+  productionFiles    String[]                @default([])
   approvedBy         User?                   @relation("CatalogueApprovedBy", fields: [approvedById], references: [id])
+
   archivedBy         User?                   @relation("CatalogueArchivedBy", fields: [archivedById], references: [id])
   category           Category                @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   designer           CatalogueDesigner?      @relation(fields: [designerId], references: [id])
@@ -2234,6 +2236,8 @@ model CatalogueImportQueue {
   scrapedName         String?
   scrapedTags         String[]     @default([])
   productId           String?      @unique
+  productionFiles     String[]     @default([])
+
   editorData          Json?
   isManual            Boolean      @default(false)
   reviewNotes         String?
