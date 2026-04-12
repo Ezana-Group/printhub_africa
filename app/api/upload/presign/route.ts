@@ -25,6 +25,8 @@ const ALLOWED_TYPES: Record<
   "model/obj": { ext: ["obj"], maxMB: 500, bucket: "private" },
   "model/3mf": { ext: ["3mf"], maxMB: 500, bucket: "private" },
   "application/sla": { ext: ["stl"], maxMB: 500, bucket: "private" },
+  "application/step": { ext: ["step", "stp"], maxMB: 500, bucket: "private" },
+  "application/x-step": { ext: ["step", "stp"], maxMB: 500, bucket: "private" },
   "application/pdf": { ext: ["pdf"], maxMB: 200, bucket: "private" },
   "image/svg+xml": { ext: ["svg"], maxMB: 50, bucket: "private" },
   "application/postscript": { ext: ["ai", "eps"], maxMB: 200, bucket: "private" },
@@ -163,8 +165,13 @@ export async function POST(req: Request) {
 
     const typeConfig = ALLOWED_TYPES[mimeType];
     if (!typeConfig) {
+      console.warn("[UPLOAD_PRESIGN] Blocked mimeType:", mimeType);
       return NextResponse.json(
-        { error: `File type not allowed: ${mimeType}. Allowed: images (JPEG, PNG, WebP, etc.), PDF, STL, and other design formats.` },
+        { 
+          error: `File type not allowed: ${mimeType}.`, 
+          details: { mimeType: [mimeType] },
+          code: "INVALID_MIME_TYPE" 
+        },
         { status: 400 }
       );
     }

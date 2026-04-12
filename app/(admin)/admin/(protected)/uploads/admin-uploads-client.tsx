@@ -214,11 +214,12 @@ export function AdminUploadsClient({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="rounded-lg h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="rounded-lg h-8 text-red-600 hover:text-red-700 hover:bg-red-50 gap-1.5"
                         onClick={() => handleDelete(u.id)}
                         disabled={isDeleting === u.id}
                       >
                         <Trash2 className="h-4 w-4" />
+                        <span>Remove</span>
                       </Button>
                     </div>
                   </td>

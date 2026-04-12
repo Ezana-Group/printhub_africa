@@ -67,7 +67,6 @@ export async function GET(req: NextRequest) {
           photos: { orderBy: { sortOrder: "asc" }, take: 1 },
           importedBy: { select: { name: true, email: true } },
           category: { select: { name: true, slug: true } },
-          productionFiles: true, // Type safe way to ensure it's selected if needed, though default
         },
       }),
 
