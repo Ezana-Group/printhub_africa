@@ -116,6 +116,7 @@ export async function uploadPrivateBuffer(key: string, body: Buffer | Uint8Array
       Key: key,
       Body: body,
       ContentType: contentType,
+    })
   );
 }
 
