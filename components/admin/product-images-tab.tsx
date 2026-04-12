@@ -165,6 +165,7 @@ export function ProductImagesTab({
                     src={(img.url && (img.url.startsWith("/") || img.url.startsWith("http"))) ? img.url : BROKEN_IMAGE_PLACEHOLDER}
                     alt={img.altText ?? `Product image ${i + 1}`}
                     className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = BROKEN_IMAGE_PLACEHOLDER;
                     }}

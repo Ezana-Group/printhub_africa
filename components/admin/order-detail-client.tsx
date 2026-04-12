@@ -20,6 +20,7 @@ import {
   Download,
   Store,
   FileText,
+  Box,
   Image as ImageIcon,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -725,6 +726,42 @@ export function OrderDetailClient({ orderId, initialOrder }: { orderId: string; 
                           SKU: {item.product?.sku ?? item.productVariant?.sku}
                         </p>
                       )}
+                      {item.uploadedFile && (
+                        <div className="mt-2 p-2 bg-slate-50 border rounded flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-sm text-slate-700 min-w-0">
+                            <FileText className="w-4 h-4 flex-shrink-0 text-slate-400" />
+                            <span className="truncate" title={item.uploadedFile.originalName}>
+                              {item.uploadedFile.originalName || item.uploadedFile.filename}
+                            </span>
+                          </div>
+                          <a
+                            href={item.uploadedFile.url || `/api/upload/${item.uploadedFile.id}/download`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-medium text-primary hover:underline whitespace-nowrap flex-shrink-0 ml-4"
+                          >
+                            <Download className="w-3 h-3 inline pb-0.5" /> Download
+                          </a>
+                        </div>
+                      )}
+                      {item.product?.productionFiles?.map((url: string, i: number) => (
+                        <div key={i} className="mt-2 p-2 bg-blue-50 border border-blue-100 rounded flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-sm text-blue-800 min-w-0">
+                            <Box className="w-4 h-4 flex-shrink-0 text-blue-400" />
+                            <span className="truncate" title={url.split('/').pop()}>
+                              {url.split('/').pop()}
+                            </span>
+                          </div>
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-medium text-primary hover:underline whitespace-nowrap flex-shrink-0 ml-4"
+                          >
+                            <Download className="w-3 h-3 inline pb-0.5" /> Download
+                          </a>
+                        </div>
+                      ))}
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className="text-sm text-gray-500">

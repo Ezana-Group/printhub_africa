@@ -32,6 +32,7 @@ import { toast } from "sonner";
 import { CategoryCascadingSelect } from "@/components/admin/CategoryCascadingSelect";
 import { ProductImagesTab } from "@/components/admin/product-images-tab";
 import { SmartTextEditor } from "@/components/admin/smart-text-editor";
+import { FileUploader } from "@/components/upload/FileUploader";
 import { ProductMaterialSelector } from "@/components/admin/ProductMaterialSelector";
 import type { ProductType } from "@prisma/client";
 
@@ -74,6 +75,7 @@ export function AdminCatalogueReviewClient({ importItem, categories }: AdminCata
       shortDescription: "",
       categoryId: importItem.scrapedCategory || (categories.length > 0 ? categories[0].id : ""),
       productType: "READYMADE_3D" as ProductType,
+      productionFiles: [],
       basePrice: "0",
       comparePrice: "",
       stock: "0",
@@ -315,6 +317,7 @@ export function AdminCatalogueReviewClient({ importItem, categories }: AdminCata
               <TabsTrigger value="pricing">Pricing</TabsTrigger>
               <TabsTrigger value="images">Images</TabsTrigger>
               <TabsTrigger value="materials">Materials</TabsTrigger>
+              <TabsTrigger value="files">Files</TabsTrigger>
               <TabsTrigger value="seo">SEO</TabsTrigger>
               <TabsTrigger value="marketing">Marketing</TabsTrigger>
             </TabsList>
@@ -447,6 +450,58 @@ export function AdminCatalogueReviewClient({ importItem, categories }: AdminCata
               <ProductMaterialSelector productId="" />
             </TabsContent>
 
+            <TabsContent value="files" className="space-y-6">
+              <Card>
+                <CardContent className="pt-6">
+                  <h3 className="text-lg font-medium mb-4">Production Files</h3>
+                  <p className="text-sm text-slate-500 mb-4">
+                    Upload STL, OBJ, STEP, or PDF files. These files are kept private and are only shown to staff when fulfilling orders.
+                  </p>
+                  <FileUploader
+                    context="ADMIN_CATALOGUE_PRODUCTION"
+                    accept={[
+                      "application/octet-stream",
+                      ".stl",
+                      ".3mf",
+                      ".obj",
+                      ".step",
+                      ".stp",
+                      "application/pdf",
+                    ]}
+                    maxFiles={10}
+                    onUploadComplete={(files) => {
+                      const newUrls = files.map((f) => f.publicUrl).filter(Boolean);
+                      updateField("productionFiles", [...(formData.productionFiles || []), ...newUrls]);
+                    }}
+                  />
+                  {formData.productionFiles?.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      <h4 className="text-sm font-medium">Uploaded Files:</h4>
+                      <ul className="space-y-1">
+                        {formData.productionFiles.map((url: string, i: number) => (
+                          <li key={i} className="flex flex-col gap-1 p-2 border rounded-md">
+                            <span className="text-sm text-slate-600 truncate">{url.split('/').pop()}</span>
+                            <div className="flex gap-2 text-xs">
+                              <a href={url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Download</a>
+                              <button
+                                type="button"
+                                className="text-destructive hover:underline"
+                                onClick={() => {
+                                  updateField("productionFiles", formData.productionFiles.filter((_: any, idx: number) => idx !== i));
+                                }}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             <TabsContent value="seo" className="space-y-6">
               <Card>
                 <CardContent className="pt-6 space-y-4">
@@ -520,7 +575,8 @@ export function AdminCatalogueReviewClient({ importItem, categories }: AdminCata
                <CardContent className="space-y-4">
                   <div className="aspect-video relative rounded-lg overflow-hidden border">
                     {importItem.scrapedImageUrls?.[0] ? (
-                      <Image src={importItem.scrapedImageUrls[0]} alt="Source" fill className="object-cover" />
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={importItem.scrapedImageUrls[0]} alt="Source" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     ) : (
                       <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-400">No Image</div>
                     )}

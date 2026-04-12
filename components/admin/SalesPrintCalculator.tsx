@@ -22,6 +22,7 @@ import {
 import { Plus, Trash2, FileText, Copy, Check, Search, User, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clearQuoteDraft, type QuoteDraft3D } from "@/lib/quote-draft";
+import { FileUploader } from "@/components/upload/FileUploader";
 
 const MAX_LINE_ITEMS = 20;
 const DEFAULT_WA = "254700000000";
@@ -547,7 +548,20 @@ export function SalesPrintCalculator({
                             updateLine(line.id, { description: e.target.value })
                           }
                           placeholder="e.g. Phone stand"
-                          className="h-8 text-sm"
+                          className="h-8 text-sm mb-2"
+                        />
+                        <FileUploader
+                          context="SALES_QUOTE_3D"
+                          accept={["application/octet-stream", ".stl", ".3mf", ".obj"]}
+                          maxFiles={1}
+                          onUploadComplete={(files) => {
+                            const f = files[0];
+                            if (f) {
+                              updateLine(line.id, { uploadedFileId: f.uploadId });
+                            }
+                          }}
+                          onRemove={() => updateLine(line.id, { uploadedFileId: undefined })}
+                          className="min-w-[150px]"
                         />
                       </td>
                       <td className="p-2">

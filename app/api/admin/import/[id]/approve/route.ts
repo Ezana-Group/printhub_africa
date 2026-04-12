@@ -113,6 +113,7 @@ export async function POST(
         tags: data.tags || [],
         keyFeatures: data.keyFeatures || [],
         featuredThisWeek: data.featuredThisWeek || false,
+        productionFiles: data.productionFiles || [],
         
         // Marketing Distribution Switches
         exportToGoogle: data.exportToGoogle ?? true,

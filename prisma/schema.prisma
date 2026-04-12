@@ -248,6 +248,8 @@ model Product {
   exportToLinkedIn           Boolean                 @default(false)
   exportToMeta               Boolean                 @default(true)
   exportToPinterest          Boolean                 @default(false)
+  /// Array of URLs/keys for production files (STL, PDF, STEP) used by admins internally
+  productionFiles            String[]                @default([])
   exportToTiktok             Boolean                 @default(true)
   exportToX                  Boolean                 @default(false)
   lastExportedAt             DateTime?
