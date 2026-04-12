@@ -83,7 +83,7 @@ export function ShopProductsInventorySection({
     return list;
   }, [products, url.q, categoryFilter, stockStatusFilter, url.sort, url.dir]);
 
-  const categories = useMemo(() => {
+  const categoryNames = useMemo(() => {
     const set = new Set<string>();
     products.forEach((p) => { if (p.category?.name) set.add(p.category!.name); });
     return ["All", ...Array.from(set).sort()];
@@ -94,7 +94,7 @@ export function ShopProductsInventorySection({
       {
         key: "category",
         label: "Category",
-        options: categories.map((c) => ({ value: c === "All" ? "" : c, label: c })),
+        options: categoryNames.map((c) => ({ value: c === "All" ? "" : c, label: c })),
         value: categoryFilter,
         onChange: (v) => url.set({ category: v || undefined, page: 1 }),
       },
@@ -112,7 +112,7 @@ export function ShopProductsInventorySection({
         onChange: (v) => url.set({ stockStatus: v || undefined, page: 1 }),
       },
     ],
-    [categories, categoryFilter, stockStatusFilter, url]
+    [categoryNames, categoryFilter, stockStatusFilter, url]
   );
 
   const hasActiveFilters = url.q !== "" || categoryFilter !== "" || stockStatusFilter !== "";
