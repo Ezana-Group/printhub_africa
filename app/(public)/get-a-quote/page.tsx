@@ -487,13 +487,7 @@ export default function GetAQuotePage() {
                           <FileUploader
                             context="CUSTOMER_QUOTE"
                             accept={[
-                              "image/jpeg",
-                              "image/png",
-                              "image/webp",
-                              "application/pdf",
-                              "application/postscript",
-                              "image/vnd.adobe.photoshop",
-                              "image/svg+xml"
+                              "image/jpeg", "image/png", "image/webp", "application/pdf", "application/postscript", ".psd", "image/svg+xml", ".svg", ".ai", ".eps", ".tiff", ".tif", "image/tiff", ".dxf", "application/octet-stream", ".stl", ".obj", ".3mf", ".sla", ".stp", ".step"
                             ]}
                             maxSizeMB={200}
                             maxFiles={10}
@@ -797,14 +791,7 @@ export default function GetAQuotePage() {
                             <FileUploader
                               context="CUSTOMER_LARGE_FORMAT"
                               accept={[
-                                "application/pdf",
-                                "image/png",
-                                "image/jpeg",
-                                "image/tiff",
-                                "image/svg+xml",
-                                "application/postscript",
-                                "image/vnd.adobe.photoshop",
-                                "application/dxf",
+                                ".ai", "application/pdf", ".psd", ".eps", "image/png", "image/svg+xml", ".svg", "image/tiff", ".tiff", ".tif", ".dxf", "image/jpeg"
                               ]}
                               maxSizeMB={500}
                               maxFiles={3}
@@ -816,16 +803,7 @@ export default function GetAQuotePage() {
                             <FileUploader
                               context="CUSTOMER_3D_PRINT"
                               accept={[
-                                "model/stl",
-                                "model/obj",
-                                "model/3mf",
-                                "application/octet-stream",
-                                "application/sla",
-                                ".stl",
-                                ".obj",
-                                ".3mf",
-                                ".step",
-                                ".stp",
+                                "model/stl", "model/obj", "model/3mf", "application/octet-stream", "application/sla", ".stl", ".obj", ".3mf", ".step", ".stp", ".sla"
                               ]}
                               maxSizeMB={500}
                               maxFiles={5}

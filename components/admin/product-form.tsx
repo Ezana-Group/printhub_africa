@@ -491,13 +491,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
             <FileUploader
               context="ADMIN_CATALOGUE_PRODUCTION"
               accept={[
-                "application/octet-stream",
-                ".stl",
-                ".3mf",
-                ".obj",
-                ".step",
-                ".stp",
-                "application/pdf",
+                "application/octet-stream", ".stl", ".obj", ".3mf", ".sla", ".stp", ".step", "application/pdf", ".ai", ".psd", "application/postscript", "image/png", "image/svg+xml", ".svg", "image/tiff", ".tiff", ".tif", ".dxf", "image/jpeg"
               ]}
               maxFiles={10}
               onUploadComplete={(files) => {

@@ -636,7 +636,7 @@ export function CatalogueEditForm({
             ) : (
               <FileUploader
                 context="ADMIN_CATALOGUE_STL"
-                accept={[".stl", ".obj", ".3mf", ".step", ".stp", "application/octet-stream"]}
+                accept={["application/octet-stream", ".stl", ".obj", ".3mf", ".sla", ".stp", ".step"]}
                 maxSizeMB={100}
                 maxFiles={1}
                 hint="STL, OBJ, 3MF, STEP · Max 100MB"

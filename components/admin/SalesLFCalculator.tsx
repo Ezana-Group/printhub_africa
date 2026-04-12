@@ -338,7 +338,7 @@ export function SalesLFCalculator({
                         />
                         <FileUploader
                           context="SALES_QUOTE_LF"
-                          accept={["application/pdf", "image/jpeg", "image/png", "image/vnd.adobe.photoshop", "application/postscript", "application/dxf"]}
+                          accept={[".ai", "application/pdf", ".psd", "application/postscript", "image/png", "image/svg+xml", ".svg", "image/tiff", ".tiff", ".tif", ".dxf", "image/jpeg"]}
                           maxFiles={1}
                           onUploadComplete={(files) => {
                             const f = files[0];

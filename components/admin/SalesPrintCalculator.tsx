@@ -552,7 +552,7 @@ export function SalesPrintCalculator({
                         />
                         <FileUploader
                           context="SALES_QUOTE_3D"
-                          accept={["application/octet-stream", ".stl", ".3mf", ".obj"]}
+                          accept={["application/octet-stream", ".stl", ".obj", ".3mf", ".sla", ".stp", ".step"]}
                           maxFiles={1}
                           onUploadComplete={(files) => {
                             const f = files[0];
