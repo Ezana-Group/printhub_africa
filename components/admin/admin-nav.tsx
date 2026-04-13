@@ -55,7 +55,6 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/products", label: "Products", icon: Package },
       { href: "/admin/categories", label: "Categories", icon: FolderTree },
       { href: "/admin/catalogue", label: "Catalogue", icon: Layers },
-      { href: "/admin/catalogue/approval-queue", label: "Approval Queue", icon: ListTodo, badge: "approval" },
     ],
   },
   {

@@ -21,6 +21,9 @@ export async function GET(req: Request) {
       "creazilla.com",
       "thangs.com",
       "cgtrader.com",
+      "makerworld.com",
+      "bambulab.com",
+      "r2.dev",
       "prusa3d.com" // Printables might use this occasionally
     ];
 

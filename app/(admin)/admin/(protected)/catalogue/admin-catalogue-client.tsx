@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { AdminCatalogueApprovalQueueClient } from "./approval-queue/admin-catalogue-approval-queue-client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,6 +43,9 @@ interface CatalogueItemRow {
 
 export function AdminCatalogueClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeView = searchParams.get("view") || "all";
+
   const [data, setData] = useState<{
     items: CatalogueItemRow[];
     total: number;
@@ -124,15 +129,42 @@ export function AdminCatalogueClient() {
   };
 
   return (
-    <div className="space-y-4">
-      {data?.pendingReviewCount ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          {data.pendingReviewCount} item(s) awaiting approval.{" "}
-          <Link href="/admin/catalogue/approval-queue" className="font-medium underline">
-            Review now →
-          </Link>
-        </div>
-      ) : null}
+    <Tabs 
+      value={activeView} 
+      onValueChange={(v) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("view", v);
+        router.push(`/admin/catalogue?${params.toString()}`);
+      }}
+      className="space-y-6"
+    >
+      <div className="flex items-center justify-between border-b pb-1">
+        <TabsList>
+          <TabsTrigger value="all">Internal Catalogue</TabsTrigger>
+          <TabsTrigger value="queue" className="relative">
+            Approval Queue
+            {data?.pendingReviewCount ? (
+              <span className="ml-2 px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold">
+                {data.pendingReviewCount}
+              </span>
+            ) : null}
+          </TabsTrigger>
+        </TabsList>
+      </div>
+
+      <TabsContent value="all" className="space-y-4 outline-none">
+        {data?.pendingReviewCount ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 transition-all hover:bg-amber-100/50 cursor-pointer" onClick={() => {
+            const params = new URLSearchParams(searchParams.toString());
+            params.set("view", "queue");
+            router.push(`/admin/catalogue?${params.toString()}`);
+          }}>
+            {data.pendingReviewCount} item(s) awaiting approval.{" "}
+            <span className="font-medium underline">
+              Switch to Approval Queue →
+            </span>
+          </div>
+        ) : null}
       <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -273,8 +305,12 @@ export function AdminCatalogueClient() {
             </tbody>
           </table>
         </div>
-      </div>
-      <p className="text-sm text-slate-500">{data?.total ?? 0} items total</p>
-    </div>
+        <p className="text-sm text-slate-500">{data?.total ?? 0} items total</p>
+      </TabsContent>
+
+      <TabsContent value="queue" className="outline-none">
+        <AdminCatalogueApprovalQueueClient />
+      </TabsContent>
+    </Tabs>
   );
 }

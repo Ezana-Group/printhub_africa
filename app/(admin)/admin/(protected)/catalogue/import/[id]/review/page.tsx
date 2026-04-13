@@ -12,7 +12,12 @@ import { FileUploader } from "@/components/upload/FileUploader";
 
 const proxiedImageUrl = (url: string) => {
   if (!url || url.trim() === "") return "";
-  if (url.startsWith("/") || url.startsWith("blob:") || url.startsWith("data:")) return url;
+  if (
+    url.startsWith("/") || 
+    url.startsWith("blob:") || 
+    url.startsWith("data:") || 
+    url.includes("r2.dev")
+  ) return url;
   return `/api/proxy/image?url=${encodeURIComponent(url)}`;
 };
 
@@ -188,9 +193,9 @@ export default function ReviewPage() {
           <div>
             <h1 className="text-2xl font-bold">Review Import</h1>
             <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-              From <span className="font-semibold uppercase">{model.platform}</span> 
+              From <span className="font-semibold uppercase">{model.platform || "Imported"}</span> 
               <span className="text-xs">•</span>
-              Imported {model.importedAt ? format(new Date(model.importedAt), "MMM d, yyyy") : "Unknown date"}
+              Imported {(model.importedAt || (model as any).createdAt) ? format(new Date(model.importedAt || (model as any).createdAt), "MMM d, yyyy") : "Unknown date"}
             </p>
           </div>
         </div>
