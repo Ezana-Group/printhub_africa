@@ -305,7 +305,8 @@ export function AdminCatalogueClient() {
             </tbody>
           </table>
         </div>
-        <p className="text-sm text-slate-500">{data?.total ?? 0} items total</p>
+      </div>
+      <p className="text-sm text-slate-500">{data?.total ?? 0} items total</p>
       </TabsContent>
 
       <TabsContent value="queue" className="outline-none">
