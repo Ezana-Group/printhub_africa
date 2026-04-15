@@ -53,7 +53,7 @@ export async function POST(req: Request) {
       body: parsedCalendar as object,
       status: "PENDING_APPROVAL",
       source: source ?? "n8n-content-calendar",
-      metadata: metadata ?? null,
+      metadata: metadata ?? undefined,
     },
   });
 

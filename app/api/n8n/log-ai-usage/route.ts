@@ -62,7 +62,7 @@ export async function POST(req: Request) {
       outputTokens: outputTokens ?? null,
       costUsd: costUsd ?? null,
       success: success !== false,
-      metadata: metadata ?? null,
+      metadata: metadata ?? undefined,
     },
   });
 
