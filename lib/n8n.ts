@@ -345,6 +345,7 @@ export interface ProductPublishedPayload {
     medium: boolean
     nextdoor: boolean
     jiji: boolean
+    postiz: boolean
   }
 }
 

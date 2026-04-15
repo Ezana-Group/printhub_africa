@@ -1,7 +1,11 @@
 # ==============================================================================
 # n8n Dockerfile — FRESH INSTALL (v5.0)
 # ==============================================================================
-FROM n8nio/n8n:latest
+# Pin to a specific version — never use `latest` in production.
+# A new n8n release can break existing workflows without warning.
+# Check releases at: https://github.com/n8n-io/n8n/releases
+# To upgrade: update this tag, test in staging, then promote to production.
+FROM n8nio/n8n:1.89.2
 
 USER root
 

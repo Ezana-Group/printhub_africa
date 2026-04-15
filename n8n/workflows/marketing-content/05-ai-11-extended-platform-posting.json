@@ -115,7 +115,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const jwt = require('jsonwebtoken');\nconst header = { alg: 'ES256', kid: process.env.APPLE_KEY_ID };\nconst payload = { iss: process.env.APPLE_TEAM_ID, iat: Math.floor(Date.now()/1000), exp: Math.floor(Date.now()/1000)+1800, origin: 'https://printhub.africa' };\nconst privateKey = Buffer.from(process.env.APPLE_PRIVATE_KEY, 'base64').toString();\nreturn [{ token: jwt.sign(payload, privateKey, { header }) }];"
+        "jsCode": "// Sign Apple Maps JWT using only built-in crypto — no external packages needed.\nconst crypto = require('crypto');\n\nfunction b64url(obj) {\n  return Buffer.from(JSON.stringify(obj)).toString('base64').replace(/=/g,'').replace(/\\+/g,'-').replace(/\\//g,'_');\n}\n\nconst header  = { alg: 'ES256', kid: process.env.APPLE_KEY_ID };\nconst payload = {\n  iss: process.env.APPLE_TEAM_ID,\n  iat: Math.floor(Date.now()/1000),\n  exp: Math.floor(Date.now()/1000) + 1800,\n  origin: 'https://printhub.africa'\n};\n\nconst signingInput = b64url(header) + '.' + b64url(payload);\nconst privateKey   = Buffer.from(process.env.APPLE_PRIVATE_KEY, 'base64').toString('utf8');\n\nconst sign = crypto.createSign('SHA256');\nsign.update(signingInput);\nconst sigB64 = sign.sign({ key: privateKey, dsaEncoding: 'ieee-p1363' }, 'base64');\nconst sig    = sigB64.replace(/=/g,'').replace(/\\+/g,'-').replace(/\\//g,'_');\n\nreturn [{ token: signingInput + '.' + sig }];"
       },
       "name": "Sign Apple JWT",
       "type": "n8n-nodes-base.code",
@@ -319,25 +319,48 @@
     },
     {
       "parameters": {
-        "url": "{{$env.POSTIZ_BASE_URL}}/api/posts",
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.exportFlags.postiz }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "If Postiz?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        200,
+        1150
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.POSTIZ_BASE_URL + '/api/v1/posts' }}",
         "method": "POST",
         "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer {{$env.POSTIZ_API_KEY}}"
+              "value": "={{ 'Bearer ' + $env.POSTIZ_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
             }
           ]
         },
-        "bodyParametersJson": "={ \"post\": {{ JSON.stringify($node['Execute Trigger'].json.postizDraft) }} }"
+        "bodyParametersJson": "={{ JSON.stringify({ shortLink: false, date: null, type: 'post', content: ($node['Execute Trigger'].json.description || $node['Execute Trigger'].json.productName), media: ($node['Execute Trigger'].json.imageUrls || []).slice(0, 1).map(url => ({ url: url })), metadata: { productName: $node['Execute Trigger'].json.productName, productUrl: $node['Execute Trigger'].json.productUrl, productSlug: $node['Execute Trigger'].json.productSlug, price: $node['Execute Trigger'].json.price, currency: $node['Execute Trigger'].json.currency, exportFlags: $node['Execute Trigger'].json.exportFlags } }) }}"
       },
       "name": "Postiz: Publish All",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        200,
-        1300
+        450,
+        1150
       ]
     }
   ],
@@ -375,6 +398,17 @@
             "type": "main",
             "index": 0
           },
+          {
+            "node": "If Postiz?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Postiz?": {
+      "main": [
+        [
           {
             "node": "Postiz: Publish All",
             "type": "main",

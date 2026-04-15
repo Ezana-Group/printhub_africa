@@ -257,6 +257,7 @@ model Product {
   exportToInstagramReels     Boolean                 @default(false)
   exportToInstagramStories   Boolean                 @default(false)
   exportToJiji               Boolean                 @default(false)
+  exportToPostiz             Boolean                 @default(true)
   exportToTelegram           Boolean                 @default(false)
   exportToWhatsappChannel    Boolean                 @default(false)
   exportToWhatsappStatus     Boolean                 @default(false)

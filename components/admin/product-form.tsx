@@ -83,6 +83,7 @@ interface ProductFormProps {
     exportToReddit: boolean;
     exportToSnapchat: boolean;
     exportToYoutube: boolean;
+    exportToPostiz: boolean;
   };
 }
 
@@ -141,6 +142,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
     exportToInstagramReels: product?.exportToInstagramReels ?? false,
     exportToInstagramStories: product?.exportToInstagramStories ?? false,
     exportToJiji: product?.exportToJiji ?? false,
+    exportToPostiz: product?.exportToPostiz ?? true,
     exportToTelegram: product?.exportToTelegram ?? false,
     exportToWhatsappStatus: product?.exportToWhatsappStatus ?? false,
     exportToWhatsappChannel: product?.exportToWhatsappChannel ?? false,
@@ -680,6 +682,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
                     { field: "exportToNextdoor", label: "Nextdoor" },
                     { field: "exportToGoogleDiscover", label: "Discover" },
                     { field: "exportToGoogleMapsPost", label: "Maps Post" },
+                    { field: "exportToPostiz", label: "Postiz" },
                   ].map((item) => (
                     <label key={item.field} className="flex items-center gap-2 p-2 rounded-lg border border-slate-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/50 cursor-pointer transition-all">
                       <input

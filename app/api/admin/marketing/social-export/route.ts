@@ -46,6 +46,7 @@ export async function GET(req: NextRequest) {
         exportToMedium: true,
         exportToNextdoor: true,
         exportToJiji: true,
+        exportToPostiz: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -78,7 +79,7 @@ export async function PATCH(req: NextRequest) {
         'exportToTelegram', 'exportToGoogleDiscover', 'exportToGoogleMapsPost',
         'exportToBingPlaces', 'exportToAppleMaps', 'exportToPigiaMe',
         'exportToOlxKenya', 'exportToReddit', 'exportToLinkedInNewsletter',
-        'exportToMedium', 'exportToNextdoor', 'exportToJiji'
+        'exportToMedium', 'exportToNextdoor', 'exportToJiji', 'exportToPostiz'
     ];
 
     if (!validFields.includes(field)) {

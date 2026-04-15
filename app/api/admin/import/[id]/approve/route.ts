@@ -127,6 +127,7 @@ export async function POST(
         exportToInstagramReels: data.exportToInstagramReels ?? false,
         exportToInstagramStories: data.exportToInstagramStories ?? false,
         exportToJiji: data.exportToJiji ?? false,
+        exportToPostiz: data.exportToPostiz ?? true,
         exportToTelegram: data.exportToTelegram ?? false,
         exportToWhatsappChannel: data.exportToWhatsappChannel ?? false,
         exportToWhatsappStatus: data.exportToWhatsappStatus ?? false,
@@ -234,7 +235,8 @@ export async function POST(
           linkedinNewsletter: product.exportToLinkedInNewsletter,
           medium: product.exportToMedium,
           nextdoor: product.exportToNextdoor,
-          jiji: product.exportToJiji
+          jiji: product.exportToJiji,
+          postiz: product.exportToPostiz
         }
       });
     } catch (err) {

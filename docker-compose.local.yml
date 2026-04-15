@@ -17,7 +17,7 @@ services:
       retries: 5
 
   n8n:
-    image: n8nio/n8n:latest
+    image: n8nio/n8n:1.89.2
     container_name: printhub_v31final_copy-n8n-1
     user: root
     environment:

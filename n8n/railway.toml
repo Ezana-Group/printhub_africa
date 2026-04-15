@@ -1,6 +1,9 @@
 [build]
   builder = "DOCKERFILE"
-  dockerfilePath = "n8n/Dockerfile"
+  # dockerfilePath is relative to the Railway service root.
+  # This railway.toml lives inside the n8n/ directory, so the Dockerfile
+  # is in the same directory — path is just "Dockerfile", not "n8n/Dockerfile".
+  dockerfilePath = "Dockerfile"
 
 [deploy]
   healthcheckPath = "/healthz"
