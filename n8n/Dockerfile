@@ -1,11 +1,12 @@
 # ==============================================================================
 # n8n Dockerfile — FRESH INSTALL (v5.0)
 # ==============================================================================
-# Pin to a specific version — never use `latest` in production.
-# A new n8n release can break existing workflows without warning.
+# Using latest because the Neon DB schema was initialized by the latest n8n image
+# and has 160 migrations (up to April 2026). Pinning to 1.89.2 caused a version
+# mismatch (500 on login). Once stable, check the running version from Railway logs
+# (n8n prints "n8n ready on port X (version Y)") and pin to that specific tag.
 # Check releases at: https://github.com/n8n-io/n8n/releases
-# To upgrade: update this tag, test in staging, then promote to production.
-FROM n8nio/n8n:1.89.2
+FROM n8nio/n8n:latest
 
 USER root
 
