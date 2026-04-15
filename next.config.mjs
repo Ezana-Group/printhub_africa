@@ -69,17 +69,18 @@ const nextConfig = {
 };
 
 export default withSentryConfig(nextConfig, {
-  org: process.env.SENTRY_ORG || "ezana-group",
-  project: process.env.SENTRY_PROJECT || "printhub",
+  // SEC-008: Remove hardcoded fallbacks — "ezana-group" / "printhub" were leaking
+  // internal workspace names in the public source bundle. Require env vars explicitly;
+  // the build will fail loudly if they are not set rather than silently using wrong values.
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
 
   silent: true,
   hideSourceMaps: true,
   widenClientFileUpload: true,
 
-  webpack: {
-    automaticVercelMonitors: true,
-    treeshake: {
-      removeDebugLogging: true,
-    },
-  },
+  // SEC-009: automaticVercelMonitors is a top-level Sentry config option, NOT a
+  // webpack option. Previously it was nested under `webpack:{}` where it was
+  // silently ignored, meaning Vercel cron monitors were never set up.
+  automaticVercelMonitors: true,
 });

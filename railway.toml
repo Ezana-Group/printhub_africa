@@ -1,0 +1,13 @@
+[build]
+  builder = "NIXPACKS"
+
+[deploy]
+  # Next.js listens on $PORT, which Railway sets automatically
+  startCommand = "npm run start"
+  healthcheckPath = "/api/health"
+  healthcheckInterval = 10
+  healthcheckTimeout = 300
+  healthcheckInitialDelay = 30
+  restartPolicyType = "ON_FAILURE"
+  restartPolicyMaxRetries = 3
+  numReplicas = 1

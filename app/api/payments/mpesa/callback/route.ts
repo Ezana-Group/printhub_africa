@@ -52,6 +52,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ ResultCode: 0, ResultDesc: "Success" });
   }
 
+  // CRIT-004 / BUG-005: Idempotency guard — Safaricom can deliver duplicate callbacks.
+  // If this payment is already COMPLETED, skip all downstream processing to prevent
+  // double invoice creation, double stock decrement, and duplicate production queue entries.
+  if (mpesa.payment?.status === "COMPLETED") {
+    return NextResponse.json({ ResultCode: 0, ResultDesc: "Already processed" });
+  }
+
   if (stk.ResultCode === 0 && stk.CallbackMetadata) {
     const items = stk.CallbackMetadata.Item;
     const getVal = (name: string) => items.find((i) => i.Name === name)?.Value;

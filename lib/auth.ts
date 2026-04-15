@@ -244,7 +244,8 @@ export const authOptions: NextAuthOptions = {
           }
         } else if (method === "email") {
           if (!totpCode || totpCode.length !== 6) {
-            const sixDigit = String(Math.floor(100000 + Math.random() * 900000));
+            const { randomInt } = await import("crypto");
+            const sixDigit = String(randomInt(100000, 1000000)); // CSPRNG — never use Math.random() for OTPs
             const hash = await bcrypt.hash(sixDigit, 10);
             const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
             await prisma.user.update({
@@ -273,7 +274,8 @@ export const authOptions: NextAuthOptions = {
           });
         } else if (method === "sms") {
           if (!totpCode || totpCode.length !== 6) {
-            const sixDigit = String(Math.floor(100000 + Math.random() * 900000));
+            const { randomInt } = await import("crypto");
+            const sixDigit = String(randomInt(100000, 1000000)); // CSPRNG — never use Math.random() for OTPs
             const hash = await bcrypt.hash(sixDigit, 10);
             const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
             await prisma.user.update({

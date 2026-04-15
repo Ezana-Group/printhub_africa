@@ -24,12 +24,16 @@ export type DangerConfirmBody = {
   totpCode?: string;
 };
 
-export async function validateDanger(
-  req: Request,
+/**
+ * Core validation logic — accepts a pre-parsed body so callers that have
+ * already consumed req.json() don't trigger a double-read (which would throw
+ * because the readable stream is exhausted after the first read).
+ */
+async function validateDangerCore(
+  body: DangerConfirmBody,
   phrase: string,
   requireTwoFa = false
 ): Promise<{ id: string; email: string; totpSecret: string | null }> {
-  const body = (await req.json().catch(() => ({}))) as DangerConfirmBody;
   const { confirmPhrase, password, totpCode } = body;
 
   if (confirmPhrase !== phrase) {
@@ -63,4 +67,31 @@ export async function validateDanger(
   }
 
   return { id: user.id, email: user.email, totpSecret: user.totpSecret };
+}
+
+/**
+ * Validate danger confirmation from a raw Request.
+ * NOTE: This reads req.json() internally. If your route has already called
+ * req.json(), use validateDangerFromBody() instead to avoid a double-read error.
+ */
+export async function validateDanger(
+  req: Request,
+  phrase: string,
+  requireTwoFa = false
+): Promise<{ id: string; email: string; totpSecret: string | null }> {
+  const body = (await req.json().catch(() => ({}))) as DangerConfirmBody;
+  return validateDangerCore(body, phrase, requireTwoFa);
+}
+
+/**
+ * Validate danger confirmation from a pre-parsed body object.
+ * Use this when req.json() has already been called in the same handler to
+ * avoid consuming the request stream twice.
+ */
+export async function validateDangerFromBody(
+  body: DangerConfirmBody,
+  phrase: string,
+  requireTwoFa = false
+): Promise<{ id: string; email: string; totpSecret: string | null }> {
+  return validateDangerCore(body, phrase, requireTwoFa);
 }

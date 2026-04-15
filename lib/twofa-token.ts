@@ -25,8 +25,13 @@ export function verifyTwoFaToken(token: string): string | null {
     const payload = JSON.parse(payloadStr);
     if (typeof payload.userId !== "string" || typeof payload.exp !== "number") return null;
     if (payload.exp < Date.now()) return null;
-    const expected = createHmac("sha256", getSecret()).update(payloadStr).digest("base64url");
-    if (expected.length !== sig.length || !timingSafeEqual(Buffer.from(expected, "utf8"), Buffer.from(sig, "utf8"))) return null;
+    // BUG-007: Compare raw HMAC bytes, not the base64url string representation.
+    // Previously Buffer.from(x, "utf8") was used on base64url strings — this worked
+    // by accident (base64url is ASCII-safe) but is semantically wrong and fragile.
+    // Comparing the raw digest bytes directly is the correct, explicit approach.
+    const expectedBuf = createHmac("sha256", getSecret()).update(payloadStr).digest();
+    const sigBuf = Buffer.from(sig, "base64url");
+    if (expectedBuf.length !== sigBuf.length || !timingSafeEqual(expectedBuf, sigBuf)) return null;
     return payload.userId;
   } catch {
     return null;

@@ -8,22 +8,17 @@ import { NextResponse } from "next/server";
 import { createHmac } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { sendAbandonedCartEmail1, sendAbandonedCartEmail2 } from "@/lib/email";
+import { checkCronAuth } from "@/lib/cron-auth";
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://printhub.africa";
 const cartUrl = `${baseUrl}/cart`;
 
 function unsubscribeToken(email: string): string {
-  const secret = process.env.CRON_SECRET ?? "";
-  return createHmac("sha256", secret).update(email.toLowerCase().trim()).digest("hex");
-}
-
-function checkCronAuth(req: Request): boolean {
+  // SEC-004: Never use an empty HMAC key — if CRON_SECRET is unset, tokens are
+  // trivially forgeable (HMAC with "" is deterministic and publicly known).
   const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  const authHeader = req.headers.get("authorization");
-  const bearer = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  const headerSecret = req.headers.get("x-cron-secret");
-  return bearer === secret || headerSecret === secret;
+  if (!secret) throw new Error("CRON_SECRET env var is required for unsubscribe tokens");
+  return createHmac("sha256", secret).update(email.toLowerCase().trim()).digest("hex");
 }
 
 export async function GET(req: Request) {
@@ -56,7 +51,11 @@ export async function GET(req: Request) {
 
   for (const cart of cartsWithEmail) {
     const email = cart.email!;
-    const lastActivity = cart.lastActivityAt ?? cart.email ? now : null;
+    // BUG-001: Operator precedence fix. Without parentheses this was parsed as
+    // (cart.lastActivityAt ?? cart.email) ? now : null — which is always `now`
+    // because cart.email is always a truthy string (filtered by the query above),
+    // making lastActivity always equal to `now` and the timing checks always fail.
+    const lastActivity = cart.lastActivityAt ?? (cart.email ? now : null);
     if (!lastActivity) continue;
 
     // First email: last activity >= 1h ago and first email not sent

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { randomInt } from "crypto";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -10,7 +11,9 @@ const schema = z.object({
 });
 
 function generatePickupCode(): string {
-  return String(Math.floor(1000 + Math.random() * 9000));
+  // SEC-007: Use CSPRNG — Math.random() produces predictable codes that could
+  // allow an attacker to collect someone else's order.
+  return String(randomInt(1000, 10000));
 }
 
 export async function POST(req: Request) {

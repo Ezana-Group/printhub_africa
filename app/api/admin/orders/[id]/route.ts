@@ -17,6 +17,24 @@ const ORDER_STATUSES = [
   "CANCELLED",
 ] as const;
 
+type OrderStatus = (typeof ORDER_STATUSES)[number];
+
+/**
+ * BUG-002: State machine — only forward/cancel transitions are allowed.
+ * Prevents nonsensical rolbacks (DELIVERED → PENDING) and audit-trail
+ * manipulation. CANCELLED and DELIVERED are terminal states.
+ */
+const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  PENDING:       ["CONFIRMED", "CANCELLED"],
+  CONFIRMED:     ["PROCESSING", "CANCELLED"],
+  PROCESSING:    ["PRINTING",   "CANCELLED"],
+  PRINTING:      ["QUALITY_CHECK", "CANCELLED"],
+  QUALITY_CHECK: ["SHIPPED",    "CANCELLED"],
+  SHIPPED:       ["DELIVERED"],
+  DELIVERED:     [], // terminal
+  CANCELLED:     [], // terminal
+};
+
 const updateSchema = z.object({
   status: z.enum(ORDER_STATUSES).optional(),
   trackingNumber: z.string().max(100).optional(),
@@ -76,6 +94,15 @@ export async function PATCH(
     }
     const updateData: Prisma.OrderUpdateInput = {};
     if (status != null) {
+      // BUG-002: Enforce state machine — reject illegal transitions
+      const currentStatus = order.status as OrderStatus;
+      const allowed = ALLOWED_TRANSITIONS[currentStatus] ?? [];
+      if (!allowed.includes(status)) {
+        return NextResponse.json(
+          { error: `Cannot transition order from ${currentStatus} to ${status}. Allowed: [${allowed.join(", ") || "none — terminal state"}]` },
+          { status: 422 }
+        );
+      }
       updateData.status = status;
       if (status === "SHIPPED") updateData.shippedAt = new Date();
       if (status === "DELIVERED") updateData.deliveredAt = new Date();

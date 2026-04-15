@@ -1,26 +1,30 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/settings-api";
-import { validateDanger } from "@/lib/danger";
+import { validateDangerFromBody, type DangerConfirmBody } from "@/lib/danger";
 import { writeAudit } from "@/lib/audit";
 
 export async function POST(req: Request) {
   const auth = await requireRole(req, "SUPER_ADMIN");
   if (auth instanceof NextResponse) return auth;
 
+  // Read the request body ONCE. validateDangerFromBody receives the parsed
+  // object so the stream is never consumed a second time (fixes CRIT-001).
+  let body: DangerConfirmBody & { userId?: string };
   try {
-    const { userId } = await req.json();
-    if (!userId) {
-      return NextResponse.json({ error: "User ID is required" }, { status: 400 });
-    }
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
 
+  const { userId } = body;
+  if (!userId) {
+    return NextResponse.json({ error: "User ID is required" }, { status: 400 });
+  }
+
+  try {
     try {
-      // Re-constructing a mock request or just using dangerParams for validation
-      // validateDanger expects (req, phrase, options)
-      // Since it reads from req.json(), I'll just pass the dangerParams in the body if needed, 
-      // but wait, validateDanger in lib/danger.ts reads from the request.
-      // I'll just validate the phrase/password/2fa here manually or wrap the request.
-      await validateDanger(req, "ANONYMISE CUSTOMER");
+      await validateDangerFromBody(body, "ANONYMISE CUSTOMER");
     } catch (e) {
       return NextResponse.json({ error: e instanceof Error ? e.message : "Confirmation failed" }, { status: 400 });
     }

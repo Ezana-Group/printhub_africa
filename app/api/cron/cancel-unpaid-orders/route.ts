@@ -7,15 +7,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { restoreOrderStock } from "@/lib/order-stock";
 import * as Sentry from "@sentry/nextjs";
-
-function checkCronAuth(req: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  const authHeader = req.headers.get("authorization");
-  const bearer = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  const headerSecret = req.headers.get("x-cron-secret");
-  return bearer === secret || headerSecret === secret;
-}
+import { checkCronAuth } from "@/lib/cron-auth";
 
 const UNPAID_TIMEOUT_MINUTES = 30;
 
