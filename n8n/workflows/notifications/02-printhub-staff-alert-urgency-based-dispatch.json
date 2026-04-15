@@ -99,7 +99,7 @@
     {
       "parameters": {
         "chatId": "={{ $env.TELEGRAM_CHANNEL_ID }}",
-        "text": "=🚨 *{{ $json.urgency }} STAFF ALERT*\n\n*Type:* {{ $json.alertType }}\n*Message:* {{ $json.message }}{{ $json.orderId ? '\n*Order:* ' + $json.orderId : '' }}\n\n_{{ new Date().toLocaleString('en-GB', {timeZone:'Africa/Nairobi'}) }} EAT_",
+        "text": "=🚨 *{{ $json.urgency }} STAFF ALERT*\n\n*Type:* {{ $json.alertType }}\n*Message:* {{ $json.message }}{{ $json.orderId ? '\\n*Order:* ' + $json.orderId : '' }}\n\n_{{ new Date().toLocaleString('en-GB', {timeZone:'Africa/Nairobi'}) }} EAT_",
         "additionalFields": {
           "parse_mode": "Markdown"
         }

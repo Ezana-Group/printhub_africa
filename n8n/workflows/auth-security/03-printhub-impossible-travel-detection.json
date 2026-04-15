@@ -59,7 +59,7 @@
     {
       "parameters": {
         "chatId": "={{ $env[\"TELEGRAM_CHANNEL_ID\"] }}",
-        "text": "=🔐 *SECURITY ALERT*\n\n*Type:* {{ $json.alertType }}\n*User:* {{ $json.userEmail }}\n*IP:* {{ $json.ipAddress }}\n*Location:* {{ $json.location }}{{ $json.previousLocation ? '\n*Previous:* ' + $json.previousLocation : '' }}\n\n*Action required — check admin panel at {{ $env[\\\"ADMIN_URL\\\"] }}*",
+        "text": "=🔐 *SECURITY ALERT*\n\n*Type:* {{ $json.alertType }}\n*User:* {{ $json.userEmail }}\n*IP:* {{ $json.ipAddress }}\n*Location:* {{ $json.location }}{{ $json.previousLocation ? '\\n*Previous:* ' + $json.previousLocation : '' }}\n\n*Action required — check admin panel at {{ $env[\\\"ADMIN_URL\\\"] }}*",
         "additionalFields": {
           "parse_mode": "Markdown"
         }
