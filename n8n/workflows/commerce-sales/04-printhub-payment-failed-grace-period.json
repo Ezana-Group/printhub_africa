@@ -5,26 +5,126 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "payment-failed",
-        "options": {
-          "rawBody": true
-        }
+        "options": { "rawBody": true }
       },
       "id": "webhook-payment-fail",
       "name": "Webhook: Payment Fail",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [
-        717,
-        300
-      ],
+      "position": [0, 300],
       "webhookId": "payment-failed"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst sig = $input.first().json.headers['x-printhub-signature'];\nconst body = $input.first().json.rawBody || JSON.stringify($input.first().json.body);\nconst expected = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(body).digest('hex');\nif (sig !== expected) throw new Error('Invalid signature');\nreturn [$input.first().json.body];"
+      },
+      "id": "verify-sig-payment",
+      "name": "Verify Signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env['RESEND_API_KEY'] }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "bodyParametersJson": "={ \"from\": \"{{ $env['FROM_NAME'] }} <{{ $env['FROM_EMAIL'] }}>\", \"to\": [\"{{ $json.customerEmail }}\"], \"subject\": \"⚠️ Payment Issue — Action Required for Order #{{ $json.orderId }}\", \"html\": \"<h2 style='color:#dc2626'>Payment Could Not Be Processed</h2><p>Hi {{ $json.customerName }},</p><p>We were unable to process your payment of <strong>KES {{ $json.amount }}</strong> for your PrintHub order.</p><p><strong>Payment Method:</strong> {{ $json.paymentMethod }}</p><p style='margin:24px 0'><a href='{{ $json.retryUrl }}' style='background:#2563eb;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;'>Retry Payment →</a></p><p style='color:#6b7280;font-size:14px;'>Your order is held for 24 hours. After that it will be automatically cancelled.</p><p>Need help? Reply to this email or WhatsApp us at {{ $env['BUSINESS_PHONE'] }}.</p>\" }"
+      },
+      "id": "email-payment-failed",
+      "name": "Email: Payment Failed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [440, 200]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env['ADMIN_URL'] }}/api/n8n/log",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-printhub-signature", "value": "={{ $env['N8N_WEBHOOK_SECRET'] }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "action", "value": "PAYMENT_FAILED" },
+            { "name": "details", "value": "=Payment failed for order {{ $json.orderId }} — {{ $json.customerEmail }} — KES {{ $json.amount }} via {{ $json.paymentMethod }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "audit-payment-failed",
+      "name": "AuditLog: Payment Failed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [440, 400]
+    },
+    {
+      "parameters": {
+        "unit": "hours",
+        "value": 2
+      },
+      "id": "wait-grace-period",
+      "name": "Wait: 2hr Grace Period",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env['ADMIN_URL'] }}/api/n8n/log",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-printhub-signature", "value": "={{ $env['N8N_WEBHOOK_SECRET'] }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "action", "value": "PAYMENT_REMINDER_SENT" },
+            { "name": "details", "value": "=2-hour grace period expired for order {{ $json.orderId }}. Reminder sent to {{ $json.customerEmail }}." }
+          ]
+        },
+        "options": {}
+      },
+      "id": "log-reminder",
+      "name": "AuditLog: Reminder Sent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [880, 300]
     }
   ],
-  "connections": {},
-  "meta": {
-    "instanceId": "printhub-n8n-production"
+  "connections": {
+    "Webhook: Payment Fail": {
+      "main": [[{ "node": "Verify Signature", "type": "main", "index": 0 }]]
+    },
+    "Verify Signature": {
+      "main": [[
+        { "node": "Email: Payment Failed", "type": "main", "index": 0 },
+        { "node": "AuditLog: Payment Failed", "type": "main", "index": 0 }
+      ]]
+    },
+    "Email: Payment Failed": {
+      "main": [[{ "node": "Wait: 2hr Grace Period", "type": "main", "index": 0 }]]
+    },
+    "AuditLog: Payment Failed": {
+      "main": [[{ "node": "Wait: 2hr Grace Period", "type": "main", "index": 0 }]]
+    },
+    "Wait: 2hr Grace Period": {
+      "main": [[{ "node": "AuditLog: Reminder Sent", "type": "main", "index": 0 }]]
+    }
   },
-  "settings": {
-    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
-  }
+  "meta": { "instanceId": "printhub-n8n-production" },
+  "settings": { "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}" }
 }

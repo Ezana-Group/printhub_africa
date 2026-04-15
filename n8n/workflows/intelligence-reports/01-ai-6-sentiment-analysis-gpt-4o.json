@@ -31,7 +31,7 @@
             }
           ]
         },
-        "bodyParametersJson": "={ \"model\": \"claude-opus-4-6-mini\", \"messages\": [{ \"role\": \"system\", \"content\": \"Analyse the sentiment of this customer message for PrintHub Africa. Is it Positive, Neutral, or Negative? Give a score from 1-10 where 10 is very happy and 1 is furious.\" }, { \"role\": \"user\", \"content\": \"Message: {{ $json.message }}\" }] }"
+        "bodyParametersJson": "={ \"model\": \"gpt-4o-mini\", \"messages\": [{ \"role\": \"system\", \"content\": \"Analyse the sentiment of this customer message for PrintHub Africa. Is it Positive, Neutral, or Negative? Give a score from 1-10 where 10 is very happy and 1 is furious.\" }, { \"role\": \"user\", \"content\": \"Message: {{ $json.message }}\" }] }"
       },
       "name": "GPT-4o: Analyse Sentiment",
       "type": "n8n-nodes-base.httpRequest",

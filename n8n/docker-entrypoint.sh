@@ -91,7 +91,9 @@ if [ -d "/home/node/workflows" ]; then
         # We must import it first so n8n assigns it an ID, then we can query
         # that ID and patch it into all other workflows before importing them.
         ERROR_HANDLER_FILE=""
-        for f in $(find /home/node/workflows -name "*.json" 2>/dev/null | sort); do
+        # -mindepth 2 skips the root-level consolidated backup files (printhub_*_workflows.json)
+        # which would create duplicate workflows. Only import from subdirectories.
+        for f in $(find /home/node/workflows -mindepth 2 -name "*.json" 2>/dev/null | sort); do
             fname=$(basename "$f")
             if echo "$fname" | grep -qi "global-error-handler"; then
                 ERROR_HANDLER_FILE="$f"
@@ -144,12 +146,12 @@ if [ -d "/home/node/workflows" ]; then
         # FIX: Use `find` recursively — the original `for f in /home/node/workflows/*.json`
         # only matched ROOT-level files. All 50+ workflows are in subdirectories
         # (auth-security/, catalog-inventory/, etc.) and were NEVER imported.
-        echo "Background Import: Scanning for workflow files recursively..."
+        echo "Background Import: Scanning for workflow files recursively (subdirectories only)..."
         TOTAL=0
         SUCCESS=0
         FAILED=0
 
-        for f in $(find /home/node/workflows -name "*.json" 2>/dev/null | sort); do
+        for f in $(find /home/node/workflows -mindepth 2 -name "*.json" 2>/dev/null | sort); do
             FILENAME=$(basename "$f")
 
             # Skip the global error handler (already imported in step A)

@@ -4,21 +4,13 @@
     {
       "parameters": {
         "rule": {
-          "interval": [
-            {
-              "field": "minutes",
-              "value": 30
-            }
-          ]
+          "interval": [{ "field": "minutes", "value": 30 }]
         }
       },
       "name": "Schedule: 30m",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1,
-      "position": [
-        100,
-        300
-      ]
+      "position": [100, 300]
     },
     {
       "parameters": {
@@ -27,20 +19,15 @@
         "authentication": "none",
         "headerParameters": {
           "parameters": [
-            {
-              "name": "x-n8n-secret",
-              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
-            }
+            { "name": "x-n8n-secret", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" }
           ]
-        }
+        },
+        "options": {}
       },
       "name": "Fetch High Intent Carts",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
-      "position": [
-        320,
-        300
-      ]
+      "position": [320, 300]
     },
     {
       "parameters": {
@@ -50,37 +37,91 @@
       "name": "Split Batches",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 1,
-      "position": [
-        540,
-        300
-      ]
+      "position": [540, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true },
+          "conditions": [
+            {
+              "id": "has-items",
+              "leftValue": "={{ $json.cartId }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty" }
+            }
+          ]
+        }
+      },
+      "id": "if-has-cart",
+      "name": "If: Has Cart Data",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [760, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env['WEBHOOK_URL'] }}/webhook/cart-abandoned",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-printhub-signature", "value": "={{ $env['N8N_WEBHOOK_SECRET'] }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "bodyParametersJson": "={{ JSON.stringify({ cartId: $json.cartId, customerId: $json.customerId, customerEmail: $json.customerEmail, customerPhone: $json.customerPhone, customerName: $json.customerName, items: $json.items, totalValue: $json.totalValue, cartUrl: $env['APP_URL'] + '/cart', abandonedAt: $json.lastActivityAt, reminderNumber: $json.reminderStage || 1 }) }}",
+        "options": {}
+      },
+      "id": "trigger-recovery",
+      "name": "Trigger: Cart Recovery Workflow",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [980, 200]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env['ADMIN_URL'] }}/api/n8n/log",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-printhub-signature", "value": "={{ $env['N8N_WEBHOOK_SECRET'] }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "action", "value": "ABANDONED_CART_CRON_RUN" },
+            { "name": "details", "value": "=Abandoned cart cron: no carts to process this cycle." }
+          ]
+        },
+        "options": {}
+      },
+      "id": "log-no-carts",
+      "name": "Log: No Carts This Cycle",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [980, 400]
     }
   ],
   "connections": {
     "Schedule: 30m": {
-      "main": [
-        [
-          {
-            "node": "Fetch High Intent Carts",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "Fetch High Intent Carts", "type": "main", "index": 0 }]]
     },
     "Fetch High Intent Carts": {
+      "main": [[{ "node": "Split Batches", "type": "main", "index": 0 }]]
+    },
+    "Split Batches": {
+      "main": [[{ "node": "If: Has Cart Data", "type": "main", "index": 0 }]]
+    },
+    "If: Has Cart Data": {
       "main": [
-        [
-          {
-            "node": "Split Batches",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        [{ "node": "Trigger: Cart Recovery Workflow", "type": "main", "index": 0 }],
+        [{ "node": "Log: No Carts This Cycle", "type": "main", "index": 0 }]
       ]
     }
   },
-  "settings": {
-    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
-  }
+  "meta": { "instanceId": "printhub-n8n-production" },
+  "settings": { "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}" }
 }
