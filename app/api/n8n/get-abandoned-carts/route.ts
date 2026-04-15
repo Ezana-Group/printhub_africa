@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
       reminderNumber: cart.recoveryEmailSent3At ? 0 : cart.recoveryEmailSent2At ? 3 : cart.recoveryEmailSent1At ? 2 : 1,
     })).filter(c => c.reminderNumber > 0);
 
-    return NextResponse.json(payload);
+    return NextResponse.json({ carts: payload });
   } catch (err) {
     console.error("[get-abandoned-carts] Error fetching carts:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

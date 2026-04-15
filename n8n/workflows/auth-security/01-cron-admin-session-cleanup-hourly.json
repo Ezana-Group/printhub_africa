@@ -27,11 +27,11 @@
           "string": [
             {
               "name": "adminUrl",
-              "value": "={{ $env.ADMIN_URL || 'https://admin.printhub.africa' }}"
+              "value": "={{ $vars.ADMIN_URL || 'https://admin.printhub.africa' }}"
             },
             {
               "name": "webhookSecret",
-              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
             }
           ]
         },

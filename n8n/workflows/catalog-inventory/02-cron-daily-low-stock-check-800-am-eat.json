@@ -23,12 +23,12 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "={{$env.ADMIN_URL}}/api/n8n/stock-levels",
+        "url": "={{$vars.ADMIN_URL}}/api/n8n/stock-levels",
         "headerParameters": {
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+              "value": "={{$vars.N8N_WEBHOOK_SECRET}}"
             }
           ]
         }
@@ -71,7 +71,7 @@
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+              "value": "={{$vars.N8N_WEBHOOK_SECRET}}"
             }
           ]
         }
@@ -87,16 +87,16 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://graph.facebook.com/v19.0/{{$env.WHATSAPP_PHONE_NUMBER_ID}}/messages",
+        "url": "=https://graph.facebook.com/v19.0/{{$vars.WHATSAPP_PHONE_NUMBER_ID}}/messages",
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}"
+              "value": "=Bearer {{$vars.WHATSAPP_ACCESS_TOKEN}}"
             }
           ]
         },
-        "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{$env.STAFF_WHATSAPP_NUMBER}}\", \"type\": \"text\", \"text\": { \"body\": \"{{ $node['Fetch Template'].json.body.replace('{{title}}', 'LOW STOCK ALERT').replace('{{message}}', $node['Filter: Stock < 5'].json.name + ' (SKU: ' + $node['Filter: Stock < 5'].json.sku + ') has only ' + $node['Filter: Stock < 5'].json.stock + ' units left.').replace('{{actionUrl}}', $env.ADMIN_URL + '/admin/inventory') }}\" } }"
+        "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{$vars.STAFF_WHATSAPP_NUMBER}}\", \"type\": \"text\", \"text\": { \"body\": \"{{ $node['Fetch Template'].json.body.replace('{{title}}', 'LOW STOCK ALERT').replace('{{message}}', $node['Filter: Stock < 5'].json.name + ' (SKU: ' + $node['Filter: Stock < 5'].json.sku + ') has only ' + $node['Filter: Stock < 5'].json.stock + ' units left.').replace('{{actionUrl}}', $vars.ADMIN_URL + '/admin/inventory') }}\" } }"
       },
       "id": "whatsapp-notify-staff",
       "name": "WhatsApp: Notify Staff",
@@ -110,12 +110,12 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{$env.ADMIN_URL}}/api/n8n/log",
+        "url": "={{$vars.ADMIN_URL}}/api/n8n/log",
         "headerParameters": {
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+              "value": "={{$vars.N8N_WEBHOOK_SECRET}}"
             }
           ]
         },

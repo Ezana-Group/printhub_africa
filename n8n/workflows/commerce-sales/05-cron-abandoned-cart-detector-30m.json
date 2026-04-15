@@ -19,7 +19,7 @@
         "authentication": "none",
         "headerParameters": {
           "parameters": [
-            { "name": "x-n8n-secret", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" }
+            { "name": "x-printhub-signature", "value": "={{ $vars.N8N_WEBHOOK_SECRET }}" }
           ]
         },
         "options": {}
@@ -61,16 +61,16 @@
     },
     {
       "parameters": {
-        "url": "={{ $env['WEBHOOK_URL'] }}/webhook/cart-abandoned",
+        "url": "={{ $vars.WEBHOOK_URL }}/webhook/cart-abandoned",
         "method": "POST",
         "authentication": "none",
         "headerParameters": {
           "parameters": [
-            { "name": "x-printhub-signature", "value": "={{ $env['N8N_WEBHOOK_SECRET'] }}" },
+            { "name": "x-printhub-signature", "value": "={{ $vars.N8N_WEBHOOK_SECRET }}" },
             { "name": "Content-Type", "value": "application/json" }
           ]
         },
-        "bodyParametersJson": "={{ JSON.stringify({ cartId: $json.cartId, customerId: $json.customerId, customerEmail: $json.customerEmail, customerPhone: $json.customerPhone, customerName: $json.customerName, items: $json.items, totalValue: $json.totalValue, cartUrl: $env['APP_URL'] + '/cart', abandonedAt: $json.lastActivityAt, reminderNumber: $json.reminderStage || 1 }) }}",
+        "bodyParametersJson": "={{ JSON.stringify({ cartId: $json.cartId, customerId: $json.customerId, customerEmail: $json.customerEmail, customerPhone: $json.customerPhone, customerName: $json.customerName, items: $json.items, totalValue: $json.totalValue, cartUrl: $vars.APP_URL + '/cart', abandonedAt: $json.lastActivityAt, reminderNumber: $json.reminderStage || 1 }) }}",
         "options": {}
       },
       "id": "trigger-recovery",
@@ -81,12 +81,12 @@
     },
     {
       "parameters": {
-        "url": "={{ $env['ADMIN_URL'] }}/api/n8n/log",
+        "url": "={{ $vars.ADMIN_URL }}/api/n8n/log",
         "method": "POST",
         "authentication": "none",
         "headerParameters": {
           "parameters": [
-            { "name": "x-printhub-signature", "value": "={{ $env['N8N_WEBHOOK_SECRET'] }}" }
+            { "name": "x-printhub-signature", "value": "={{ $vars.N8N_WEBHOOK_SECRET }}" }
           ]
         },
         "sendBody": true,

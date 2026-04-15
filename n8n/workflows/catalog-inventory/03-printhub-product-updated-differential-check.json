@@ -67,14 +67,14 @@
     },
     {
       "parameters": {
-        "url": "=https://graph.facebook.com/v19.0/{{ $env[\"META_AD_ACCOUNT_ID\"] }}/products",
+        "url": "=https://graph.facebook.com/v19.0/{{ $vars.META_AD_ACCOUNT_ID }}/products",
         "method": "POST",
         "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env[\"META_ACCESS_TOKEN\"]}}"
+              "value": "=Bearer {{$vars.META_ACCESS_TOKEN}}"
             }
           ]
         },
@@ -111,14 +111,14 @@
     },
     {
       "parameters": {
-        "url": "={{$env[\"ADMIN_URL\"]}}/api/n8n/get-template",
+        "url": "={{$vars.ADMIN_URL}}/api/n8n/get-template",
         "method": "POST",
         "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{ $env[\"N8N_WEBHOOK_SECRET\"] }}"
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
             }
           ]
         },
@@ -142,11 +142,11 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env[\"RESEND_API_KEY\"]}}"
+              "value": "=Bearer {{$vars.RESEND_API_KEY}}"
             }
           ]
         },
-        "bodyParametersJson": "={ \"from\": \"PrintHub Stock <stock@printhub.africa>\", \"to\": \"{{ $env[\\\"ADMIN_EMAIL\\\"] }}\", \"subject\": \"{{ $node['Fetch Stock Alert Template'].json.subject }}\", \"html\": \"{{ ($node['Fetch Stock Alert Template'].json.bodyHtml || '').replace(/{{productName}}/g, $json.productName).replace(/{{sku}}/g, $json.sku || 'N/A').replace(/{{productId}}/g, $json.productId) }}\" }"
+        "bodyParametersJson": "={ \"from\": \"PrintHub Stock <stock@printhub.africa>\", \"to\": \"{{ $vars.ADMIN_EMAIL }}\", \"subject\": \"{{ $node['Fetch Stock Alert Template'].json.subject }}\", \"html\": \"{{ ($node['Fetch Stock Alert Template'].json.bodyHtml || '').replace(/{{productName}}/g, $json.productName).replace(/{{sku}}/g, $json.sku || 'N/A').replace(/{{productId}}/g, $json.productId) }}\" }"
       },
       "id": "email-out-of-stock-alert",
       "name": "Email: Out of Stock Alert",
@@ -159,14 +159,14 @@
     },
     {
       "parameters": {
-        "url": "={{$env[\"ADMIN_URL\"]}}/api/n8n/mark-product-exported",
+        "url": "={{$vars.ADMIN_URL}}/api/n8n/mark-product-exported",
         "method": "POST",
         "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{ $env[\"N8N_WEBHOOK_SECRET\"] }}"
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
             }
           ]
         },

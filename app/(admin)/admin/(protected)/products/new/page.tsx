@@ -32,6 +32,7 @@ export default async function NewProductPage() {
         ) : (
           <ProductForm
             categories={categories.map((c) => ({ id: c.id, name: c.name, slug: c.slug }))}
+            postizUrl={process.env.POSTIZ_BASE_URL}
           />
         )}
       </div>

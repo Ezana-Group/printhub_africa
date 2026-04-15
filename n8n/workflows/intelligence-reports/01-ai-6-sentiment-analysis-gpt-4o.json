@@ -27,7 +27,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env.OPENAI_API_KEY}}"
+              "value": "=Bearer {{$vars.OPENAI_API_KEY}}"
             }
           ]
         },
@@ -50,7 +50,7 @@
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
             }
           ]
         },

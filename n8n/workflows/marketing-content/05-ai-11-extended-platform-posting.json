@@ -39,7 +39,7 @@
     },
     {
       "parameters": {
-        "url": "=https://mybusiness.googleapis.com/v4/accounts/{{$env.GOOGLE_ACCOUNT_ID}}/locations/{{$env.GOOGLE_LOCATION_ID}}/localPosts",
+        "url": "=https://mybusiness.googleapis.com/v4/accounts/{{$vars.GOOGLE_ACCOUNT_ID}}/locations/{{$vars.GOOGLE_LOCATION_ID}}/localPosts",
         "method": "POST",
         "authentication": "oAuth2",
         "bodyParametersJson": "={ \"languageCode\": \"en\", \"summary\": \"{{ $json.captions.google_business }}\", \"callToAction\": { \"actionType\": \"SHOP\", \"url\": \"https://printhub.africa/shop/{{ $json.productSlug }}\" }, \"media\": [{ \"mediaFormat\": \"PHOTO\", \"sourceUrl\": \"{{ $json.approvedMockupUrl }}\" }], \"topicType\": \"PRODUCT\", \"offer\": { \"couponCode\": \"\", \"redeemOnlineUrl\": \"https://printhub.africa/shop/{{ $json.productSlug }}\", \"termsConditions\": \"While stocks last\" } }"
@@ -80,11 +80,11 @@
           "parameters": [
             {
               "name": "Ocp-Apim-Subscription-Key",
-              "value": "={{ $env.BING_MAPS_KEY }}"
+              "value": "={{ $vars.BING_MAPS_KEY }}"
             }
           ]
         },
-        "bodyParametersJson": "={ \"businessId\": \"{{ $env.BING_BUSINESS_ID }}\", \"post\": { \"title\": \"{{ $json.productName }}\", \"description\": \"{{ $json.shortDescription }}\", \"imageUrl\": \"{{ $json.approvedMockupUrl }}\", \"actionType\": \"LEARN_MORE\", \"actionUrl\": \"https://printhub.africa/shop/{{ $json.productSlug }}\" } }"
+        "bodyParametersJson": "={ \"businessId\": \"{{ $vars.BING_BUSINESS_ID }}\", \"post\": { \"title\": \"{{ $json.productName }}\", \"description\": \"{{ $json.shortDescription }}\", \"imageUrl\": \"{{ $json.approvedMockupUrl }}\", \"actionType\": \"LEARN_MORE\", \"actionUrl\": \"https://printhub.africa/shop/{{ $json.productSlug }}\" } }"
       },
       "name": "Bing Places: Post",
       "type": "n8n-nodes-base.httpRequest",
@@ -127,7 +127,7 @@
     },
     {
       "parameters": {
-        "url": "=https://places-api.apple.com/v1/places/{{ $env.APPLE_PLACE_ID }}/showcards",
+        "url": "=https://places-api.apple.com/v1/places/{{ $vars.APPLE_PLACE_ID }}/showcards",
         "method": "POST",
         "authentication": "none",
         "headerParameters": {
@@ -171,7 +171,7 @@
       "parameters": {
         "url": "https://www.pigiame.co.ke/accounts/login/",
         "method": "POST",
-        "bodyParametersJson": "={ \"email\": \"{{ $env.PIGIAME_EMAIL }}\", \"password\": \"{{ $env.PIGIAME_PASSWORD }}\" }"
+        "bodyParametersJson": "={ \"email\": \"{{ $vars.PIGIAME_EMAIL }}\", \"password\": \"{{ $vars.PIGIAME_PASSWORD }}\" }"
       },
       "name": "PigiaMe: Auth",
       "type": "n8n-nodes-base.httpRequest",
@@ -194,7 +194,7 @@
             }
           ]
         },
-        "bodyParametersJson": "={ \"title\": \"{{ $node['Execute Trigger'].json.productName }} \u2014 PrintHub Africa\", \"description\": \"{{ $node['Execute Trigger'].json.shortDescription }}\\n\\nProfessional quality. Fast turnaround.\\nOrder online: printhub.africa\\nWhatsApp: +254XXXXXXXXX\\nNairobi CBD and delivery available.\", \"price\": {{ $node['Execute Trigger'].json.price }}, \"location\": \"Nairobi\", \"phone\": \"{{ $env.BUSINESS_PHONE }}\" }"
+        "bodyParametersJson": "={ \"title\": \"{{ $node['Execute Trigger'].json.productName }} \u2014 PrintHub Africa\", \"description\": \"{{ $node['Execute Trigger'].json.shortDescription }}\\n\\nProfessional quality. Fast turnaround.\\nOrder online: printhub.africa\\nWhatsApp: +254XXXXXXXXX\\nNairobi CBD and delivery available.\", \"price\": {{ $node['Execute Trigger'].json.price }}, \"location\": \"Nairobi\", \"phone\": \"{{ $vars.BUSINESS_PHONE }}\" }"
       },
       "name": "PigiaMe: Post",
       "type": "n8n-nodes-base.httpRequest",
@@ -227,7 +227,7 @@
       "parameters": {
         "url": "https://api.olx.co.ke/api/oauth/token",
         "method": "POST",
-        "bodyParametersJson": "={ \"grant_type\": \"password\", \"username\": \"{{ $env.OLX_EMAIL }}\", \"password\": \"{{ $env.OLX_PASSWORD }}\", \"client_id\": \"olx-kenya-web\" }"
+        "bodyParametersJson": "={ \"grant_type\": \"password\", \"username\": \"{{ $vars.OLX_EMAIL }}\", \"password\": \"{{ $vars.OLX_PASSWORD }}\", \"client_id\": \"olx-kenya-web\" }"
       },
       "name": "OLX: Auth",
       "type": "n8n-nodes-base.httpRequest",
@@ -288,7 +288,7 @@
           "parameters": [
             {
               "name": "x-api-key",
-              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+              "value": "={{ $vars.ANTHROPIC_API_KEY }}"
             }
           ]
         },
@@ -307,7 +307,7 @@
         "url": "https://api.linkedin.com/v2/articles",
         "method": "POST",
         "authentication": "oAuth2",
-        "bodyParametersJson": "={ \"author\": \"urn:li:organization:{{$env.LINKEDIN_ORGANIZATION_ID}}\", \"lifecycleState\": \"PUBLISHED\", \"specificContent\": { \"com.linkedin.ugc.ShareContent\": { \"shareCommentary\": { \"text\": \"{{ JSON.parse($json.content[0].text).headline }}\" }, \"shareMediaCategory\": \"ARTICLE\", \"media\": [{ \"status\": \"READY\", \"description\": { \"text\": \"{{ JSON.parse($json.content[0].text).subheadline }}\" }, \"originalUrl\": \"https://printhub.africa/shop/{{$json.productSlug}}\", \"title\": { \"text\": \"{{ JSON.parse($json.content[0].text).headline }}\" } }] } } }"
+        "bodyParametersJson": "={ \"author\": \"urn:li:organization:{{$vars.LINKEDIN_ORGANIZATION_ID}}\", \"lifecycleState\": \"PUBLISHED\", \"specificContent\": { \"com.linkedin.ugc.ShareContent\": { \"shareCommentary\": { \"text\": \"{{ JSON.parse($json.content[0].text).headline }}\" }, \"shareMediaCategory\": \"ARTICLE\", \"media\": [{ \"status\": \"READY\", \"description\": { \"text\": \"{{ JSON.parse($json.content[0].text).subheadline }}\" }, \"originalUrl\": \"https://printhub.africa/shop/{{$json.productSlug}}\", \"title\": { \"text\": \"{{ JSON.parse($json.content[0].text).headline }}\" } }] } } }"
       },
       "name": "LinkedIn: Article",
       "type": "n8n-nodes-base.httpRequest",
@@ -338,14 +338,14 @@
     },
     {
       "parameters": {
-        "url": "={{ $env.POSTIZ_BASE_URL + '/api/v1/posts' }}",
+        "url": "={{ $vars.POSTIZ_BASE_URL + '/api/v1/posts' }}",
         "method": "POST",
         "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.POSTIZ_API_KEY }}"
+              "value": "={{ 'Bearer ' + $vars.POSTIZ_API_KEY }}"
             },
             {
               "name": "Content-Type",

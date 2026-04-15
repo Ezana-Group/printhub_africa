@@ -39,7 +39,7 @@
           "parameters": [
             {
               "name": "x-api-key",
-              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+              "value": "={{ $vars.ANTHROPIC_API_KEY }}"
             },
             {
               "name": "anthropic-version",
@@ -71,14 +71,14 @@
     },
     {
       "parameters": {
-        "url": "=https://api.elevenlabs.io/v1/text-to-speech/{{$env.ELEVENLABS_VOICE_ID}}",
+        "url": "=https://api.elevenlabs.io/v1/text-to-speech/{{$vars.ELEVENLABS_VOICE_ID}}",
         "method": "POST",
         "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
               "name": "xi-api-key",
-              "value": "={{ $env.ELEVENLABS_API_KEY }}"
+              "value": "={{ $vars.ELEVENLABS_API_KEY }}"
             }
           ]
         },
@@ -108,7 +108,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env.RUNWAY_API_KEY}}"
+              "value": "=Bearer {{$vars.RUNWAY_API_KEY}}"
             }
           ]
         },
@@ -150,7 +150,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env.RUNWAY_API_KEY}}"
+              "value": "=Bearer {{$vars.RUNWAY_API_KEY}}"
             }
           ]
         }
@@ -178,14 +178,14 @@
     },
     {
       "parameters": {
-        "url": "=https://{{ $env.FFMPEG_SERVICE_URL || 'printhub-ffmpeg.railway.app' }}/combine",
+        "url": "=https://{{ $vars.FFMPEG_SERVICE_URL || 'printhub-ffmpeg.railway.app' }}/combine",
         "method": "POST",
         "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
               "name": "x-combine-secret",
-              "value": "={{ $env.COMBINE_SECRET }}"
+              "value": "={{ $vars.COMBINE_SECRET }}"
             }
           ]
         },
@@ -208,7 +208,7 @@
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
             }
           ]
         },

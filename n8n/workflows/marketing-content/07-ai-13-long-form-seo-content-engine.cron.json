@@ -36,7 +36,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer {{$env.PERPLEXITY_API_KEY}}"
+              "value": "Bearer {{$vars.PERPLEXITY_API_KEY}}"
             }
           ]
         },
@@ -67,7 +67,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer {{$env.OPENAI_API_KEY}}"
+              "value": "Bearer {{$vars.OPENAI_API_KEY}}"
             }
           ]
         },
@@ -98,7 +98,7 @@
           "parameters": [
             {
               "name": "x-api-key",
-              "value": "={{$env.ANTHROPIC_API_KEY}}"
+              "value": "={{$vars.ANTHROPIC_API_KEY}}"
             },
             {
               "name": "anthropic-version",
@@ -133,7 +133,7 @@
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+              "value": "={{$vars.N8N_WEBHOOK_SECRET}}"
             }
           ]
         },

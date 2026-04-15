@@ -52,7 +52,7 @@
         "headerParametersUi": [
           {
             "name": "Authorization",
-            "value": "=Bearer {{$env.OPENAI_API_KEY}}"
+            "value": "=Bearer {{$vars.OPENAI_API_KEY}}"
           }
         ],
         "jsonParameters": true,
@@ -75,7 +75,7 @@
         "headerParametersUi": [
           {
             "name": "x-api-key",
-            "value": "={{$env[\"ANTHROPIC_API_KEY\"]}}"
+            "value": "={{$vars.ANTHROPIC_API_KEY}}"
           },
           {
             "name": "anthropic-version",
@@ -102,7 +102,7 @@
         "headerParametersUi": [
           {
             "name": "x-printhub-signature",
-            "value": "={{$env[\"N8N_WEBHOOK_SECRET\"]}}"
+            "value": "={{$vars.N8N_WEBHOOK_SECRET}}"
           }
         ],
         "jsonParameters": true,
@@ -125,7 +125,7 @@
         "headerParametersUi": [
           {
             "name": "Authorization",
-            "value": "=Bearer {{$env.OPENAI_API_KEY}}"
+            "value": "=Bearer {{$vars.OPENAI_API_KEY}}"
           }
         ],
         "jsonParameters": true,
@@ -148,7 +148,7 @@
         "headerParametersUi": [
           {
             "name": "x-printhub-signature",
-            "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+            "value": "={{$vars.N8N_WEBHOOK_SECRET}}"
           }
         ],
         "jsonParameters": true,
@@ -171,7 +171,7 @@
         "headerParametersUi": [
           {
             "name": "x-printhub-signature",
-            "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+            "value": "={{$vars.N8N_WEBHOOK_SECRET}}"
           }
         ],
         "jsonParameters": true,

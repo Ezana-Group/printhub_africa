@@ -29,7 +29,7 @@
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
             }
           ]
         },
@@ -61,7 +61,7 @@
           "parameters": [
             {
               "name": "x-api-key",
-              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+              "value": "={{ $vars.ANTHROPIC_API_KEY }}"
             },
             {
               "name": "anthropic-version",
@@ -88,11 +88,11 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env.RESEND_API_KEY}}"
+              "value": "=Bearer {{$vars.RESEND_API_KEY}}"
             }
           ]
         },
-        "bodyParametersJson": "={ \"from\": \"PrintHub AI <ai@printhub.africa>\", \"to\": \"{{$env.ADMIN_EMAIL}}\", \"subject\": \"Daily Customer Sentiment Report — {{ new Date().toLocaleDateString() }}\", \"html\": \"{{ $json.content[0].text }}\" }"
+        "bodyParametersJson": "={ \"from\": \"PrintHub AI <ai@printhub.africa>\", \"to\": \"{{$vars.ADMIN_EMAIL}}\", \"subject\": \"Daily Customer Sentiment Report — {{ new Date().toLocaleDateString() }}\", \"html\": \"{{ $json.content[0].text }}\" }"
       },
       "name": "Email Daily Report",
       "type": "n8n-nodes-base.httpRequest",

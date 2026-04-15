@@ -40,7 +40,7 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $env.TELEGRAM_STAFF_GROUP_ID }}",
+        "chatId": "={{ $vars.TELEGRAM_STAFF_GROUP_ID }}",
         "text": "=🚨 *CRITICAL ALERT*\n\n{{ $json.message }}\n\nTime: {{ new Date().toLocaleString() }}",
         "additionalFields": {
           "parse_mode": "Markdown"
@@ -52,7 +52,13 @@
       "position": [
         400,
         200
-      ]
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Telegram Bot"
+        }
+      }
     }
   ],
   "connections": {

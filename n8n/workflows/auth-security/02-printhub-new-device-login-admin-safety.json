@@ -41,11 +41,11 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env[\"RESEND_API_KEY\"]}}"
+              "value": "=Bearer {{$vars.RESEND_API_KEY}}"
             }
           ]
         },
-        "bodyParametersJson": "={ \"from\": \"PrintHub Security <security@printhub.africa>\", \"to\": [\"{{ $env[\\\"ADMIN_EMAIL\\\"] }}\", \"{{ $json.userEmail }}\"], \"subject\": \"🔑 New Device Login — {{ $json.userEmail }}\", \"html\": \"<h2>🔑 New Device Login Detected</h2><p>A new device logged into the PrintHub admin panel.</p><table style='border-collapse:collapse;width:100%;max-width:500px'><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>User</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.userEmail }}</td></tr><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>IP Address</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.ipAddress }}</td></tr><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>Location</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.geolocation || 'Unknown' }}</td></tr><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>Device</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ ($json.userAgent || '').slice(0, 80) }}</td></tr><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>Time</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ new Date().toLocaleString('en-GB', {timeZone:'Africa/Nairobi'}) }} EAT</td></tr></table><p style='margin-top:16px'>If this was not you, <a href='{{ $env[\\\"ADMIN_URL\\\"] }}/admin/security' style='color:#dc2626;font-weight:bold'>revoke all sessions immediately →</a></p><p style='color:#888;font-size:12px'>PrintHub Africa Admin Security System</p>\" }"
+        "bodyParametersJson": "={ \"from\": \"PrintHub Security <security@printhub.africa>\", \"to\": [\"{{ $vars.ADMIN_EMAIL }}\", \"{{ $json.userEmail }}\"], \"subject\": \"🔑 New Device Login — {{ $json.userEmail }}\", \"html\": \"<h2>🔑 New Device Login Detected</h2><p>A new device logged into the PrintHub admin panel.</p><table style='border-collapse:collapse;width:100%;max-width:500px'><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>User</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.userEmail }}</td></tr><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>IP Address</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.ipAddress }}</td></tr><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>Location</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.geolocation || 'Unknown' }}</td></tr><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>Device</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ ($json.userAgent || '').slice(0, 80) }}</td></tr><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>Time</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ new Date().toLocaleString('en-GB', {timeZone:'Africa/Nairobi'}) }} EAT</td></tr></table><p style='margin-top:16px'>If this was not you, <a href='{{ $vars.ADMIN_URL }}/admin/security' style='color:#dc2626;font-weight:bold'>revoke all sessions immediately →</a></p><p style='color:#888;font-size:12px'>PrintHub Africa Admin Security System</p>\" }"
       },
       "id": "email-new-device-alert",
       "name": "Email: New Device Alert",
@@ -58,8 +58,8 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $env[\"TELEGRAM_CHANNEL_ID\"] }}",
-        "text": "=🔑 *New Admin Login*\n\n*User:* {{ $json.userEmail }}\n*IP:* {{ $json.ipAddress }}\n*Location:* {{ $json.geolocation || 'Unknown' }}\n*Time:* {{ new Date().toLocaleString('en-GB', {timeZone:'Africa/Nairobi'}) }} EAT\n\n_If unexpected: {{ $env[\\\"ADMIN_URL\\\"] }}/admin/security_",
+        "chatId": "={{ $vars.TELEGRAM_CHANNEL_ID }}",
+        "text": "=🔑 *New Admin Login*\n\n*User:* {{ $json.userEmail }}\n*IP:* {{ $json.ipAddress }}\n*Location:* {{ $json.geolocation || 'Unknown' }}\n*Time:* {{ new Date().toLocaleString('en-GB', {timeZone:'Africa/Nairobi'}) }} EAT\n\n_If unexpected: {{ $vars.ADMIN_URL }}/admin/security_",
         "additionalFields": {
           "parse_mode": "Markdown"
         }
@@ -74,7 +74,7 @@
       ],
       "credentials": {
         "telegramApi": {
-          "id": "telegram-cred",
+          "id": "",
           "name": "Telegram"
         }
       }
@@ -102,18 +102,18 @@
     },
     {
       "parameters": {
-        "url": "=https://graph.facebook.com/v19.0/{{ $env[\"WHATSAPP_PHONE_NUMBER_ID\"] }}/messages",
+        "url": "=https://graph.facebook.com/v19.0/{{ $vars.WHATSAPP_PHONE_NUMBER_ID }}/messages",
         "method": "POST",
         "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env[\"WHATSAPP_ACCESS_TOKEN\"]}}"
+              "value": "=Bearer {{$vars.WHATSAPP_ACCESS_TOKEN}}"
             }
           ]
         },
-        "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{ $env[\\\"BUSINESS_PHONE\\\"] }}\", \"type\": \"text\", \"text\": { \"body\": \"🚨 SUSPICIOUS LOGIN\\n\\nAdmin login from OUTSIDE Kenya detected!\\n\\nUser: {{ $json.userEmail }}\\nLocation: {{ $json.geolocation }}\\nIP: {{ $json.ipAddress }}\\n\\nIf not you, revoke sessions NOW: {{ $env[\\\"ADMIN_URL\\\"] }}/admin/security\" } }"
+        "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{ $vars.BUSINESS_PHONE }}\", \"type\": \"text\", \"text\": { \"body\": \"🚨 SUSPICIOUS LOGIN\\n\\nAdmin login from OUTSIDE Kenya detected!\\n\\nUser: {{ $json.userEmail }}\\nLocation: {{ $json.geolocation }}\\nIP: {{ $json.ipAddress }}\\n\\nIf not you, revoke sessions NOW: {{ $vars.ADMIN_URL }}/admin/security\" } }"
       },
       "id": "whatsapp-suspicious-login",
       "name": "WhatsApp: Suspicious Login",
@@ -126,14 +126,14 @@
     },
     {
       "parameters": {
-        "url": "={{$env[\"ADMIN_URL\"]}}/api/n8n/log-error",
+        "url": "={{$vars.ADMIN_URL}}/api/n8n/log-error",
         "method": "POST",
         "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{ $env[\"N8N_WEBHOOK_SECRET\"] }}"
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
             }
           ]
         },

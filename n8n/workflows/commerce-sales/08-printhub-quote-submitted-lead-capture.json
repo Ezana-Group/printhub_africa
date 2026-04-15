@@ -41,7 +41,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env[\"RESEND_API_KEY\"]}}"
+              "value": "=Bearer {{$vars.RESEND_API_KEY}}"
             }
           ]
         },
@@ -64,7 +64,7 @@
             },
             {
               "name": "html",
-              "value": "=<p>Hi {{$json.customerName}},</p><p>We have received your request. Attached is a summary draft.</p><p><a href='{{$env[\\\"APP_URL\\\"]}}'>Visit PrintHub Africa →</a></p>"
+              "value": "=<p>Hi {{$json.customerName}},</p><p>We have received your request. Attached is a summary draft.</p><p><a href='{{$vars.APP_URL}}'>Visit PrintHub Africa →</a></p>"
             }
           ]
         },
@@ -87,7 +87,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Klaviyo-API-Key {{$env.KLAVIYO_API_KEY}}"
+              "value": "=Klaviyo-API-Key {{$vars.KLAVIYO_API_KEY}}"
             },
             {
               "name": "revision",
@@ -118,7 +118,7 @@
     },
     {
       "parameters": {
-        "url": "={{$env['LISTMONK_URL']}}/api/subscribers",
+        "url": "={{$vars.LISTMONK_URL}}/api/subscribers",
         "method": "POST",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBasicAuth",
@@ -138,7 +138,7 @@
             {
               "name": "lists",
               "value": [
-                "={{$env['LISTMONK_DEFAULT_LIST_ID'] || 1}}"
+                "={{$vars.LISTMONK_DEFAULT_LIST_ID || 1}}"
               ]
             },
             {

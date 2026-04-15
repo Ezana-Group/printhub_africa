@@ -40,7 +40,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.RESEND_API_KEY }}"
+              "value": "={{ 'Bearer ' + $vars.RESEND_API_KEY }}"
             }
           ]
         },

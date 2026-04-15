@@ -51,6 +51,7 @@ export default async function SocialExportPage() {
         exportToMedium: true,
         exportToNextdoor: true,
         exportToJiji: true,
+        exportToPostiz: true,
         featuredThisWeek: true,
         category: { select: { name: true } },
       },

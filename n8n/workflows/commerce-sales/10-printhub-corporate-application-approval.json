@@ -41,7 +41,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env[\"RESEND_API_KEY\"]}}"
+              "value": "=Bearer {{$vars.RESEND_API_KEY}}"
             }
           ]
         },
@@ -88,7 +88,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env[\"RESEND_API_KEY\"]}}"
+              "value": "=Bearer {{$vars.RESEND_API_KEY}}"
             }
           ]
         },
@@ -103,7 +103,7 @@
             },
             {
               "name": "to",
-              "value": "={{$env[\"ADMIN_EMAIL\"]}}"
+              "value": "={{$vars.ADMIN_EMAIL}}"
             },
             {
               "name": "subject",
@@ -111,7 +111,7 @@
             },
             {
               "name": "html",
-              "value": "=<p>New Corporate Account Application details:</p><ul><li><strong>Company:</strong> {{$json.companyName}}</li><li><strong>Contact:</strong> {{$json.contactPerson}} ({{$json.email}})</li><li><strong>Phone:</strong> {{$json.phone}}</li></ul><p><a href='{{$env[\"ADMIN_URL\"]}}/admin/applications'>Review Application Status →</a></p>"
+              "value": "=<p>New Corporate Account Application details:</p><ul><li><strong>Company:</strong> {{$json.companyName}}</li><li><strong>Contact:</strong> {{$json.contactPerson}} ({{$json.email}})</li><li><strong>Phone:</strong> {{$json.phone}}</li></ul><p><a href='{{$vars.ADMIN_URL}}/admin/applications'>Review Application Status →</a></p>"
             }
           ]
         },

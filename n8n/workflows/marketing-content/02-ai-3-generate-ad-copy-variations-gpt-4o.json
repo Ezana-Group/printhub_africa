@@ -27,7 +27,7 @@
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
             }
           ]
         },
@@ -49,8 +49,8 @@
         300
       ],
       "retryOnFail": true,
-      "maxRetries": 3,
-      "waitBetweenRetries": 5000
+      "maxTries": 3,
+      "waitBetweenTries": 5000
     },
     {
       "parameters": {
@@ -61,7 +61,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env.OPENAI_API_KEY}}"
+              "value": "=Bearer {{$vars.OPENAI_API_KEY}}"
             }
           ]
         },
@@ -84,7 +84,7 @@
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
             }
           ]
         },

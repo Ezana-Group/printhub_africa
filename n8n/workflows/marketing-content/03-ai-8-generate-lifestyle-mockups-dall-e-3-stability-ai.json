@@ -51,7 +51,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env.OPENAI_API_KEY}}"
+              "value": "=Bearer {{$vars.OPENAI_API_KEY}}"
             }
           ]
         },
@@ -74,7 +74,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env.OPENAI_API_KEY}}"
+              "value": "=Bearer {{$vars.OPENAI_API_KEY}}"
             }
           ]
         },
@@ -97,7 +97,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env.OPENAI_API_KEY}}"
+              "value": "=Bearer {{$vars.OPENAI_API_KEY}}"
             }
           ]
         },
@@ -120,7 +120,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env.STABILITY_API_KEY}}"
+              "value": "=Bearer {{$vars.STABILITY_API_KEY}}"
             }
           ]
         },
@@ -155,7 +155,7 @@
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
             }
           ]
         },
@@ -178,7 +178,7 @@
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
             }
           ]
         },
@@ -201,11 +201,11 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env.RESEND_API_KEY}}"
+              "value": "=Bearer {{$vars.RESEND_API_KEY}}"
             }
           ]
         },
-        "bodyParametersJson": "={ \"from\": \"PrintHub AI <ai@printhub.africa>\", \"to\": \"{{$env.ADMIN_EMAIL}}\", \"subject\": \"Mockups Ready for Approval: {{$node['Build DALL-E Prompts'].json.productName}}\", \"html\": \"<h2>Lifestyle Mockups Ready</h2><p>{{$node['Upload Mockups to R2'].json.results.length}} mockups generated for <strong>{{$node['Build DALL-E Prompts'].json.productName}}</strong>.</p><p><a href='https://admin.printhub.africa/admin/ai'>Approve in AI Control Centre →</a></p>\" }"
+        "bodyParametersJson": "={ \"from\": \"PrintHub AI <ai@printhub.africa>\", \"to\": \"{{$vars.ADMIN_EMAIL}}\", \"subject\": \"Mockups Ready for Approval: {{$node['Build DALL-E Prompts'].json.productName}}\", \"html\": \"<h2>Lifestyle Mockups Ready</h2><p>{{$node['Upload Mockups to R2'].json.results.length}} mockups generated for <strong>{{$node['Build DALL-E Prompts'].json.productName}}</strong>.</p><p><a href='https://admin.printhub.africa/admin/ai'>Approve in AI Control Centre →</a></p>\" }"
       },
       "name": "Email Admin: Mockups Ready",
       "type": "n8n-nodes-base.httpRequest",
@@ -224,7 +224,7 @@
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+              "value": "={{$vars.N8N_WEBHOOK_SECRET}}"
             },
             {
               "name": "Content-Type",

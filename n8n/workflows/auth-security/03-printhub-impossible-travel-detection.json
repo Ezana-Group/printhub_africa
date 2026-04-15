@@ -41,11 +41,11 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env[\"RESEND_API_KEY\"]}}"
+              "value": "=Bearer {{$vars.RESEND_API_KEY}}"
             }
           ]
         },
-        "bodyParametersJson": "={ \"from\": \"PrintHub Security <security@printhub.africa>\", \"to\": [\"{{ $env[\\\"ADMIN_EMAIL\\\"] }}\", \"{{ $json.userEmail }}\"], \"subject\": \"🔐 Security Alert: {{ $json.alertType }} — {{ $json.userEmail }}\", \"html\": \"<h2 style='color:#dc2626'>🔐 Security Alert</h2><table style='border-collapse:collapse;width:100%'><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>Alert Type</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.alertType }}</td></tr><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>User</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.userEmail }}</td></tr><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>IP Address</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.ipAddress }}</td></tr><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>Location</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.location }}</td></tr>{{ $json.previousLocation ? '<tr><td style=\\'padding:8px;border:1px solid #e5e7eb\\'><strong>Previous Location</strong></td><td style=\\'padding:8px;border:1px solid #e5e7eb\\'>' + $json.previousLocation + '</td></tr>' : '' }}<tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>Device</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.userAgent }}</td></tr></table><p style='margin-top:16px'>If this was not you, please <a href='{{ $env[\\\"ADMIN_URL\\\"] }}/admin/security'>review active sessions immediately →</a></p>\" }"
+        "bodyParametersJson": "={ \"from\": \"PrintHub Security <security@printhub.africa>\", \"to\": [\"{{ $vars.ADMIN_EMAIL }}\", \"{{ $json.userEmail }}\"], \"subject\": \"🔐 Security Alert: {{ $json.alertType }} — {{ $json.userEmail }}\", \"html\": \"<h2 style='color:#dc2626'>🔐 Security Alert</h2><table style='border-collapse:collapse;width:100%'><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>Alert Type</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.alertType }}</td></tr><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>User</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.userEmail }}</td></tr><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>IP Address</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.ipAddress }}</td></tr><tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>Location</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.location }}</td></tr>{{ $json.previousLocation ? '<tr><td style=\\'padding:8px;border:1px solid #e5e7eb\\'><strong>Previous Location</strong></td><td style=\\'padding:8px;border:1px solid #e5e7eb\\'>' + $json.previousLocation + '</td></tr>' : '' }}<tr><td style='padding:8px;border:1px solid #e5e7eb'><strong>Device</strong></td><td style='padding:8px;border:1px solid #e5e7eb'>{{ $json.userAgent }}</td></tr></table><p style='margin-top:16px'>If this was not you, please <a href='{{ $vars.ADMIN_URL }}/admin/security'>review active sessions immediately →</a></p>\" }"
       },
       "id": "email-security-alert",
       "name": "Email: Security Alert",
@@ -58,8 +58,8 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $env[\"TELEGRAM_CHANNEL_ID\"] }}",
-        "text": "=🔐 *SECURITY ALERT*\n\n*Type:* {{ $json.alertType }}\n*User:* {{ $json.userEmail }}\n*IP:* {{ $json.ipAddress }}\n*Location:* {{ $json.location }}{{ $json.previousLocation ? '\\n*Previous:* ' + $json.previousLocation : '' }}\n\n*Action required — check admin panel at {{ $env[\\\"ADMIN_URL\\\"] }}*",
+        "chatId": "={{ $vars.TELEGRAM_CHANNEL_ID }}",
+        "text": "=🔐 *SECURITY ALERT*\n\n*Type:* {{ $json.alertType }}\n*User:* {{ $json.userEmail }}\n*IP:* {{ $json.ipAddress }}\n*Location:* {{ $json.location }}{{ $json.previousLocation ? '\\n*Previous:* ' + $json.previousLocation : '' }}\n\n*Action required — check admin panel at {{ $vars.ADMIN_URL }}*",
         "additionalFields": {
           "parse_mode": "Markdown"
         }
@@ -74,7 +74,7 @@
       ],
       "credentials": {
         "telegramApi": {
-          "id": "telegram-cred",
+          "id": "",
           "name": "Telegram"
         }
       }
@@ -102,18 +102,18 @@
     },
     {
       "parameters": {
-        "url": "=https://graph.facebook.com/v19.0/{{ $env[\"WHATSAPP_PHONE_NUMBER_ID\"] }}/messages",
+        "url": "=https://graph.facebook.com/v19.0/{{ $vars.WHATSAPP_PHONE_NUMBER_ID }}/messages",
         "method": "POST",
         "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env[\"WHATSAPP_ACCESS_TOKEN\"]}}"
+              "value": "=Bearer {{$vars.WHATSAPP_ACCESS_TOKEN}}"
             }
           ]
         },
-        "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{ $env[\\\"BUSINESS_PHONE\\\"] }}\", \"type\": \"text\", \"text\": { \"body\": \"🔐 IMPOSSIBLE TRAVEL DETECTED\\n\\nUser: {{ $json.userEmail }}\\nFrom: {{ $json.previousLocation }}\\nTo: {{ $json.location }}\\nIP: {{ $json.ipAddress }}\\n\\nReview immediately: {{ $env[\\\"ADMIN_URL\\\"] }}/admin/security\" } }"
+        "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{ $vars.BUSINESS_PHONE }}\", \"type\": \"text\", \"text\": { \"body\": \"🔐 IMPOSSIBLE TRAVEL DETECTED\\n\\nUser: {{ $json.userEmail }}\\nFrom: {{ $json.previousLocation }}\\nTo: {{ $json.location }}\\nIP: {{ $json.ipAddress }}\\n\\nReview immediately: {{ $vars.ADMIN_URL }}/admin/security\" } }"
       },
       "id": "whatsapp-impossible-travel",
       "name": "WhatsApp: Impossible Travel",

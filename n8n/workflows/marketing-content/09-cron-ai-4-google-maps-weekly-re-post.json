@@ -62,7 +62,7 @@
     },
     {
       "parameters": {
-        "url": "=https://mybusiness.googleapis.com/v4/accounts/{{$env.GOOGLE_ACCOUNT_ID}}/locations/{{$env.GOOGLE_LOCATION_ID}}/localPosts",
+        "url": "=https://mybusiness.googleapis.com/v4/accounts/{{$vars.GOOGLE_ACCOUNT_ID}}/locations/{{$vars.GOOGLE_LOCATION_ID}}/localPosts",
         "method": "POST",
         "authentication": "oAuth2",
         "bodyParametersJson": "={ \"summary\": \"{{ $json.choices[0].message.content }}\", \"callToAction\": { \"actionType\": \"SHOP\", \"url\": \"https://printhub.africa/shop/{{ $node['Each Product'].json.productSlug }}\" }, \"media\": [{ \"mediaFormat\": \"PHOTO\", \"sourceUrl\": \"{{ $node['Each Product'].json.approvedMockupUrl }}\" }], \"topicType\": \"PRODUCT\" }"

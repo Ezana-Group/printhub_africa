@@ -33,6 +33,7 @@ interface Category {
 
 interface ProductFormProps {
   categories: Category[];
+  postizUrl?: string;
   product?: {
     id: string;
     name: string;
@@ -91,7 +92,7 @@ function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
-export function ProductForm({ categories, product }: ProductFormProps) {
+export function ProductForm({ categories, product, postizUrl }: ProductFormProps) {
   const router = useRouter();
   const isEdit = !!product;
   const [loading, setLoading] = useState(false);
@@ -618,9 +619,9 @@ export function ProductForm({ categories, product }: ProductFormProps) {
                 </h2>
                 <p className="text-[10px] text-indigo-500 uppercase font-bold tracking-wider mt-1">Automatic Cloud Sync Settings</p>
               </div>
-              {process.env.NEXT_PUBLIC_POSTIZ_BASE_URL && (
+              {postizUrl && (
                 <Button variant="outline" size="sm" className="bg-white border-indigo-200 text-indigo-700 hover:bg-indigo-50" asChild>
-                  <a href={process.env.NEXT_PUBLIC_POSTIZ_BASE_URL} target="_blank" rel="noopener noreferrer" className="gap-2">
+                  <a href={postizUrl} target="_blank" rel="noopener noreferrer" className="gap-2">
                     <ExternalLink className="h-3 w-3" />
                     Open Postiz
                   </a>

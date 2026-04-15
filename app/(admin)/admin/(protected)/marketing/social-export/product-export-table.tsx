@@ -34,6 +34,7 @@ interface Product {
   exportToMedium: boolean;
   exportToNextdoor: boolean;
   exportToJiji: boolean;
+  exportToPostiz: boolean;
   featuredThisWeek: boolean;
 }
 
@@ -131,6 +132,7 @@ export function ProductExportTable({
     { field: "exportToNextdoor", label: "Nextdoor" },
     { field: "exportToGoogleDiscover", label: "Discover" },
     { field: "exportToGoogleMapsPost", label: "Maps Post" },
+    { field: "exportToPostiz", label: "Postiz" },
     { field: "featuredThisWeek", label: "SMS Spotlight" },
   ] as const;
 

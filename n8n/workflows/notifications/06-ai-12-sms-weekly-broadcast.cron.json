@@ -36,7 +36,7 @@
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+              "value": "={{$vars.N8N_WEBHOOK_SECRET}}"
             }
           ]
         }
@@ -58,7 +58,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer {{$env.OPENAI_API_KEY}}"
+              "value": "Bearer {{$vars.OPENAI_API_KEY}}"
             }
           ]
         },
@@ -89,7 +89,7 @@
           "parameters": [
             {
               "name": "apiKey",
-              "value": "={{$env.AT_API_KEY}}"
+              "value": "={{$vars.AT_API_KEY}}"
             },
             {
               "name": "Content-Type",
@@ -102,11 +102,11 @@
           "parameters": [
             {
               "name": "username",
-              "value": "={{$env.AT_USERNAME}}"
+              "value": "={{$vars.AT_USERNAME}}"
             },
             {
               "name": "to",
-              "value": "={{$env.MARKETING_SMS_LIST}}"
+              "value": "={{$vars.MARKETING_SMS_LIST}}"
             },
             {
               "name": "message",
@@ -132,7 +132,7 @@
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+              "value": "={{$vars.N8N_WEBHOOK_SECRET}}"
             }
           ]
         },

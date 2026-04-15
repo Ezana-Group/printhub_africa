@@ -16,7 +16,7 @@
       ],
       "credentials": {
         "telegramApi": {
-          "id": "telegram-cred",
+          "id": "",
           "name": "Telegram"
         }
       }
@@ -42,7 +42,7 @@
     },
     {
       "parameters": {
-        "url": "=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/getFile?file_id={{$json.message.voice.file_id}}",
+        "url": "=https://api.telegram.org/bot{{$vars.TELEGRAM_BOT_TOKEN}}/getFile?file_id={{$json.message.voice.file_id}}",
         "method": "GET"
       },
       "name": "Get Voice File URL",
@@ -55,7 +55,7 @@
     },
     {
       "parameters": {
-        "url": "=https://api.telegram.org/file/bot{{$env.TELEGRAM_BOT_TOKEN}}/{{$node['Get Voice File URL'].json.result.file_path}}",
+        "url": "=https://api.telegram.org/file/bot{{$vars.TELEGRAM_BOT_TOKEN}}/{{$node['Get Voice File URL'].json.result.file_path}}",
         "method": "GET",
         "options": {
           "response": {
@@ -82,7 +82,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env.OPENAI_API_KEY}}"
+              "value": "=Bearer {{$vars.OPENAI_API_KEY}}"
             }
           ]
         },
@@ -119,7 +119,7 @@
           "parameters": [
             {
               "name": "x-api-key",
-              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+              "value": "={{ $vars.ANTHROPIC_API_KEY }}"
             },
             {
               "name": "anthropic-version",
@@ -154,7 +154,7 @@
       ],
       "credentials": {
         "telegramApi": {
-          "id": "telegram-cred",
+          "id": "",
           "name": "Telegram"
         }
       }
@@ -188,11 +188,11 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env.RESEND_API_KEY}}"
+              "value": "=Bearer {{$vars.RESEND_API_KEY}}"
             }
           ]
         },
-        "bodyParametersJson": "={ \"from\": \"PrintHub Telegram <bot@printhub.africa>\", \"to\": \"{{$env.ADMIN_EMAIL}}\", \"subject\": \"Telegram Customer Needs Human Support\", \"html\": \"<p>Customer {{ $node['Normalise Message'].json.customerName }} on Telegram needs human support.</p><p>Message: {{ $node['Normalise Message'].json.messageText }}</p>\" }"
+        "bodyParametersJson": "={ \"from\": \"PrintHub Telegram <bot@printhub.africa>\", \"to\": \"{{$vars.ADMIN_EMAIL}}\", \"subject\": \"Telegram Customer Needs Human Support\", \"html\": \"<p>Customer {{ $node['Normalise Message'].json.customerName }} on Telegram needs human support.</p><p>Message: {{ $node['Normalise Message'].json.messageText }}</p>\" }"
       },
       "name": "Alert Admin: Human Needed",
       "type": "n8n-nodes-base.httpRequest",

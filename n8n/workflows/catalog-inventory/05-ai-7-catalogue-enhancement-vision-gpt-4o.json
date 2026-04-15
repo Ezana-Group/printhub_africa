@@ -1,4 +1,5 @@
 {
+  "name": "AI-7 — Catalogue Enhancement Vision (GPT-4o)",
   "nodes": [
     {
       "parameters": {
@@ -80,7 +81,7 @@
         "headerParametersUi": [
           {
             "name": "x-api-key",
-            "value": "={{$env[\"ANTHROPIC_API_KEY\"]}}"
+            "value": "={{$vars.ANTHROPIC_API_KEY}}"
           },
           {
             "name": "anthropic-version",
@@ -107,7 +108,7 @@
         "headerParametersUi": [
           {
             "name": "x-printhub-signature",
-            "value": "={{$env[\"N8N_WEBHOOK_SECRET\"]}}"
+            "value": "={{$vars.N8N_WEBHOOK_SECRET}}"
           }
         ],
         "bodyParametersJson": "={\n  \"importId\": \"{{$node[\\\"webhook-trigger\\\"].json.body.importId}}\",\n  \"aiEnhancement\": {{JSON.stringify($node[\"claude-generation\"].json)}} \n}"

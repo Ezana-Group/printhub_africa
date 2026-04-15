@@ -31,11 +31,11 @@
         "authentication": "none",
         "headerParameters": {
           "parameters": [
-            { "name": "Authorization", "value": "=Bearer {{ $env['RESEND_API_KEY'] }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $vars.RESEND_API_KEY }}" },
             { "name": "Content-Type", "value": "application/json" }
           ]
         },
-        "bodyParametersJson": "={ \"from\": \"{{ $env['FROM_NAME'] }} <{{ $env['FROM_EMAIL'] }}>\", \"to\": [\"{{ $json.customerEmail }}\"], \"subject\": \"⚠️ Payment Issue — Action Required for Order #{{ $json.orderId }}\", \"html\": \"<h2 style='color:#dc2626'>Payment Could Not Be Processed</h2><p>Hi {{ $json.customerName }},</p><p>We were unable to process your payment of <strong>KES {{ $json.amount }}</strong> for your PrintHub order.</p><p><strong>Payment Method:</strong> {{ $json.paymentMethod }}</p><p style='margin:24px 0'><a href='{{ $json.retryUrl }}' style='background:#2563eb;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;'>Retry Payment →</a></p><p style='color:#6b7280;font-size:14px;'>Your order is held for 24 hours. After that it will be automatically cancelled.</p><p>Need help? Reply to this email or WhatsApp us at {{ $env['BUSINESS_PHONE'] }}.</p>\" }"
+        "bodyParametersJson": "={ \"from\": \"{{ $vars.FROM_NAME }} <{{ $vars.FROM_EMAIL }}>\", \"to\": [\"{{ $json.customerEmail }}\"], \"subject\": \"⚠️ Payment Issue — Action Required for Order #{{ $json.orderId }}\", \"html\": \"<h2 style='color:#dc2626'>Payment Could Not Be Processed</h2><p>Hi {{ $json.customerName }},</p><p>We were unable to process your payment of <strong>KES {{ $json.amount }}</strong> for your PrintHub order.</p><p><strong>Payment Method:</strong> {{ $json.paymentMethod }}</p><p style='margin:24px 0'><a href='{{ $json.retryUrl }}' style='background:#2563eb;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;'>Retry Payment →</a></p><p style='color:#6b7280;font-size:14px;'>Your order is held for 24 hours. After that it will be automatically cancelled.</p><p>Need help? Reply to this email or WhatsApp us at {{ $vars.BUSINESS_PHONE }}.</p>\" }"
       },
       "id": "email-payment-failed",
       "name": "Email: Payment Failed",
@@ -45,12 +45,12 @@
     },
     {
       "parameters": {
-        "url": "={{ $env['ADMIN_URL'] }}/api/n8n/log",
+        "url": "={{ $vars.ADMIN_URL }}/api/n8n/log",
         "method": "POST",
         "authentication": "none",
         "headerParameters": {
           "parameters": [
-            { "name": "x-printhub-signature", "value": "={{ $env['N8N_WEBHOOK_SECRET'] }}" }
+            { "name": "x-printhub-signature", "value": "={{ $vars.N8N_WEBHOOK_SECRET }}" }
           ]
         },
         "sendBody": true,
@@ -81,12 +81,12 @@
     },
     {
       "parameters": {
-        "url": "={{ $env['ADMIN_URL'] }}/api/n8n/log",
+        "url": "={{ $vars.ADMIN_URL }}/api/n8n/log",
         "method": "POST",
         "authentication": "none",
         "headerParameters": {
           "parameters": [
-            { "name": "x-printhub-signature", "value": "={{ $env['N8N_WEBHOOK_SECRET'] }}" }
+            { "name": "x-printhub-signature", "value": "={{ $vars.N8N_WEBHOOK_SECRET }}" }
           ]
         },
         "sendBody": true,

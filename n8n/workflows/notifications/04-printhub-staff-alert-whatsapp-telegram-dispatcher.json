@@ -37,7 +37,7 @@
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+              "value": "={{$vars.N8N_WEBHOOK_SECRET}}"
             }
           ]
         }
@@ -52,7 +52,7 @@
     },
     {
       "parameters": {
-        "chatId": "={{$env.TELEGRAM_STAFF_GROUP_ID}}",
+        "chatId": "={{$vars.TELEGRAM_STAFF_GROUP_ID}}",
         "text": "={{ $node['Fetch Template'].json.body.replace('{{title}}', $node['Verify Internal Staff Sig'].json.title).replace('{{message}}', $node['Verify Internal Staff Sig'].json.message).replace('{{actionUrl}}', $node['Verify Internal Staff Sig'].json.actionUrl) }}",
         "additionalFields": {
           "parse_mode": "Markdown"
@@ -74,18 +74,18 @@
     },
     {
       "parameters": {
-        "url": "=https://graph.facebook.com/v19.0/{{$env.WHATSAPP_PHONE_NUMBER_ID}}/messages",
+        "url": "=https://graph.facebook.com/v19.0/{{$vars.WHATSAPP_PHONE_NUMBER_ID}}/messages",
         "method": "POST",
         "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}"
+              "value": "=Bearer {{$vars.WHATSAPP_ACCESS_TOKEN}}"
             }
           ]
         },
-        "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{$env.STAFF_WHATSAPP_NUMBER}}\", \"type\": \"text\", \"text\": { \"body\": \"{{ $node['Fetch Template'].json.body.replace('{{title}}', $node['Verify Internal Staff Sig'].json.title).replace('{{message}}', $node['Verify Internal Staff Sig'].json.message).replace('{{actionUrl}}', $node['Verify Internal Staff Sig'].json.actionUrl) }}\" } }"
+        "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{$vars.STAFF_WHATSAPP_NUMBER}}\", \"type\": \"text\", \"text\": { \"body\": \"{{ $node['Fetch Template'].json.body.replace('{{title}}', $node['Verify Internal Staff Sig'].json.title).replace('{{message}}', $node['Verify Internal Staff Sig'].json.message).replace('{{actionUrl}}', $node['Verify Internal Staff Sig'].json.actionUrl) }}\" } }"
       },
       "name": "WhatsApp: Staff Alert",
       "type": "n8n-nodes-base.httpRequest",

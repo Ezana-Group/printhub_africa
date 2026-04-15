@@ -35,6 +35,7 @@ export default async function EditProductPage({
         isActive: true,
         isFeatured: true,
         featuredThisWeek: true,
+        exportToPostiz: true,
         metaTitle: true,
         metaDescription: true,
         tags: true,
@@ -76,10 +77,12 @@ export default async function EditProductPage({
             isActive: product.isActive,
             isFeatured: product.isFeatured,
             featuredThisWeek: product.featuredThisWeek,
+            exportToPostiz: product.exportToPostiz,
             metaTitle: product.metaTitle,
             metaDescription: product.metaDescription,
             tags: product.tags ?? [],
           }}
+          postizUrl={process.env.POSTIZ_BASE_URL}
         />
       </div>
     </div>

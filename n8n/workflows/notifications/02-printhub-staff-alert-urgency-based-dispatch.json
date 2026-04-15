@@ -59,11 +59,11 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env.RESEND_API_KEY}}"
+              "value": "=Bearer {{$vars.RESEND_API_KEY}}"
             }
           ]
         },
-        "bodyParametersJson": "={ \"from\": \"PrintHub Alerts <alerts@printhub.africa>\", \"to\": \"{{ $env.ADMIN_EMAIL }}\", \"subject\": \"[{{ $json.urgency }}] Staff Alert: {{ $json.alertType }}\", \"html\": \"<h2 style='color:{{ $json.urgency === 'CRITICAL' ? '#dc2626' : $json.urgency === 'HIGH' ? '#ea580c' : '#d97706' }}'>⚠️ {{ $json.urgency }} Alert</h2><p><strong>Type:</strong> {{ $json.alertType }}</p><p><strong>Message:</strong> {{ $json.message }}</p>{{ $json.orderId ? '<p><strong>Order:</strong> ' + $json.orderId + '</p>' : '' }}{{ $json.customerId ? '<p><strong>Customer:</strong> ' + $json.customerId + '</p>' : '' }}<p><a href='https://admin.printhub.africa/admin'>Open Admin Panel →</a></p><p style='color:#888;font-size:11px;'>{{ new Date().toLocaleString('en-GB', {timeZone:'Africa/Nairobi'}) }} EAT</p>\" }"
+        "bodyParametersJson": "={ \"from\": \"PrintHub Alerts <alerts@printhub.africa>\", \"to\": \"{{ $vars.ADMIN_EMAIL }}\", \"subject\": \"[{{ $json.urgency }}] Staff Alert: {{ $json.alertType }}\", \"html\": \"<h2 style='color:{{ $json.urgency === 'CRITICAL' ? '#dc2626' : $json.urgency === 'HIGH' ? '#ea580c' : '#d97706' }}'>⚠️ {{ $json.urgency }} Alert</h2><p><strong>Type:</strong> {{ $json.alertType }}</p><p><strong>Message:</strong> {{ $json.message }}</p>{{ $json.orderId ? '<p><strong>Order:</strong> ' + $json.orderId + '</p>' : '' }}{{ $json.customerId ? '<p><strong>Customer:</strong> ' + $json.customerId + '</p>' : '' }}<p><a href='https://admin.printhub.africa/admin'>Open Admin Panel →</a></p><p style='color:#888;font-size:11px;'>{{ new Date().toLocaleString('en-GB', {timeZone:'Africa/Nairobi'}) }} EAT</p>\" }"
       },
       "name": "Email: Alert Admin",
       "type": "n8n-nodes-base.httpRequest",
@@ -75,18 +75,18 @@
     },
     {
       "parameters": {
-        "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "url": "=https://graph.facebook.com/v19.0/{{ $vars.WHATSAPP_PHONE_NUMBER_ID }}/messages",
         "method": "POST",
         "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}"
+              "value": "=Bearer {{$vars.WHATSAPP_ACCESS_TOKEN}}"
             }
           ]
         },
-        "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{ $env.BUSINESS_PHONE }}\", \"type\": \"text\", \"text\": { \"body\": \"🚨 {{ $json.urgency }} ALERT\\n\\nType: {{ $json.alertType }}\\n{{ $json.message }}{{ $json.orderId ? '\\nOrder: ' + $json.orderId : '' }}\\n\\nCheck admin panel immediately.\" } }"
+        "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{ $vars.BUSINESS_PHONE }}\", \"type\": \"text\", \"text\": { \"body\": \"🚨 {{ $json.urgency }} ALERT\\n\\nType: {{ $json.alertType }}\\n{{ $json.message }}{{ $json.orderId ? '\\nOrder: ' + $json.orderId : '' }}\\n\\nCheck admin panel immediately.\" } }"
       },
       "name": "WhatsApp: Alert",
       "type": "n8n-nodes-base.httpRequest",
@@ -98,7 +98,7 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $env.TELEGRAM_CHANNEL_ID }}",
+        "chatId": "={{ $vars.TELEGRAM_CHANNEL_ID }}",
         "text": "=🚨 *{{ $json.urgency }} STAFF ALERT*\n\n*Type:* {{ $json.alertType }}\n*Message:* {{ $json.message }}{{ $json.orderId ? '\\n*Order:* ' + $json.orderId : '' }}\n\n_{{ new Date().toLocaleString('en-GB', {timeZone:'Africa/Nairobi'}) }} EAT_",
         "additionalFields": {
           "parse_mode": "Markdown"
@@ -113,7 +113,7 @@
       ],
       "credentials": {
         "telegramApi": {
-          "id": "telegram-cred",
+          "id": "",
           "name": "Telegram"
         }
       }
@@ -127,7 +127,7 @@
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
             }
           ]
         },

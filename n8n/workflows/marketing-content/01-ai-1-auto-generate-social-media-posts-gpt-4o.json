@@ -39,7 +39,7 @@
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
             }
           ]
         },
@@ -67,11 +67,11 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env.OPENAI_API_KEY}}"
+              "value": "=Bearer {{$vars.OPENAI_API_KEY}}"
             }
           ]
         },
-        "bodyParametersJson": "={ \"model\": \"claude-opus-4-6\", \"messages\": [{ \"role\": \"system\", \"content\": \"You are a professional social media strategist for PrintHub Africa, Nairobi. Tone: punchy, high-energy. British English. \\n\\nPLATFORM ROUTING (via exportFlags):\\n- exportMeta -> FB + IG\\n- exportTiktok -> TikTok\\n- exportLinkedin -> LinkedIn\\n- exportX -> Twitter\\n- exportTelegram -> Telegram\\n- exportYoutube (if video_url present) -> YT Community\\n\\nIMAGE FORMAT: {{$env.R2_PUBLIC_URL}}/products/images/{image_key}. \\n\\nOUTPUT: JSON with fields (instagram, facebook, tiktok, linkedin, twitter, telegram, youtube, video). Default to IG/FB/Twitter if flags null.\" }, { \"role\": \"user\", \"content\": \"Generate posts for product: {{ $json.name }}. Description: {{ $json.description }}. exportFlags: {{ JSON.stringify($json.exportFlags) }}. primary_image_key: {{ $json.image_key }}. video_url: {{ $json.video_url || 'null' }}.\" }] }"
+        "bodyParametersJson": "={ \"model\": \"claude-opus-4-6\", \"messages\": [{ \"role\": \"system\", \"content\": \"You are a professional social media strategist for PrintHub Africa, Nairobi. Tone: punchy, high-energy. British English. \\n\\nPLATFORM ROUTING (via exportFlags):\\n- exportMeta -> FB + IG\\n- exportTiktok -> TikTok\\n- exportLinkedin -> LinkedIn\\n- exportX -> Twitter\\n- exportTelegram -> Telegram\\n- exportYoutube (if video_url present) -> YT Community\\n\\nIMAGE FORMAT: {{$vars.R2_PUBLIC_URL}}/products/images/{image_key}. \\n\\nOUTPUT: JSON with fields (instagram, facebook, tiktok, linkedin, twitter, telegram, youtube, video). Default to IG/FB/Twitter if flags null.\" }, { \"role\": \"user\", \"content\": \"Generate posts for product: {{ $json.name }}. Description: {{ $json.description }}. exportFlags: {{ JSON.stringify($json.exportFlags) }}. primary_image_key: {{ $json.image_key }}. video_url: {{ $json.video_url || 'null' }}.\" }] }"
       },
       "name": "Claude: Generate Social Posts",
       "type": "n8n-nodes-base.httpRequest",
@@ -90,7 +90,7 @@
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
             }
           ]
         },

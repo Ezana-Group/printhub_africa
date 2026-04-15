@@ -61,11 +61,11 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env[\"RESEND_API_KEY\"]}}"
+              "value": "=Bearer {{$vars.RESEND_API_KEY}}"
             }
           ]
         },
-        "bodyParametersJson": "={ \"from\": \"PrintHub Africa <shipping@printhub.africa>\", \"to\": \"{{$json.customerEmail}}\", \"subject\": \"Your order {{$json.orderNumber}} is on its way!\", \"html\": \"<p>Exciting news {{$json.customerName}}! Your order is dispatched. Tracking: {{$json.trackingNumber}}</p><p><a href='{{$env[\\\"APP_URL\\\"]}}/track/{{$json.orderNumber}}'>Track Order →</a></p>\" }"
+        "bodyParametersJson": "={ \"from\": \"PrintHub Africa <shipping@printhub.africa>\", \"to\": \"{{$json.customerEmail}}\", \"subject\": \"Your order {{$json.orderNumber}} is on its way!\", \"html\": \"<p>Exciting news {{$json.customerName}}! Your order is dispatched. Tracking: {{$json.trackingNumber}}</p><p><a href='{{$vars.APP_URL}}/track/{{$json.orderNumber}}'>Track Order →</a></p>\" }"
       },
       "id": "email-dispatched",
       "name": "Email: Dispatched",

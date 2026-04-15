@@ -28,13 +28,13 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.N8N_BASE_URL || 'https://n8n.printhub.africa' }}/webhook/staff-alert",
+        "url": "={{ $vars.N8N_BASE_URL || 'https://n8n.printhub.africa' }}/webhook/staff-alert",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
             }
           ]
         },
@@ -77,13 +77,13 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.ADMIN_URL || 'https://admin.printhub.africa' }}/api/n8n/log-error",
+        "url": "={{ $vars.ADMIN_URL || 'https://admin.printhub.africa' }}/api/n8n/log-error",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
             },
             {
               "name": "x-printhub-timestamp",

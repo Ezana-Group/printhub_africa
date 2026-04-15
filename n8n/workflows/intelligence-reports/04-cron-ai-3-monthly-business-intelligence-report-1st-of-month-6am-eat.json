@@ -29,7 +29,7 @@
           "parameters": [
             {
               "name": "x-n8n-secret",
-              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
             }
           ]
         }
@@ -44,7 +44,7 @@
     },
     {
       "parameters": {
-        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={{$env.GEMINI_API_KEY}}",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={{$vars.GEMINI_API_KEY}}",
         "method": "POST",
         "bodyParametersJson": "={ \"contents\": [{ \"parts\": [{ \"text\": \"You are the business analyst for PrintHub Africa, a Nairobi printing company.\\n\\nAnalyse this month's complete business data and produce:\\n1. Executive summary (key wins, key concerns)\\n2. Revenue analysis with MoM comparison\\n3. Product performance (stars, dogs, risers, fallers)\\n4. Customer analysis (LTV trends, churn signals)\\n5. Operational insights (production efficiency, stock)\\n6. Top 5 actionable recommendations for next month\\n7. Forecast for next month based on trends\\n\\nBusiness data:\\n{{ JSON.stringify($json) }}\" }] }], \"generationConfig\": { \"maxOutputTokens\": 3000 } }"
       },
@@ -65,7 +65,7 @@
           "parameters": [
             {
               "name": "x-api-key",
-              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+              "value": "={{ $vars.ANTHROPIC_API_KEY }}"
             },
             {
               "name": "anthropic-version",
@@ -104,7 +104,7 @@
           "parameters": [
             {
               "name": "x-printhub-signature",
-              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
             }
           ]
         },
@@ -127,11 +127,11 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env.RESEND_API_KEY}}"
+              "value": "=Bearer {{$vars.RESEND_API_KEY}}"
             }
           ]
         },
-        "bodyParametersJson": "={ \"from\": \"PrintHub Reports <reports@printhub.africa>\", \"to\": \"{{$env.SUPER_ADMIN_EMAIL || $env.ADMIN_EMAIL}}\", \"subject\": \"PrintHub Monthly Business Report — {{ new Date().toLocaleString('en-GB', { month: 'long', year: 'numeric' }) }}\", \"html\": \"<h2>Monthly Business Intelligence Report</h2><p>Your full business report is ready.</p><p><a href='{{ $node['Generate PDF'].json.pdfUrl }}' style='display:inline-block;background:#0066cc;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;'>Download PDF Report →</a></p><hr><h3>Key Highlights</h3>{{ $node['Claude: Format HTML Report'].json.content?.[0]?.text?.slice(0, 1500) }}...\" }"
+        "bodyParametersJson": "={ \"from\": \"PrintHub Reports <reports@printhub.africa>\", \"to\": \"{{$vars.SUPER_ADMIN_EMAIL || $vars.ADMIN_EMAIL}}\", \"subject\": \"PrintHub Monthly Business Report — {{ new Date().toLocaleString('en-GB', { month: 'long', year: 'numeric' }) }}\", \"html\": \"<h2>Monthly Business Intelligence Report</h2><p>Your full business report is ready.</p><p><a href='{{ $node['Generate PDF'].json.pdfUrl }}' style='display:inline-block;background:#0066cc;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;'>Download PDF Report →</a></p><hr><h3>Key Highlights</h3>{{ $node['Claude: Format HTML Report'].json.content?.[0]?.text?.slice(0, 1500) }}...\" }"
       },
       "name": "Email Report to SUPER_ADMIN",
       "type": "n8n-nodes-base.httpRequest",

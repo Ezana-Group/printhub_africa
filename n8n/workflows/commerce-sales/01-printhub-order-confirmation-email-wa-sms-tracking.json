@@ -41,11 +41,11 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env[\"RESEND_API_KEY\"]}}"
+              "value": "=Bearer {{$vars.RESEND_API_KEY}}"
             }
           ]
         },
-        "bodyParametersJson": "={ \"from\": \"PrintHub Africa <orders@printhub.africa>\", \"to\": \"{{$json.customerEmail}}\", \"subject\": \"Order Confirmed: {{$json.orderNumber}}\", \"html\": \"<div style='font-family:sans-serif;max-width:600px;margin:0 auto'><h2>Order Confirmed!</h2><p>Hi {{$json.customerName}}, your order <strong>{{$json.orderNumber}}</strong> (KES {{$json.total}}) is confirmed! We will notify you when it's dispatched.</p><p><a href='{{$env[\\\"APP_URL\\\"]}}/track/{{$json.orderNumber}}' style='background:#f97316;color:white;padding:10px 20px;border-radius:5px;text-decoration:none'>Track Your Order</a></p></div>\" }"
+        "bodyParametersJson": "={ \"from\": \"PrintHub Africa <orders@printhub.africa>\", \"to\": \"{{$json.customerEmail}}\", \"subject\": \"Order Confirmed: {{$json.orderNumber}}\", \"html\": \"<div style='font-family:sans-serif;max-width:600px;margin:0 auto'><h2>Order Confirmed!</h2><p>Hi {{$json.customerName}}, your order <strong>{{$json.orderNumber}}</strong> (KES {{$json.total}}) is confirmed! We will notify you when it's dispatched.</p><p><a href='{{$vars.APP_URL}}/track/{{$json.orderNumber}}' style='background:#f97316;color:white;padding:10px 20px;border-radius:5px;text-decoration:none'>Track Your Order</a></p></div>\" }"
       },
       "id": "resend-email",
       "name": "Resend: Email",
@@ -58,14 +58,14 @@
     },
     {
       "parameters": {
-        "url": "=https://graph.facebook.com/v19.0/{{$env[\"WHATSAPP_PHONE_NUMBER_ID\"]}}/messages",
+        "url": "=https://graph.facebook.com/v19.0/{{$vars.WHATSAPP_PHONE_NUMBER_ID}}/messages",
         "method": "POST",
         "authentication": "none",
         "headerParameters": {
           "parameters": [
             {
               "name": "Authorization",
-              "value": "=Bearer {{$env[\"WHATSAPP_ACCESS_TOKEN\"]}}"
+              "value": "=Bearer {{$vars.WHATSAPP_ACCESS_TOKEN}}"
             }
           ]
         },
@@ -89,7 +89,7 @@
           "parameters": [
             {
               "name": "apiKey",
-              "value": "={{$env[\"AT_API_KEY\"]}}"
+              "value": "={{$vars.AT_API_KEY}}"
             }
           ]
         },
@@ -97,7 +97,7 @@
           "parameters": [
             {
               "name": "username",
-              "value": "={{$env[\"AT_USERNAME\"]}}"
+              "value": "={{$vars.AT_USERNAME}}"
             },
             {
               "name": "to",
@@ -122,9 +122,9 @@
     },
     {
       "parameters": {
-        "url": "=https://graph.facebook.com/v19.0/{{$env[\"META_PIXEL_ID\"]}}/events",
+        "url": "=https://graph.facebook.com/v19.0/{{$vars.META_PIXEL_ID}}/events",
         "method": "POST",
-        "bodyParametersJson": "={ \"data\": [ { \"event_name\": \"Purchase\", \"event_time\": {{Math.floor(Date.now()/1000)}}, \"action_source\": \"website\", \"user_data\": { \"em\": [\"{{$json.customerEmail}}\"], \"ph\": [\"{{$json.customerPhone}}\"] }, \"custom_data\": { \"value\": {{$json.total}}, \"currency\": \"KES\", \"order_id\": \"{{$json.orderNumber}}\" } } ], \"access_token\": \"{{$env[\\\"META_ACCESS_TOKEN\\\"]}}\" }"
+        "bodyParametersJson": "={ \"data\": [ { \"event_name\": \"Purchase\", \"event_time\": {{Math.floor(Date.now()/1000)}}, \"action_source\": \"website\", \"user_data\": { \"em\": [\"{{$json.customerEmail}}\"], \"ph\": [\"{{$json.customerPhone}}\"] }, \"custom_data\": { \"value\": {{$json.total}}, \"currency\": \"KES\", \"order_id\": \"{{$json.orderNumber}}\" } } ], \"access_token\": \"{{$vars.META_ACCESS_TOKEN}}\" }"
       },
       "id": "meta-capi-purchase",
       "name": "Meta CAPI: Purchase",
