@@ -12,28 +12,67 @@ import { CatalogueStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
-function getBaseUrl(req: Request): string {
-  try {
-    const u = new URL(req.url);
-    return u.origin;
-  } catch {
-    return process.env.NEXT_PUBLIC_APP_URL ?? "https://printhub.africa";
+function getBaseUrl(req: NextRequest): string {
+  const searchParams = req.nextUrl.searchParams;
+  const forcedDomain = searchParams.get("domain");
+
+  // 1. Check for explicit domain override in query params
+  if (forcedDomain) {
+    const cleanDomain = forcedDomain.replace(/^https?:\/\//, "").replace(/\/$/, "");
+    return `https://${cleanDomain}`;
   }
+
+  // 2. Detect from request headers
+  const forwardedHost = req.headers.get("x-forwarded-host");
+  const host = req.headers.get("host");
+  const detectedHost = forwardedHost || host;
+
+  if (detectedHost && !detectedHost.includes("localhost") && !detectedHost.includes("railway.app")) {
+     return `https://${detectedHost}`;
+  }
+
+  // 3. Fallback to Env or Hardcoded
+  const envUrl = process.env.NEXT_PUBLIC_APP_URL || "https://printhub.africa";
+  return envUrl.replace(/\/$/, "");
 }
 
 export async function GET(req: NextRequest) {
   try {
     const baseUrl = getBaseUrl(req);
+    const searchParams = req.nextUrl.searchParams;
+    const isDebug = searchParams.get("debug") === "1" || searchParams.get("debug") === "true";
+    const format = searchParams.get("format");
+    const channel = searchParams.get("channel")?.toLowerCase();
+
+    // Mapping of feed channels to DB boolean fields
+    const channelMap: Record<string, string> = {
+      meta: "exportToMeta",
+      google: "exportToGoogle",
+      tiktok: "exportToTiktok",
+      youtube: "exportToYoutube",
+      pinterest: "exportToPinterest",
+      linkedin: "exportToLinkedIn",
+      x: "exportToX",
+      instagram: "exportToInstagramStories",
+      jiji: "exportToJiji",
+    };
+
+    const productWhere: any = { isActive: true };
+    if (channel && channelMap[channel]) {
+      productWhere[channelMap[channel]] = true;
+    }
+
     const [products, catalogueItems] = await Promise.all([
       prisma.product.findMany({
-        where: { isActive: true },
+        where: productWhere,
         include: {
           category: { select: { name: true, slug: true } },
           productImages: { orderBy: { sortOrder: "asc" }, take: 1 },
         },
       }),
       prisma.catalogueItem.findMany({
-        where: { status: CatalogueStatus.LIVE },
+        // Only show live catalogue items that ARE NOT yet shop products (prevents duplicates)
+        where: { status: CatalogueStatus.LIVE, productId: null },
         include: {
           category: { select: { name: true, slug: true } },
           photos: { where: { isPrimary: true }, take: 1 },
@@ -41,65 +80,160 @@ export async function GET(req: NextRequest) {
       }),
     ]);
 
-    const shopEntries = products.map((p) => {
-      const img = p.productImages?.[0];
-      const imageUrl =
-        (p.images?.[0]?.startsWith("http") ? p.images[0] : null)
-        ?? (img?.storageKey ? safePublicFileUrl(img.storageKey) : null)
-        ?? img?.url
-        ?? null;
-      return {
-        id: `shop-${p.id}`,
-        title: p.name,
-        description: p.shortDescription ?? p.description ?? p.name,
-        link: `${baseUrl}/shop/${p.slug}`,
-        imageLink: imageUrl,
-        price: `${Number(p.basePrice)} KES`,
-        availability: p.stock > 0 ? "in_stock" : "out_of_stock",
-        brand: "PrintHub",
-        channel: "shop",
-      };
-    });
+    // Handle Debug Mode
+    if (isDebug) {
+      return NextResponse.json({
+        debug: true,
+        summary: {
+          productCount: products.length,
+          catalogueCount: catalogueItems.length,
+          totalCount: products.length + catalogueItems.length,
+          baseUrl,
+        },
+        items: {
+          products: products.map(p => ({ id: p.id, name: p.name, isActive: p.isActive, images: p.images })),
+          catalogue: catalogueItems.map(c => ({ id: c.id, name: c.name, status: c.status, productId: c.productId })),
+        }
+      });
+    }
 
-    const catalogueEntries = catalogueItems.map((item) => {
-      const photo = item.photos[0];
-      const imageUrl =
-        photo?.url?.startsWith("http")
-          ? photo.url
-          : photo?.storageKey
-            ? safePublicFileUrl(photo.storageKey)
-            : null;
-      const priceKes = item.priceOverrideKes ?? item.basePriceKes;
-      return {
-        id: `catalogue-${item.id}`,
-        title: item.name,
-        description: item.shortDescription ?? item.description ?? item.name,
-        link: `${baseUrl}/catalogue/${item.slug}`,
-        imageLink: imageUrl,
-        price: priceKes != null ? `${Math.round(priceKes)} KES` : null,
-        availability: "in_stock",
-        brand: "PrintHub",
-        channel: "catalogue",
-      };
-    });
+    interface FeedItem {
+      id: string;
+      item_group_id?: string;
+      title: string;
+      description: string;
+      link: string;
+      imageLink: string | null;
+      price: string;
+      availability: string;
+      brand: string;
+      category: string;
+    }
 
-    const feed = {
-      version: "1.0",
-      baseUrl,
+    // Build the standardized items list
+    const allItems: FeedItem[] = [
+      ...products.map((p) => {
+        const img = p.productImages?.[0];
+        let imageUrl =
+          (p.images?.[0]?.startsWith("http") ? p.images[0] : null)
+          ?? (img?.storageKey ? safePublicFileUrl(img.storageKey) : null)
+          ?? img?.url
+          ?? (p.images?.[0]?.startsWith("/") ? `${baseUrl}${p.images[0]}` : null); // Fix: handle relative paths
+
+        return {
+          id: `shop-${p.id}`,
+          item_group_id: p.catalogueItemId ? `catalogue-${p.catalogueItemId}` : undefined,
+          title: p.name || "Untitled Product",
+          description: p.shortDescription || p.description || p.name || "No description available",
+          link: `${baseUrl}/shop/${p.slug}`,
+          imageLink: imageUrl,
+          price: `${Number(p.basePrice || 0).toFixed(2)} KES`,
+          availability: (p.stock ?? 0) > 0 ? "in_stock" : (p.isPOD ? "in_stock" : "out_of_stock"),
+          brand: p.brand || "PrintHub",
+          category: "5267",
+        };
+      }),
+      ...catalogueItems.map((item) => {
+        const photo = item.photos[0];
+        let imageUrl =
+          photo?.url?.startsWith("http")
+            ? photo.url
+            : photo?.storageKey
+              ? safePublicFileUrl(photo.storageKey)
+              : photo?.url?.startsWith("/")
+                ? `${baseUrl}${photo.url}` // Fix: handle relative paths
+                : null;
+
+        const priceKes = item.priceOverrideKes ?? item.basePriceKes ?? 0;
+        return {
+          id: `catalogue-${item.id}`,
+          title: item.name || "Untitled Catalogue Item",
+          description: item.shortDescription || item.description || item.name || "No description available",
+          link: `${baseUrl}/catalogue/${item.slug}`,
+          imageLink: imageUrl,
+          price: `${Number(priceKes).toFixed(2)} KES`,
+          availability: "in_stock",
+          brand: "PrintHub",
+          category: "5267",
+        };
+      }),
+    ];
+
+    // Meta/Google require images. Filter items without valid imageLinks.
+    const feedItems = allItems.filter(item => item.imageLink && item.imageLink.startsWith("http"));
+
+    if (format === "xml" || format === "rss") {
+      try {
+        const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">
+  <channel>
+    <title>PrintHub Africa Product Feed</title>
+    <link>${baseUrl}</link>
+    <description>3/D Printing Catalogue and Shop Products</description>
+    <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
+    ${feedItems.map(item => `
+    <item>
+      <g:id>${escapeXml(item.id)}</g:id>
+      ${item.item_group_id ? `<g:item_group_id>${escapeXml(item.item_group_id)}</g:item_group_id>` : ''}
+      <g:title><![CDATA[${item.title}]]></g:title>
+      <g:description><![CDATA[${item.description}]]></g:description>
+      <g:link>${escapeXml(item.link)}</g:link>
+      <g:image_link>${escapeXml(item.imageLink || "")}</g:image_link>
+      <g:brand>${escapeXml(item.brand)}</g:brand>
+      <g:condition>new</g:condition>
+      <g:availability>${item.availability}</g:availability>
+      <g:price>${item.price}</g:price>
+      <g:google_product_category>${item.category}</g:google_product_category>
+    </item>`).join('')}
+  </channel>
+</rss>`;
+
+        // Use Response for cleaner XML serialization
+        return new Response(xml, {
+          headers: {
+            "Content-Type": "application/xml; charset=utf-8",
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "X-Feed-Items": feedItems.length.toString(),
+          },
+        });
+      } catch (err: any) {
+        console.error("[Feed] XML Template Error:", err);
+        return new Response(`XML generation Error: ${err?.message}`, { 
+          status: 500, 
+          headers: { "Content-Type": "text/plain" } 
+        });
+      }
+    }
+
+    // Default JSON response
+    return NextResponse.json({
       generatedAt: new Date().toISOString(),
-      items: [...shopEntries, ...catalogueEntries],
-    };
-
-    return NextResponse.json(feed, {
-      headers: {
-        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
-      },
+      baseUrl,
+      filteredItemCount: feedItems.length,
+      totalCount: allItems.length,
+      items: feedItems,
+    }, {
+      headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
     });
-  } catch (e) {
-    console.error("Product feed error:", e);
-    return NextResponse.json(
-      { error: "Failed to generate feed" },
-      { status: 500 }
-    );
+  } catch (e: any) {
+    console.error("[Feed] Database or System Error:", e);
+    return new Response(`System Error: ${e?.message || "Unknown"}`, { 
+      status: 500,
+      headers: { "Content-Type": "text/plain" }
+    });
   }
+}
+
+function escapeXml(unsafe: string | null | undefined): string {
+  if (!unsafe) return "";
+  return String(unsafe).replace(/[<>&"']/g, (c) => {
+    switch (c) {
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '&': return '&amp;';
+      case '"': return '&quot;';
+      case "'": return '&apos;';
+      default: return c;
+    }
+  });
 }

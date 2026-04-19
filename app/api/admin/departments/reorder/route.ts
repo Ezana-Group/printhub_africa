@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
 /** POST: Update sort order. Body: { order: string[] } department IDs. */
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user || !role || !ADMIN_ROLES.includes(role)) {
     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });

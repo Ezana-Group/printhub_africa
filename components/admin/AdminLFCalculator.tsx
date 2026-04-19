@@ -13,7 +13,9 @@ import {
   type LFJobInputs,
   type LFMaterialCosts,
 } from "@/lib/lf-calculator-engine";
-import { Calculator, Package, History, Download, FileText } from "lucide-react";
+import { Calculator, Package, History, Download, FileText, ExternalLink } from "lucide-react";
+import { FileUploader } from "@/components/upload/FileUploader";
+
 import { setQuoteDraft } from "@/lib/quote-draft";
 import type { LFHistoryEntry } from "@/app/api/admin/calculator/lf/history/route";
 
@@ -45,7 +47,9 @@ export function AdminLFCalculator() {
   const [rushMultiplier, setRushMultiplier] = useState(1);
   const [marginOverride, setMarginOverride] = useState<number | "">(40);
   const [jobName, setJobName] = useState("");
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [saveHistoryStatus, setSaveHistoryStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+
 
   const [history, setHistory] = useState<LFHistoryEntry[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -195,7 +199,9 @@ export function AdminLFCalculator() {
           profitAmount: breakdown.profitAmount,
           marginPercent: breakdown.profitMarginPct,
           totalJobTimeHours: breakdown.totalJobTimeHours,
+          fileUrl: fileUrl,
         }),
+
       });
       if (res.ok) {
         setSaveHistoryStatus("done");
@@ -471,6 +477,25 @@ export function AdminLFCalculator() {
                       className="mt-1"
                     />
                   </div>
+                  <div>
+                    <Label className="mb-2 block">Production File (Optional)</Label>
+                    <FileUploader
+                      context="ADMIN_LF_CALC"
+                      accept={["application/pdf", ".ai", ".psd", "application/postscript", "image/png", "image/svg+xml", ".svg", "image/tiff", ".tiff", ".tif", ".dxf", "image/jpeg"]}
+                      maxFiles={1}
+                      onUploadComplete={(files) => {
+                        if (files.length > 0) {
+                          setFileUrl(files[0].publicUrl);
+                        }
+                      }}
+                    />
+                    {fileUrl && (
+                      <p className="text-xs text-green-600 mt-1 truncate">
+                        Uploaded: {fileUrl.split('/').pop()}
+                      </p>
+                    )}
+                  </div>
+
                   <Button
                     onClick={handleSaveToHistory}
                     disabled={!breakdown || saveHistoryStatus === "loading"}
@@ -703,7 +728,9 @@ export function AdminLFCalculator() {
                       <th className="text-right p-2">Selling</th>
                       <th className="text-right p-2">Profit</th>
                       <th className="text-right p-2">Margin</th>
+                      <th className="text-center p-2">File</th>
                     </tr>
+
                   </thead>
                   <tbody>
                     {filteredHistory.map((e) => (
@@ -717,7 +744,23 @@ export function AdminLFCalculator() {
                         <td className="p-2 text-right">{formatKes(e.sellingPrice)}</td>
                         <td className="p-2 text-right text-green-600">{formatKes(e.profitAmount)}</td>
                         <td className="p-2 text-right">{e.marginPercent}%</td>
+                        <td className="p-2 text-center">
+                          {e.fileUrl ? (
+                            <a 
+                              href={e.fileUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center text-primary hover:underline hover:scale-110 transition-transform"
+                              title="Download File"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </td>
                       </tr>
+
                     ))}
                   </tbody>
                 </table>

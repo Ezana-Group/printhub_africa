@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 
 const ADMIN_ROLES = ["STAFF", "ADMIN", "SUPER_ADMIN"];
@@ -9,22 +9,42 @@ const MAX_HISTORY = 500;
 
 type HistoryEntry = {
   id: string;
-  staffUserId: string | null;
+  staffUserId?: string | null;
   jobName: string;
-  materialCode: string;
-  weightGrams: number;
-  printTimeHours: number;
-  quantity: number;
-  postProcessing: boolean;
-  productionCost: number;
-  sellingPrice: number;
+  parts?: Array<{
+    name: string;
+    materialCode: string;
+    weightGrams: number;
+    printTimeHours: number;
+    quantity: number;
+    postProcessing: boolean;
+    postProcessingTimeHoursOverride?: number;
+    productionCost: number;
+    sellingPrice: number;
+    color?: string;
+    infillPercent?: number;
+    layerHeightMm?: number;
+  }>;
+  totalProductionCost: number;
+  totalSellingPrice: number;
   profitAmount: number;
   marginPercent: number;
+  isPrinted?: boolean;
+  fileUrl?: string;
   createdAt: string;
+
+  // Legacy fields (for backward compatibility during migration)
+  materialCode?: string; 
+  weightGrams?: number;
+  printTimeHours?: number;
+  quantity?: number;
+  postProcessing?: boolean;
+  productionCost?: number;
+  sellingPrice?: number;
 };
 
 export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user || !role || !ADMIN_ROLES.includes(role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -33,21 +53,53 @@ export async function GET(req: Request) {
     const config = await prisma.pricingConfig.findUnique({
       where: { key: HISTORY_KEY },
     });
-    const list: HistoryEntry[] = config?.valueJson
+    const list: any[] = config?.valueJson
       ? JSON.parse(config.valueJson)
       : [];
+    
+    // Normalize legacy entries to multi-part format for the UI
+    const normalized: HistoryEntry[] = list.map(e => {
+      if (!e.parts && e.materialCode) {
+        return {
+          ...e,
+          parts: [{
+            name: "Part 1",
+            materialCode: e.materialCode,
+            weightGrams: e.weightGrams || 0,
+            printTimeHours: e.printTimeHours || 0,
+            quantity: e.quantity || 1,
+            postProcessing: !!e.postProcessing,
+            postProcessingTimeHoursOverride: e.postProcessingTimeHoursOverride,
+            productionCost: e.productionCost || 0,
+            sellingPrice: e.sellingPrice || 0,
+            color: (e as any).color,
+            infillPercent: (e as any).infillPercent,
+            layerHeightMm: (e as any).layerHeightMm,
+          }],
+          totalProductionCost: e.productionCost || 0,
+          totalSellingPrice: e.sellingPrice || 0,
+        };
+      }
+      return e;
+    });
+
     const { searchParams } = new URL(req.url);
     const material = searchParams.get("material");
     const from = searchParams.get("from");
     const to = searchParams.get("to");
     const search = searchParams.get("search");
-    let filtered = list;
-    if (material) filtered = filtered.filter((e) => e.materialCode === material);
+    let filtered = normalized;
+    if (material) {
+      filtered = filtered.filter((e) => 
+        e.parts?.some(p => p.materialCode === material) || e.materialCode === material
+      );
+    }
     if (from) filtered = filtered.filter((e) => e.createdAt >= from);
     if (to) filtered = filtered.filter((e) => e.createdAt <= to);
     if (search)
       filtered = filtered.filter((e) =>
-        e.jobName.toLowerCase().includes(search.toLowerCase())
+        e.jobName.toLowerCase().includes(search.toLowerCase()) ||
+        e.parts?.some(p => p.materialCode.toLowerCase().includes(search.toLowerCase()))
       );
     return NextResponse.json(filtered.reverse());
   } catch (e) {
@@ -57,7 +109,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user || !role || !ADMIN_ROLES.includes(role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -68,16 +120,15 @@ export async function POST(req: Request) {
       id: `hist_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
       staffUserId: session.user?.id ?? null,
       jobName: String(body.jobName ?? "Unnamed job"),
-      materialCode: String(body.materialCode ?? ""),
-      weightGrams: Number(body.weightGrams) || 0,
-      printTimeHours: Number(body.printTimeHours) || 0,
-      quantity: Number(body.quantity) || 1,
-      postProcessing: Boolean(body.postProcessing),
-      productionCost: Number(body.productionCost) || 0,
-      sellingPrice: Number(body.sellingPrice) || 0,
+      parts: body.parts || [],
+      totalProductionCost: Number(body.totalProductionCost) || 0,
+      totalSellingPrice: Number(body.totalSellingPrice) || 0,
       profitAmount: Number(body.profitAmount) || 0,
       marginPercent: Number(body.marginPercent) || 0,
+      isPrinted: !!body.isPrinted,
+      fileUrl: body.fileUrl,
       createdAt: new Date().toISOString(),
+
     };
     const config = await prisma.pricingConfig.findUnique({
       where: { key: HISTORY_KEY },
@@ -96,5 +147,40 @@ export async function POST(req: Request) {
   } catch (e) {
     console.error("3D history POST error:", e);
     return NextResponse.json({ error: "Failed to save" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  const session = await getServerSession(authOptionsAdmin);
+  const role = (session?.user as { role?: string })?.role;
+  if (!session?.user || !role || !ADMIN_ROLES.includes(role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    if (!id) {
+      return NextResponse.json({ error: "ID required" }, { status: 400 });
+    }
+
+    const config = await prisma.pricingConfig.findUnique({
+      where: { key: HISTORY_KEY },
+    });
+    if (!config?.valueJson) {
+      return NextResponse.json({ error: "No history found" }, { status: 404 });
+    }
+
+    const list: HistoryEntry[] = JSON.parse(config.valueJson);
+    const updated = list.filter((e) => e.id !== id);
+    
+    await prisma.pricingConfig.update({
+      where: { key: HISTORY_KEY },
+      data: { valueJson: JSON.stringify(updated) },
+    });
+
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    console.error("3D history DELETE error:", e);
+    return NextResponse.json({ error: "Failed to delete" }, { status: 500 });
   }
 }

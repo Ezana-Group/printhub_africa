@@ -1,0 +1,142 @@
+{
+  "name": "4. PrintHub - Staff Alert (WhatsApp + Telegram Dispatcher)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "staff-alert-whatsapp",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "name": "Webhook: Staff Alert",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst sig = $node['Webhook: Staff Alert'].json.headers['x-printhub-signature'];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node['Webhook: Staff Alert'].json.body)).digest('hex');\nif (sig !== hmac) throw new Error('Invalid');\nreturn $node['Webhook: Staff Alert'].json.body;"
+      },
+      "name": "Verify Internal Staff Sig",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://admin.printhub.africa/api/admin/content/templates/fetch/staff-alert-whatsapp",
+        "method": "GET",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{$vars.N8N_WEBHOOK_SECRET}}"
+            }
+          ]
+        }
+      },
+      "name": "Fetch Template",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        540,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{$vars.TELEGRAM_STAFF_GROUP_ID}}",
+        "text": "={{ $node['Fetch Template'].json.body.replace('{{title}}', $node['Verify Internal Staff Sig'].json.title).replace('{{message}}', $node['Verify Internal Staff Sig'].json.message).replace('{{actionUrl}}', $node['Verify Internal Staff Sig'].json.actionUrl) }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Telegram: Staff Group",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        760,
+        200
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-staff",
+          "name": "Telegram Staff"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://graph.facebook.com/v19.0/{{$vars.WHATSAPP_PHONE_NUMBER_ID}}/messages",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$vars.WHATSAPP_ACCESS_TOKEN}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{$vars.STAFF_WHATSAPP_NUMBER}}\", \"type\": \"text\", \"text\": { \"body\": \"{{ $node['Fetch Template'].json.body.replace('{{title}}', $node['Verify Internal Staff Sig'].json.title).replace('{{message}}', $node['Verify Internal Staff Sig'].json.message).replace('{{actionUrl}}', $node['Verify Internal Staff Sig'].json.actionUrl) }}\" } }"
+      },
+      "name": "WhatsApp: Staff Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        760,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: Staff Alert": {
+      "main": [
+        [
+          {
+            "node": "Verify Internal Staff Sig",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Internal Staff Sig": {
+      "main": [
+        [
+          {
+            "node": "Fetch Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Template": {
+      "main": [
+        [
+          {
+            "node": "Telegram: Staff Group",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "WhatsApp: Staff Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+  }
+}

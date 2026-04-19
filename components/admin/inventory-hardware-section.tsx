@@ -17,6 +17,8 @@ import { TableToolbar, type FilterConfig } from "@/components/admin/ui/TableTool
 import { TableEmptyState } from "@/components/admin/ui/TableEmptyState";
 import { useTableUrlState } from "@/hooks/useTableUrlState";
 import { Search, Wrench, Puzzle, Plus, MoreHorizontal, Eye, Pencil, History, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 export type HardwareItemSerialized = {
   id: string;
@@ -40,6 +42,7 @@ export type HardwareItemSerialized = {
   postProcessingTimeHours: number | null;
   isActive: boolean;
   sortOrder: number;
+  source?: "INVENTORY" | "CORE_ASSET";
 };
 
 const HARDWARE_TYPES = [
@@ -101,7 +104,18 @@ export function InventoryHardwareSection({
   title: string;
   description: string;
   initialItems: HardwareItemSerialized[];
-  printerAssets?: { id: string; name: string }[];
+  printerAssets?: Array<{ 
+    id: string; 
+    name: string; 
+    location: string | null; 
+    printerType: string; 
+    status: string; 
+    priceKes: number; 
+    lifespanHours: number | null; 
+    powerWatts: number | null; 
+    maintenancePerYearKes: number | null; 
+    isActive: boolean;
+  }>;
 }) {
   const router = useRouter();
   const [items, setItems] = useState<HardwareItemSerialized[]>(initialItems);
@@ -111,8 +125,39 @@ export function InventoryHardwareSection({
   const statusFilter = url.get("status", "");
 
   const filteredList = useMemo(() => {
-    return items.filter((i) => i.category === category);
-  }, [items, category]);
+    const list = items.filter((i) => i.category === category).map(i => ({ ...i, source: "INVENTORY" as const }));
+    
+    // Merge printerAssets if category is HARDWARE
+    if (category === "HARDWARE" && printerAssets) {
+      const coreAssets = printerAssets.map(pa => ({
+        id: pa.id,
+        name: pa.name,
+        category: "HARDWARE",
+        priceKes: pa.priceKes,
+        location: pa.location,
+        linkedPrinterId: null,
+        timeHours: null,
+        hardwareType: pa.printerType === "LARGE_FORMAT" ? "LARGE_FORMAT_PRINTER" : "THREE_D_PRINTER",
+        printerSubType: null,
+        model: null,
+        maxPrintWidthM: null,
+        printSpeedSqmPerHour: null,
+        setupTimeHours: null,
+        lifespanHours: pa.lifespanHours,
+        annualMaintenanceKes: null,
+        powerWatts: pa.powerWatts,
+        electricityRateKesKwh: 24, // Default
+        maintenancePerYearKes: pa.maintenancePerYearKes,
+        postProcessingTimeHours: null,
+        isActive: pa.isActive,
+        sortOrder: 0,
+        source: "CORE_ASSET" as const
+      }));
+      return [...list, ...coreAssets];
+    }
+    
+    return list;
+  }, [items, category, printerAssets]);
 
   const filteredAndSorted = useMemo(() => {
     let list = [...filteredList];
@@ -643,7 +688,18 @@ export function InventoryHardwareSection({
               <tbody>
                 {filteredAndSorted.map((i) => (
                   <tr key={i.id} className="border-b hover:bg-muted/30">
-                    <td className="p-2 font-medium">{i.name}</td>
+                    <td className="p-2">
+                      <div className="flex flex-col">
+                        <span className="font-medium">{i.name}</span>
+                        {i.source === "CORE_ASSET" && (
+                          <div className="mt-1">
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-50">
+                              Core Asset
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                    </td>
                     {category === "HARDWARE" && (
                       <>
                         <td className="p-2 text-muted-foreground">
@@ -695,7 +751,7 @@ export function InventoryHardwareSection({
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
                             onClick={() => {
-                              const printerId = getPrinterIdByName(i.name);
+                              const printerId = i.source === "CORE_ASSET" ? i.id : getPrinterIdByName(i.name);
                               if (printerId) router.push(`/admin/inventory/hardware/printers/${printerId}`);
                               else router.push("/admin/inventory/hardware/printers");
                             }}
@@ -704,14 +760,18 @@ export function InventoryHardwareSection({
                             <Eye className="h-4 w-4" />
                             <span>View details</span>
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setEditItem(i)} className="flex items-center gap-2 cursor-pointer">
-                            <Pencil className="h-4 w-4" />
-                            <span>Edit hardware</span>
-                          </DropdownMenuItem>
+                          
+                          {i.source === "INVENTORY" && (
+                            <DropdownMenuItem onClick={() => setEditItem(i)} className="flex items-center gap-2 cursor-pointer">
+                              <Pencil className="h-4 w-4" />
+                              <span>Edit hardware</span>
+                            </DropdownMenuItem>
+                          )}
+
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onClick={() => {
-                              const printerId = getPrinterIdByName(i.name);
+                              const printerId = i.source === "CORE_ASSET" ? i.id : getPrinterIdByName(i.name);
                               if (printerId) router.push(`/admin/inventory/hardware/printers/${printerId}?tab=maintenance`);
                               else router.push("/admin/inventory/hardware/printers");
                             }}
@@ -722,8 +782,8 @@ export function InventoryHardwareSection({
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => {
-                              const printerId = getPrinterIdByName(i.name);
-                              if (printerId) router.push(`/admin/inventory/hardware/printers/${printerId}?tab=maintenance`);
+                              const printerId = i.source === "CORE_ASSET" ? i.id : getPrinterIdByName(i.name);
+                              if (printerId) router.push(`/admin/inventory/hardware/printers/${printerId}?tab=history`);
                               else router.push("/admin/inventory/hardware/printers");
                             }}
                             className="flex items-center gap-2 cursor-pointer"
@@ -731,14 +791,19 @@ export function InventoryHardwareSection({
                             <History className="h-4 w-4" />
                             <span>View history</span>
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => setDeleteItem(i)}
-                            className="flex items-center gap-2 cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            <span>Delete hardware</span>
-                          </DropdownMenuItem>
+                          
+                          {i.source === "INVENTORY" && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => setDeleteItem(i)}
+                                className="flex items-center gap-2 cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                <span>Delete hardware</span>
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
@@ -808,24 +873,53 @@ function EditHardwareItemModal({
   const [name, setName] = useState(item.name);
   const [priceKes, setPriceKes] = useState<number | "">(item.priceKes);
   const [location, setLocation] = useState(item.location ?? "");
+  const [hardwareType, setHardwareType] = useState(item.hardwareType ?? "");
+  const [printerSubType, setPrinterSubType] = useState(item.printerSubType ?? "");
+  const [model, setModel] = useState(item.model ?? "");
+  const [maxPrintWidthM, setMaxPrintWidthM] = useState<number | "">(item.maxPrintWidthM ?? "");
+  const [printSpeedSqmPerHour, setPrintSpeedSqmPerHour] = useState<number | "">(item.printSpeedSqmPerHour ?? "");
+  const [setupTimeHours, setSetupTimeHours] = useState<number | "">(item.setupTimeHours ?? "");
+  const [lifespanHours, setLifespanHours] = useState<number | "">(item.lifespanHours ?? "");
+  const [annualMaintenanceKes, setAnnualMaintenanceKes] = useState<number | "">(item.annualMaintenanceKes ?? "");
   const [powerWatts, setPowerWatts] = useState<number | "">(item.powerWatts ?? "");
+  const [electricityRateKesKwh, setElectricityRateKesKwh] = useState<number | "">(item.electricityRateKesKwh ?? 24);
+  const [maintenancePerYearKes, setMaintenancePerYearKes] = useState<number | "">(item.maintenancePerYearKes ?? "");
+  const [postProcessingTimeHours, setPostProcessingTimeHours] = useState<number | "">(item.postProcessingTimeHours ?? "");
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
   const handleSave = async () => {
     setSaving(true);
     setError("");
     try {
+      const body: any = {
+        name: name.trim(),
+        priceKes: Number(priceKes),
+        location: location.trim() || null,
+        hardwareType: hardwareType || null,
+        printerSubType: printerSubType || null,
+        model: model.trim() || null,
+        maxPrintWidthM: maxPrintWidthM === "" ? null : Number(maxPrintWidthM),
+        printSpeedSqmPerHour: printSpeedSqmPerHour === "" ? null : Number(printSpeedSqmPerHour),
+        setupTimeHours: setupTimeHours === "" ? null : Number(setupTimeHours),
+        lifespanHours: lifespanHours === "" ? null : Number(lifespanHours),
+        annualMaintenanceKes: annualMaintenanceKes === "" ? null : Number(annualMaintenanceKes),
+        powerWatts: powerWatts === "" ? null : Number(powerWatts),
+        electricityRateKesKwh: electricityRateKesKwh === "" ? null : Number(electricityRateKesKwh),
+        maintenancePerYearKes: maintenancePerYearKes === "" ? null : Number(maintenancePerYearKes),
+        postProcessingTimeHours: postProcessingTimeHours === "" ? null : Number(postProcessingTimeHours),
+      };
+
       const res = await fetch(`/api/admin/inventory/hardware-items/${item.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          priceKes: Number(priceKes),
-          location: location.trim() || null,
-          powerWatts: powerWatts === "" ? null : Number(powerWatts),
-        }),
+        body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error("Save failed");
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Save failed");
+      }
       const updated = await res.json();
       onSaved(updated);
       onClose();
@@ -835,31 +929,133 @@ function EditHardwareItemModal({
       setSaving(false);
     }
   };
+
+  const isLF = hardwareType === "LARGE_FORMAT_PRINTER";
+  const is3D = hardwareType === "THREE_D_PRINTER";
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden />
-      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 space-y-4">
-        <h2 className="font-bold text-gray-900">Edit hardware item</h2>
-        <div>
-          <Label>Name</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1" />
+      <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+        <h2 className="font-bold text-gray-900 border-b pb-2">Edit hardware item</h2>
+        
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <Label>Name</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} className="mt-1" />
+          </div>
+          <div>
+            <Label>Price (KES)</Label>
+            <Input type="number" min={0} value={priceKes} onChange={(e) => setPriceKes(e.target.value === "" ? "" : Number(e.target.value))} className="mt-1" />
+          </div>
+          <div>
+            <Label>Location</Label>
+            <Input value={location} onChange={(e) => setLocation(e.target.value)} className="mt-1" />
+          </div>
+          <div>
+            <Label>Hardware Type</Label>
+            <select
+              value={hardwareType}
+              onChange={(e) => {
+                setHardwareType(e.target.value);
+                setPrinterSubType("");
+              }}
+              className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              {HARDWARE_TYPES.map((opt) => (
+                <option key={opt.value || "generic"} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          {(isLF || is3D) && (
+            <div>
+              <Label>Sub-type</Label>
+              <select
+                value={printerSubType}
+                onChange={(e) => setPrinterSubType(e.target.value)}
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                {(isLF ? LARGE_FORMAT_SUB_TYPES : THREE_D_SUB_TYPES).map((opt) => (
+                  <option key={opt.value || "none"} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
-        <div>
-          <Label>Price (KES)</Label>
-          <Input type="number" min={0} value={priceKes} onChange={(e) => setPriceKes(e.target.value === "" ? "" : Number(e.target.value))} className="mt-1" />
-        </div>
-        <div>
-          <Label>Location</Label>
-          <Input value={location} onChange={(e) => setLocation(e.target.value)} className="mt-1" />
-        </div>
-        <div>
-          <Label>Power (W) — e.g. 400 for Bambu X1C</Label>
-          <Input type="number" min={0} value={powerWatts} onChange={(e) => setPowerWatts(e.target.value === "" ? "" : Number(e.target.value))} className="mt-1" />
-        </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <div className="flex gap-2">
+
+        {isLF && (
+          <div className="grid gap-4 sm:grid-cols-2 border-t pt-4">
+             <div className="sm:col-span-2 text-xs font-semibold uppercase text-muted-foreground">Technical Specs — Large Format</div>
+             <div>
+               <Label>Model</Label>
+               <Input value={model} onChange={(e) => setModel(e.target.value)} className="mt-1" />
+             </div>
+             <div>
+               <Label>Max print width (m)</Label>
+               <Input type="number" step={0.01} value={maxPrintWidthM} onChange={(e) => setMaxPrintWidthM(e.target.value === "" ? "" : Number(e.target.value))} className="mt-1" />
+             </div>
+             <div>
+               <Label>Print speed (m²/hr)</Label>
+               <Input type="number" value={printSpeedSqmPerHour} onChange={(e) => setPrintSpeedSqmPerHour(e.target.value === "" ? "" : Number(e.target.value))} className="mt-1" />
+             </div>
+             <div>
+               <Label>Setup time (hours)</Label>
+               <Input type="number" step={0.05} value={setupTimeHours} onChange={(e) => setSetupTimeHours(e.target.value === "" ? "" : Number(e.target.value))} className="mt-1" />
+             </div>
+             <div>
+               <Label>Lifespan (hours)</Label>
+               <Input type="number" value={lifespanHours} onChange={(e) => setLifespanHours(e.target.value === "" ? "" : Number(e.target.value))} className="mt-1" />
+             </div>
+             <div>
+               <Label>Annual maintenance (KES)</Label>
+               <Input type="number" value={annualMaintenanceKes} onChange={(e) => setAnnualMaintenanceKes(e.target.value === "" ? "" : Number(e.target.value))} className="mt-1" />
+             </div>
+             <div>
+               <Label>Power (W)</Label>
+               <Input type="number" value={powerWatts} onChange={(e) => setPowerWatts(e.target.value === "" ? "" : Number(e.target.value))} className="mt-1" />
+             </div>
+             <div>
+               <Label>Electricity (KES/kWh)</Label>
+               <Input type="number" value={electricityRateKesKwh} onChange={(e) => setElectricityRateKesKwh(e.target.value === "" ? "" : Number(e.target.value))} className="mt-1" />
+             </div>
+          </div>
+        )}
+
+        {is3D && (
+          <div className="grid gap-4 sm:grid-cols-2 border-t pt-4">
+             <div className="sm:col-span-2 text-xs font-semibold uppercase text-muted-foreground">Technical Specs — 3D Printing</div>
+             <div>
+               <Label>Power (W)</Label>
+               <Input type="number" value={powerWatts} onChange={(e) => setPowerWatts(e.target.value === "" ? "" : Number(e.target.value))} className="mt-1" />
+             </div>
+             <div>
+               <Label>Electricity (KES/kWh)</Label>
+               <Input type="number" value={electricityRateKesKwh} onChange={(e) => setElectricityRateKesKwh(e.target.value === "" ? "" : Number(e.target.value))} className="mt-1" />
+             </div>
+             <div>
+               <Label>Lifespan (hours)</Label>
+               <Input type="number" value={lifespanHours} onChange={(e) => setLifespanHours(e.target.value === "" ? "" : Number(e.target.value))} className="mt-1" />
+             </div>
+             <div>
+               <Label>Maintenance per year (KES)</Label>
+               <Input type="number" value={maintenancePerYearKes} onChange={(e) => setMaintenancePerYearKes(e.target.value === "" ? "" : Number(e.target.value))} className="mt-1" />
+             </div>
+             <div>
+               <Label>Post-processing time (hours)</Label>
+               <Input type="number" step={0.1} value={postProcessingTimeHours} onChange={(e) => setPostProcessingTimeHours(e.target.value === "" ? "" : Number(e.target.value))} className="mt-1" />
+             </div>
+          </div>
+        )}
+
+        {error && <p className="text-sm text-red-600 bg-red-50 p-2 rounded border border-red-100">{error}</p>}
+        <div className="flex gap-2 border-t pt-4">
           <Button variant="outline" onClick={onClose} className="flex-1">Cancel</Button>
-          <Button onClick={handleSave} disabled={saving} className="flex-1">{saving ? "Saving..." : "Save"}</Button>
+          <Button onClick={handleSave} disabled={saving} className="bg-orange-500 hover:bg-orange-600 text-white flex-1">{saving ? "Saving..." : "Save Changes"}</Button>
         </div>
       </div>
     </div>

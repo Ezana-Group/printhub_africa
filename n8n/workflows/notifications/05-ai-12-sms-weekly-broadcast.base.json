@@ -1,0 +1,136 @@
+{
+  "name": "AI-12 — SMS Weekly Broadcast",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * 5"
+            }
+          ]
+        }
+      },
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.perplexity.ai/chat/completions",
+        "method": "POST",
+        "bodyParametersJson": "={ \"model\": \"llama-3.1-sonar-large-128k-online\", \"messages\": [{ \"role\": \"user\", \"content\": \"Kenya trends this week for print shop hooks.\" }] }"
+      },
+      "name": "Perplexity: Trends",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://admin.printhub.africa/api/n8n/weekly-featured-products",
+        "method": "GET"
+      },
+      "name": "Get Featured Products",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "bodyParametersJson": "={ \"model\": \"claude-opus-4-6-mini\", \"messages\": [{ \"role\": \"system\", \"content\": \"Write 3 SMS marketing messages for PrintHub Africa... Return as JSON: { 'options': ['msg1', 'msg2', 'msg3'] }\" }, { \"role\": \"user\", \"content\": \"Featured: {{ JSON.stringify($node['Get Featured Products'].json) }}. Context: {{ $node['Perplexity: Trends'].json.choices[0].message.content }}\" }] }"
+      },
+      "name": "GPT-4o: SMS Copy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        600,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://admin.printhub.africa/api/admin/content/broadcasts",
+        "method": "POST",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{$vars.N8N_WEBHOOK_SECRET}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={{ JSON.stringify({\n  type: 'SMS',\n  title: 'Weekly AI Broadcast Proposal',\n  bodyText: $node['GPT-4o: SMS Copy'].json.choices[0].message.content,\n  metadata: { \n    source: 'AI-12 n8n Workflow',\n    aiModel: 'claude-opus-4-6-mini',\n    featuredProducts: $node['Get Featured Products'].json\n  }\n}) }}"
+      },
+      "name": "Push to Approval Queue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        800,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Perplexity: Trends",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perplexity: Trends": {
+      "main": [
+        [
+          {
+            "node": "Get Featured Products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Featured Products": {
+      "main": [
+        [
+          {
+            "node": "GPT-4o: SMS Copy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o: SMS Copy": {
+      "main": [
+        [
+          {
+            "node": "Push to Approval Queue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+  }
+}

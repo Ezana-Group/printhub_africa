@@ -163,8 +163,8 @@ export function canAccessRoute(
 
   if (matched) return permissions?.includes(matched.permission) ?? false;
 
-  // Fail closed for unknown /admin routes.
-  if (normalizedPath.startsWith("/admin")) return false;
+  // Fail closed for unknown /admin and /api/admin routes.
+  if (normalizedPath.startsWith("/admin") || normalizedPath.startsWith("/api/admin")) return false;
 
   return true;
 }

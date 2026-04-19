@@ -35,10 +35,11 @@ type CategoryRow = {
   metaDescription: string | null;
   _count: { products: number };
   parent: { id: string; name: string; slug: string } | null;
+  children: CategoryRow[];
 };
 
 type AdminCategoriesClientProps = {
-  initialCategories: CategoryRow[];
+  initialCategories: CategoryRow[]; // This will now be the tree roots
   parentOptions: { id: string; name: string; slug: string; parentId: string | null }[];
   initialEditId?: string | null;
 };
@@ -55,7 +56,20 @@ export function AdminCategoriesClient({
 
   useEffect(() => {
     if (!initialEditId || hasAppliedEditId.current || categories.length === 0) return;
-    const cat = categories.find((c) => c.id === initialEditId);
+    
+    // Find category in tree (recursive)
+    function findInTree(nodes: CategoryRow[], id: string): CategoryRow | undefined {
+      for (const n of nodes) {
+        if (n.id === id) return n;
+        if (n.children?.length) {
+          const found = findInTree(n.children, id);
+          if (found) return found;
+        }
+      }
+      return undefined;
+    }
+
+    const cat = findInTree(categories, initialEditId);
     if (cat) {
       hasAppliedEditId.current = true;
       setEditingCategory({
@@ -105,8 +119,8 @@ export function AdminCategoriesClient({
     setSheetOpen(true);
   };
 
-  const handleAdd = () => {
-    setEditingCategory(null);
+  const handleAdd = (parentId?: string | null) => {
+    setEditingCategory(parentId ? { parentId } as CategoryForForm : null);
     setSheetOpen(true);
   };
 
@@ -126,8 +140,14 @@ export function AdminCategoriesClient({
   };
 
   const handleNavToggle = async (cat: CategoryRow, checked: boolean) => {
+    // Flatten tree to check nav limit
+    function flatten(nodes: CategoryRow[]): CategoryRow[] {
+      return nodes.reduce((acc, n) => [...acc, n, ...flatten(n.children || [])], [] as CategoryRow[]);
+    }
+    const flat = flatten(categories);
+
     if (checked) {
-      const currentNavCount = categories.filter((c) => c.showInNav && c.id !== cat.id).length;
+      const currentNavCount = flat.filter((c) => c.showInNav && c.id !== cat.id).length;
       if (currentNavCount >= 8) {
         alert("Navigation limit reached. Disable another category first (max 8 in nav).");
         return;
@@ -172,7 +192,11 @@ export function AdminCategoriesClient({
   const sortDir = url.dir === "desc" ? -1 : 1;
 
   const filteredAndSorted = useMemo(() => {
-    let list = [...categories];
+    // Helper to flatten local tree for table view
+    function flatten(nodes: CategoryRow[]): CategoryRow[] {
+      return nodes.reduce((acc, n) => [...acc, n, ...flatten(n.children || [])], [] as CategoryRow[]);
+    }
+    let list = flatten(categories);
     const q = url.q.toLowerCase().trim();
     if (q) {
       list = list.filter(
@@ -197,8 +221,8 @@ export function AdminCategoriesClient({
 
   const parentFilterOptions = useMemo(() => {
     const opts = [{ value: "", label: "All parents" }, { value: "top", label: "Top level" }];
-    const parents = categories.filter((c) => !c.parentId);
-    parents.forEach((p) => opts.push({ value: p.id, label: p.name }));
+    // Roots only for filter? Or keep it simple
+    categories.forEach((p) => opts.push({ value: p.id, label: p.name }));
     return opts;
   }, [categories]);
 
@@ -228,15 +252,6 @@ export function AdminCategoriesClient({
 
   const hasActiveFilters = url.q !== "" || parentFilter !== "" || statusFilter !== "";
 
-  const topLevel = categories.filter((c) => !c.parentId);
-  const childrenByParent = categories.reduce<Record<string, CategoryRow[]>>((acc, c) => {
-    if (c.parentId) {
-      if (!acc[c.parentId]) acc[c.parentId] = [];
-      acc[c.parentId].push(c);
-    }
-    return acc;
-  }, {});
-
   const copySlug = useCallback((slug: string) => {
     const base = typeof window !== "undefined" ? window.location.origin : "https://printhub.africa";
     const path = `/shop/${slug}`;
@@ -253,7 +268,7 @@ export function AdminCategoriesClient({
               Shop products are grouped by category. Add or edit here; assign when creating products.
             </p>
           </div>
-          <Button onClick={handleAdd}>Add category</Button>
+          <Button onClick={() => handleAdd()}>Add category</Button>
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
@@ -417,62 +432,13 @@ export function AdminCategoriesClient({
           </div>
         ) : (
           <div className="rounded-lg border p-4">
-            <ul className="space-y-1">
-              {topLevel.map((cat) => (
-                <li key={cat.id}>
-                  <div className="flex items-center gap-2 rounded py-1.5 px-2 hover:bg-muted/50">
-                    <span className="font-medium">{cat.name}</span>
-                    <span className="text-xs text-muted-foreground">({cat._count.products} products)</span>
-                    <div className="ml-auto flex gap-1 items-center">
-                      <div className="flex items-center gap-2 mr-3" title="Show in site navigation dropdown">
-                        <Label htmlFor={`nav-${cat.id}`} className="text-xs text-muted-foreground cursor-pointer">In Nav</Label>
-                        <Switch id={`nav-${cat.id}`} checked={cat.showInNav} onCheckedChange={(checked) => handleNavToggle(cat, checked)} className="scale-75" />
-                      </div>
-                      <Button variant="ghost" size="sm" className="h-7" onClick={() => handleEdit(cat)}>
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 text-destructive"
-                        onClick={() => setDeleteTarget(cat)}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                  {childrenByParent[cat.id]?.length ? (
-                    <ul className="ml-6 border-l border-muted pl-3">
-                      {childrenByParent[cat.id].map((child) => (
-                        <li key={child.id} className="py-1">
-                          <div className="flex items-center gap-2 rounded py-1 px-2 hover:bg-muted/50">
-                            <span className="text-sm">{child.name}</span>
-                            <span className="text-xs text-muted-foreground">({child._count.products})</span>
-                            <div className="ml-auto flex gap-1 items-center">
-                              <div className="flex items-center gap-2 mr-3" title="Show in site navigation dropdown">
-                                <Label htmlFor={`nav-${child.id}`} className="text-xs text-muted-foreground cursor-pointer">In Nav</Label>
-                                <Switch id={`nav-${child.id}`} checked={child.showInNav} onCheckedChange={(checked) => handleNavToggle(child, checked)} className="scale-75" />
-                              </div>
-                              <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => handleEdit(child)}>
-                                Edit
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 text-xs text-destructive"
-                                onClick={() => setDeleteTarget(child)}
-                              >
-                                Delete
-                              </Button>
-                            </div>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+            <CategoryTree
+              categories={categories}
+              onEdit={handleEdit}
+              onDelete={setDeleteTarget}
+              onNavToggle={handleNavToggle}
+              onAddSub={handleAdd}
+            />
             {categories.length === 0 && (
               <p className="py-8 text-center text-muted-foreground">No categories.</p>
             )}
@@ -515,5 +481,106 @@ export function AdminCategoriesClient({
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+function CategoryTree({
+  categories,
+  onEdit,
+  onDelete,
+  onNavToggle,
+  onAddSub,
+  parentId = null,
+  depth = 0,
+}: {
+  categories: CategoryRow[];
+  onEdit: (cat: CategoryRow) => void;
+  onDelete: (cat: CategoryRow) => void;
+  onNavToggle: (cat: CategoryRow, checked: boolean) => void;
+  onAddSub: (parentId: string) => void;
+  parentId?: string | null;
+  depth?: number;
+}) {
+  const nodes = parentId === null ? categories : categories.find(c => c.id === parentId)?.children ?? [];
+  if (nodes.length === 0) return null;
+
+  return (
+    <ul className={depth > 0 ? "ml-6 border-l border-muted pl-3 space-y-1 mt-1" : "space-y-1"}>
+      {nodes.map((cat) => (
+        <CategoryNode
+          key={cat.id}
+          cat={cat}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onNavToggle={onNavToggle}
+          onAddSub={onAddSub}
+          depth={depth}
+        />
+      ))}
+    </ul>
+  );
+}
+
+function CategoryNode({
+  cat,
+  onEdit,
+  onDelete,
+  onNavToggle,
+  onAddSub,
+  depth,
+}: {
+  cat: CategoryRow;
+  onEdit: (cat: CategoryRow) => void;
+  onDelete: (cat: CategoryRow) => void;
+  onNavToggle: (cat: CategoryRow, checked: boolean) => void;
+  onAddSub: (parentId: string) => void;
+  depth: number;
+}) {
+  return (
+    <li>
+      <div className="flex items-center gap-2 rounded py-1.5 px-2 hover:bg-muted/50 transition-colors group">
+        <span className={depth === 0 ? "font-semibold" : depth === 1 ? "text-sm font-medium" : "text-sm"}>
+          {cat.name}
+        </span>
+        <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded uppercase font-mono">
+          {cat.slug}
+        </span>
+        <span className="text-xs text-muted-foreground">({cat._count.products} products)</span>
+        
+        <div className="ml-auto flex gap-1 items-center opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-2 mr-3" title="Show in site navigation dropdown">
+            <Label htmlFor={`nav-${cat.id}`} className="text-[10px] text-muted-foreground cursor-pointer uppercase font-semibold">In Nav</Label>
+            <Switch id={`nav-${cat.id}`} checked={cat.showInNav} onCheckedChange={(checked) => onNavToggle(cat, checked)} className="scale-75" />
+          </div>
+          {depth < 2 && (
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-primary" onClick={() => onAddSub(cat.id)}>
+              Add Sub
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => onEdit(cat)}>
+            Edit
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={() => onDelete(cat)}
+          >
+            Delete
+          </Button>
+        </div>
+      </div>
+      {cat.children && cat.children.length > 0 && (
+        <CategoryTree
+          categories={cat.children}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onNavToggle={onNavToggle}
+          onAddSub={onAddSub}
+          parentId={null} // Passing children as roots for recursive call
+          depth={depth + 1}
+        />
+      )}
+    </li>
   );
 }

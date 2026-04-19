@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
  * Poll after STK push. Returns CONFIRMED | FAILED | PENDING and payment when confirmed.
  */
 export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   const { searchParams } = new URL(req.url);
   const checkoutRequestId = searchParams.get("checkoutRequestId");
   const orderId = searchParams.get("orderId");

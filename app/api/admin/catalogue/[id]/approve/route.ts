@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/admin-api-guard";
-import { CatalogueStatus } from "@prisma/client";
+import { CatalogueStatus, ProductType, ProductAvailability } from "@prisma/client";
 
 export async function POST(
   _req: Request,
@@ -12,7 +12,7 @@ export async function POST(
 ) {
   const auth = await requireAdminApi({ permission: "products_edit" });
   if (auth instanceof NextResponse) return auth;
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const userId = session?.user?.id ?? null;
   const { id } = await ctx.params;
 
@@ -38,28 +38,45 @@ export async function POST(
   };
 
   // 1. Create or Find Product
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let productId = (item as any).productId;
+  let productId = item.productId;
   if (!productId) {
-    const slug = item.slug;
+    const isPod = item.sourceType !== "MANUAL";
+    const productType = isPod ? ("POD" as ProductType) : ProductType.READYMADE_3D;
+    const availability = isPod ? ProductAvailability.PRINT_ON_DEMAND : ProductAvailability.IN_STOCK;
+    
+    // Auto-generate SKU
+    const { generateNextProductSku, generatePODSku } = await import("@/lib/product-utils");
+    const sku = isPod 
+      ? await generatePODSku()
+      : await generateNextProductSku(item.categoryId);
+    
     const product = await prisma.product.create({
       data: {
         name: item.name,
-        slug: slug,
+        slug: item.slug,
         description: item.description,
         shortDescription: item.shortDescription,
         categoryId: item.categoryId,
-        productType: "READYMADE_3D",
+        productType: productType,
+        availability: availability,
         images: item.photos.length > 0 ? item.photos.map(p => p.url) : [],
         basePrice: item.priceOverrideKes ?? item.basePriceKes ?? 0,
         comparePrice: item.priceOverrideKes && item.basePriceKes ? item.basePriceKes : null,
-        stock: 0,
+        stock: isPod ? null : 0,
         isActive: true,
+        isPOD: isPod,
+        catalogueItemId: isPod ? item.id : null,
         tags: item.tags,
+        sku: sku,
+        printTimeEstimate: item.printTimeHours ? `${item.printTimeHours}h` : null,
+        filamentWeightGrams: item.weightGrams ?? null,
       }
     });
     productId = product.id;
-    data.productId = productId;
+    // For non-POD, we still update the catalogue item itself with the productId
+    if (!isPod) {
+      data.productId = productId;
+    }
   } else {
     // Ensure product is active
     await prisma.product.update({

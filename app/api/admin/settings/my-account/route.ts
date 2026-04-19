@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { Prisma } from "@prisma/client";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { isStaffWorkEmail } from "@/lib/staff-email";
@@ -11,14 +11,15 @@ const STAFF_OR_ADMIN = ["STAFF", "ADMIN", "SUPER_ADMIN"];
 const postSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   email: z.string().email().optional(),
-  phone: z.string().max(50).optional(),
+  personalEmail: z.string().email().nullable().optional(),
+  phone: z.string().max(50).nullable().optional(),
   position: z.string().max(200).optional(),
   departmentId: z.string().nullable().optional(),
 });
 
 /** GET: Return current user profile for my-account form (name, email, phone, role, staff fields). */
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user || !role || !STAFF_OR_ADMIN.includes(role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -62,7 +63,7 @@ const ADMIN_OR_ABOVE = ["ADMIN", "SUPER_ADMIN"];
 
 /** POST: Update current user profile. User: name, email, phone. Staff (admin only): position, departmentId. */
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user || !role || !STAFF_OR_ADMIN.includes(role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -103,6 +104,7 @@ export async function POST(req: Request) {
       data: {
         ...(data.name != null && { name: data.name }),
         ...(emailToSave != null && { email: emailToSave }),
+        ...(data.personalEmail !== undefined && { personalEmail: data.personalEmail ?? null }),
         ...(data.phone !== undefined && { phone: data.phone ?? null }),
       },
     });

@@ -1,24 +1,35 @@
-/**
- * Africa's Talking SMS (Kenya)
- * https://africastalking.com
- */
+import { prisma } from "./prisma";
 
 const BASE_URL = "https://api.africastalking.com/version1";
 
 export async function sendSMS(to: string, message: string): Promise<boolean> {
-  const key = process.env.AT_API_KEY;
-  const username = process.env.AT_USERNAME;
+  const settings = await prisma.businessSettings.findUnique({
+    where: { id: "default" },
+    select: {
+      atApiKey: true,
+      atUsername: true,
+      atSenderId: true,
+    },
+  }).catch(() => null);
+
+  const key = settings?.atApiKey || process.env.AT_API_KEY;
+  const username = settings?.atUsername || process.env.AT_USERNAME;
+  const from = settings?.atSenderId || undefined;
+
   if (!key || !username) {
     console.warn("AT_API_KEY / AT_USERNAME not set; SMS not sent");
     return false;
   }
   const phone = to.replace(/\D/g, "").replace(/^0/, "254");
-  const body = new URLSearchParams({
+  const params: Record<string, string> = {
     username,
     to: `+${phone}`,
     message: message.slice(0, 160),
-  });
-  // [Africa's Talking] API — updated to use header auth + error handling
+  };
+  if (from) params.from = from;
+
+  const body = new URLSearchParams(params);
+
   const res = await fetch(`${BASE_URL}/messaging`, {
     method: "POST",
     headers: {

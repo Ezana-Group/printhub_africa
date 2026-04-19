@@ -257,7 +257,7 @@ export function PickupLocationsSection() {
                 id="pl-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Nairobi — Westlands"
+                placeholder="e.g. Eldoret — CBD"
                 className="mt-1"
               />
             </div>
@@ -268,7 +268,7 @@ export function PickupLocationsSection() {
                   id="pl-city"
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  placeholder="e.g. Nairobi"
+                  placeholder="e.g. Eldoret"
                   className="mt-1"
                 />
               </div>

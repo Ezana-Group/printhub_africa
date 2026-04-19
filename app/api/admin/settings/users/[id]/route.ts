@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/settings-api";
 import { writeAudit } from "@/lib/audit";
+import { withRateLimit } from "@/lib/rate-limit-wrapper";
 
-export async function DELETE(
+async function _DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -27,3 +28,5 @@ export async function DELETE(
   });
   return NextResponse.json({ success: true });
 }
+
+export const DELETE = withRateLimit(_DELETE, { limit: 10, windowMs: 60000, keyPrefix: "admin_role_change", byUserId: true });

@@ -1,0 +1,165 @@
+{
+  "name": "14. PrintHub - Corporate Application (Approval)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "corporate-app",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "webhook-corporate-app",
+      "name": "Webhook: Corporate",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ],
+      "webhookId": "corporate-app"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst sig = $node['Webhook: Corporate'].json.headers['x-printhub-signature'];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node['Webhook: Corporate'].json.body)).digest('hex');\nif (sig !== hmac) throw new Error('Invalid signature');\nreturn $node['Webhook: Corporate'].json.body;"
+      },
+      "id": "verify-signature",
+      "name": "Verify Signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$vars.RESEND_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonParameters": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "from",
+              "value": "PrintHub Business <business@printhub.africa>"
+            },
+            {
+              "name": "to",
+              "value": "={{$json.email}}"
+            },
+            {
+              "name": "subject",
+              "value": "We've received your Corporate Account application — {{$json.companyName}}"
+            },
+            {
+              "name": "html",
+              "value": "=<p>Hi {{$json.contactPerson}},</p><p>Thank you for applying for a PrintHub Corporate Account for <strong>{{$json.companyName}}</strong>.</p><p>Our team is currently reviewing your documentation and will reach out to you within 24-48 hours with the next steps.</p><p>Best regards,<br>The PrintHub Business Team</p>"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "email-customer-confirmation",
+      "name": "Email: Customer Confirmation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        540,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$vars.RESEND_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonParameters": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "from",
+              "value": "PrintHub Alerts <alerts@printhub.africa>"
+            },
+            {
+              "name": "to",
+              "value": "={{$vars.ADMIN_EMAIL}}"
+            },
+            {
+              "name": "subject",
+              "value": "New Corporate Application: {{$json.companyName}}"
+            },
+            {
+              "name": "html",
+              "value": "=<p>New Corporate Account Application details:</p><ul><li><strong>Company:</strong> {{$json.companyName}}</li><li><strong>Contact:</strong> {{$json.contactPerson}} ({{$json.email}})</li><li><strong>Phone:</strong> {{$json.phone}}</li></ul><p><a href='{{$vars.ADMIN_URL}}/admin/applications'>Review Application Status →</a></p>"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "email-admin-alert",
+      "name": "Email: Admin Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        540,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: Corporate": {
+      "main": [
+        [
+          {
+            "node": "Verify Signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Signature": {
+      "main": [
+        [
+          {
+            "node": "Email: Customer Confirmation",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Email: Admin Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "meta": {
+    "instanceId": "printhub-n8n-production"
+  },
+  "settings": {
+    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+  }
+}

@@ -58,9 +58,20 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ results: finalResults });
   } catch (error: unknown) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const err = error as any;
+    const err = error as Error;
     console.error("API Search Import Error:", err);
+    
+    // Platform-specific errors
+    if (err.message.includes("TIMEOUT")) {
+      return NextResponse.json({ error: "EXTERNAL_API_TIMEOUT", detail: "The external platform is taking too long to respond. Please try again later." }, { status: 504 });
+    }
+    if (err.message.includes("AUTH_FAILED")) {
+      return NextResponse.json({ error: "API_AUTH_FAILED", detail: "Authentication with the external platform failed. Please check your API keys." }, { status: 401 });
+    }
+    if (err.message.includes("SERVICE_UNAVAILABLE")) {
+      return NextResponse.json({ error: "EXTERNAL_SERVICE_DOWN", detail: "The external platform is currently down or under maintenance." }, { status: 503 });
+    }
+
     return NextResponse.json({ error: "INTERNAL_ERROR", detail: err.message }, { status: 500 });
   }
 }

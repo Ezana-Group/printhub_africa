@@ -4,7 +4,7 @@
  * Use presigned URLs for uploads/downloads when using a bucket; store keys in DB.
  */
 
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 // R2 (Cloudflare) or AWS S3
@@ -116,6 +116,21 @@ export async function uploadPrivateBuffer(key: string, body: Buffer | Uint8Array
       Key: key,
       Body: body,
       ContentType: contentType,
+    })
+  );
+}
+
+/**
+ * Delete a file from R2/S3.
+ */
+export async function deleteObject(key: string): Promise<void> {
+  const client = getClient();
+  const bucket = getBucket();
+  if (!client || !bucket) return;
+  await client.send(
+    new DeleteObjectCommand({
+      Bucket: bucket,
+      Key: key,
     })
   );
 }

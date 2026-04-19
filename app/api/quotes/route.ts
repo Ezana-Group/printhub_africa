@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { generateQuoteNumber, QUOTE_TYPE_API_TO_DB } from "@/lib/quote-utils";
@@ -32,7 +33,7 @@ const createBodySchema = z.object({
 });
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user || !["STAFF", "ADMIN", "SUPER_ADMIN"].includes(role ?? "")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -108,7 +109,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptionsCustomer);
     const raw = await req.json();
     const parsed = createBodySchema.safeParse(raw);
     if (!parsed.success) {
@@ -167,15 +168,53 @@ export async function POST(req: NextRequest) {
       three_d_print: "3D Print",
       design_and_print: "Design+Print",
     };
-    void Promise.resolve()
-      .then(() =>
-        sendQuoteReceivedEmail(
-          data.customerEmail,
-          quote.quoteNumber,
-          typeLabels[typeDb] ?? typeDb
-        )
-      )
-      .catch((err) => console.error("Quote received email error:", err));
+
+    // --- AUTOMATION TRIGGERS ---
+    void Promise.all([
+      // 1. Customer Email
+      sendQuoteReceivedEmail(
+        data.customerEmail,
+        quote.quoteNumber,
+        typeLabels[typeDb] ?? typeDb
+      ),
+      // 2. Staff Alerts (WhatsApp/Telegram)
+      (async () => {
+        const { n8n } = await import("@/lib/n8n");
+        return n8n.staffAlert({
+          type: 'NEW_QUOTE',
+          title: `📄 New Quote Request #${quote.quoteNumber}`,
+          message: `Type: ${typeLabels[typeDb] || typeDb}\nCustomer: ${quote.customerName}\nProject: ${quote.projectName || 'N/A'}\nBudget: ${quote.budgetRange || 'Unspecified'}`,
+          urgency: 'medium',
+          actionUrl: `${process.env.NEXT_PUBLIC_APP_URL}/admin/quotes/${quote.id}`,
+          targetRoles: ['STAFF', 'ADMIN']
+        });
+      })(),
+      // 3. n8n Master Trigger (with PDF)
+      (async () => {
+        const { n8n } = await import("@/lib/n8n");
+        let pdfBase64: string | undefined;
+        try {
+          const { generateQuotePdfBuffer } = await import("@/lib/quote-pdf");
+          const buffer = await generateQuotePdfBuffer(quote.id);
+          if (buffer) {
+            pdfBase64 = buffer.toString("base64");
+          }
+        } catch (err) {
+          console.error("Failed to generate quote PDF for n8n:", err);
+        }
+
+        return n8n.quoteSubmitted({
+          quoteId: quote.id,
+          customerEmail: quote.customerEmail,
+          customerName: quote.customerName,
+          quoteType: typeDb,
+          projectName: quote.projectName || undefined,
+          reviewUrl: `${process.env.NEXT_PUBLIC_APP_URL}/admin/quotes/${quote.id}`,
+          pdfBase64,
+          specifications: quote.specifications
+        });
+      })()
+    ]).catch((err) => console.error("Quote triggers error:", err));
 
     return NextResponse.json({
       success: true,

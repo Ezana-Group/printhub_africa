@@ -10,6 +10,7 @@ import { CALCULATOR_CONFIG_INVALIDATE_EVENT } from "@/lib/calculator-config";
 
 type BusinessSettings = {
   labourRateKesPerHour?: number;
+  threeDLabourRateKesPerHour?: number;
   monthlyRentKes?: number;
   monthlyUtilitiesKes?: number;
   monthlyInsuranceKes?: number;
@@ -18,6 +19,7 @@ type BusinessSettings = {
   workingHoursPerDay?: number;
   defaultProfitMarginPct?: number;
   vatRatePct?: number;
+  postProcessingFeePerUnit?: number;
 };
 
 function formatNum(n: number | undefined): string {
@@ -30,6 +32,7 @@ const UTILISATION_PCT = 70; // 70% machine utilisation for effective hours
 /** Default baseline values (same as API/seed). Use as starting point so you can edit and save your own. */
 const DEFAULT_BASELINE: BusinessSettings = {
   labourRateKesPerHour: 200,
+  threeDLabourRateKesPerHour: 50,
   monthlyRentKes: 35000,
   monthlyUtilitiesKes: 8000,
   monthlyInsuranceKes: 4000,
@@ -38,6 +41,7 @@ const DEFAULT_BASELINE: BusinessSettings = {
   workingHoursPerDay: 8,
   defaultProfitMarginPct: 40,
   vatRatePct: 16,
+  postProcessingFeePerUnit: 300,
 };
 
 export function FinanceBusinessCostsForm({ canEdit = true }: { canEdit?: boolean }) {
@@ -75,6 +79,7 @@ export function FinanceBusinessCostsForm({ canEdit = true }: { canEdit?: boolean
     const payload = {
       business: {
         labourRateKesPerHour: business.labourRateKesPerHour ?? 0,
+        threeDLabourRateKesPerHour: business.threeDLabourRateKesPerHour ?? 0,
         defaultProfitMarginPct: business.defaultProfitMarginPct ?? 0,
         monthlyRentKes: business.monthlyRentKes ?? 0,
         monthlyUtilitiesKes: business.monthlyUtilitiesKes ?? 0,
@@ -83,6 +88,7 @@ export function FinanceBusinessCostsForm({ canEdit = true }: { canEdit?: boolean
         workingDaysPerMonth: business.workingDaysPerMonth ?? 0,
         workingHoursPerDay: business.workingHoursPerDay ?? 0,
         vatRatePct: business.vatRatePct ?? 0,
+        postProcessingFeePerUnit: business.postProcessingFeePerUnit ?? 0,
       },
     };
     const res = await fetch("/api/admin/calculator/lf/settings", {
@@ -224,6 +230,8 @@ export function FinanceBusinessCostsForm({ canEdit = true }: { canEdit?: boolean
             </CardHeader>
             <CardContent className="text-sm">
               <p>Standard rate: KES {formatNum(business.labourRateKesPerHour)}/hr</p>
+              <p className="mt-1">3D Printing rate: KES {formatNum(business.threeDLabourRateKesPerHour)}/hr</p>
+              <p className="mt-1">Flat post-processing: KES {formatNum(business.postProcessingFeePerUnit)}/part</p>
               <p className="mt-1 text-muted-foreground">
                 Days/month: {business.workingDaysPerMonth ?? "—"} · Hours/day: {business.workingHoursPerDay ?? "—"}
               </p>
@@ -321,8 +329,26 @@ export function FinanceBusinessCostsForm({ canEdit = true }: { canEdit?: boolean
                   onChange={(e) => update("labourRateKesPerHour", parseFloat(e.target.value) || 0)}
                 />
               </div>
+              <div className="space-y-1.5 max-w-xs">
+                <Label>3D Printing rate (KES/hr)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={business.threeDLabourRateKesPerHour ?? ""}
+                  onChange={(e) => update("threeDLabourRateKesPerHour", parseFloat(e.target.value) || 0)}
+                />
+              </div>
+              <div className="space-y-1.5 max-w-xs">
+                <Label>Flat Post-processing fee (KES/unit)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={business.postProcessingFeePerUnit ?? ""}
+                  onChange={(e) => update("postProcessingFeePerUnit", parseFloat(e.target.value) || 0)}
+                />
+              </div>
               <p className="text-xs text-muted-foreground">
-                Used per print job. Not applied to shop orders.
+                Flat fee added per part when post-processing is selected.
               </p>
             </CardContent>
           </Card>

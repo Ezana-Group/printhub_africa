@@ -41,7 +41,7 @@ const PRIVACY_POLICY_HTML = `
 "<strong>our</strong>") is a printing and manufacturing services company operating the website
 <strong>printhub.africa</strong> (the "<strong>Platform</strong>"). PrintHub is a company of the
 Ezana Group and is registered and operating under the laws of the Republic of Kenya, with its
-principal place of business in Nairobi, Kenya.</p>
+principal place of business in Eldoret, Kenya.</p>
 
 <p>We are committed to protecting the privacy and personal data of all individuals who interact
 with our Platform, including customers, visitors, and corporate clients (collectively
@@ -70,7 +70,7 @@ through this Platform. As Data Controller, we determine the purposes and means o
 your personal data.</p>
 
 <p><strong>Data Controller:</strong> PrintHub (An Ezana Group Company)<br>
-<strong>Principal Address:</strong> Nairobi, Kenya<br>
+<strong>Principal Address:</strong> Eldoret, Kenya<br>
 <strong>Email:</strong> hello@printhub.africa<br>
 <strong>Website:</strong> https://printhub.africa</p>
 
@@ -78,7 +78,7 @@ your personal data.</p>
 In compliance with Section 24 of the Data Protection Act, 2019, we have designated a Data
 Protection Officer. You may contact our DPO for any data protection enquiries at:<br>
 <strong>Email:</strong> dpo@printhub.africa<br>
-<strong>Post:</strong> The Data Protection Officer, PrintHub, Nairobi, Kenya</p>
+<strong>Post:</strong> The Data Protection Officer, PrintHub, Eldoret, Kenya</p>
 
 <h2>3. Personal Data We Collect</h2>
 
@@ -519,7 +519,7 @@ practices, please contact:</p>
 <p>
 <strong>Data Protection Officer</strong><br>
 PrintHub — An Ezana Group Company<br>
-Nairobi, Kenya<br>
+Eldoret, Kenya<br>
 Email: dpo@printhub.africa<br>
 General enquiries: hello@printhub.africa<br>
 Website: https://printhub.africa
@@ -867,7 +867,7 @@ before resorting to litigation.</p>
 
 <h3>13.3 Jurisdiction</h3>
 <p>Subject to Clause 13.2, each party irrevocably submits to the exclusive jurisdiction of the
-courts of <strong>Nairobi, Kenya</strong> for the resolution of any dispute that cannot be
+courts of <strong>Eldoret, Kenya</strong> for the resolution of any dispute that cannot be
 resolved by mediation.</p>
 
 <h2>14. Force Majeure</h2>
@@ -907,7 +907,7 @@ agreements and understandings.</p>
 <p>For any questions regarding these Terms, please contact:</p>
 <p>
 <strong>PrintHub — An Ezana Group Company</strong><br>
-Nairobi, Kenya<br>
+Eldoret, Kenya<br>
 Email: hello@printhub.africa<br>
 WhatsApp: +254 727 410 320<br>
 Website: https://printhub.africa
@@ -1581,7 +1581,7 @@ before the 7-year retention period expires.</p>
 
 <p>
 <strong>PrintHub — An Ezana Group Company</strong><br>
-Nairobi, Kenya<br>
+Eldoret, Kenya<br>
 Website: https://printhub.africa
 </p>
 
@@ -1609,7 +1609,7 @@ const ACCOUNT_TERMS_HTML = `
 <p>By creating an account on <strong>printhub.africa</strong> ("<strong>Platform</strong>"),
 you are entering into a contract with <strong>PrintHub (An Ezana Group Company)</strong>,
 a business registered and operating under the laws of the <strong>Republic of Kenya</strong>,
-with its principal place of business in Nairobi, Kenya ("<strong>PrintHub</strong>",
+with its principal place of business in Eldoret, Kenya ("<strong>PrintHub</strong>",
 "<strong>we</strong>", "<strong>us</strong>").</p>
 
 <p>These Account Registration Terms ("<strong>Account Terms</strong>") govern your creation
@@ -1878,8 +1878,8 @@ if force majeure continues more than 30 days, either Party may terminate affecte
 full refund for unrendered services. The Client may not assign without PrintHub's consent;
 PrintHub may assign to a successor in a merger or sale. Governing law: Republic of Kenya.
 Disputes: good-faith negotiation, then mediation via Nairobi Centre for International
-Arbitration (NCIA), then arbitration under NCIA rules, seat Nairobi, English language. Courts
-of Nairobi have non-exclusive jurisdiction for urgent or interim relief.</p>
+Arbitration (NCIA), then arbitration under NCIA rules, seat Eldoret, English language. Courts
+of Eldoret have non-exclusive jurisdiction for urgent or interim relief.</p>
 
 <h2>12. Contact</h2>
 
@@ -1993,7 +1993,7 @@ If EU or UK GDPR applies to you, you may lodge a complaint with your local data 
 <p>
 Data Protection Officer<br>
 PrintHub — An Ezana Group Company<br>
-Nairobi, Kenya<br>
+Eldoret, Kenya<br>
 Email: dpo@printhub.africa<br>
 General enquiries: hello@printhub.africa<br>
 Website: https://printhub.africa<br>

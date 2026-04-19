@@ -1,0 +1,19 @@
+[build]
+  builder = "DOCKERFILE"
+  # dockerfilePath is relative to the Railway service root.
+  # This railway.toml lives inside the n8n/ directory, so the Dockerfile
+  # is in the same directory — path is just "Dockerfile", not "n8n/Dockerfile".
+  dockerfilePath = "Dockerfile"
+
+[deploy]
+  healthcheckPath = "/healthz"
+  healthcheckInterval = 10
+  # Provide enough time for n8n's fresh database migrations
+  healthcheckTimeout = 600
+  # Give it 2 minutes to start up and migrate
+  healthcheckInitialDelay = 120
+  restartPolicyType = "ON_FAILURE"
+  restartPolicyMaxRetries = 5
+  numReplicas = 1
+
+# Note: healthcheckPort is handled by Railway automatically detecting the dynamic $PORT

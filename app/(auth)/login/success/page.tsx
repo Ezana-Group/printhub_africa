@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { redirect } from "next/navigation";
 
 const ADMIN_ROLES = ["STAFF", "ADMIN", "SUPER_ADMIN"];
@@ -7,7 +7,7 @@ const ADMIN_ROLES = ["STAFF", "ADMIN", "SUPER_ADMIN"];
 export const dynamic = "force-dynamic";
 
 export default async function LoginSuccessPage() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   if (!session?.user) {
     redirect("/login");
   }

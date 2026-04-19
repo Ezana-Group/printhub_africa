@@ -285,9 +285,11 @@ export function MyAccountForm({
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setTimeout(() => {
+      setTimeout(async () => {
         setPasswordSuccess(false);
-        signOut({ callbackUrl: "/login", redirect: true });
+        // Using the custom logout route to ensure DB session and admin cookies are cleared
+        await fetch("/api/auth/admin/logout", { method: "POST" }).catch(err => console.error("Logout fetch failed:", err));
+        window.location.href = "/admin/login";
       }, 2000);
     } catch {
       setPasswordError("Something went wrong");
@@ -322,15 +324,9 @@ export function MyAccountForm({
           <Input id="name" name="name" defaultValue={name} required />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="email">Work email (login) *</Label>
-          <Input id="email" name="email" type="email" defaultValue={email} required />
-          <p className="text-xs text-muted-foreground">Must stay on @printhub.africa. Contact an admin to change your personal email for notifications.</p>
-          {personalEmail?.trim() ? (
-            <div className="mt-3 rounded-md border border-border bg-muted/40 px-3 py-2">
-              <p className="text-xs font-medium text-muted-foreground">Personal email (notifications)</p>
-              <p className="text-sm font-medium text-foreground mt-0.5">{personalEmail}</p>
-            </div>
-          ) : null}
+          <Label htmlFor="personalEmail">Personal email (notifications)</Label>
+          <Input id="personalEmail" name="personalEmail" type="email" defaultValue={personalEmail ?? ""} placeholder="your@email.com" />
+          <p className="text-xs text-muted-foreground">Used for 2FA codes and system notifications if configured.</p>
         </div>
         <div className="grid gap-2">
           <Label htmlFor="phone">Phone</Label>

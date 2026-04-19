@@ -1,0 +1,228 @@
+{
+  "name": "4. PrintHub - Staff Alert (Urgency-Based Dispatch)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "staff-alert",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "name": "Webhook: Staff Alert",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "staff-alert"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst sig = $node['Webhook: Staff Alert'].json.headers['x-printhub-signature'];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node['Webhook: Staff Alert'].json.body)).digest('hex');\nif (sig !== hmac) throw new Error('Invalid signature');\nreturn $node['Webhook: Staff Alert'].json.body;"
+      },
+      "name": "Verify Signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.urgency }}",
+              "operation": "regex",
+              "value2": "CRITICAL|HIGH"
+            }
+          ]
+        }
+      },
+      "name": "Is High/Critical?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$vars.RESEND_API_KEY}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"from\": \"PrintHub Alerts <alerts@printhub.africa>\", \"to\": \"{{ $vars.ADMIN_EMAIL }}\", \"subject\": \"[{{ $json.urgency }}] Staff Alert: {{ $json.alertType }}\", \"html\": \"<h2 style='color:{{ $json.urgency === 'CRITICAL' ? '#dc2626' : $json.urgency === 'HIGH' ? '#ea580c' : '#d97706' }}'>⚠️ {{ $json.urgency }} Alert</h2><p><strong>Type:</strong> {{ $json.alertType }}</p><p><strong>Message:</strong> {{ $json.message }}</p>{{ $json.orderId ? '<p><strong>Order:</strong> ' + $json.orderId + '</p>' : '' }}{{ $json.customerId ? '<p><strong>Customer:</strong> ' + $json.customerId + '</p>' : '' }}<p><a href='https://admin.printhub.africa/admin'>Open Admin Panel →</a></p><p style='color:#888;font-size:11px;'>{{ new Date().toLocaleString('en-GB', {timeZone:'Africa/Nairobi'}) }} EAT</p>\" }"
+      },
+      "name": "Email: Alert Admin",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        600,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://graph.facebook.com/v19.0/{{ $vars.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$vars.WHATSAPP_ACCESS_TOKEN}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{ $vars.BUSINESS_PHONE }}\", \"type\": \"text\", \"text\": { \"body\": \"🚨 {{ $json.urgency }} ALERT\\n\\nType: {{ $json.alertType }}\\n{{ $json.message }}{{ $json.orderId ? '\\nOrder: ' + $json.orderId : '' }}\\n\\nCheck admin panel immediately.\" } }"
+      },
+      "name": "WhatsApp: Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        600,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $vars.TELEGRAM_CHANNEL_ID }}",
+        "text": "=🚨 *{{ $json.urgency }} STAFF ALERT*\n\n*Type:* {{ $json.alertType }}\n*Message:* {{ $json.message }}{{ $json.orderId ? '\\n*Order:* ' + $json.orderId : '' }}\n\n_{{ new Date().toLocaleString('en-GB', {timeZone:'Africa/Nairobi'}) }} EAT_",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "name": "Telegram: Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        800,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Telegram"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://admin.printhub.africa/api/n8n/mark-alert-sent",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"alertId\": \"{{ $json.orderId || $json.customerId || 'system' }}\", \"type\": \"{{ $json.alertType }}\", \"urgency\": \"{{ $json.urgency }}\" }"
+      },
+      "name": "Mark Alert Sent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1000,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: Staff Alert": {
+      "main": [
+        [
+          {
+            "node": "Verify Signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Signature": {
+      "main": [
+        [
+          {
+            "node": "Is High/Critical?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is High/Critical?": {
+      "main": [
+        [
+          {
+            "node": "Email: Alert Admin",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "WhatsApp: Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email: Alert Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email: Alert Admin": {
+      "main": [
+        [
+          {
+            "node": "Telegram: Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp: Alert": {
+      "main": [
+        [
+          {
+            "node": "Telegram: Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram: Alert": {
+      "main": [
+        [
+          {
+            "node": "Mark Alert Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+  }
+}

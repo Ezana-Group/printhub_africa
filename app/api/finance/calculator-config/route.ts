@@ -4,10 +4,10 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const DEFAULT_LABOUR_RATE = 200;
+const DEFAULT_LABOUR_RATE = 50; // Aligned with current Admin Pricing
 const DEFAULT_PROFIT_MARGIN = 40;
 const DEFAULT_VAT_PCT = 16;
-const DEFAULT_MONTHLY_OVERHEAD = 50000;
+const DEFAULT_MONTHLY_OVERHEAD = 13500; // Aligned with Admin ~KES 65/hr Machine cost
 const DEFAULT_MONTHLY_CAPACITY_HRS = 208; // 26 * 8
 
 /** GET: Public config for 3D (and LF) calculators: business costs + filaments + post-processing fee.
@@ -15,8 +15,7 @@ const DEFAULT_MONTHLY_CAPACITY_HRS = 208; // 26 * 8
  */
 export async function GET() {
   try {
-    const [business, filaments, supportRemovalAddons, finishingAddons] = await Promise.all([
-      prisma.lFBusinessSettings.findFirst(),
+    const [filaments, supportRemovalAddons, finishingAddons] = await Promise.all([
       prisma.threeDConsumable.findMany({
         where: { kind: "FILAMENT", costPerKgKes: { not: null } },
         orderBy: [{ name: "asc" }, { specification: "asc" }],
@@ -24,6 +23,13 @@ export async function GET() {
       prisma.threeDAddon.findMany({ where: { category: "SUPPORT_REMOVAL", isActive: true } }),
       prisma.threeDAddon.findMany({ where: { category: "FINISHING", isActive: true } }),
     ]);
+
+    let business: any = null;
+    try {
+      business = await prisma.lFBusinessSettings.findFirst();
+    } catch (dbErr) {
+      console.warn("Could not fetch lFBusinessSettings (maybe column mismatch?):", dbErr);
+    }
 
     const labourRate = business?.labourRateKesPerHour ?? DEFAULT_LABOUR_RATE;
     const profitMargin = business?.defaultProfitMarginPct ?? DEFAULT_PROFIT_MARGIN;
@@ -48,14 +54,17 @@ export async function GET() {
       };
     });
 
-    // Post-processing / support removal: default fee per unit (support removal + finishing) for 3D quote calculator
+    // Post-processing fees from addons (as fallbacks)
     const supportRemovalFee = Number(
       supportRemovalAddons.find((a) => a.code !== "SUP_RM_NONE")?.pricePerUnit ?? 200
     );
     const finishingFee = Number(
       finishingAddons.find((a) => a.code !== "FINISH_RAW")?.pricePerUnit ?? 100
     );
-    const postProcessingFeePerUnit = supportRemovalFee + finishingFee;
+
+    // Post-processing / support removal fee (from business settings if present, else fallback to addons)
+    const postProcessingFeePerUnit = 
+      (business as any)?.postProcessingFeePerUnit ?? (supportRemovalFee + finishingFee);
 
     return NextResponse.json({
       labourRate,
@@ -65,6 +74,8 @@ export async function GET() {
       monthlyCapacityHrs: monthlyCapacityHrs || DEFAULT_MONTHLY_CAPACITY_HRS,
       filaments: filamentsList,
       postProcessingFeePerUnit,
+      // Default extra labor time for post-processing (can be overridden in admin calculator)
+      postProcessingTimeHours: 0.5, 
     });
   } catch (e) {
     console.error("calculator-config GET error:", e);

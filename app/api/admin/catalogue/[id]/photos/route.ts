@@ -17,51 +17,83 @@ export async function POST(
   });
   if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  let body: { fileIds?: string[] };
+  let body: { fileIds?: string[]; urls?: string[] };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
   const fileIds = Array.isArray(body.fileIds) ? body.fileIds : [];
-  if (fileIds.length === 0) {
-    return NextResponse.json({ error: "fileIds required" }, { status: 400 });
+  const urls = Array.isArray(body.urls) ? body.urls : [];
+  
+  if (fileIds.length === 0 && urls.length === 0) {
+    return NextResponse.json({ error: "fileIds or urls required" }, { status: 400 });
   }
 
-  const files = await prisma.uploadedFile.findMany({
+  const files = fileIds.length > 0 ? await prisma.uploadedFile.findMany({
     where: { id: { in: fileIds } },
     select: { id: true, storageKey: true, url: true, bucket: true },
-  });
+  }) : [];
 
   const existingCount = await prisma.catalogueItemPhoto.count({
     where: { catalogueItemId: id },
   });
   const maxNew = Math.max(0, 8 - existingCount);
-  const toCreate = files.slice(0, maxNew);
+  
+  // Combine files and direct URLs
+  const itemsToAdd: { url: string; storageKey: string | null }[] = [];
+  
+  for (const f of files) {
+    const url = f.url ?? (f.storageKey && f.bucket === "public" ? publicFileUrl(f.storageKey) : null);
+    if (url) itemsToAdd.push({ url, storageKey: f.storageKey });
+  }
+  
+  for (const url of urls) {
+    if (url.trim()) itemsToAdd.push({ url: url.trim(), storageKey: null });
+  }
 
-  const created: { url: string; storageKey: string | null }[] = [];
-  for (let i = 0; i < toCreate.length; i++) {
-    const f = toCreate[i];
-    const url =
-      f.url ??
-      (f.storageKey && f.bucket === "public"
-        ? publicFileUrl(f.storageKey)
-        : null);
-    if (!url) continue;
+  const existingPhotos = await prisma.catalogueItemPhoto.findMany({
+    where: { catalogueItemId: id },
+    select: { storageKey: true, url: true }
+  });
+  
+  const existingKeys = new Set(existingPhotos.map(p => p.storageKey).filter(Boolean));
+  const existingUrls = new Set(existingPhotos.map(p => p.url));
+
+  const toCreate = itemsToAdd.filter(item => 
+    (item.storageKey && !existingKeys.has(item.storageKey)) || 
+    (!item.storageKey && !existingUrls.has(item.url))
+  ).slice(0, maxNew);
+  
+  const createdCount = toCreate.length;
+
+  for (let i = 0; i < createdCount; i++) {
+    const photoItem = toCreate[i];
     await prisma.catalogueItemPhoto.create({
       data: {
         catalogueItemId: id,
-        url,
-        storageKey: f.storageKey,
+        url: photoItem.url,
+        storageKey: photoItem.storageKey,
         sortOrder: existingCount + i,
         isPrimary: existingCount === 0 && i === 0,
       },
     });
-    created.push({ url, storageKey: f.storageKey });
+  }
+
+  // Link UploadedFile records to this catalogue item (if possible/needed)
+  if (fileIds.length > 0) {
+    try {
+      await prisma.uploadedFile.updateMany({
+        where: { id: { in: fileIds } },
+        data: { uploadContext: "ADMIN_CATALOGUE_PHOTO" }
+      });
+    } catch (e) {
+      console.error("Failed to update uploaded files context:", e);
+    }
   }
 
   return NextResponse.json({
     success: true,
-    added: created.length,
+    added: createdCount,
   });
 }

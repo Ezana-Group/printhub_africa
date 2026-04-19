@@ -378,7 +378,7 @@ export const SITE_IMAGE_SLOT_META: Record<
   },
   about_story_image: {
     label: "Our Story image",
-    description: "Image in “Built for Makers. Built for Kenya.” section",
+    description: "Image in “Built for Makers. Built for Eldoret.” section",
     tab: "about",
   },
   about_card_01: {

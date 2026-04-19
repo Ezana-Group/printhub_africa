@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Syne, DM_Sans, JetBrains_Mono, Playfair_Display } from "next/font/google";
 import { ConsentGatedAnalytics } from "@/components/ConsentGatedAnalytics";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+import { CookieBanner } from "@/components/CookieBanner";
+import { PixelTrackerWrapper } from "@/components/marketing/pixel-tracker-wrapper";
 import { Providers } from "@/components/providers";
 import { getCachedBusinessMetadata } from "@/lib/cache/unstable-cache";
 import { ProfileCompletionGate } from "@/components/layout/profile-completion-gate";
@@ -38,7 +39,7 @@ const playfairDisplay = Playfair_Display({
   adjustFontFallback: true,
 });
 
-const metadataBase = (() => {
+const defaultMetadataBase = (() => {
   const raw = process.env.NEXT_PUBLIC_APP_URL?.trim();
   const url = raw || "https://printhub.africa";
   try {
@@ -48,18 +49,16 @@ const metadataBase = (() => {
   }
 })();
 
-const shouldEnableSpeedInsights = process.env.VERCEL === "1";
-
 export async function generateMetadata(): Promise<Metadata> {
     const meta = await getCachedBusinessMetadata().catch(() => ({ 
-      favicon: null, updatedAt: null, businessName: "PrintHub", tagline: null, logo: null, seo: null 
+      favicon: null, updatedAt: null, businessName: "PrintHub", tagline: null, logo: null, seo: null, googleSiteVerification: null 
     }));
   const businessName = meta.seo?.siteName || meta.businessName || "PrintHub";
-  const defaultTitle = meta.seo?.defaultTitle || `${businessName} | Large Format & 3D Printing | Nairobi, Kenya`;
+  const defaultTitle = meta.seo?.defaultTitle || `${businessName} | Large Format & 3D Printing | Eldoret, Kenya`;
   const description =
     meta.seo?.defaultDescription ||
     meta.tagline ||
-    "Large format printing and 3D printing for Nairobi and all of Kenya. Banners, signage, vehicle wraps, canvas, custom 3D prints. An Ezana Group Company.";
+    "Large format printing and 3D printing for Eldoret and all of Kenya. Banners, signage, vehicle wraps, canvas, custom 3D prints. An Ezana Group Company.";
   
   const updatedAtTime = meta.updatedAt ? new Date(meta.updatedAt).getTime() : 0;
   const faviconUrl =
@@ -68,6 +67,8 @@ export async function generateMetadata(): Promise<Metadata> {
       : null;
 
   const ogImage = meta.seo?.ogImageUrl || meta.logo || "/images/og/default-og.webp";
+  const canonical = meta.seo?.canonicalDomain || process.env.NEXT_PUBLIC_APP_URL || "https://printhub.africa";
+  const metadataBase = new URL(canonical);
 
   return {
     title: {
@@ -76,6 +77,12 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description,
     metadataBase,
+    alternates: {
+      canonical: "./",
+    },
+    verification: {
+      google: meta.googleSiteVerification || undefined,
+    },
     icons: faviconUrl
       ? {
           icon: [
@@ -108,7 +115,9 @@ export async function generateMetadata(): Promise<Metadata> {
       ],
     },
     twitter: {
-      card: "summary_large_image",
+      card: (meta.seo?.twitterCardType as any) || "summary_large_image",
+      site: meta.seo?.twitterHandle || undefined,
+      creator: meta.seo?.twitterHandle || undefined,
       images: [ogImage],
     },
   };
@@ -120,10 +129,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Meta Domain Verification - Required for Aggregated Event Measurement */}
+        <meta name="facebook-domain-verification" content="2035196960739715" />
       </head>
       <body
         className={`${syne.variable} ${dmSans.variable} ${jetbrainsMono.variable} ${playfairDisplay.variable} font-body antialiased`}
@@ -135,8 +146,9 @@ export default function RootLayout({
           {children}
           <ProfileCompletionGate />
         </Providers>
+        <CookieBanner />
+        <PixelTrackerWrapper />
         <ConsentGatedAnalytics />
-        {shouldEnableSpeedInsights ? <SpeedInsights /> : null}
       </body>
     </html>
   );

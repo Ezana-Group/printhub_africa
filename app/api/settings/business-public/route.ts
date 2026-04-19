@@ -62,5 +62,9 @@ export async function GET() {
     socialLinkedIn: row.socialLinkedIn,
     socialTikTok: row.socialTikTok,
     socialYouTube: row.socialYouTube,
+    ga4MeasurementId: row.ga4MeasurementId,
+    hotjarSiteId: row.hotjarSiteId,
+    searchConsoleVerification: row.searchConsoleVerification,
+    algoliaEnabled: row.algoliaEnabled ?? false,
   });
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { AnnouncementBar } from "@/components/layout/announcement-bar";
 import { Header } from "@/components/layout/header";
 import { EmailVerificationBanner } from "@/components/layout/email-verification-banner";
@@ -71,8 +72,18 @@ export default async function PublicLayout({
       <EmailVerificationBanner />
       <main id="main-content" className="min-h-[calc(100vh-8rem)]">{children}</main>
       <Footer business={business} />
-      <WhatsAppFloat whatsapp={business.whatsapp} />
+      <WhatsAppFloat 
+        whatsapp={business.whatsapp} 
+        message={business.whatsappPrefilledMessage}
+        visible={business.whatsappFloatingButton}
+      />
       <CookieBanner />
+      <Script
+        defer
+        data-domain="printhub.africa"
+        src="https://analytics.printhub.africa/js/script.js"
+        strategy="lazyOnload"
+      />
       <TawkTo />
     </>
   );

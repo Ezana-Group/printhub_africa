@@ -114,6 +114,7 @@ export default function GetAQuotePage() {
   const [finishingCode3d] = useState("FINISH_RAW");
   const [turnaroundCode3d] = useState("STD_3D");
   const [postProcessing3d] = useState(false);
+  const [parts3d, setParts3d] = useState<any[]>([]);
   const [selectedMaterialName3d, setSelectedMaterialName3d] = useState<string | null>(null);
   const [selectedColor3d, setSelectedColor3d] = useState<string | null>(null);
 
@@ -254,19 +255,30 @@ export default function GetAQuotePage() {
                   estimateHigh: estimateLfHigh ?? undefined,
                 }
               : {
-                  materialSlug: materialSlug3d,
-                  materialName: selectedMaterialName3d ?? undefined,
-                  color: selectedColor3d ?? undefined,
-                  quantity: quantity3d,
-                  weightG: typeof weightG === "number" ? weightG : Number(weightG) || 0,
-                  printTimeHrs: typeof printTimeHrs === "number" ? printTimeHrs : Number(printTimeHrs) || 0,
-                  infillPercent,
-                  layerHeightMm,
-                  supportCode,
-                  supportRemovalCode,
-                  finishingCode: finishingCode3d,
-                  turnaroundCode: turnaroundCode3d,
-                  postProcessing: postProcessing3d,
+                  isMultiPart: parts3d.length > 0,
+                  parts: parts3d.length > 0 ? parts3d.map(p => ({
+                    materialSlug: p.material,
+                    materialName: p.materialName,
+                    color: p.color || undefined,
+                    quantity: p.quantity,
+                    weightG: p.weightGrams,
+                    printTimeHrs: p.printTimeHours,
+                    postProcessing: p.postProcessing,
+                  })) : [{
+                    materialSlug: materialSlug3d,
+                    materialName: selectedMaterialName3d ?? undefined,
+                    color: selectedColor3d ?? undefined,
+                    quantity: quantity3d,
+                    weightG: typeof weightG === "number" ? weightG : Number(weightG) || 0,
+                    printTimeHrs: typeof printTimeHrs === "number" ? printTimeHrs : Number(printTimeHrs) || 0,
+                    infillPercent,
+                    layerHeightMm,
+                    supportCode,
+                    supportRemovalCode,
+                    finishingCode: finishingCode3d,
+                    turnaroundCode: turnaroundCode3d,
+                    postProcessing: postProcessing3d,
+                  }],
                   estimateLow: estimate3dLow ?? undefined,
                   estimateHigh: estimate3dHigh ?? undefined,
                 }),
@@ -474,11 +486,13 @@ export default function GetAQuotePage() {
                           <Label className="text-slate-700">Reference images or inspiration</Label>
                           <FileUploader
                             context="CUSTOMER_QUOTE"
-                            accept={["image/jpeg", "image/png", "image/webp", "application/pdf"]}
-                            maxSizeMB={20}
-                            maxFiles={5}
+                            accept={[
+                              "image/jpeg", "image/png", "image/webp", "application/pdf", "application/postscript", ".psd", "image/svg+xml", ".svg", ".ai", ".eps", ".tiff", ".tif", "image/tiff", ".dxf", "application/octet-stream", ".stl", ".obj", ".3mf", ".sla", ".stp", ".step"
+                            ]}
+                            maxSizeMB={200}
+                            maxFiles={10}
                             label="Reference images or inspiration"
-                            hint="Upload photos, sketches, or anything that shows what you have in mind"
+                            hint="Photos, sketches, AI, PDF, PSD, EPS, SVG · Max 200MB each"
                             onUploadComplete={setReferenceUploadedFiles}
                           />
                         </div>
@@ -759,6 +773,7 @@ export default function GetAQuotePage() {
                             setSelectedMaterialName3d(name);
                             setSelectedColor3d(color ?? null);
                           }}
+                          onPartsChange={setParts3d}
                         />
                       )}
                     </div>
@@ -776,14 +791,7 @@ export default function GetAQuotePage() {
                             <FileUploader
                               context="CUSTOMER_LARGE_FORMAT"
                               accept={[
-                                "application/pdf",
-                                "image/png",
-                                "image/jpeg",
-                                "image/tiff",
-                                "image/svg+xml",
-                                "application/postscript",
-                                "image/vnd.adobe.photoshop",
-                                "application/dxf",
+                                ".ai", "application/pdf", ".psd", ".eps", "image/png", "image/svg+xml", ".svg", "image/tiff", ".tiff", ".tif", ".dxf", "image/jpeg"
                               ]}
                               maxSizeMB={500}
                               maxFiles={3}
@@ -795,16 +803,7 @@ export default function GetAQuotePage() {
                             <FileUploader
                               context="CUSTOMER_3D_PRINT"
                               accept={[
-                                "model/stl",
-                                "model/obj",
-                                "model/3mf",
-                                "application/octet-stream",
-                                "application/sla",
-                                ".stl",
-                                ".obj",
-                                ".3mf",
-                                ".step",
-                                ".stp",
+                                "model/stl", "model/obj", "model/3mf", "application/octet-stream", "application/sla", ".stl", ".obj", ".3mf", ".step", ".stp", ".sla"
                               ]}
                               maxSizeMB={500}
                               maxFiles={5}

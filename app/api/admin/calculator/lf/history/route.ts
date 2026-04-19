@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 
 const ADMIN_ROLES = ["STAFF", "ADMIN", "SUPER_ADMIN"];
@@ -22,11 +22,13 @@ export type LFHistoryEntry = {
   profitAmount: number;
   marginPercent: number;
   totalJobTimeHours: number;
+  fileUrl?: string;
   createdAt: string;
+
 };
 
 export async function GET(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user || !role || !ADMIN_ROLES.includes(role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -59,7 +61,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user || !role || !ADMIN_ROLES.includes(role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -81,7 +83,9 @@ export async function POST(req: Request) {
       profitAmount: Number(body.profitAmount) || 0,
       marginPercent: Number(body.marginPercent) || 0,
       totalJobTimeHours: Number(body.totalJobTimeHours) || 0,
+      fileUrl: body.fileUrl,
       createdAt: new Date().toISOString(),
+
     };
     const config = await prisma.pricingConfig.findUnique({
       where: { key: HISTORY_KEY },

@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { prisma } from "@/lib/prisma";
 import { PayOrderClient } from "./pay-order-client";
 
@@ -38,7 +38,7 @@ export default async function PayOrderPage({
     order.paymentLinkExpiresAt &&
     new Date(order.paymentLinkExpiresAt) > new Date();
 
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   const isOrderOwner = session?.user?.id && order.userId === session.user.id;
   const canPayFromAccount = isOrderOwner && order.status === "PENDING";
 

@@ -51,10 +51,10 @@ export async function getSkuPrefixConfig(): Promise<SkuPrefixConfig> {
  * Uses the prefix from settings: default or per-category override.
  * categoryId: optional; when provided, category-specific prefix is used if configured.
  */
-export async function generateNextProductSku(categoryId?: string | null): Promise<string> {
+export async function generateNextProductSku(categoryId?: string | null, overridePrefix?: string): Promise<string> {
   const { defaultPrefix, prefixByCategoryId } = await getSkuPrefixConfig();
   const prefix =
-    (categoryId && prefixByCategoryId[categoryId]) || defaultPrefix;
+    overridePrefix || (categoryId && prefixByCategoryId[categoryId]) || defaultPrefix;
 
   const products = await prisma.product.findMany({
     where: { sku: { not: null } },
@@ -73,9 +73,74 @@ export async function generateNextProductSku(categoryId?: string | null): Promis
   }
   const next = maxNum + 1;
   const sku = `${prefix}-${String(next).padStart(SKU_PAD, "0")}`;
-  const exists = await prisma.product.findUnique({ where: { sku } });
-  if (exists) return generateNextProductSku(categoryId ?? undefined);
+  
+  // Defensive check: use findMany to avoid findUnique internal optimization which crashes on some DBs
+  const existing = await prisma.product.findMany({ 
+    where: { sku },
+    select: { id: true },
+    take: 1
+  });
+  if (existing.length > 0) return generateNextProductSku(categoryId ?? undefined);
   return sku;
+}
+
+/**
+ * Generate a POD SKU: POD-[YYYYMM]-[5-digit-sequence].
+ * Uses the Counter model with key "pod_sku" for atomic increment.
+ */
+export async function generatePODSku(): Promise<string> {
+  const now = new Date();
+  const yearMonth = now.toISOString().slice(0, 7).replace("-", ""); // 202603
+
+  const counter = await prisma.$transaction(async (tx) => {
+    const c = await tx.counter.upsert({
+      where: { id: "pod_sku" },
+      update: { value: { increment: 1 } },
+      create: { id: "pod_sku", value: 1 },
+    });
+    return c;
+  });
+
+  const sequence = String(counter.value).padStart(5, "0");
+  return `POD-${yearMonth}-${sequence}`;
+}
+
+
+/**
+ * Generate a unique product slug by checking both existing products and catalogue items.
+ * If the preferred slug is taken, appends a numeric suffix.
+ */
+export async function generateUniqueProductSlug(preferredSlug: string, skipId?: string): Promise<string> {
+  let slug = preferredSlug;
+  let counter = 1;
+  const maxAttempts = 100;
+
+  while (counter <= maxAttempts) {
+    // Defensive check using findMany to avoid findUnique internal optimization
+    const [existingProducts, existingCatalogue] = await Promise.all([
+      prisma.product.findMany({
+        where: { slug, NOT: skipId ? { id: skipId } : undefined },
+        select: { id: true },
+        take: 1
+      }),
+      prisma.catalogueItem.findMany({
+        where: { slug, NOT: skipId ? { id: skipId } : undefined },
+        select: { id: true },
+        take: 1
+      })
+    ]);
+
+    if (existingProducts.length === 0 && existingCatalogue.length === 0) {
+      return slug;
+    }
+
+    // Collision — try next
+    slug = `${preferredSlug}-${counter}`;
+    counter++;
+  }
+
+  // Final fallback if many collisions (unlikely)
+  return `${preferredSlug}-${Math.random().toString(36).substring(2, 7)}`;
 }
 
 function escapeRegex(s: string): string {

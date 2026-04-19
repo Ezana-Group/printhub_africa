@@ -7,10 +7,13 @@ export async function GET() {
   const auth = await requireAdminApi({ finance: true, needEdit: false });
   if (auth instanceof NextResponse) return auth;
   try {
-    const [printer, business] = await Promise.all([
-      prisma.lFPrinterSettings.findFirst({ where: { isDefault: true } }),
-      prisma.lFBusinessSettings.findFirst(),
-    ]);
+    const printer = await prisma.lFPrinterSettings.findFirst({ where: { isDefault: true } });
+    let business: any = null;
+    try {
+      business = await prisma.lFBusinessSettings.findFirst();
+    } catch (dbErr) {
+      console.warn("Could not fetch lFBusinessSettings (Settings API):", dbErr);
+    }
     return NextResponse.json({ printer, business });
   } catch (e) {
     console.error("LF settings GET error:", e);
@@ -50,7 +53,7 @@ export async function PATCH(req: Request) {
 
     if (business && typeof business === "object") {
       const row = await prisma.lFBusinessSettings.findFirst();
-      const data = {
+      const baseData = {
         labourRateKesPerHour: business.labourRateKesPerHour ?? row?.labourRateKesPerHour ?? 200,
         finishingTimeEyeletStd: business.finishingTimeEyeletStd ?? row?.finishingTimeEyeletStd ?? 0.1,
         finishingTimeEyeletHeavy: business.finishingTimeEyeletHeavy ?? row?.finishingTimeEyeletHeavy ?? 0.2,
@@ -71,13 +74,31 @@ export async function PATCH(req: Request) {
         vatRatePct: business.vatRatePct ?? row?.vatRatePct ?? 16,
         minOrderValueKes: business.minOrderValueKes ?? row?.minOrderValueKes ?? 500,
       };
-      if (row) {
-        await prisma.lFBusinessSettings.update({
-          where: { id: row.id },
-          data,
-        });
-      } else {
-        await prisma.lFBusinessSettings.create({ data });
+
+      const fullData = {
+        ...baseData,
+        postProcessingFeePerUnit: business.postProcessingFeePerUnit ?? row?.postProcessingFeePerUnit ?? 300,
+      };
+
+      try {
+        if (row) {
+          await (prisma.lFBusinessSettings.update as any)({
+            where: { id: row.id },
+            data: fullData,
+          });
+        } else {
+          await (prisma.lFBusinessSettings.create as any)({ data: fullData });
+        }
+      } catch (err) {
+        console.warn("Failed to save full business settings (falling back to base data):", err);
+        if (row) {
+          await prisma.lFBusinessSettings.update({
+            where: { id: row.id },
+            data: baseData,
+          });
+        } else {
+          await prisma.lFBusinessSettings.create({ data: baseData });
+        }
       }
     }
 

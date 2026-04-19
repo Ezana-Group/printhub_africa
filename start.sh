@@ -1,8 +1,20 @@
 #!/bin/sh
-set -e
+# NOTE: No 'set -e' — migration/seed failures must NOT prevent the server from starting.
 echo "Running database migrations..."
-./node_modules/.bin/prisma migrate deploy
+if [ -n "$DATABASE_URL_UNPOOLED" ]; then
+  echo "Using unpooled connection for migrations..."
+  DATABASE_URL="$DATABASE_URL_UNPOOLED" ./node_modules/.bin/prisma migrate deploy || echo "⚠️ Migration failed — continuing startup anyway"
+else
+  echo "⚠️ DATABASE_URL_UNPOOLED not found, falling back to pooled connection..."
+  ./node_modules/.bin/prisma migrate deploy || echo "⚠️ Migration failed — continuing startup anyway"
+fi
+
 echo "Running production seed..."
-./node_modules/.bin/tsx prisma/seed-production.ts || echo "⚠️ Seed skipped (missing env vars or already seeded)"
+if [ -n "$DATABASE_URL_UNPOOLED" ]; then
+  DATABASE_URL="$DATABASE_URL_UNPOOLED" ./node_modules/.bin/tsx prisma/seed-production.ts || echo "⚠️ Seed skipped (missing env vars or already seeded)"
+else
+  ./node_modules/.bin/tsx prisma/seed-production.ts || echo "⚠️ Seed skipped (missing env vars or already seeded)"
+fi
+
 echo "Starting Next.js server..."
-node server.js
+exec node server.js

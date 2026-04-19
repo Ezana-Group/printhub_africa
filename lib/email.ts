@@ -1,6 +1,46 @@
 import { Resend } from "resend";
 import { getBusinessPublic } from "@/lib/business-public";
 import { getEmailTemplate, renderTemplate } from "@/lib/email-templates";
+import { prisma } from "@/lib/prisma";
+import { n8n } from "@/lib/n8n";
+
+export type AdminAlertEvent = 
+  | "New Order" | "Payment Received" | "Payment Failed" | "New Upload" 
+  | "Quote Request" | "Quote Accepted" | "Cancellation" | "Refund" 
+  | "Corporate Application" | "Low Stock" | "Maintenance Alert" 
+  | "Support Ticket" | "Negative Review";
+
+export async function sendAdminAlert({
+  event,
+  subject,
+  html,
+}: {
+  event: AdminAlertEvent;
+  subject: string;
+  html: string;
+}) {
+  const settings = await prisma.businessSettings.findUnique({
+    where: { id: "default" },
+    select: { adminAlertEmail: true, adminAlertEvents: true },
+  }).catch(() => null);
+
+  if (!settings?.adminAlertEmail) return;
+
+  const enabledEvents = Array.isArray(settings.adminAlertEvents) 
+    ? (settings.adminAlertEvents as string[]) 
+    : [];
+
+  if (!enabledEvents.includes(event)) {
+    console.log(`[AdminAlert] Event ${event} is disabled. Skipping email.`);
+    return;
+  }
+
+  return sendEmail({
+    to: settings.adminAlertEmail,
+    subject: `[Admin Alert] ${event}: ${subject}`,
+    html,
+  });
+}
 
 async function getEmailBranding() {
   const b = await getBusinessPublic();
@@ -10,6 +50,23 @@ async function getEmailBranding() {
 }
 
 const defaultFrom = process.env.FROM_EMAIL ?? "PrintHub <hello@printhub.africa>";
+
+async function getEmailSettings() {
+  const row = await prisma.businessSettings.findUnique({
+    where: { id: "default" },
+    select: {
+      resendApiKey: true,
+      emailFromName: true,
+      emailFrom: true,
+    },
+  }).catch(() => null);
+
+  return {
+    apiKey: row?.resendApiKey || process.env.RESEND_API_KEY,
+    fromName: row?.emailFromName,
+    fromEmail: row?.emailFrom,
+  };
+}
 
 export async function sendEmail({
   to,
@@ -24,13 +81,24 @@ export async function sendEmail({
   text?: string;
   fromOverride?: string;
 }) {
-  if (!process.env.RESEND_API_KEY) {
-    console.warn("RESEND_API_KEY not set; email not sent:", { to, subject });
+  const settings = await getEmailSettings();
+
+  if (!settings.apiKey) {
+    console.warn("Resend API key not set; email not sent:", { to, subject });
     return { success: false, error: "email_not_configured" };
   }
-  const resend = new Resend(process.env.RESEND_API_KEY);
+
+  const resend = new Resend(settings.apiKey);
+
+  let from = fromOverride ?? defaultFrom;
+  if (!fromOverride && settings.fromEmail) {
+    from = settings.fromName 
+      ? `${settings.fromName} <${settings.fromEmail}>`
+      : settings.fromEmail;
+  }
+
   const payload: { from: string; to: string[]; subject: string; html?: string; text?: string } = {
-    from: fromOverride ?? defaultFrom,
+    from,
     to: [to],
     subject,
   };
@@ -38,7 +106,6 @@ export async function sendEmail({
   else if (text) payload.text = text;
   else payload.text = subject;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await resend.emails.send(payload as any);
   if (error) throw error;
   return data;
@@ -80,9 +147,10 @@ export async function sendVerificationEmail(email: string, token: string) {
   return sendWithTemplate("verification", email, context, defaultSubject, defaultHtml);
 }
 
-export async function sendPasswordResetEmail(email: string, token: string) {
+export async function sendPasswordResetEmail(email: string, token: string, baseUrlOverride?: string) {
   const { businessName, footer } = await getEmailBranding();
-  const url = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
+  const targetBaseUrl = baseUrlOverride || baseUrl;
+  const url = `${targetBaseUrl}/reset-password?token=${encodeURIComponent(token)}`;
   const context = { businessName, footer, resetUrl: url };
   const defaultSubject = `Reset your ${businessName} password`;
   const defaultHtml = `
@@ -162,6 +230,42 @@ export async function sendOrderConfirmationEmail(
   total: number,
   currency = "KES"
 ) {
+  // 1. Fetch full order for n8n payload
+  const order = await prisma.order.findUnique({
+    where: { orderNumber },
+    include: { 
+      items: { include: { product: true } },
+      user: true,
+      corporate: true
+    }
+  });
+
+  if (order) {
+    n8n.orderConfirmed({
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      customerId: order.userId || "guest",
+      customerEmail: order.user?.email || email,
+      customerPhone: order.user?.phone || "",
+      customerName: order.user?.name || "Customer",
+      totalAmount: Number(order.total),
+      currency: "KES",
+      items: order.items.map(i => ({
+        name: i.product?.name || "Item",
+        quantity: i.quantity,
+        price: Number(i.unitPrice),
+        imageUrl: i.product?.images?.[0]
+      })),
+      paymentMethod: order.paymentMethod || "UNKNOWN",
+      deliveryMethod: (order as any).deliveryMethod || "UNKNOWN", // Check if deliveryMethod exists or is a relation
+      isCorporate: !!order.corporateId,
+      corporateId: order.corporateId || undefined
+    }).catch(err => console.error("n8n order-confirmed failed:", err));
+  }
+
+  // Fallback: commenting out direct Resend call. 
+  // n8n is the primary orchestrator for order-confirmation (Email + WA + SMS).
+  /*
   const { businessName, footer } = await getEmailBranding();
   const orderUrl = `${baseUrl}/account/orders`;
   const context = {
@@ -172,7 +276,7 @@ export async function sendOrderConfirmationEmail(
     currency,
     orderUrl,
   };
-  const defaultSubject = `Order ${orderNumber} confirmed – ${businessName}`;
+  const defaultSubject = `Order ${orderNumber} confirmed \u2013 ${businessName}`;
   const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h1 style="color: #FF4D00;">${businessName}</h1>
@@ -185,6 +289,7 @@ export async function sendOrderConfirmationEmail(
       </div>
     `;
   return sendWithTemplate("order-confirmation", email, context, defaultSubject, defaultHtml);
+  */
 }
 
 /** Order status update (tracking) — used by createTrackingEvent. */
@@ -194,10 +299,33 @@ export async function sendOrderStatusEmail(
   title: string,
   description: string
 ) {
+  // 1. Fetch order details for n8n payload
+  const order = await prisma.order.findUnique({
+    where: { orderNumber },
+    include: { user: true }
+  });
+
+  if (order) {
+    n8n.orderStatusChanged({
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      customerEmail: order.user?.email || email,
+      customerPhone: order.user?.phone || "",
+      customerName: order.user?.name || "Customer",
+      previousStatus: "UNKNOWN", // Could be tracked if we pass it
+      newStatus: order.status,
+      trackingUrl: order.trackingNumber ? `https://printhub.africa/track?ref=${order.orderNumber}` : undefined,
+      estimatedDelivery: order.estimatedDelivery?.toISOString()
+    }).catch(err => console.error("n8n order-status-changed failed:", err));
+  }
+
+  // Fallback: commenting out direct Resend call for status changes.
+  // n8n handles logistics notifications (WhatsApp + Email).
+  /*
   const { businessName, footer } = await getEmailBranding();
   const trackUrl = `${baseUrl}/track?ref=${encodeURIComponent(orderNumber)}`;
   const context = { businessName, footer, orderNumber, title, description, trackUrl };
-  const defaultSubject = `Order ${orderNumber} – ${title} – ${businessName}`;
+  const defaultSubject = `Order ${orderNumber} \u2013 ${title} \u2013 ${businessName}`;
   const defaultHtml = `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h1 style="color: #FF4D00;">${businessName}</h1>
@@ -209,6 +337,7 @@ export async function sendOrderStatusEmail(
       </div>
     `;
   return sendWithTemplate("order-status", email, context, defaultSubject, defaultHtml);
+  */
 }
 
 /** Manual payment submitted — we received your reference; team will confirm within 30 min. */
@@ -275,7 +404,7 @@ export async function sendPickupConfirmationEmail(
         <p>Your order <strong>${orderNumber}</strong> is confirmed. You'll pay when you collect.</p>
         <p><strong>Pickup code:</strong> <span style="font-size: 1.2em; letter-spacing: 0.2em;">${pickupCode}</span></p>
         <p><strong>Amount to pay at collection:</strong> KSh ${totalKes.toLocaleString()}</p>
-        <p>We'll notify you when your order is ready. Bring this code to our Nairobi studio.</p>
+        <p>We'll notify you when your order is ready. Bring this code to our Eldoret location.</p>
         <p style="color: #6B6B6B; font-size: 12px;">${footer}</p>
       </div>
     `;

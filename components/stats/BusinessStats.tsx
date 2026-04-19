@@ -96,7 +96,7 @@ export function BusinessStats({ variant = "full", className }: BusinessStatsProp
         ))}
         <span className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-emerald-500" />
-          Nairobi based
+          Eldoret based
         </span>
       </div>
     );

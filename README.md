@@ -1,6 +1,6 @@
 # PrintHub — printhub.africa
 
-**Large format printing & 3D printing for Nairobi and all of Kenya.**  
+**Large format printing & 3D printing for Eldoret and all of Kenya.**  
 An Ezana Group Company.
 
 ## Tech stack

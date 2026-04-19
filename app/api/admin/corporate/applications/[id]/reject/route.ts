@@ -5,7 +5,7 @@
 
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import { sendCorporateApplicationRejectedEmail } from "@/lib/email";
 import { canAccessRoute } from "@/lib/admin-permissions";
@@ -20,7 +20,7 @@ export async function POST(
   req: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   const permissions = (session?.user as { permissions?: string[] })?.permissions;
   if (!session?.user?.id || !role || !ADMIN_ROLES.includes(role)) {

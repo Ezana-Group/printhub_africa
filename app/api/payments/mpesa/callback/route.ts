@@ -5,6 +5,7 @@ import { capturePaymentFailure, capturePaymentSuccess } from "@/lib/sentry-event
 import { createInvoiceForOrder } from "@/lib/invoice-create";
 import { decrementStockForOrder } from "@/lib/stock";
 import { addOrderToProductionQueue } from "@/lib/production-queue";
+import { createTrackingEvent } from "@/lib/tracking";
 
 interface CallbackBody {
   Body: {
@@ -20,7 +21,16 @@ interface CallbackBody {
   };
 }
 
-export async function POST(req: Request) {
+import { withRateLimit } from "@/lib/rate-limit-wrapper";
+
+/**
+ * Security Validation:
+ * - Uses `getMpesaCallbackIpCheck` which validates that incoming callbacks 
+ *   originate from safaricom's IP whitelist (in production).
+ * - Matches the CheckoutRequestID from the callback securely against 
+ *   the pending `MpesaTransaction` in the database.
+ */
+async function _POST(req: Request) {
   const ipCheck = getMpesaCallbackIpCheck(req);
   if (!ipCheck.allowed && ipCheck.productionRequiresWhitelist) {
     return NextResponse.json(
@@ -109,6 +119,24 @@ export async function POST(req: Request) {
     } catch (e) {
       console.error("Production queue add on M-Pesa callback:", e);
     }
+    try {
+      const { awardLoyaltyPoints } = await import("@/lib/loyalty");
+      await awardLoyaltyPoints(mpesa.payment.orderId);
+      
+      const { awardReferralPoints } = await import("@/lib/referrals");
+      const order = await prisma.order.findUnique({ where: { id: mpesa.payment.orderId }, select: { userId: true } });
+      if (order?.userId) await awardReferralPoints(order.userId, mpesa.payment.orderId);
+    } catch (e) {
+      console.error("Loyalty points award on M-Pesa callback:", e);
+    }
+    
+    // Trigger marketing and tracking events
+    void createTrackingEvent(mpesa.payment.orderId, "CONFIRMED", {
+      userData: {
+        ip: req.headers.get("x-forwarded-for") || undefined,
+        userAgent: req.headers.get("user-agent") || undefined,
+      }
+    });
   } else {
     await prisma.mpesaTransaction.update({
       where: { id: mpesa.id },
@@ -133,3 +161,5 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ ResultCode: 0, ResultDesc: "Success" });
 }
+
+export const POST = withRateLimit(_POST, { limit: 100, windowMs: 60000, keyPrefix: "payment_webhook" });

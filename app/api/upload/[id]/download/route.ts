@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import {
   createPresignedDownloadUrl,
@@ -12,7 +13,10 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
+  // Try both sessions — admin downloads originate from the admin portal (different session cookie)
+  const adminSession = await getServerSession(authOptionsAdmin);
+  const customerSession = await getServerSession(authOptionsCustomer);
+  const session = adminSession?.user?.id ? adminSession : customerSession;
   const { id } = await params;
 
   const file = await prisma.uploadedFile.findUnique({
@@ -22,6 +26,21 @@ export async function GET(
 
   if (!file) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  // 🔴 CRIT-3: Prevent download of unscanned or infected files
+  if (file.status === "VIRUS_SCANNING" || file.virusScanStatus === "PENDING") {
+    return NextResponse.json({ 
+      error: "File is currently being scanned for viruses. Try again in 30 seconds.",
+      code: "SCAN_PENDING"
+    }, { status: 423 });
+  }
+
+  if (file.status === "INFECTED" || file.virusScanStatus === "infected") {
+    return NextResponse.json({ 
+      error: "Access denied. This file has been flagged as malicious and cannot be downloaded.",
+      code: "FILE_INFECTED"
+    }, { status: 403 });
   }
 
   const isOwner = file.userId === session?.user?.id;

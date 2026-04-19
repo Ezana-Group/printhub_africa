@@ -2,49 +2,54 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/admin-api-guard";
 
-export async function GET() {
+export async function GET(req: Request) {
   const auth = await requireAdminApi({ permission: "catalogue_review" });
   if (auth instanceof NextResponse) return auth;
 
+  const { searchParams } = new URL(req.url);
+  const tab = searchParams.get("tab") || "review";
+
+  const statusMap: Record<string, any[]> = {
+    drafts: ["PENDING", "PROCESSING", "DRAFT"],
+    review: ["PENDING_REVIEW"],
+    rejected: ["REJECTED"],
+    approved: ["APPROVED"],
+  };
+
+  const selectedStatuses = statusMap[tab] || ["PENDING_REVIEW"];
+
   try {
-    const records = await prisma.catalogueItem.findMany({
+    const records = await prisma.catalogueImportQueue.findMany({
       where: {
-        status: {
-          in: ["DRAFT", "PENDING_REVIEW"]
-        },
-        sourceType: {
-          not: "MANUAL"
-        }
+        status: { in: selectedStatuses }
       },
       orderBy: {
-        createdAt: "desc",
+        updatedAt: "desc",
       },
-      select: {
-        id: true,
-        name: true,
-        sourceType: true,
-        licenseType: true,
-        createdAt: true,
-        status: true,
-        photos: {
-          where: { isPrimary: true },
-          take: 1
-        }
+      include: {
+        submittedBy: { select: { name: true, email: true } }
       }
     });
 
     const items = records.map(r => ({
       id: r.id,
-      name: r.name,
-      platform: r.sourceType,
-      licenceType: r.licenseType,
+      name: r.scrapedName || "Untitled draft",
+      platform: (r as any).isManual ? "MANUAL" : (r.sourceUrl?.includes("printables") ? "PRINTABLES" : "EXTERNAL"),
+      licenceType: r.licenseType || "Unknown",
       importedAt: r.createdAt,
+      updatedAt: r.updatedAt,
       status: r.status,
-      thumbnailUrl: r.photos.length > 0 ? r.photos[0].url : null
+      thumbnailUrl: r.scrapedImageUrls?.[0] || null,
+      isManual: (r as any).isManual,
+      scrapedImageUrls: r.scrapedImageUrls,
+      reviewNotes: r.reviewNotes,
+      submittedBy: r.submittedBy?.name || r.submittedBy?.email || null,
+      submittedAt: r.submittedAt,
     }));
 
     return NextResponse.json({ items });
-  } catch {
+  } catch (error) {
+    console.error("[QUEUE_FETCH_ERROR]", error);
     return NextResponse.json({ error: "INTERNAL_ERROR" }, { status: 500 });
   }
 }

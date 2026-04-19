@@ -1,0 +1,842 @@
+[
+  {
+    "name": "1. PrintHub - Order Confirmation (Email + WA + SMS + Tracking)",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "order-confirmed-legacy",
+          "options": {
+            "rawBody": true
+          }
+        },
+        "name": "Webhook: Order Confirmed",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [
+          100,
+          300
+        ],
+        "webhookId": "order-confirmed-legacy"
+      },
+      {
+        "parameters": {
+          "jsCode": "const crypto = require('crypto');\nconst signature = $node[\"Webhook: Order Confirmed\"].json.headers[\"x-printhub-signature\"];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node[\"Webhook: Order Confirmed\"].json.body)).digest('hex');\nif (signature !== hmac) throw new Error('Invalid Signature');\nreturn $node[\"Webhook: Order Confirmed\"].json.body;"
+        },
+        "name": "Verify Signature",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [
+          320,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://api.resend.com/emails",
+          "method": "POST",
+          "authentication": "none",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "=Bearer {{$env.RESEND_API_KEY}}"
+              }
+            ]
+          },
+          "bodyParametersJson": "={ \"from\": \"PrintHub Africa <orders@printhub.africa>\", \"to\": \"{{$json.customerEmail}}\", \"subject\": \"Order Confirmed: {{$json.orderNumber}}\", \"html\": \"<div style='font-family:sans-serif;max-width:600px;margin:0 auto'><h2>Order Confirmed!</h2><p>Hi {{$json.customerName}}, your order <strong>{{$json.orderNumber}}</strong> (KES {{$json.total}}) is confirmed! We will notify you when it's dispatched.</p><p><a href='https://printhub.africa/track/{{$json.orderNumber}}' style='background:#f97316;color:white;padding:10px 20px;border-radius:5px;text-decoration:none'>Track Your Order</a></p></div>\" }"
+        },
+        "name": "Resend: Email",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          540,
+          150
+        ]
+      },
+      {
+        "parameters": {
+          "url": "=https://graph.facebook.com/v19.0/{{$env.WHATSAPP_PHONE_NUMBER_ID}}/messages",
+          "method": "POST",
+          "authentication": "none",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "=Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}"
+              }
+            ]
+          },
+          "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{$json.customerPhone}}\", \"type\": \"template\", \"template\": { \"name\": \"order_confirmation\", \"language\": { \"code\": \"en\" }, \"components\": [ { \"type\": \"body\", \"parameters\": [ { \"type\": \"text\", \"text\": \"{{$json.customerName}}\" }, { \"type\": \"text\", \"text\": \"{{$json.orderNumber}}\" } ] } ] } }"
+        },
+        "name": "WhatsApp: Notify",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          540,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.africastalking.com/version1/messaging",
+          "authentication": "none",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "apiKey",
+                "value": "={{$env.AT_API_KEY}}"
+              }
+            ]
+          },
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "username",
+                "value": "={{$env.AT_USERNAME}}"
+              },
+              {
+                "name": "to",
+                "value": "={{$json.customerPhone}}"
+              },
+              {
+                "name": "message",
+                "value": "=Hi {{$json.customerName}}, order {{$json.orderNumber}} confirmed. Tracking: printhub.africa/track/{{$json.orderNumber}}"
+              }
+            ]
+          }
+        },
+        "name": "SMS: Africa's Talking",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          540,
+          450
+        ]
+      },
+      {
+        "parameters": {
+          "url": "=https://graph.facebook.com/v19.0/{{$env.META_PIXEL_ID}}/events",
+          "method": "POST",
+          "bodyParametersJson": "={ \"data\": [ { \"event_name\": \"Purchase\", \"event_time\": {{Math.floor(Date.now()/1000)}}, \"action_source\": \"website\", \"user_data\": { \"em\": [\"{{$json.customerEmail}}\"], \"ph\": [\"{{$json.customerPhone}}\"] }, \"custom_data\": { \"value\": {{$json.total}}, \"currency\": \"KES\", \"order_id\": \"{{$json.orderNumber}}\" } } ], \"access_token\": \"{{$env.META_ACCESS_TOKEN}}\" }"
+        },
+        "name": "Meta CAPI: Purchase",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          760,
+          300
+        ]
+      }
+    ],
+    "connections": {
+      "Webhook: Order Confirmed": {
+        "main": [
+          [
+            {
+              "node": "Verify Signature",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Verify Signature": {
+        "main": [
+          [
+            {
+              "node": "Resend: Email",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "WhatsApp: Notify",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "SMS: Africa's Talking",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Meta CAPI: Purchase",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  },
+  {
+    "name": "2. PrintHub - Order Status Changed (Multi-Channel Notify)",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "order-status-changed-legacy",
+          "options": {
+            "rawBody": true
+          }
+        },
+        "name": "Webhook: Status Changed",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [
+          100,
+          300
+        ],
+        "webhookId": "order-status-changed-legacy"
+      },
+      {
+        "parameters": {
+          "jsCode": "const crypto = require('crypto');\nconst signature = $node[\"Webhook: Status Changed\"].json.headers[\"x-printhub-signature\"];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node[\"Webhook: Status Changed\"].json.body)).digest('hex');\nif (signature !== hmac) throw new Error('Invalid');\nreturn $node[\"Webhook: Status Changed\"].json.body;"
+        },
+        "name": "Verify Internal Auth",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [
+          320,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "string": [
+              {
+                "value1": "={{$json.newStatus}}",
+                "value2": "DISPATCHED"
+              }
+            ]
+          }
+        },
+        "name": "If Dispatched",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 1,
+        "position": [
+          540,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://api.resend.com/emails",
+          "method": "POST",
+          "authentication": "none",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "=Bearer {{$env.RESEND_API_KEY}}"
+              }
+            ]
+          },
+          "bodyParametersJson": "={ \"from\": \"PrintHub Africa <shipping@printhub.africa>\", \"to\": \"{{$json.customerEmail}}\", \"subject\": \"Your order {{$json.orderNumber}} is on its way!\", \"html\": \"<p>Exciting news {{$json.customerName}}! Your order is dispatched. Tracking: {{$json.trackingNumber}}</p>\" }"
+        },
+        "name": "Email: Dispatched",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          760,
+          200
+        ]
+      }
+    ],
+    "connections": {
+      "Webhook: Status Changed": {
+        "main": [
+          [
+            {
+              "node": "Verify Internal Auth",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Verify Internal Auth": {
+        "main": [
+          [
+            {
+              "node": "If Dispatched",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "If Dispatched": {
+        "main": [
+          [
+            {
+              "node": "Email: Dispatched",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  },
+  {
+    "name": "3. PrintHub - Abandoned Cart Recovery (Wait & Sequence)",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "cart-abandoned-legacy",
+          "options": {
+            "rawBody": true
+          }
+        },
+        "name": "Webhook: Cart Abandoned",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [
+          0,
+          300
+        ],
+        "webhookId": "cart-abandoned-legacy"
+      },
+      {
+        "parameters": {
+          "amount": 1,
+          "unit": "hours"
+        },
+        "name": "Wait 1 Hour",
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1,
+        "position": [
+          200,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://api.resend.com/emails",
+          "method": "POST",
+          "authentication": "none",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "=Bearer {{$env.RESEND_API_KEY}}"
+              }
+            ]
+          },
+          "bodyParametersJson": "={ \"from\": \"PrintHub <hello@printhub.africa>\", \"to\": \"{{ $json.customerEmail }}\", \"subject\": \"You left something behind! 🛒\", \"html\": \"<p>Hi {{ $json.customerName }}, we saved your cart for you. <a href='{{ $json.cartUrl }}'>Complete your order here</a></p>\" }"
+        },
+        "name": "Email: Stage 1",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          400,
+          300
+        ]
+      }
+    ],
+    "connections": {
+      "Webhook: Cart Abandoned": {
+        "main": [
+          [
+            {
+              "node": "Wait 1 Hour",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Wait 1 Hour": {
+        "main": [
+          [
+            {
+              "node": "Email: Stage 1",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  },
+  {
+    "name": "4. PrintHub - Staff Alert (Urgency-Based Dispatcher)",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "staff-alert-legacy",
+          "options": {
+            "rawBody": true
+          }
+        },
+        "name": "Webhook: Staff Alert",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [
+          0,
+          300
+        ],
+        "webhookId": "staff-alert-legacy"
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "string": [
+              {
+                "value1": "={{ $json.urgency }}",
+                "operation": "equal",
+                "value2": "CRITICAL"
+              }
+            ]
+          }
+        },
+        "name": "Is Critical?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 1,
+        "position": [
+          200,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "chatId": "={{ $env.TELEGRAM_STAFF_GROUP_ID }}",
+          "text": "=🚨 *CRITICAL ALERT*\n\n{{ $json.message }}\n\nTime: {{ new Date().toLocaleString() }}",
+          "additionalFields": {
+            "parse_mode": "Markdown"
+          }
+        },
+        "name": "Telegram: Staff Alert",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1,
+        "position": [
+          400,
+          200
+        ]
+      }
+    ],
+    "connections": {
+      "Webhook: Staff Alert": {
+        "main": [
+          [
+            {
+              "node": "Is Critical?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Is Critical?": {
+        "main": [
+          [
+            {
+              "node": "Telegram: Staff Alert",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  },
+  {
+    "name": "5. PrintHub - Security Alert (Impossible Travel + Auth)",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "security-alert-legacy",
+          "options": {
+            "rawBody": true
+          }
+        },
+        "name": "Webhook: Security",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [
+          0,
+          300
+        ],
+        "webhookId": "security-alert-legacy"
+      },
+      {
+        "parameters": {
+          "url": "https://api.resend.com/emails",
+          "method": "POST",
+          "authentication": "none",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "=Bearer {{$env.RESEND_API_KEY}}"
+              }
+            ]
+          },
+          "bodyParametersJson": "={ \"from\": \"Security <security@printhub.africa>\", \"to\": \"{{ $env.ADMIN_EMAIL }}\", \"subject\": \"🔐 Security Alert: {{ $json.type }}\", \"html\": \"<p>A security event was detected: <strong>{{ $json.message }}</strong></p>\" }"
+        },
+        "name": "Email: Admin Alert",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          200,
+          300
+        ]
+      }
+    ],
+    "connections": {
+      "Webhook: Security": {
+        "main": [
+          [
+            {
+              "node": "Email: Admin Alert",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  },
+  {
+    "name": "6. PrintHub - Low Stock Notify (Inventory Flow)",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "low-stock-legacy",
+          "options": {
+            "rawBody": true
+          }
+        },
+        "name": "Webhook: Low Stock",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [
+          0,
+          300
+        ],
+        "webhookId": "low-stock-legacy"
+      },
+      {
+        "parameters": {
+          "url": "https://api.resend.com/emails",
+          "method": "POST",
+          "authentication": "none",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "=Bearer {{$env.RESEND_API_KEY}}"
+              }
+            ]
+          },
+          "bodyParametersJson": "={ \"from\": \"Stock <stock@printhub.africa>\", \"to\": \"{{ $env.ADMIN_EMAIL }}\", \"subject\": \"⚠️ Low Stock Alert: {{ $json.productName }}\", \"html\": \"<p><strong>{{ $json.productName }}</strong> is low in stock ({{ $json.currentStock }} remaining).</p>\" }"
+        },
+        "name": "Email: Stock Alert",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          200,
+          300
+        ]
+      }
+    ],
+    "connections": {
+      "Webhook: Low Stock": {
+        "main": [
+          [
+            {
+              "node": "Email: Stock Alert",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  },
+  {
+    "name": "7. PrintHub - Social Media Sync (Catalog Upload)",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "sync-catalog-legacy",
+          "options": {
+            "rawBody": true
+          }
+        },
+        "name": "Webhook: Sync Catalog",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [
+          0,
+          300
+        ],
+        "webhookId": "sync-catalog-legacy"
+      }
+    ],
+    "connections": {},
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  },
+  {
+    "name": "8. PrintHub - Product Updated (Differential Check)",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "product-updated-legacy",
+          "options": {
+            "rawBody": true
+          }
+        },
+        "name": "Webhook: Product Update",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [
+          0,
+          300
+        ],
+        "webhookId": "product-updated-legacy"
+      }
+    ],
+    "connections": {},
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  },
+  {
+    "name": "9. PrintHub - Quote Submitted (Lead Capture)",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "quote-submitted-legacy",
+          "options": {
+            "rawBody": true
+          }
+        },
+        "name": "Webhook: Quote Lead",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [
+          0,
+          300
+        ],
+        "webhookId": "quote-submitted-legacy"
+      }
+    ],
+    "connections": {},
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  },
+  {
+    "name": "10. PrintHub - Quote Ready (PDF & Close)",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "quote-ready-legacy",
+          "options": {
+            "rawBody": true
+          }
+        },
+        "name": "Webhook: Quote Ready",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [
+          0,
+          300
+        ],
+        "webhookId": "quote-ready-legacy"
+      }
+    ],
+    "connections": {},
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  },
+  {
+    "name": "11. PrintHub - New Device Login (Admin Safety)",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "new-device-login-legacy",
+          "options": {
+            "rawBody": true
+          }
+        },
+        "name": "Webhook: New Login",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [
+          0,
+          300
+        ],
+        "webhookId": "new-device-login-legacy"
+      }
+    ],
+    "connections": {},
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  },
+  {
+    "name": "12. PrintHub - Delivery Status Changed",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "delivery-update-legacy",
+          "options": {
+            "rawBody": true
+          }
+        },
+        "name": "Webhook: Delivery",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [
+          0,
+          300
+        ],
+        "webhookId": "delivery-update-legacy"
+      }
+    ],
+    "connections": {},
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  },
+  {
+    "name": "13. PrintHub - Payment Failed (Grace Period)",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "payment-failed-legacy",
+          "options": {
+            "rawBody": true
+          }
+        },
+        "name": "Webhook: Payment Fail",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [
+          0,
+          300
+        ],
+        "webhookId": "payment-failed-legacy"
+      }
+    ],
+    "connections": {},
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  },
+  {
+    "name": "14. PrintHub - Corporate Application (Approval)",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "corporate-app-legacy",
+          "options": {
+            "rawBody": true
+          }
+        },
+        "name": "Webhook: Corporate",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [
+          0,
+          300
+        ],
+        "webhookId": "corporate-app-legacy"
+      }
+    ],
+    "connections": {},
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  },
+  {
+    "name": "15. PrintHub - Lead Magnet Capture",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "lead-magnet-legacy",
+          "options": {
+            "rawBody": true
+          }
+        },
+        "name": "Webhook: Lead Magnet",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [
+          0,
+          300
+        ],
+        "webhookId": "lead-magnet-legacy"
+      }
+    ],
+    "connections": {},
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  },
+  {
+    "name": "16. PrintHub - Impossible Travel Detection",
+    "nodes": [
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "impossible-travel-legacy",
+          "options": {
+            "rawBody": true
+          }
+        },
+        "name": "Webhook: Travel Audit",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [
+          0,
+          300
+        ],
+        "webhookId": "impossible-travel-legacy"
+      }
+    ],
+    "connections": {},
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  }
+]

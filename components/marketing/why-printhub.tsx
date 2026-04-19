@@ -11,7 +11,7 @@ const REASONS = (city: string) => [
 
 export function WhyPrintHub({ city, businessName }: { city?: string | null; businessName?: string } = {}) {
   const name = businessName || "PrintHub";
-  const reasons = REASONS(city ?? "Nairobi");
+  const reasons = REASONS(city ?? "Eldoret");
   return (
     <section className="py-20 md:py-28 bg-slate-50/80">
       <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8">

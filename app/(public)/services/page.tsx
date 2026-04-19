@@ -101,9 +101,6 @@ export default async function ServicesPage() {
               <Link href="/get-a-quote">Get a quote</Link>
             </Button>
             <Button asChild variant="outline" className="rounded-xl">
-              <Link href="/get-a-quote">Get a quote</Link>
-            </Button>
-            <Button asChild variant="outline" className="rounded-xl">
               <Link href="/shop">Shop products</Link>
             </Button>
           </div>

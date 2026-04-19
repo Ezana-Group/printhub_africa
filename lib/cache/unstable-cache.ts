@@ -16,8 +16,8 @@ const DEFAULTS: BusinessPublic = {
   financeEmail: "finance@printhub.africa",
   address1: null,
   address2: null,
-  city: "Nairobi",
-  county: "Nairobi County",
+  city: "Eldoret",
+  county: "Uasin Gishu County",
   country: "Kenya",
   googleMapsUrl: null,
   businessHours: "Mon–Fri 8am–6pm | Sat 9am–3pm",
@@ -45,26 +45,39 @@ export type BusinessMetadata = {
   businessName: string;
   tagline: string | null;
   logo: string | null;
+  googleSiteVerification: string | null;
   seo?: {
     siteName: string | null;
     titleTemplate: string | null;
     defaultTitle: string | null;
     defaultDescription: string | null;
     ogImageUrl: string | null;
+    canonicalDomain: string | null;
+    twitterHandle: string | null;
+    twitterCardType: string | null;
   } | null;
 };
 
 export const getCachedBusinessMetadata = unstable_cache(
   async () => {
-    const [row, seo] = await Promise.all([
-      prisma.businessSettings.findUnique({
-        where: { id: "default" },
-        select: { favicon: true, updatedAt: true, businessName: true, tagline: true, logo: true },
-      }),
-      prisma.seoSettings.findUnique({
-        where: { id: "default" },
-      }),
-    ]).catch(() => [null, null]);
+    const row = await prisma.businessSettings.findUnique({
+      where: { id: "default" },
+      select: { 
+        favicon: true, 
+        updatedAt: true, 
+        businessName: true, 
+        tagline: true, 
+        logo: true,
+        googleSiteVerification: true,
+        seoSiteName: true,
+        seoDefaultTitle: true,
+        seoDefaultDescription: true,
+        defaultOgImage: true,
+        canonicalDomain: true,
+        twitterHandle: true,
+        twitterCardType: true,
+      },
+    }).catch(() => null);
 
     if (!row)
       return { favicon: null, updatedAt: null, businessName: "PrintHub", tagline: null, logo: null, seo: null };
@@ -75,13 +88,17 @@ export const getCachedBusinessMetadata = unstable_cache(
       businessName: row.businessName ?? "PrintHub",
       tagline: row.tagline ?? null,
       logo: row.logo ?? null,
-      seo: seo ? {
-        siteName: seo.siteName,
-        titleTemplate: seo.titleTemplate,
-        defaultTitle: seo.defaultTitle,
-        defaultDescription: seo.defaultDescription,
-        ogImageUrl: seo.ogImageUrl,
-      } : null,
+      googleSiteVerification: row.googleSiteVerification ?? null,
+      seo: {
+        siteName: row.seoSiteName || row.businessName || "PrintHub",
+        titleTemplate: `%s | ${row.seoSiteName || row.businessName || "PrintHub"}`,
+        defaultTitle: row.seoDefaultTitle,
+        defaultDescription: row.seoDefaultDescription,
+        ogImageUrl: row.defaultOgImage || row.logo,
+        canonicalDomain: row.canonicalDomain,
+        twitterHandle: row.twitterHandle,
+        twitterCardType: row.twitterCardType,
+      },
     };
   },
   ["business-metadata"],
@@ -135,6 +152,8 @@ export const getCachedBusinessPublic = unstable_cache(
       showStatsExperience: row.showStatsExperience ?? false,
       showStatsMachines: row.showStatsMachines ?? false,
       showStatsStaff: row.showStatsStaff ?? false,
+      whatsappFloatingButton: row.whatsappFloatingButton ?? true,
+      whatsappPrefilledMessage: row.whatsappPrefilledMessage ?? (DEFAULTS as any).whatsappPrefilledMessage,
     };
   },
   ["business-public"],

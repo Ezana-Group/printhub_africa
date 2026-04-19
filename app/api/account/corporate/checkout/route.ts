@@ -4,13 +4,13 @@
  */
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { prisma } from "@/lib/prisma";
 
 const APPROVED = "APPROVED";
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   if (!session?.user?.id) {
     return NextResponse.json({ corporate: null });
   }
@@ -19,6 +19,7 @@ export async function GET() {
     where: {
       userId: session.user.id,
       isActive: true,
+      canPlaceOrders: true, // MED-6: Enforce order placement permission
       corporate: { status: APPROVED },
     },
     include: {
@@ -57,6 +58,7 @@ export async function GET() {
       creditUsed: corp.creditUsed,
       availableCredit,
       canUseNetTerms,
+      canPlaceOrders: membership.canPlaceOrders,
     },
   });
 }

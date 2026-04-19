@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Analytics } from "@vercel/analytics/next";
 
 const COOKIE_NAME = "printhub-cookie-consent";
 
-/** Optional: Hotjar, ContentSquare, or any analytics script URL. Loaded only after user accepts analytics cookies. */
+/** Optional third-party analytics script (Hotjar, ContentSquare, etc). Loaded only after user accepts analytics cookies. */
 const THIRD_PARTY_SCRIPT_SRC =
-  typeof process.env.NEXT_PUBLIC_ANALYTICS_SCRIPT_URL === "string" && process.env.NEXT_PUBLIC_ANALYTICS_SCRIPT_URL.trim()
+  typeof process.env.NEXT_PUBLIC_ANALYTICS_SCRIPT_URL === "string" &&
+  process.env.NEXT_PUBLIC_ANALYTICS_SCRIPT_URL.trim()
     ? process.env.NEXT_PUBLIC_ANALYTICS_SCRIPT_URL.trim()
     : null;
 
@@ -26,7 +26,7 @@ function hasAnalyticsConsent(): boolean {
   }
 }
 
-/** Vercel Analytics + optional third-party script (Hotjar/ContentSquare). All load only after analytics cookie consent. */
+/** Optional third-party script loader. Loads only after analytics cookie consent. */
 export function ConsentGatedAnalytics() {
   const [allowed, setAllowed] = useState(false);
 
@@ -47,6 +47,6 @@ export function ConsentGatedAnalytics() {
     document.body.appendChild(script);
   }, [allowed]);
 
-  if (!allowed) return null;
-  return <Analytics />;
+  // Google Analytics via NEXT_PUBLIC_GA_MEASUREMENT_ID is handled in app/layout.tsx
+  return null;
 }

@@ -41,6 +41,10 @@ function getClient(): S3Client | null {
       accessKeyId: R2_ACCESS_KEY_ID,
       secretAccessKey: R2_SECRET_ACCESS_KEY,
     },
+    // AWS SDK v3 >=3.700 adds x-amz-checksum-crc32 to every PutObject by default.
+    // Cloudflare R2 rejects these headers in CORS preflights — disable checksums.
+    requestChecksumCalculation: "when_required",
+    responseChecksumValidation: "when_required",
   });
   return _client;
 }
@@ -102,10 +106,17 @@ export async function createPresignedUploadUrl(params: {
   const command = new PutObjectCommand({
     Bucket: bucket,
     Key: params.key,
-    ContentType: params.contentType,
+    // NOTE: Do NOT include ContentType here. When ContentType is set on the command,
+    // the AWS SDK includes 'content-type' in X-Amz-SignedHeaders. R2's presigner
+    // sometimes strips it from the signed headers while still generating the URL,
+    // causing a signature mismatch (403) when the browser sends Content-Type on the PUT.
+    // With AllowedHeaders: ["*"] in R2 CORS, the browser can still send Content-Type
+    // as an unsigned header without triggering preflight failures.
   });
   return getSignedUrl(client, command, {
     expiresIn: params.expiresIn ?? 300,
+    // Explicitly exclude content-type from the signature so the browser can send it freely
+    unsignableHeaders: new Set(["content-type"]),
   });
 }
 

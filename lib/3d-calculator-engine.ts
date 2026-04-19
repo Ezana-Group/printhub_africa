@@ -36,10 +36,19 @@ export interface MaterialRate {
 export interface PrintJob {
   name: string;
   material: string;
+  color?: string;
   weightGrams: number;
   printTimeHours: number;
   postProcessing: boolean;
+  postProcessingTimeHoursOverride?: number;
   quantity: number;
+  infillPercent?: number;
+  layerHeightMm?: number;
+}
+
+export interface MultiPartJob {
+  name: string;
+  parts: PrintJob[];
 }
 
 export interface CostBreakdown {
@@ -95,7 +104,7 @@ export function calculatePrintCost(
     job.printTimeHours;
 
   const laborTimeHours = job.postProcessing
-    ? job.printTimeHours + settings.postProcessingTimeHours
+    ? job.printTimeHours + (job.postProcessingTimeHoursOverride ?? settings.postProcessingTimeHours)
     : job.printTimeHours;
   const laborCost = laborTimeHours * settings.laborRateKesPerHour;
 
@@ -127,10 +136,10 @@ export function calculatePrintCost(
     failedPrintBuffer +
     packagingCost;
 
-  const profitAmountPerUnit =
-    totalProductionCostPerUnit * (marginPercent / 100);
-  const sellingPriceExVatPerUnit =
-    totalProductionCostPerUnit + profitAmountPerUnit;
+  const sellingPriceExVatPerUnit = marginPercent >= 100
+    ? totalProductionCostPerUnit * 2 // Fallback for 100% margin (unrealistic)
+    : totalProductionCostPerUnit / (1 - marginPercent / 100);
+  const profitAmountPerUnit = sellingPriceExVatPerUnit - totalProductionCostPerUnit;
   const vatAmountPerUnit =
     sellingPriceExVatPerUnit * (settings.vatRatePercent / 100);
   const sellingPriceIncVatPerUnit = sellingPriceExVatPerUnit + vatAmountPerUnit;
@@ -171,18 +180,18 @@ export const DEFAULT_PRINTER_SETTINGS: PrinterSettings = {
   powerWatts: 270,
   electricityRateKesKwh: 24,
   printerPurchasePriceKes: 85000,
-  lifespanHours: 5000,
-  maintenancePerYearKes: 12000,
-  laborRateKesPerHour: 200,
+  lifespanHours: 10000,
+  maintenancePerYearKes: 6000,
+  laborRateKesPerHour: 50, // Aligned with Admin
   postProcessingTimeHours: 0.5,
-  postProcessingFeePerUnit: 300,
-  monthlyRentKes: 25000,
-  monthlyUtilitiesKes: 6000,
-  monthlyInsuranceKes: 3000,
+  postProcessingFeePerUnit: 200, // Aligned with Business Settings
+  monthlyRentKes: 10000, // Part of 13,500 overhead
+  monthlyUtilitiesKes: 2500, // Part of 13,500 overhead
+  monthlyInsuranceKes: 1000, // Part of 13,500 overhead
   workingDaysPerMonth: 26,
   workingHoursPerDay: 8,
   failedPrintRatePercent: 5,
-  packagingCostKes: 50,
+  packagingCostKes: 20,
   profitMarginPercent: 40,
   vatRatePercent: 16,
 };

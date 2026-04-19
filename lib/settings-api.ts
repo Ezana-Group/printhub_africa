@@ -1,6 +1,6 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { revalidatePath } from "next/cache";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
@@ -17,7 +17,7 @@ export async function requireRole(
   | { session: { user: { id: string; email?: string | null; name?: string | null; role?: string } }; userId: string }
   | NextResponse
 > {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const userRole = (session?.user as { role?: string })?.role;
 
   if (!session?.user?.id) {

@@ -27,6 +27,9 @@ import {
   Layers,
   Truck,
   PanelLeft,
+  Zap,
+  Brain,
+  CheckCircle2,
 } from "lucide-react";
 import { canAccessRoute } from "@/lib/admin-permissions";
 import { cn } from "@/lib/utils";
@@ -52,14 +55,13 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/products", label: "Products", icon: Package },
       { href: "/admin/categories", label: "Categories", icon: FolderTree },
       { href: "/admin/catalogue", label: "Catalogue", icon: Layers },
-      { href: "/admin/catalogue/approval-queue", label: "Approval Queue", icon: ListTodo, badge: "approval" },
     ],
   },
   {
     label: "COMMUNICATION",
     items: [
       { href: "/admin/email/inbox", label: "Email", icon: Mail },
-      { href: "/admin/content/email-templates", label: "Email Templates", icon: Mail },
+      { href: "/admin/content/templates", label: "Templates", icon: FileText },
       { href: "/admin/support", label: "Support", icon: HelpCircle },
       { href: "/admin/reviews", label: "Reviews", icon: BarChart3 },
     ],
@@ -88,6 +90,8 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin/finance", label: "Finance", icon: DollarSign },
       { href: "/admin/refunds", label: "Refunds", icon: DollarSign },
       { href: "/admin/marketing", label: "Marketing", icon: Megaphone },
+      { href: "/admin/marketing/content", label: "Media & Content", icon: LayoutDashboard },
+      { href: "/admin/marketing/content?tab=approval", label: "Content Queue", icon: CheckCircle2, badge: "approval" },
     ],
   },
   {
@@ -102,6 +106,8 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "ADMIN",
     items: [
+      { href: "/admin/ai", label: "AI Control Centre", icon: Brain },
+      { href: "/api/admin/n8n/sso", label: "Automations", icon: Zap },
       { href: "/admin/staff", label: "Staff", icon: UserCog },
       { href: "/admin/reports", label: "Reports", icon: BarChart3 },
       { href: "/admin/careers", label: "Careers", icon: Briefcase },
@@ -153,11 +159,37 @@ export function AdminNav({
             <div className="space-y-0.5">
               {items.map((item) => {
                 const basePath = item.href.split("?")[0];
-                const isActive =
+                const isActive = pathname ? (
                   pathname === basePath ||
-                  (basePath !== "/admin/dashboard" && pathname.startsWith(basePath + "/"));
+                  (basePath !== "/admin/dashboard" && 
+                   basePath !== "/admin/catalogue" && 
+                   basePath !== "/admin/marketing" &&
+                   pathname.startsWith(basePath + "/"))
+                ) : false;
                 const showQuotesBadge = item.badge === "quotes" && newQuotesCount > 0;
                 const showApprovalBadge = item.badge === "approval" && pendingApprovalCount > 0;
+                const isExternal = item.href.startsWith("/api/admin/n8n");
+                
+                if (isExternal) {
+                  return (
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                        isActive
+                          ? "bg-primary/10 text-primary font-medium border-l-2 border-primary -ml-px pl-[11px]"
+                          : "hover:bg-muted text-foreground hover:text-primary"
+                      )}
+                    >
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      <span>{item.label}</span>
+                    </a>
+                  );
+                }
+
                 return (
                   <Link
                     key={item.href}

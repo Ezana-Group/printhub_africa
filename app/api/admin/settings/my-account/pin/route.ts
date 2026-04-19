@@ -4,7 +4,7 @@
  */
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
@@ -16,7 +16,7 @@ const bodySchema = z.object({
 }).refine((d) => d.newPin === d.confirmPin, { message: "PIN and confirmation do not match", path: ["confirmPin"] });
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user?.id || !role || !["STAFF", "ADMIN", "SUPER_ADMIN"].includes(role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

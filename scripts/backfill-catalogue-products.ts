@@ -4,6 +4,7 @@ async function main() {
   console.log("Starting backfill for Catalogue Items...");
 
   // Find all LIVE catalogue items without a linked Product
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const items = await (prisma.catalogueItem as any).findMany({
     where: {
       status: "LIVE",
@@ -31,6 +32,7 @@ async function main() {
           shortDescription: item.shortDescription,
           categoryId: item.categoryId,
           productType: "READYMADE_3D",
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           images: (item as any).photos.length > 0 ? (item as any).photos.map((p: any) => p.url) : [],
           basePrice: item.priceOverrideKes ?? item.basePriceKes ?? 0,
           comparePrice: item.priceOverrideKes && item.basePriceKes ? item.basePriceKes : null,
@@ -41,6 +43,7 @@ async function main() {
       });
 
       // Link it back
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (prisma.catalogueItem as any).update({
         where: { id: item.id },
         data: { productId: product.id },

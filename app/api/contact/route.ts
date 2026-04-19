@@ -19,7 +19,8 @@ const CONTACT_WINDOW_MS = 60 * 1000;
 
 export async function POST(req: NextRequest) {
   const ip = getRateLimitClientIp(req) ?? "unknown";
-  if (!(await rateLimit(`contact:${ip}`, CONTACT_LIMIT, CONTACT_WINDOW_MS)).ok) {
+  const limitResult = await rateLimit(`contact:${ip}`, { limit: CONTACT_LIMIT, windowMs: CONTACT_WINDOW_MS });
+  if (!limitResult.success) {
     return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
   }
   try {
@@ -71,6 +72,23 @@ export async function POST(req: NextRequest) {
         </div>
       `,
     });
+    // --- AUTOMATION: Staff Alert ---
+    void (async () => {
+      try {
+        const { n8n } = await import("@/lib/n8n");
+        await n8n.staffAlert({
+          type: 'SUPPORT_TICKET',
+          title: `🎟️ New Support Ticket #${ticket.ticketNumber}`,
+          message: `Subject: ${subject}\nFrom: ${name} (${email})\nPriority: MEDIUM`,
+          urgency: 'medium',
+          actionUrl: `${process.env.NEXT_PUBLIC_APP_URL}/admin/support/${ticket.id}`,
+          targetRoles: ['STAFF', 'ADMIN']
+        });
+      } catch (err) {
+        console.error("Failed to trigger n8n support alert:", err);
+      }
+    })();
+
     return NextResponse.json({ success: true, ticketNumber: ticket.ticketNumber });
   } catch (e) {
     console.error("Contact form error:", e);

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { prisma } from "@/lib/prisma";
 import { createTrackingEvent } from "@/lib/tracking";
 import { restoreStockForOrder } from "@/lib/stock";
@@ -16,7 +16,7 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -27,7 +27,7 @@ export async function GET(
       include: {
         items: {
           include: {
-            product: { select: { name: true, slug: true, images: true } },
+            product: { select: { name: true, slug: true, images: true, productionFiles: true } },
           },
         },
         shippingAddress: true,
@@ -38,6 +38,14 @@ export async function GET(
       },
     });
     if (!order) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const fileIds = order.items.map((item) => item.uploadedFileId).filter(Boolean) as string[];
+    let uploadedFiles: any[] = [];
+    if (fileIds.length > 0) {
+      uploadedFiles = await prisma.uploadedFile.findMany({
+        where: { id: { in: fileIds } },
+      });
+    }
     return NextResponse.json({
       ...order,
       subtotal: Number(order.subtotal),
@@ -52,6 +60,7 @@ export async function GET(
         ...i,
         unitPrice: Number(i.unitPrice),
         product: i.product,
+        uploadedFile: i.uploadedFileId ? uploadedFiles.find((uf) => uf.id === i.uploadedFileId) || null : null,
       })),
       delivery: order.delivery
         ? {
@@ -92,7 +101,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

@@ -12,7 +12,12 @@ const FORGOT_PASSWORD_WINDOW_MS = 60 * 1000;
 
 export async function POST(req: Request) {
   const ip = getRateLimitClientIp(req) ?? "unknown";
-  if (!(await rateLimit(`forgot-password:${ip}`, FORGOT_PASSWORD_LIMIT, FORGOT_PASSWORD_WINDOW_MS)).ok) {
+  const rl = await rateLimit(`forgot-password:${ip}`, { 
+    limit: FORGOT_PASSWORD_LIMIT, 
+    windowMs: FORGOT_PASSWORD_WINDOW_MS 
+  });
+  
+  if (!rl.success) {
     return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   }
   try {

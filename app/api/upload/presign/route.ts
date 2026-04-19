@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import {
   createPresignedUploadUrl,
@@ -17,13 +18,15 @@ const ALLOWED_TYPES: Record<
 > = {
   "model/stl": { ext: ["stl"], maxMB: 500, bucket: "private" },
   "application/octet-stream": {
-    ext: ["stl", "obj", "3mf", "step"],
+    ext: ["stl", "obj", "3mf", "step", "stp"],
     maxMB: 500,
     bucket: "private",
   },
   "model/obj": { ext: ["obj"], maxMB: 500, bucket: "private" },
   "model/3mf": { ext: ["3mf"], maxMB: 500, bucket: "private" },
   "application/sla": { ext: ["stl"], maxMB: 500, bucket: "private" },
+  "application/step": { ext: ["step", "stp"], maxMB: 500, bucket: "private" },
+  "application/x-step": { ext: ["step", "stp"], maxMB: 500, bucket: "private" },
   "application/pdf": { ext: ["pdf"], maxMB: 200, bucket: "private" },
   "image/svg+xml": { ext: ["svg"], maxMB: 50, bucket: "private" },
   "application/postscript": { ext: ["ai", "eps"], maxMB: 200, bucket: "private" },
@@ -54,6 +57,11 @@ const CONTEXT_TO_FOLDER: Record<string, { folder: UploadFolder; bucket: "private
   USER_AVATAR: { folder: "avatars", bucket: "public" },
   STAFF_AVATAR: { folder: "avatars", bucket: "public" },
   STAFF_PROFILE_PHOTO: { folder: "staff-profile", bucket: "public" },
+  ADMIN_CATALOGUE_PRODUCTION: { folder: "catalogue/production", bucket: "private" },
+  ADMIN_3D_CALC: { folder: "designs/3d", bucket: "private" },
+  ADMIN_LF_CALC: { folder: "designs/large-format", bucket: "private" },
+  SALES_QUOTE_3D: { folder: "designs/3d", bucket: "private" },
+  SALES_QUOTE_LF: { folder: "designs/large-format", bucket: "private" },
 };
 
 const CONTEXTS = [
@@ -73,6 +81,11 @@ const CONTEXTS = [
   "USER_AVATAR",
   "STAFF_AVATAR",
   "STAFF_PROFILE_PHOTO",
+  "ADMIN_CATALOGUE_PRODUCTION",
+  "ADMIN_3D_CALC",
+  "ADMIN_LF_CALC",
+  "SALES_QUOTE_3D",
+  "SALES_QUOTE_LF",
 ] as const;
 
 const schema = z.object({
@@ -92,6 +105,7 @@ function extToFileType(ext: string): UploadedFileType {
     fbx: "FBX",
     "3mf": "THREE_MF",
     step: "STEP",
+    stp: "STEP",
     ai: "AI",
     pdf: "PDF",
     psd: "PSD",
@@ -129,7 +143,12 @@ export async function POST(req: Request) {
   try {
     let session: SessionLike = null;
     try {
-      session = (await getServerSession(authOptions)) as SessionLike;
+      // Try admin session first (for ADMIN_* contexts uploaded from the admin portal),
+      // then fall back to the customer session.
+      const adminSession = (await getServerSession(authOptionsAdmin)) as SessionLike;
+      const customerSession = (await getServerSession(authOptionsCustomer)) as SessionLike;
+      // Prefer whichever session has a role set; admin session wins if both exist.
+      session = adminSession?.user?.role ? adminSession : customerSession;
     } catch (authErr) {
       console.error("Presign auth error:", authErr);
       return NextResponse.json(
@@ -156,8 +175,13 @@ export async function POST(req: Request) {
 
     const typeConfig = ALLOWED_TYPES[mimeType];
     if (!typeConfig) {
+      console.warn("[UPLOAD_PRESIGN] Blocked mimeType:", mimeType);
       return NextResponse.json(
-        { error: `File type not allowed: ${mimeType}. Allowed: images (JPEG, PNG, WebP, etc.), PDF, STL, and other design formats.` },
+        { 
+          error: `File type not allowed: ${mimeType}.`, 
+          details: { mimeType: [mimeType] },
+          code: "INVALID_MIME_TYPE" 
+        },
         { status: 400 }
       );
     }

@@ -8,10 +8,11 @@ import { processPesapalRefund } from "@/lib/pesapal-refund";
 import { sendRefundProcessedEmail } from "@/lib/email";
 import * as Sentry from "@sentry/nextjs";
 import { z } from "zod";
+import { withRateLimit } from "@/lib/rate-limit-wrapper";
 
 const bodySchema = z.object({ refundId: z.string() });
 
-export async function POST(req: NextRequest) {
+async function _POST(req: NextRequest) {
   const auth = await requireAdminApi({ finance: true, needEdit: true });
   if (auth instanceof NextResponse) return auth;
 
@@ -117,3 +118,5 @@ export async function POST(req: NextRequest) {
     refundReference: result.refundReference,
   });
 }
+
+export const POST = withRateLimit(_POST, { limit: 20, windowMs: 60000, keyPrefix: "admin_refunds", byUserId: true });

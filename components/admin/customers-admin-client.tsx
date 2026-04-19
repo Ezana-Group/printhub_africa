@@ -35,6 +35,7 @@ import {
   Building2,
   UserX,
   Ban,
+  CheckCircle2,
 } from "lucide-react";
 
 export type CustomerRow = {
@@ -48,6 +49,7 @@ export type CustomerRow = {
   lastOrderAt: Date | null;
   isTopSpender: boolean;
   isCorporate: boolean;
+  smsMarketingOptIn: boolean;
 };
 
 export function CustomersAdminClient({
@@ -202,6 +204,20 @@ export function CustomersAdminClient({
             <span title={formatDateTimeForDisplay(d)}>
               {formatRelativeTime(d)}
             </span>
+          );
+        },
+      },
+      {
+        id: "sms",
+        header: "SMS AI",
+        cell: ({ row }) => {
+          const c = row.original;
+          return c.smsMarketingOptIn ? (
+            <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200">
+              <CheckCircle2 className="mr-1 h-3 w-3" /> Opt-in
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-zinc-400 border-zinc-200">Off</Badge>
           );
         },
       },

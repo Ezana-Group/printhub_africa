@@ -29,6 +29,7 @@ import {
   getProductTypeLabel,
   getProductTypeDotColor,
 } from "@/lib/admin-utils";
+import type { ProductType } from "@prisma/client";
 import { ProductFormSheet } from "@/components/admin/product-form-sheet";
 import { TableToolbar, type FilterConfig, type SortOption } from "@/components/admin/ui/TableToolbar";
 import { TablePagination } from "@/components/admin/ui/TablePagination";
@@ -47,8 +48,6 @@ import {
   Download,
 } from "lucide-react";
 
-type ProductType = "READYMADE_3D" | "LARGE_FORMAT" | "CUSTOM";
-
 export type ProductRow = {
   id: string;
   name: string;
@@ -60,20 +59,29 @@ export type ProductRow = {
   productType: ProductType;
   basePrice: number;
   comparePrice: number | null;
-  stock: number;
+  stock: number | null;
   isActive: boolean;
-  isFeatured: boolean;
+  isPOD: boolean;
   images: string[];
+  productionFiles: string[];
   createdAt: Date;
   _variantsCount?: number;
 };
 
-function StockBadge({ stock, productType }: { stock: number; productType: ProductType }) {
-  const isService = productType === "LARGE_FORMAT" || productType === "CUSTOM";
-  if (isService && stock === 0) {
-    return <Badge variant="secondary" className="font-mono text-xs bg-[#F3F4F6] text-[#6B7280]">Service</Badge>;
+function StockBadge({ stock, productType, isPOD }: { stock: number | null; productType: string; isPOD?: boolean }) {
+  if (isPOD || productType === "POD" || productType === "PRINT_ON_DEMAND") {
+    return <Badge variant="secondary" className="font-mono text-xs bg-primary/10 text-primary border-primary/20">
+      POD
+    </Badge>;
   }
-  if (stock === 0) return <Badge className="bg-[#EF4444] text-white border-0">Out of Stock</Badge>;
+  const isService = productType === "LARGE_FORMAT" || productType === "CUSTOM" || productType === "SERVICE";
+  
+  if (isService && (stock === 0 || stock === null)) {
+    return <Badge variant="secondary" className="font-mono text-xs bg-[#F3F4F6] text-[#6B7280]">
+      Service
+    </Badge>;
+  }
+  if (stock === null || stock === 0) return <Badge className="bg-[#EF4444] text-white border-0">Out of Stock</Badge>;
   if (stock <= 5) return <Badge className="bg-[#F59E0B] text-white border-0">Low: {stock}</Badge>;
   if (stock < 20) return <Badge variant="secondary" className="bg-[#F3F4F6] text-[#6B7280]">In Stock: {stock}</Badge>;
   return <Badge className="bg-[#10B981] text-white border-0">{stock}</Badge>;
@@ -162,6 +170,8 @@ export function ProductsAdminClient({
           { value: "READYMADE_3D", label: "Ready-made 3D" },
           { value: "LARGE_FORMAT", label: "Large Format" },
           { value: "CUSTOM", label: "3D Service" },
+          { value: "PRINT_ON_DEMAND", label: "Print-On-Demand" },
+          { value: "SERVICE", label: "Other Service" },
         ],
         value: typeFilter,
         onChange: (v) => url.set({ type: v || undefined, page: 1 }),
@@ -245,12 +255,19 @@ export function ProductsAdminClient({
         cell: ({ row }) => {
           const imgs = row.original.images;
           const src = Array.isArray(imgs) && imgs[0] ? imgs[0] : null;
+          // If the "image" looks like a slug (only chars and hyphens), it's likely a data mismatch.
+          // Real images should be URLs or absolute paths from public/ (e.g. /uploads/...)
+          const isUrl = src && (src.startsWith("/") || src.startsWith("http"));
+          
           return (
-            <div className="h-12 w-12 rounded-md bg-[#F3F4F6] overflow-hidden shrink-0 flex items-center justify-center">
-              {src ? (
+            <div className="h-12 w-12 rounded-md bg-[#F3F4F6] overflow-hidden shrink-0 flex items-center justify-center border border-[#E5E7EB]">
+              {src && isUrl ? (
                 <Image src={src} alt="" width={48} height={48} className="h-full w-full object-cover" />
               ) : (
-                <Box className="h-5 w-5 text-[#9CA3AF]" />
+                <div className="flex flex-col items-center justify-center text-[8px] text-[#9CA3AF] text-center px-1">
+                  <Box className="h-4 w-4 mb-0.5" />
+                  NO IMG
+                </div>
               )}
             </div>
           );
@@ -272,8 +289,13 @@ export function ProductsAdminClient({
                 className="text-left font-semibold text-sm text-[#111] hover:text-primary hover:underline truncate block"
               >
                 {p.name}
+                {p.isPOD && (
+                  <Badge variant="outline" className="ml-2 h-4 px-1 text-[9px] uppercase tracking-tighter bg-primary/5 text-primary border-primary/20 align-middle">
+                    POD
+                  </Badge>
+                )}
               </button>
-              <div className="text-[12px] text-[#6B7280] font-mono">
+              <div className="text-[12px] text-[#6B7280] font-mono mt-0.5">
                 {p.sku ? `SKU: ${p.sku}` : "No SKU"}
               </div>
               {p._variantsCount && p._variantsCount > 0 && (
@@ -319,7 +341,7 @@ export function ProductsAdminClient({
         accessorKey: "stock",
         header: "Stock",
         cell: ({ row }) => (
-          <StockBadge stock={row.original.stock} productType={row.original.productType} />
+          <StockBadge stock={row.original.stock} productType={row.original.productType} isPOD={row.original.isPOD} />
         ),
       },
       {

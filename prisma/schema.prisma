@@ -38,13 +38,23 @@ model User {
   twoFaMethod              String?
   otpCodeHash              String?
   otpExpiresAt             DateTime?
-  /// Where invite / password-setup emails are sent (optional). Login email remains `email`.
-  personalEmail            String?
   displayName              String?
+  displayEmail             String?
+  lastActiveAt             DateTime?                  @default(now())
+  passwordChangedAt        DateTime?                  @default(now())
+  passwordExpired          Boolean                    @default(false)
+  passwordHistory          String[]                   @default([])
+  lastLoginIp              String?
+  personalEmail            String?
+  smsMarketingOptIn        Boolean                    @default(false)
+  smsUnsubscribedAt        DateTime?
+  referredById             String?
   accounts                 Account[]
   addresses                Address[]
+  adminSessions            AdminSession[]
   auditLogs                AuditLog[]
   backupRecords            BackupRecord[]
+  catalogueSubmissions     CatalogueImportQueue[]     @relation("CatalogueSubmittedBy")
   catalogueApproved        CatalogueItem[]            @relation("CatalogueApprovedBy")
   catalogueArchived        CatalogueItem[]            @relation("CatalogueArchivedBy")
   catalogueImported        CatalogueItem[]            @relation("CatalogueImportedBy")
@@ -56,6 +66,7 @@ model User {
   emailMailboxViewers      EmailMailboxViewer[]
   assignedEmailThreads     EmailThread[]              @relation("AssignedThreads")
   emailThreadsCreated      EmailThread[]              @relation("EmailThreadCreatedBy")
+  knownAdminDevices        KnownAdminDevice[]
   loyaltyAccount           LoyaltyAccount?
   notifications            Notification[]
   orders                   Order[]
@@ -74,6 +85,8 @@ model User {
   performedByMovements     ThreeDConsumableMovement[]
   ticketMessages           TicketMessage[]
   uploadedFiles            UploadedFile[]
+  referredBy               User?                      @relation("UserReferrals", fields: [referredById], references: [id])
+  referrals                User[]                     @relation("UserReferrals")
   userNotificationPrefs    UserNotificationPrefs?
   userPermissions          UserPermission[]
   wishlists                Wishlist[]
@@ -105,6 +118,34 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model AdminSession {
+  id              String    @id @default(cuid())
+  userId          String
+  sessionToken    String    @unique
+  ipAddress       String?
+  userAgent       String?
+  lastActiveAt    DateTime  @default(now())
+  expiresAt       DateTime
+  revokedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  ipCity          String?
+  ipCountry       String?
+  suspiciousLogin Boolean   @default(false)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sessionToken])
+}
+
+model KnownAdminDevice {
+  id          String   @id @default(cuid())
+  userId      String
+  fingerprint String
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Account {
@@ -156,55 +197,116 @@ model Category {
 }
 
 model Product {
-  id                 String                  @id @default(cuid())
-  name               String
-  slug               String                  @unique
-  description        String?
-  shortDescription   String?
-  categoryId         String
-  productType        ProductType
-  images             String[]
-  basePrice          Decimal                 @db.Decimal(12, 2)
-  comparePrice       Decimal?                @db.Decimal(12, 2)
-  costPrice          Decimal?                @db.Decimal(12, 2)
-  sku                String?                 @unique
-  stock              Int                     @default(0)
-  lowStockThreshold  Int                     @default(0)
-  minOrderQty        Int                     @default(1)
-  maxOrderQty        Int?
-  weight             Decimal?                @db.Decimal(10, 3)
-  dimensions         Json?
-  materials          String[]
-  colors             String[]
-  finishes           String[]
-  isActive           Boolean                 @default(true)
-  isFeatured         Boolean                 @default(false)
-  metaTitle          String?
-  metaDescription    String?
-  tags               String[]
-  createdAt          DateTime                @default(now())
-  updatedAt          DateTime                @updatedAt
-  brand              String?
-  specifications     Json?
-  compatibility      String?
-  materialType       String?
-  availability       ProductAvailability     @default(IN_STOCK)
-  externalModel      ExternalModel?
-  catalogueItem      CatalogueItem?
-  inventory          Inventory[]
-  orderItems         OrderItem[]
-  category           Category                @relation(fields: [categoryId], references: [id])
-  productImages      ProductImage[]
-  reviews            ProductReview[]
-  variants           ProductVariant[]
-  shopStockMovements ShopInventoryMovement[]
-  shopPOLines        ShopPurchaseOrderLine[]
-  wishlists          Wishlist[]
+  id                         String                  @id @default(cuid())
+  name                       String
+  slug                       String                  @unique
+  description                String?
+  shortDescription           String?
+  categoryId                 String
+  productType                ProductType
+  images                     String[]
+  basePrice                  Decimal                 @db.Decimal(12, 2)
+  comparePrice               Decimal?                @db.Decimal(12, 2)
+  costPrice                  Decimal?                @db.Decimal(12, 2)
+  sku                        String?                 @unique
+  stock                      Int?                    @default(0)
+  lowStockThreshold          Int                     @default(0)
+  minOrderQty                Int                     @default(1)
+  maxOrderQty                Int?
+  weight                     Decimal?                @db.Decimal(10, 3)
+  dimensions                 Json?
+  materials                  String[]
+  colors                     String[]
+  finishes                   String[]
+  isActive                   Boolean                 @default(true)
+  isFeatured                 Boolean                 @default(false)
+  metaTitle                  String?
+  metaDescription            String?
+  tags                       String[]
+  createdAt                  DateTime                @default(now())
+  updatedAt                  DateTime                @updatedAt
+  availability               ProductAvailability     @default(IN_STOCK)
+  brand                      String?
+  /// Links back to the CatalogueItem this POD product was created from
+  catalogueItemId            String?                 @unique
+  compatibility              String?
+  /// URL to a dimension diagram image shown as a tab in the gallery
+  dimensionDiagramUrl        String?
+  /// Approximate filament weight in grams
+  filamentWeightGrams        Float?
+  /// True for Print-on-Demand products — no stock tracking
+  isPOD                      Boolean                 @default(false)
+  materialType               String?
+  printTimeEstimate          String?
+  /// Running count of units sold this calendar month (reset by monthly cron)
+  soldThisMonth              Int                     @default(0)
+  specifications             Json?
+  exportNotes                String?
+  /// Human-readable estimated print time, e.g. "4–6 hours"
+  exportToGoogle             Boolean                 @default(true)
+  exportToGoogleBiz          Boolean                 @default(true)
+  exportToLinkedIn           Boolean                 @default(false)
+  exportToMeta               Boolean                 @default(true)
+  exportToPinterest          Boolean                 @default(false)
+  /// Array of URLs/keys for production files (STL, PDF, STEP) used by admins internally
+  productionFiles            String[]                @default([])
+  exportToTiktok             Boolean                 @default(true)
+  exportToX                  Boolean                 @default(false)
+  lastExportedAt             DateTime?
+  exportToGoogleDiscover     Boolean                 @default(false)
+  exportToInstagramReels     Boolean                 @default(false)
+  exportToInstagramStories   Boolean                 @default(false)
+  exportToJiji               Boolean                 @default(false)
+  exportToPostiz             Boolean                 @default(true)
+  exportToTelegram           Boolean                 @default(false)
+  exportToWhatsappChannel    Boolean                 @default(false)
+  exportToWhatsappStatus     Boolean                 @default(false)
+  exportToYoutubeShorts      Boolean                 @default(false)
+  aiDescriptionGenerated     Boolean                 @default(false)
+  aiGeneratedAt              DateTime?
+  keyFeatures                String[]                @default([])
+  exportToAppleMaps          Boolean                 @default(false)
+  exportToBingPlaces         Boolean                 @default(false)
+  exportToGoogleMapsPost     Boolean                 @default(true)
+  exportToLinkedInNewsletter Boolean                 @default(false)
+  exportToMedium             Boolean                 @default(false)
+  exportToNextdoor           Boolean                 @default(false)
+  exportToOlxKenya           Boolean                 @default(false)
+  exportToPigiaMe            Boolean                 @default(false)
+  exportToReddit             Boolean                 @default(false)
+  exportToSnapchat           Boolean                 @default(false)
+  exportToYoutube            Boolean                 @default(false)
+  featuredThisWeek           Boolean                 @default(false)
+  totalViews                 Int                     @default(0)
+  weeklyViews                Int                     @default(0)
+  lastGoogleSync             DateTime?
+  lastMetaSync               DateTime?
+  lastTiktokSync             DateTime?
+  adCopyVariations           AdCopyVariation[]
+  catalogueImportQueue       CatalogueImportQueue?
+  catalogueItem              CatalogueItem?          @relation("CatalogueProductLink")
+  externalModel              ExternalModel?
+  inventory                  Inventory[]
+  orderItems                 OrderItem[]
+  catalogueSourceItem        CatalogueItem?          @relation("CataloguePODSource", fields: [catalogueItemId], references: [id])
+  category                   Category                @relation(fields: [categoryId], references: [id])
+  filamentColors             ProductFilamentColor[]
+  productImages              ProductImage[]
+  mockups                    ProductMockup[]
+  printMaterials             ProductPrintMaterial[]
+  reviews                    ProductReview[]
+  variants                   ProductVariant[]
+  videos                     ProductVideo[]
+  shopStockMovements         ShopInventoryMovement[]
+  shopPOLines                ShopPurchaseOrderLine[]
+  stockNotifications         StockNotification[]
+  wishlists                  Wishlist[]
 
   @@index([categoryId])
   @@index([slug])
   @@index([isFeatured, isActive])
   @@index([isActive])
+  @@index([isPOD])
   @@index([createdAt])
   @@index([basePrice])
 }
@@ -239,6 +341,39 @@ model ProductImage {
   product    Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
+}
+
+/// Join table linking shop products to printable 3D consumables (filament/resin)
+model ProductPrintMaterial {
+  productId    String
+  consumableId String
+  isDefault    Boolean          @default(false)
+  consumable   ThreeDConsumable @relation(fields: [consumableId], references: [id])
+  product      Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([productId, consumableId])
+  @@index([consumableId])
+}
+
+/// A named filament/resin colour option available for 3D products
+model FilamentColor {
+  id       String                 @id @default(cuid())
+  name     String
+  hexCode  String
+  isActive Boolean                @default(true)
+  products ProductFilamentColor[]
+}
+
+/// Join table linking products to available filament colour options
+model ProductFilamentColor {
+  productId       String
+  filamentColorId String
+  isAvailable     Boolean       @default(true)
+  filamentColor   FilamentColor @relation(fields: [filamentColorId], references: [id])
+  product         Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([productId, filamentColorId])
+  @@index([filamentColorId])
 }
 
 model ProductReview {
@@ -377,6 +512,12 @@ model LFBusinessSettings {
   minOrderValueKes         Float    @default(500)
   updatedBy                String?
   updatedAt                DateTime @updatedAt
+  postProcessingFeePerUnit Float    @default(300)
+  
+  // 3D Printing Unified Settings
+  threeDLabourRateKesPerHour     Float    @default(200)
+  threeDFailedPrintBufferPct     Float    @default(5.0)
+  threeDPackagingFeeKes          Float    @default(20.0)
 }
 
 model LFStockItem {
@@ -826,6 +967,8 @@ model Quote {
   cancellationReason String?
   cancellationNotes  String?
   cancelledByAdminId String?
+  aiDraft            Json?
+  aiDraftGeneratedAt DateTime?
   assignedStaff      Staff?              @relation(fields: [assignedStaffId], references: [id])
   cancelledByAdmin   User?               @relation("QuoteCancelledByAdmin", fields: [cancelledByAdminId], references: [id])
   customer           User?               @relation(fields: [customerId], references: [id])
@@ -987,6 +1130,9 @@ model CorporateAccount {
   estimatedMonthlySpend String?
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
+  brandGuidelineUrl     String?
+  brandNotes            String?
+  logoImageUrl          String?
   bulkQuotes            BulkQuote[]
   primaryUser           User                   @relation("CorporatePrimaryContact", fields: [primaryUserId], references: [id])
   applications          CorporateApplication[]
@@ -1082,7 +1228,7 @@ model CorporateInvoice {
   notes          String?
   createdAt      DateTime               @default(now())
   updatedAt      DateTime               @updatedAt
-  corporate      CorporateAccount @relation(fields: [corporateId], references: [id])
+  corporate      CorporateAccount       @relation(fields: [corporateId], references: [id])
   orders         Order[]
 
   @@index([corporateId])
@@ -1283,6 +1429,10 @@ model PrinterAsset {
   depreciationPerHourKes   Float?
   maintenancePerHourKes    Float?
   maintenanceLogs          MaintenanceLog[]
+
+  // Calculator Overrides
+  failedPrintBufferPct     Float?
+  packagingFeeKes          Float?
 }
 
 model MaintenanceLog {
@@ -1366,6 +1516,7 @@ model ThreeDConsumable {
   notes             String?
   colourHex         String?
   weightPerSpoolKg  Float?
+  products          ProductPrintMaterial[]
   movements         ThreeDConsumableMovement[]
 }
 
@@ -1405,16 +1556,21 @@ model Staff {
 }
 
 model AuditLog {
-  id        String   @id @default(cuid())
-  userId    String?
-  action    String
-  entity    String
-  entityId  String?
-  before    Json?
-  after     Json?
-  ipAddress String?
-  timestamp DateTime @default(now())
-  user      User?    @relation(fields: [userId], references: [id])
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  entity     String
+  entityId   String?
+  before     Json?
+  after      Json?
+  ipAddress  String?
+  timestamp  DateTime @default(now())
+  category   String?
+  targetId   String?
+  targetType String?
+  details    Json?
+  severity   String?
+  user       User?    @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([entity, entityId])
@@ -1625,70 +1781,181 @@ model AuthPanelSlide {
 }
 
 model BusinessSettings {
-  id                    String    @id
-  businessName          String?
-  tradingName           String?
-  tagline               String?
-  website               String?
-  favicon               String?
-  primaryPhone          String?
-  whatsapp              String?
-  primaryEmail          String?
-  supportEmail          String?
-  financeEmail          String?
-  address1              String?
-  address2              String?
-  city                  String?
-  county                String?
-  country               String?
-  googleMapsUrl         String?
-  businessHours         String?
-  socialFacebook        String?
-  socialInstagram       String?
-  socialTwitter         String?
-  socialLinkedIn        String?
-  socialTikTok          String?
-  socialYouTube         String?
-  invoicePrefix         String?
-  invoiceNotes          String?
-  invoiceFooter         String?
-  vatOnInvoices         Boolean?
-  paymentTermsDays      Int?
-  mpesaEnabled          Boolean?
-  pesapalEnabled        Boolean?
-  flutterwaveEnabled    Boolean?
-  stripeEnabled         Boolean?
-  updatedAt             DateTime  @updatedAt
-  logo                  String?
-  hoursHolidays         String?
-  hoursSaturday         String?
-  hoursSunday           String?
-  hoursWeekdays         String?
-  foundingDate          DateTime?
-  statsClientsThreshold Int?      @default(500)
-  statsOrdersThreshold  Int?      @default(1000)
-  showStatsClients      Boolean   @default(false)
-  showStatsExperience   Boolean   @default(false)
-  showStatsMachines     Boolean   @default(false)
-  showStatsOrders       Boolean   @default(false)
-  showStatsStaff        Boolean   @default(false)
+  id                         String    @id
+  businessName               String?
+  tradingName                String?
+  tagline                    String?
+  website                    String?
+  favicon                    String?
+  primaryPhone               String?
+  whatsapp                   String?
+  primaryEmail               String?
+  supportEmail               String?
+  financeEmail               String?
+  address1                   String?
+  address2                   String?
+  city                       String?
+  county                     String?
+  country                    String?
+  googleMapsUrl              String?
+  businessHours              String?
+  socialFacebook             String?
+  socialInstagram            String?
+  socialTwitter              String?
+  socialLinkedIn             String?
+  socialTikTok               String?
+  socialYouTube              String?
+  invoicePrefix              String?
+  invoiceNotes               String?
+  invoiceFooter              String?
+  vatOnInvoices              Boolean?
+  paymentTermsDays           Int?
+  mpesaEnabled               Boolean?
+  pesapalEnabled             Boolean?
+  flutterwaveEnabled         Boolean?
+  stripeEnabled              Boolean?
+  updatedAt                  DateTime  @updatedAt
+  logo                       String?
+  hoursHolidays              String?
+  hoursSaturday              String?
+  hoursSunday                String?
+  hoursWeekdays              String?
+  foundingDate               DateTime?
+  showStatsClients           Boolean   @default(false)
+  showStatsExperience        Boolean   @default(false)
+  showStatsMachines          Boolean   @default(false)
+  showStatsOrders            Boolean   @default(false)
+  showStatsStaff             Boolean   @default(false)
+  statsClientsThreshold      Int?      @default(500)
+  statsOrdersThreshold       Int?      @default(1000)
+  algoliaEnabled             Boolean?  @default(false)
+  apiSecretKey               String?
+  ga4MeasurementId           String?
+  hotjarSiteId               String?
+  ipAllowlist                Json?
+  passwordPolicy             Json?
+  rateLimitSettings          Json?
+  searchConsoleVerification  String?
+  sentryDsn                  String?
+  sessionSettings            Json?
+  storageBucket              String?
+  storageCdnUrl              String?
+  storagePublicBucket        String?
+  twoFactorPolicy            Json?
+  adminAlertEmail            String?
+  adminAlertEvents           Json      @default("[]")
+  atApiKey                   String?
+  atSenderId                 String?
+  atUsername                 String?
+  bankTransferDetails        String?
+  bankTransferEnabled        Boolean   @default(false)
+  bankTransferThreshold      Float     @default(0)
+  canonicalDomain            String?
+  defaultOgImage             String?
+  developerMode              Boolean   @default(false)
+  emailFrom                  String?
+  emailFromName              String?
+  emailReplyTo               String?
+  googleSiteVerification     String?
+  guestCheckoutEnabled       Boolean   @default(true)
+  invoiceDueDays             Int       @default(30)
+  minimumOrderValue          Float     @default(0)
+  mpesaConsumerKey           String?
+  mpesaConsumerSecret        String?
+  mpesaEnvironment           String?   @default("sandbox")
+  mpesaPasskey               String?
+  mpesaPaybillNumber         String?
+  mpesaShortCode             String?
+  mpesaTillNumber            String?
+  paymentTimeoutMinutes      Int       @default(30)
+  pesapalConsumerKey         String?
+  pesapalConsumerSecret      String?
+  pesapalEnvironment         String?   @default("sandbox")
+  quotePrefix                String?   @default("PHUB-QT-")
+  resendApiKey               String?
+  robotsTxt                  String?
+  seoDefaultDescription      String?
+  seoDefaultTitle            String?
+  seoSiteName                String?
+  seoTagline                 String?
+  sitemapIncludeCategories   Boolean   @default(true)
+  sitemapIncludePages        Boolean   @default(true)
+  sitemapIncludeProducts     Boolean   @default(true)
+  twitterCardType            String?   @default("summary_large_image")
+  twitterHandle              String?
+  whatsappFloatingButton     Boolean   @default(true)
+  whatsappNumber             String?
+  whatsappPrefilledMessage   String?
+  factoryResetExecuteAt      DateTime?
+  factoryResetInitiatedBy    String?
+  pendingFactoryReset        Boolean   @default(false)
+  aiAutoMockups              Boolean   @default(false)
+  aiAutoVideos               Boolean   @default(false)
+  aiCustomerReplyModel       String?   @default("claude-opus-4-6")
+  aiDescriptionModel         String?   @default("claude-opus-4-6")
+  aiElevenLabsCharLimit      Int?      @default(10000)
+  aiElevenLabsCharUsed       Int?      @default(0)
+  aiImageGenerator           String?   @default("both")
+  aiJijiEnabled              Boolean   @default(false)
+  aiMonthlyBusinessReport    Boolean   @default(true)
+  aiRequireApproval          Boolean   @default(true)
+  aiTelegramBot              Boolean   @default(false)
+  aiVoiceTranscription       Boolean   @default(true)
+  aiWeeklyTrendReport        Boolean   @default(true)
+  aiAdCopyEnabled            Boolean   @default(true)
+  aiQuoteDraftingEnabled     Boolean   @default(true)
+  aiSentimentAnalysisEnabled Boolean   @default(true)
+  aiSocialGenerationEnabled  Boolean   @default(true)
 }
 
-model SeoSettings {
-  id                       String    @id
-  siteName                 String?
-  titleTemplate            String?
-  defaultTitle             String?
-  defaultDescription       String?
-  ogImageUrl               String?
-  twitterHandle            String?
-  sitemapGeneratedAt       DateTime?
-  updatedAt                DateTime  @updatedAt
-  defaultOgImageUrl        String?
-  robotsTxt                String?
-  sitemapIncludeCategories Boolean?  @default(true)
-  sitemapIncludePages      Boolean?  @default(true)
-  sitemapIncludeProducts   Boolean?  @default(true)
+model AdCopyVariation {
+  id             String    @id @default(cuid())
+  productId      String
+  platform       String
+  variationIndex Int
+  headline       String?
+  body           String?
+  description    String?
+  cta            String?
+  script         String?
+  isRefined      Boolean   @default(false)
+  isApproved     Boolean   @default(false)
+  usedInCampaign Boolean   @default(false)
+  generatedAt    DateTime  @default(now())
+  approvedAt     DateTime?
+  approvedBy     String?
+  product        Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  name        String
+  keyHash     String    @unique
+  keyPrefix   String
+  permissions Json?
+  expiresAt   DateTime?
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  createdBy   String
+  createdAt   DateTime  @default(now())
+
+  @@index([keyHash])
+  @@index([createdBy])
+}
+
+model OAuthToken {
+  id           String    @id @default(cuid())
+  provider     String    @unique
+  accessToken  String
+  refreshToken String?
+  tenantId     String?
+  realmId      String?
+  expiresAt    DateTime?
+  businessName String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }
 
 model ShippingSettings {
@@ -1703,18 +1970,22 @@ model ShippingSettings {
 }
 
 model LoyaltySettings {
-  id                String   @id
-  bonusRules        Json?
-  tiers             Json?
-  updatedAt         DateTime @updatedAt
-  enabled           Boolean? @default(true)
-  kesPerPointSpent  Float?
-  pointsPerKesSpent Float?
+  id                  String   @id
+  bonusRules          Json?
+  tiers               Json?
+  updatedAt           DateTime @updatedAt
+  enabled             Boolean? @default(true)
+  kesPerPointSpent    Float?
+  pointsPerKesSpent   Float?
+  kesPerPointRedeemed Float?   @default(1)
 }
 
 model ReferralSettings {
-  id        String   @id
-  updatedAt DateTime @updatedAt
+  id                  String   @id
+  updatedAt           DateTime @updatedAt
+  enabled             Boolean? @default(true)
+  pointsPerReferral   Int?     @default(500)
+  refereeDiscountCode String?  @default("WELCOME10")
 }
 
 model DiscountSettings {
@@ -1730,6 +2001,10 @@ model SystemSettings {
   factoryResetInitiatedBy String?
   quoteCounter            Int?      @default(0)
   updatedAt               DateTime  @updatedAt
+
+  // System Backup Configuration
+  backupFrequencyHours    Int       @default(24)
+  lastBackupAt            DateTime?
 }
 
 model FaqCategory {
@@ -1794,6 +2069,34 @@ model EmailTemplate {
   bodyHtml    String
   updatedAt   DateTime @updatedAt
   updatedBy   String?
+  status      String   @default("DRAFT")
+
+  @@index([slug])
+}
+
+model WhatsAppTemplate {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String?
+  category    String?  @default("UTILITY")
+  bodyText    String
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+  status      String   @default("DRAFT")
+
+  @@index([slug])
+}
+
+model PdfTemplate {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String?
+  bodyHtml    String
+  updatedAt   DateTime @updatedAt
+  updatedBy   String?
+  status      String   @default("DRAFT")
 
   @@index([slug])
 }
@@ -1802,6 +2105,21 @@ model DatabaseGuard {
   id        String   @id
   project   String
   updatedAt DateTime @updatedAt
+}
+
+model MarketingBroadcast {
+  id          String    @id @default(cuid())
+  slug        String?
+  type        String
+  title       String
+  bodyText    String
+  status      String    @default("PENDING")
+  scheduledAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  metadata    Json?
+
+  @@index([status])
 }
 
 model CatalogueDesigner {
@@ -1849,19 +2167,22 @@ model CatalogueItem {
   archivedAt         DateTime?
   archivedById       String?
   importedById       String?
-  rejectedById       String?
   modelStorageKey    String?
   modelUrl           String?
   productId          String?                 @unique
-  product            Product?                @relation(fields: [productId], references: [id])
+  rejectedById       String?
+  productionFiles    String[]                @default([])
   approvedBy         User?                   @relation("CatalogueApprovedBy", fields: [approvedById], references: [id])
+
   archivedBy         User?                   @relation("CatalogueArchivedBy", fields: [archivedById], references: [id])
   category           Category                @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   designer           CatalogueDesigner?      @relation(fields: [designerId], references: [id])
   importedBy         User?                   @relation("CatalogueImportedBy", fields: [importedById], references: [id])
+  product            Product?                @relation("CatalogueProductLink", fields: [productId], references: [id])
   rejectedBy         User?                   @relation("CatalogueRejectedBy", fields: [rejectedById], references: [id])
   availableMaterials CatalogueItemMaterial[]
   photos             CatalogueItemPhoto[]
+  podProduct         Product?                @relation("CataloguePODSource")
 
   @@index([categoryId])
   @@index([status])
@@ -1897,12 +2218,34 @@ model CatalogueItemMaterial {
 }
 
 model CatalogueImportQueue {
-  id            String       @id @default(cuid())
-  status        ImportStatus @default(PENDING)
-  sourceUrl     String?
-  stlStorageKey String?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id                  String       @id @default(cuid())
+  status              ImportStatus @default(PENDING)
+  sourceUrl           String?
+  stlStorageKey       String?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  aiEnhancedAt        DateTime?
+  aiEnhancement       Json?
+  aiEnhancementStatus String?      @default("pending")
+  designerName        String?
+  downloadCount       Int?
+  licenseType         String?
+  likeCount           Int?
+  scrapedCategory     String?
+  scrapedDescription  String?
+  scrapedImageUrls    String[]     @default([])
+  scrapedName         String?
+  scrapedTags         String[]     @default([])
+  productId           String?      @unique
+  productionFiles     String[]     @default([])
+
+  editorData          Json?
+  isManual            Boolean      @default(false)
+  reviewNotes         String?
+  submittedAt         DateTime?
+  submittedById       String?
+  product             Product?     @relation(fields: [productId], references: [id])
+  submittedBy         User?        @relation("CatalogueSubmittedBy", fields: [submittedById], references: [id])
 
   @@index([status])
 }
@@ -2101,6 +2444,15 @@ model BackupRecord {
   filename    String
   errorMsg    String?
   createdBy   User     @relation(fields: [createdById], references: [id])
+}
+
+model SystemBackup {
+  id        String   @id @default(cuid())
+  createdBy String
+  createdAt DateTime @default(now())
+  sizeBytes Float
+  r2Key     String
+  status    String
 }
 
 model DemoBooking {
@@ -2315,6 +2667,145 @@ model WarrantyRecord {
   HardwareProduct HardwareProduct @relation(fields: [productId], references: [id])
 }
 
+model StockNotification {
+  id         String    @id @default(cuid())
+  email      String?
+  phone      String?
+  productId  String
+  createdAt  DateTime  @default(now())
+  notifiedAt DateTime?
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([email])
+  @@index([phone])
+}
+
+model MarketingErrorLog {
+  id        String   @id @default(cuid())
+  channel   String
+  error     String
+  payload   Json?
+  createdAt DateTime @default(now())
+
+  @@index([channel])
+  @@index([createdAt])
+}
+
+model ProductMockup {
+  id         String            @id @default(cuid())
+  productId  String
+  platform   String
+  imageUrl   String
+  generator  String
+  prompt     String
+  isUsed     Boolean           @default(false)
+  approvedAt DateTime?
+  approvedBy String?
+  createdAt  DateTime          @default(now())
+  status     ModerationStatus? @default(PENDING_REVIEW)
+  product    Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([platform])
+}
+
+model ProductVideo {
+  id           String            @id @default(cuid())
+  productId    String
+  platform     String
+  videoUrl     String
+  audioUrl     String?
+  thumbnailUrl String?
+  duration     Int?
+  isPosted     Boolean           @default(false)
+  approvedAt   DateTime?
+  createdAt    DateTime          @default(now())
+  status       ModerationStatus? @default(PENDING_REVIEW)
+  product      Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([platform])
+}
+
+model ContentCalendar {
+  id              String   @id @default(cuid())
+  weekStarting    DateTime
+  strategy        Json
+  contentCalendar Json
+  generatedBy     String   @default("ai")
+  createdAt       DateTime @default(now())
+
+  @@index([weekStarting])
+}
+
+model AiServiceLog {
+  id           String   @id @default(cuid())
+  service      String
+  operation    String
+  model        String?
+  inputTokens  Int?     @default(0)
+  outputTokens Int?     @default(0)
+  imageCount   Int?     @default(0)
+  audioChars   Int?     @default(0)
+  durationSecs Int?     @default(0)
+  costUsd      Float?   @default(0)
+  success      Boolean  @default(true)
+  error        String?
+  entityId     String?
+  entityType   String?
+  createdAt    DateTime @default(now())
+
+  @@index([service])
+  @@index([createdAt])
+  @@index([success])
+  @@index([entityId])
+}
+
+model AiServiceVerification {
+  id             String   @id @default(cuid())
+  service        String   @unique
+  apiKeyHash     String?
+  status         String   @default("down")
+  lastVerifiedAt DateTime @default(now())
+  errorMessage   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([service])
+}
+
+model SmsBroadcast {
+  id               String    @id @default(cuid())
+  broadcastDate    DateTime
+  smsText          String
+  recipientCount   Int
+  deliveredCount   Int       @default(0)
+  failedCount      Int       @default(0)
+  featuredProducts String[]  @default([])
+  approvedBy       String?
+  sentAt           DateTime?
+  createdAt        DateTime  @default(now())
+}
+
+model BlogPost {
+  id              String    @id @default(cuid())
+  title           String
+  slug            String    @unique
+  excerpt         String?
+  bodyHtml        String
+  metaDescription String?
+  tags            String[]  @default([])
+  targetKeyword   String?
+  status          String    @default("DRAFT")
+  aiGenerated     Boolean   @default(true)
+  mediumUrl       String?
+  linkedinPostUrl String?
+  publishedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
 enum UserRole {
   CUSTOMER
   STAFF
@@ -2322,10 +2813,20 @@ enum UserRole {
   SUPER_ADMIN
 }
 
+enum ModerationStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  ARCHIVED
+}
+
 enum ProductType {
   READYMADE_3D
   LARGE_FORMAT
   CUSTOM
+  PRINT_ON_DEMAND
+  SERVICE
+  POD
 }
 
 enum PrintMaterialType {
@@ -2439,6 +2940,11 @@ enum UploadContext {
   ADMIN_FAVICON
   STAFF_PROFILE_PHOTO
   ADMIN_SITE_IMAGE
+  ADMIN_CATALOGUE_PRODUCTION
+  ADMIN_3D_CALC
+  ADMIN_LF_CALC
+  SALES_QUOTE_3D
+  SALES_QUOTE_LF
 }
 
 enum PrintQuoteStatus {
@@ -2645,6 +3151,7 @@ enum ImportPlatform {
   CREAZILLA
   THANGS
   OTHER
+  MAKERWORLD
 }
 
 enum ImportStatus {
@@ -2655,6 +3162,7 @@ enum ImportStatus {
   PENDING_REVIEW
   APPROVED
   REJECTED
+  DRAFT
 }
 
 enum JobStatus {
@@ -2701,6 +3209,7 @@ enum ProductAvailability {
   ON_ORDER
   PRE_ORDER
   IMPORT_ON_REQUEST
+  PRINT_ON_DEMAND
 }
 
 enum CartItemType {
@@ -2764,3 +3273,6 @@ enum WarrantyStatus {
   CLAIMED
   VOID
 }
+
+// Extended Business Settings for 3D Printing
+// Note: We use LFBusinessSettings as the unified store for calculator overheads.

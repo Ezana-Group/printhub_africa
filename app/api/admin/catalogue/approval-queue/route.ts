@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   if (auth instanceof NextResponse) return auth;
 
   const { searchParams } = new URL(req.url);
-  const tab = searchParams.get("tab") ?? "pending";
+  const tab = searchParams.get("tab") ?? "PENDING_REVIEW";
   const search = searchParams.get("search")?.trim() || "";
   const platform = searchParams.get("platform") || "All";
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
@@ -16,51 +16,115 @@ export async function GET(req: NextRequest) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const importWhere: any = {};
 
-  // Tab Status Filter
-  if (tab === "pending" || tab === "PENDING_REVIEW") {
+  // Tab Status Filter Mapping
+  if (tab === "PENDING_REVIEW" || tab === "pending") {
     where.status = CatalogueStatus.PENDING_REVIEW;
-  } else if (tab === "approved" || tab === "LIVE") {
+    importWhere.status = "PENDING_REVIEW";
+  } else if (tab === "LIVE" || tab === "approved") {
     where.status = { in: [CatalogueStatus.LIVE, CatalogueStatus.PAUSED] };
-  } else if (tab === "archived" || tab === "ARCHIVED") {
-    where.status = CatalogueStatus.RETIRED;
+    // Approved imports usually become CatalogueItems, so we might not need to fetch from ImportQueue here
+    importWhere.status = "APPROVED"; 
+  } else if (tab === "ARCHIVED" || tab === "archived") {
+    where.status = { in: [CatalogueStatus.ARCHIVED, CatalogueStatus.RETIRED] };
+    importWhere.status = "NOT_APPLICABLE"; // Import items aren't usually archived
+  } else if (tab === "DRAFT" || tab === "draft") {
+    where.status = CatalogueStatus.DRAFT;
+    importWhere.status = "DRAFT";
+  } else if (tab === "REJECTED" || tab === "rejected") {
+    where.status = CatalogueStatus.REJECTED;
+    importWhere.status = "REJECTED";
   }
 
-  // Search Filter (Name or Platform)
+  // Search & Platform Filters
   if (search) {
-    where.OR = [
+    const searchConditions = [
       { name: { contains: search, mode: "insensitive" } },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      { sourceType: { equals: search.toUpperCase() as any } }, // Best effort for platform search
+      { slug: { contains: search, mode: "insensitive" } }
+    ];
+    where.OR = searchConditions;
+    
+    importWhere.OR = [
+      { scrapedName: { contains: search, mode: "insensitive" } },
+      { scrapedDescription: { contains: search, mode: "insensitive" } }
     ];
   }
 
-  // Platform Filter
   if (platform !== "All") {
     where.sourceType = platform.toUpperCase() as CatalogueSourceType;
+    // For import queue, we don't have sourceType enum, but we can check sourceUrl or platform field if it exists
+    // importWhere.platform = platform; 
   }
 
   try {
-    const [items, total] = await Promise.all([
+    const [catalogueItems, importItems] = await Promise.all([
       prisma.catalogueItem.findMany({
         where,
         orderBy: { updatedAt: "desc" },
-        skip: (page - 1) * limit,
-        take: limit,
         include: {
           photos: { orderBy: { sortOrder: "asc" }, take: 1 },
           importedBy: { select: { name: true, email: true } },
-          approvedBy: { select: { name: true, email: true } },
-          archivedBy: { select: { name: true, email: true } },
           category: { select: { name: true, slug: true } },
-          availableMaterials: true,
         },
       }),
-      prisma.catalogueItem.count({ where }),
+
+      importWhere.status === "NOT_APPLICABLE" ? [] : prisma.catalogueImportQueue.findMany({
+        where: importWhere,
+        orderBy: { updatedAt: "desc" },
+        include: {
+          submittedBy: { select: { name: true, email: true } }
+        }
+      }),
     ]);
 
+    // Normalize ImportItems to match CatalogueItem structure
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const normalizedImports = importItems.map((item: any) => {
+      // Resolve the best available display name
+      let displayName: string = item.scrapedName || item.editorData?.name || "";
+      if (!displayName && item.sourceUrl) {
+        try {
+          const hostname = new URL(item.sourceUrl).hostname.replace("www.", "");
+          displayName = `${hostname} import`;
+        } catch {}
+      }
+      displayName = displayName || (item.isManual ? "Manual Draft" : "Unnamed Import");
+
+      return {
+        id: item.id,
+        name: displayName,
+        slug: `import-${item.id}`,
+        status: item.status,
+        sourceType: item.isManual ? "MANUAL" : "IMPORT",
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+        importedAt: item.createdAt,
+        category: (item.scrapedCategory || item.editorData?.categoryId)
+          ? { name: item.scrapedCategory || "Pending", slug: "" }
+          : null,
+        importedBy: item.submittedBy,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        photos: item.scrapedImageUrls?.length
+          ? item.scrapedImageUrls.slice(0, 1).map((url: string) => ({ url, isPrimary: true }))
+          : [],
+        productionFiles: item.productionFiles || [],
+        isImport: true,
+      };
+
+    });
+
+    const combinedItems = [...catalogueItems, ...normalizedImports].sort((a, b) => 
+      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    );
+
+    // Apply pagination to combined list
+    const paginatedItems = combinedItems.slice((page - 1) * limit, page * limit);
+    const total = combinedItems.length;
+
     return NextResponse.json({
-      items,
+      items: paginatedItems,
       pagination: {
         total,
         page,

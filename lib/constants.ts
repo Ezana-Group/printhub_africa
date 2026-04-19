@@ -9,10 +9,10 @@ export const KENYA_COUNTIES = [
   "Trans Nzoia", "Turkana", "Uasin Gishu", "Vihiga", "Wajir", "West Pokot",
 ] as const;
 
-/** Nairobi first, then rest alphabetically — for checkout county dropdown */
+/** Uasin Gishu first, then rest alphabetically — for checkout county dropdown */
 export const KENYA_COUNTIES_CHECKOUT = [
-  "Nairobi",
-  ...KENYA_COUNTIES.filter((c) => c !== "Nairobi").slice().sort((a, b) => a.localeCompare(b)),
+  "Uasin Gishu",
+  ...KENYA_COUNTIES.filter((c) => c !== "Uasin Gishu").slice().sort((a, b) => a.localeCompare(b)),
 ];
 
 export const VAT_RATE = 0.16;

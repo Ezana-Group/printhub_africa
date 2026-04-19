@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import { sendTicketRepliedEmail, sendTicketResolvedEmail } from "@/lib/email";
 import { z } from "zod";
@@ -14,7 +14,7 @@ const ADMIN_ROLES = ["STAFF", "ADMIN", "SUPER_ADMIN"];
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- signature kept for API consistency
 async function requireAdmin(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user?.id || !role || !ADMIN_ROLES.includes(role)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

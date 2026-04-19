@@ -1,5 +1,5 @@
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { authOptionsCustomer } from '@/lib/auth-customer'
 import { prisma } from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
 import { NextResponse } from 'next/server'
@@ -24,7 +24,7 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions)
+  const session = await getServerSession(authOptionsCustomer)
   if (!session?.user?.id && !session?.user?.email) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -78,7 +78,7 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions)
+  const session = await getServerSession(authOptionsCustomer)
   if (!session?.user?.id && !session?.user?.email) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -115,6 +115,10 @@ export async function PATCH(
     (action === 'WITHDRAW' || action === 'REJECT') &&
     !CUSTOMER_CANCELLABLE.includes(existing.status)
   ) {
+    // TODO(template): Replace hardcoded WhatsApp contact string with the DB template slug
+    //   slug: "support-contact"  (seeded via prisma/seeds/whatsapp-templates.ts)
+    //   Fetch with: prisma.whatsAppTemplate.findUnique({ where: { slug: "support-contact" } })
+    //   Then interpolate {{whatsappNumber}} from BusinessSettings.whatsapp
     return NextResponse.json(
       {
         error: 'This quote can no longer be cancelled from your account.',

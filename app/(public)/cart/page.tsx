@@ -106,7 +106,7 @@ export default function CartPage() {
                       onClick={() =>
                         isCatalogue
                           ? updateCatalogueQuantity(item.catalogueItemId, item.materialCode, item.colourHex, Math.max(1, item.quantity - 1))
-                          : updateQuantity(item.productId, item.variantId, Math.max(1, item.quantity - 1))
+                          : updateQuantity(item.productId, item.variantId, item.colorHex, Math.max(1, item.quantity - 1))
                       }
                       className="h-8 w-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
                       aria-label="Decrease"
@@ -119,7 +119,7 @@ export default function CartPage() {
                       onClick={() =>
                         isCatalogue
                           ? updateCatalogueQuantity(item.catalogueItemId, item.materialCode, item.colourHex, item.quantity + 1)
-                          : updateQuantity(item.productId, item.variantId, item.quantity + 1)
+                          : updateQuantity(item.productId, item.variantId, item.colorHex, item.quantity + 1)
                       }
                       className="h-8 w-8 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
                       aria-label="Increase"
@@ -131,7 +131,7 @@ export default function CartPage() {
                       onClick={() =>
                         isCatalogue
                           ? removeCatalogueItem(item.catalogueItemId, item.materialCode, item.colourHex)
-                          : removeItem(item.productId, item.variantId)
+                          : removeItem(item.productId, item.variantId, item.colorHex)
                       }
                       className="ml-2 text-sm text-red-600 hover:underline"
                     >

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { getBusinessPublic } from "@/lib/business-public";
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
   }
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptionsCustomer);
     const raw = await req.json();
     const parsed = bodySchema.safeParse(raw);
     if (!parsed.success) {

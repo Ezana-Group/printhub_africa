@@ -1,0 +1,304 @@
+{
+  "name": "3. PrintHub - Abandoned Cart Recovery (3-Stage Sequence)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 */2 * * *"
+            }
+          ]
+        }
+      },
+      "name": "Schedule: Every 2 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://admin.printhub.africa/api/n8n/get-abandoned-carts",
+        "method": "GET",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
+            }
+          ]
+        }
+      },
+      "name": "Fetch Abandoned Carts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "data",
+        "options": {}
+      },
+      "name": "Split Into Carts",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.reminderNumber }}",
+              "operation": "equal",
+              "value2": 2
+            }
+          ]
+        }
+      },
+      "name": "Is Stage 2?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        600,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://admin.printhub.africa/api/n8n/generate-coupon",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"customerId\": \"{{ $json.customerId }}\", \"discount\": 10, \"type\": \"percentage\", \"expiresInHours\": 48, \"source\": \"cart-recovery\" }"
+      },
+      "name": "Generate 10% Coupon",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        800,
+        50
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$vars.RESEND_API_KEY}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"from\": \"PrintHub Africa <hello@printhub.africa>\", \"to\": \"{{ $json.customerEmail }}\", \"subject\": \"{{ $json.reminderNumber === 1 ? 'You left something behind! 🛒' : $json.reminderNumber === 2 ? 'Your 10% discount is waiting ⏰' : 'Last chance — your cart expires tonight 🔥' }}\", \"html\": \"<h2>Hi {{ $json.customerName.split(' ')[0] }}!</h2><p>{{ $json.reminderNumber === 1 ? 'You left some great items in your cart.' : $json.reminderNumber === 2 ? 'We saved your cart — and added a 10% discount code for you: <strong>' + $node['Generate 10% Coupon'].json.code + '</strong>. Use it at checkout!' : 'This is your final reminder. Your cart and discount expire soon.' }}</p><ul>{{ $json.items.map(i => '<li>' + i.name + ' — KES ' + i.price.toLocaleString() + '</li>').join('') }}</ul><p><strong>Cart Total: KES {{ $json.totalValue.toLocaleString() }}</strong></p><p><a href='{{ $json.cartUrl }}' style='background:#f97316;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;display:inline-block;'>Complete My Order →</a></p><p style='color:#888;font-size:12px;'>PrintHub Africa · Nairobi, Kenya</p>\" }"
+      },
+      "name": "Resend: Recovery Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1000,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.customerPhone }}",
+              "operation": "isNotEmpty"
+            }
+          ],
+          "number": [
+            {
+              "value1": "={{ $json.reminderNumber }}",
+              "operation": "smallerEqual",
+              "value2": 2
+            }
+          ]
+        }
+      },
+      "name": "Has Phone & Stage ≤ 2?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://graph.facebook.com/v19.0/{{ $vars.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$vars.WHATSAPP_ACCESS_TOKEN}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{ $json.customerPhone }}\", \"type\": \"text\", \"text\": { \"body\": \"Hi {{ $json.customerName.split(' ')[0] }}! 👋 You left {{ $json.items.length }} item(s) in your PrintHub cart worth KES {{ $json.totalValue.toLocaleString() }}.{{ $json.reminderNumber === 2 ? ' Use code ' + $node['Generate 10% Coupon'].json.code + ' for 10% off!' : '' }} Complete your order: {{ $json.cartUrl }}\" } }"
+      },
+      "name": "WhatsApp: Cart Reminder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1400,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://admin.printhub.africa/api/n8n/mark-alert-sent",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"alertId\": \"{{ $json.cartId }}\", \"type\": \"abandoned-cart-stage-{{ $json.reminderNumber }}\", \"urgency\": \"low\" }"
+      },
+      "name": "Mark Reminder Sent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1600,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule: Every 2 Hours": {
+      "main": [
+        [
+          {
+            "node": "Fetch Abandoned Carts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Abandoned Carts": {
+      "main": [
+        [
+          {
+            "node": "Split Into Carts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Into Carts": {
+      "main": [
+        [
+          {
+            "node": "Is Stage 2?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Stage 2?": {
+      "main": [
+        [
+          {
+            "node": "Generate 10% Coupon",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Resend: Recovery Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate 10% Coupon": {
+      "main": [
+        [
+          {
+            "node": "Resend: Recovery Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resend: Recovery Email": {
+      "main": [
+        [
+          {
+            "node": "Has Phone & Stage ≤ 2?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Phone & Stage ≤ 2?": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp: Cart Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark Reminder Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp: Cart Reminder": {
+      "main": [
+        [
+          {
+            "node": "Mark Reminder Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+  }
+}

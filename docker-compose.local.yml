@@ -1,0 +1,54 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: printhub_v31final_copy-db-1
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: printhub
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./prisma/data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d printhub"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  n8n:
+    image: n8nio/n8n:1.89.2
+    container_name: printhub_v31final_copy-n8n-1
+    user: root
+    environment:
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_DATABASE=printhub
+      - DB_POSTGRESDB_HOST=db
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_USER=user
+      - DB_POSTGRESDB_PASSWORD=password
+      - N8N_URL=https://admin.printhub.africa
+      - N8N_PORT=5678
+      - N8N_ENCRYPTION_KEY=my-secure-encryption-key
+      - GENERIC_TIMEZONE=Africa/Nairobi
+      - N8N_WEBHOOK_SECRET=2811f4818eb1daadf969fd4fbdb0106a85f3253037013e1c5f192dc34583c159
+      - INTERNAL_SECRET=9a20430bc95817792f03b412a350ec549f785e7855bce7984f3364d538dc5c733fcb2fea5dd8f7316de23fce363967b4ad7c6b4bc5891e7dc80e9f4cd414e908
+      - N8N_API_KEY=local-dev-placeholder
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - N8N_BLOCK_ENV_ACCESS_IN_EXPRESSIONS=false
+    ports:
+      - "5678:5678"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - printhub_local_n8ndata:/home/node/.n8n
+      - ./n8n/workflows:/home/node/workflows
+      - ./n8n/docker-entrypoint.sh:/docker-entrypoint.sh
+    entrypoint: /docker-entrypoint.sh
+
+volumes:
+  printhub_local_n8ndata:
+    external: true

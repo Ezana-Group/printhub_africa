@@ -1,0 +1,138 @@
+{
+  "name": "AI-5 — AI-Assisted Quote Responses (Claude)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-generate-quotedraft",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "name": "Webhook: Generate Quote Draft",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ],
+      "webhookId": "ai-generate-quotedraft"
+    },
+    {
+      "parameters": {
+        "url": "https://admin.printhub.africa/api/n8n/get-quote-context",
+        "method": "GET",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "qs": [
+          {
+            "name": "quoteId",
+            "value": "={{ $json.quoteId }}"
+          }
+        ]
+      },
+      "name": "Get Quote Details",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.anthropic.com/v1/messages",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $vars.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"model\": \"claude-opus-4-6\", \"max_tokens\": 1000, \"system\": \"You are the expert estimator for PrintHub Africa...\", \"messages\": [{ \"role\": \"user\", \"content\": \"Customer {{ $json.customerName }} wants a quote for: {{ $json.projectName }}. Details: {{ $json.description }}. Write a professional draft response with a suggested price (if possible based on context) and breakdown. Include warm Kenyan business greeting. Return valid JSON: { 'draft': '...', 'suggestedPrice': 0, 'breakdown': '...' }\" }] }"
+      },
+      "name": "Claude: Generate Draft",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://admin.printhub.africa/api/n8n/save-quote-draft",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"quoteId\": \"{{ $node['Get Quote Details'].json.id }}\", \"draft\": \"{{ $json.content[0].text.draft }}\", \"amount\": {{ $json.content[0].text.suggestedPrice || 0 }}, \"breakdown\": \"{{ $json.content[0].text.breakdown }}\" }"
+      },
+      "name": "Save Quote Draft",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        860,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: Generate Quote Draft": {
+      "main": [
+        [
+          {
+            "node": "Get Quote Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Quote Details": {
+      "main": [
+        [
+          {
+            "node": "Claude: Generate Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: Generate Draft": {
+      "main": [
+        [
+          {
+            "node": "Save Quote Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+  }
+}

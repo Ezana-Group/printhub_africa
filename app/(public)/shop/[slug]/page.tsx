@@ -3,175 +3,250 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getBusinessPublic } from "@/lib/business-public";
-import { AddToCartButton } from "./add-to-cart-button";
-import { ProductImageGallery } from "@/components/shop/product-image-gallery";
+import { ProductImageGallery } from "@/components/shop/ProductImageGallery";
+import { ProductInfoBlock } from "@/components/shop/ProductInfoBlock";
 import { ProductReviewsSection } from "./reviews-section";
-import { formatPrice } from "@/lib/utils";
+import { formatDescription, serializeDecimal } from "@/lib/utils";
 import { LicenceBadge } from "@/components/catalogue/LicenceBadge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { ViewContentTracker } from "@/components/marketing/ViewContentTracker";
+import { ChevronRight } from "lucide-react";
 
-const DEFAULT_WHATSAPP = "254700000000";
-
-export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
+export const dynamic = "force-dynamic";
 
 interface Props {
   params: Promise<{ slug: string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  try {
-    const { slug } = await params;
-    const product = await prisma.product.findFirst({
-      where: { slug, isActive: true },
-      select: {
-        name: true,
-        shortDescription: true,
-        metaTitle: true,
-        metaDescription: true,
-        images: true,
-        productImages: { where: { isPrimary: true }, take: 1, select: { url: true } },
-      },
-    });
-    if (!product) return { title: "Shop | PrintHub Kenya" };
-    const primaryUrl = product.images?.[0] ?? product.productImages?.[0]?.url;
-    return {
-      title: product.metaTitle ?? `${product.name} | PrintHub Kenya`,
-      description: product.metaDescription ?? product.shortDescription ?? undefined,
-      openGraph: {
-        title: product.metaTitle ?? product.name,
-        images: primaryUrl ? [primaryUrl] : undefined,
-      },
-    };
-  } catch {
-    return { title: "Shop | PrintHub Kenya" };
-  }
+  const { slug } = await params;
+  const product = await prisma.product.findFirst({
+    where: { slug, isActive: true },
+    select: { 
+      name: true, 
+      shortDescription: true, 
+      metaTitle: true, 
+      metaDescription: true, 
+      images: true,
+      basePrice: true,
+      availability: true,
+      variants: { select: { price: true }, take: 1 },
+    },
+  });
+  if (!product) return { title: "Shop | PrintHub Kenya" };
+  const title = product.metaTitle ?? `${product.name} | PrintHub Kenya`;
+  const description = product.metaDescription ?? product.shortDescription ?? undefined;
+  const image = product.images?.[0] || "/images/og/default-og.webp";
+
+  const url = `${process.env.NEXT_PUBLIC_APP_URL}/shop/${slug}`;
+  const price = product.variants?.[0]?.price ?? product.basePrice;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      siteName: "PrintHub Africa",
+      images: [{ url: image, width: 1200, height: 630 }],
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [image],
+    },
+    other: {
+      "product:price:amount": Number(price).toString(),
+      "product:price:currency": "KES",
+      "product:availability": product.availability === "IN_STOCK" ? "instock" : "out of stock",
+      "og:product:condition": "new",
+    }
+  };
 }
 
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
   const business = await getBusinessPublic();
-  const whatsappDigits = (business.whatsapp ?? "").replace(/\D/g, "") || DEFAULT_WHATSAPP;
-  const waHref = (text: string) => `https://wa.me/${whatsappDigits}?text=${encodeURIComponent(text)}`;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let product: any = null;
-  try {
-    product = await prisma.product.findFirst({
-      where: { slug, isActive: true },
-        include: {
-        category: { select: { name: true, slug: true } },
-        productImages: { orderBy: { sortOrder: "asc" } },
-        variants: true,
-        externalModel: true,
-      },
-    });
-  } catch {
-    // DB unavailable
-  }
-  if (!product) notFound();
+  
+  const rawProduct = await prisma.product.findFirst({
+    where: { slug, isActive: true },
+    include: {
+      category: { select: { name: true, slug: true } },
+      productImages: { orderBy: { sortOrder: "asc" } },
+      variants: { orderBy: { price: "asc" } },
+      externalModel: true,
+    },
+  });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const productWithRelations = product as any;
-  const dbImages = productWithRelations.productImages ?? [];
-  /* eslint-disable @typescript-eslint/no-explicit-any */
-  const galleryImages: any[] =
-    dbImages.length > 0
-      ? dbImages.map((img: any) => ({ id: img.id, url: img.url, altText: img.altText, isPrimary: img.isPrimary }))
-      : (product.images ?? []).map((url: string, i: number) => ({ id: undefined, url, altText: null as string | null, isPrimary: i === 0 }));
-  const primaryImage = product.images?.[0] ?? galleryImages.find((i: any) => i.isPrimary)?.url ?? galleryImages[0]?.url;
-  /* eslint-enable @typescript-eslint/no-explicit-any */
-  const basePrice = Number(product.basePrice);
-  const comparePrice = product.comparePrice != null ? Number(product.comparePrice) : null;
+  if (!rawProduct) notFound();
+
+  // Serialize Decimal objects to numbers for Client Components
+  const product = serializeDecimal(rawProduct);
+
+  // Merge modern productImages relation with legacy images JSON array
+  const legacyImages = Array.isArray(product.images) ? product.images : [];
+  const adhocImages = product.productImages.map(img => ({ 
+    id: img.id, 
+    url: img.url, 
+    altText: img.altText, 
+    isPrimary: img.isPrimary 
+  }));
+
+  // Create a combined list of unique images by URL
+  const seenUrls = new Set(adhocImages.map(img => img.url));
+  const mergedLegacy = legacyImages
+    .filter(url => !seenUrls.has(url))
+    .map((url, i) => ({ 
+      url, 
+      isPrimary: adhocImages.length === 0 && i === 0 
+    }));
+
+  const galleryImages = [...adhocImages, ...mergedLegacy];
 
   return (
-    <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-8">
-      <nav className="mb-6 text-sm text-slate-600">
-        <Link href="/shop" className="hover:text-slate-900">Shop</Link>
-        <span className="mx-2">/</span>
-        {productWithRelations.category && (
-          <>
-            <Link href={`/shop?category=${productWithRelations.category.slug}`} className="hover:text-slate-900">{productWithRelations.category.name}</Link>
-            <span className="mx-2">/</span>
-          </>
-        )}
-        <span className="text-slate-900">{product.name}</span>
-      </nav>
-
-      <div className="grid gap-8 lg:grid-cols-2">
-        <div className="max-w-lg">
-          <ProductImageGallery images={galleryImages} />
-        </div>
-
-        <div>
-          <h1 className="font-display text-3xl font-bold text-slate-900">{product.name}</h1>
-          {product.sku && <p className="mt-1 text-sm text-slate-500">SKU: {product.sku}</p>}
-          <div className="mt-4 flex items-center gap-3">
-            <span className="text-2xl font-bold text-primary">{formatPrice(basePrice)}</span>
-            {comparePrice != null && comparePrice > basePrice && (
-              <span className="text-lg text-slate-500 line-through">{formatPrice(comparePrice)}</span>
+    <div className="bg-white min-h-screen">
+      <ViewContentTracker 
+        product={{ 
+          id: product.id, 
+          name: product.name, 
+          price: Number(product.basePrice), 
+          category: product.category?.name 
+        }} 
+      />
+      
+      {/* Premium Breadcrumbs */}
+      <div className="bg-slate-50/50 border-b border-slate-100">
+        <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-4">
+          <nav className="text-[13px] font-bold flex items-center gap-2 overflow-x-auto whitespace-nowrap scrollbar-hide text-slate-400">
+            <Link href="/" className="hover:text-[#FF4D00] transition-colors">Home</Link>
+            <ChevronRight className="h-4 w-4 text-slate-200" />
+            <Link href="/shop" className="hover:text-[#FF4D00] transition-colors">Shop</Link>
+            {product.category && (
+              <>
+                <ChevronRight className="h-4 w-4 text-slate-200" />
+                <Link href={`/shop?category=${product.category.slug}`} className="hover:text-[#FF4D00] transition-colors">
+                  {product.category.name}
+                </Link>
+              </>
             )}
-          </div>
-          <p className="mt-2 text-sm text-slate-600">Prices include 16% VAT.</p>
-
-          {product.shortDescription && (
-            <p className="mt-4 text-slate-700">{product.shortDescription}</p>
-          )}
-
-          <div className="mt-6">
-            <p className="text-sm font-medium text-slate-700">Stock: {product.stock > 0 ? (product.stock <= 5 ? `Low (${product.stock} left)` : "In stock") : "Out of stock"}</p>
-          </div>
-
-          <AddToCartButton
-            productId={product.id}
-            name={product.name}
-            slug={product.slug}
-            image={primaryImage ?? undefined}
-            basePrice={basePrice}
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            variants={productWithRelations.variants.map((v: any) => ({ id: v.id, name: v.name, price: Number(v.price), stock: v.stock }))}
-            stock={product.stock}
-            minOrderQty={product.minOrderQty}
-            maxOrderQty={product.maxOrderQty ?? undefined}
-          />
-
-          <div className="mt-8 flex gap-4">
-            <a
-              href={waHref(`Hi, I have a question about: ${product.name}`)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm font-medium text-green-600 hover:underline"
-            >
-              Ask on WhatsApp
-            </a>
-          </div>
+            <ChevronRight className="h-4 w-4 text-slate-200" />
+            <span className="text-slate-900 truncate max-w-[200px]">{formatDescription(product.name)}</span>
+          </nav>
         </div>
       </div>
 
-      {product.description && (
-        <div className="mt-12 border-t border-slate-200 pt-12">
-          <h2 className="font-display text-xl font-bold text-slate-900">Description</h2>
-          <p className="mt-4 text-slate-700 whitespace-pre-wrap">{product.description}</p>
-          
-          {productWithRelations.externalModel && (
-            <div className="mt-8 p-4 bg-slate-50 rounded-lg border border-slate-100 flex flex-wrap items-center justify-between gap-4">
-              <div className="space-y-1">
-                <p className="text-sm font-medium">Original design by {productWithRelations.externalModel.designerName}</p>
-                <div className="flex gap-2">
-                  <LicenceBadge licence={productWithRelations.externalModel.licenceType} size="sm" />
-                </div>
-              </div>
-              <div className="text-xs text-slate-500">
-                {productWithRelations.externalModel.designerUrl && (
-                  <a href={productWithRelations.externalModel.designerUrl} target="_blank" className="text-blue-600 hover:underline block mb-1">
-                    View Designer Profile
-                  </a>
-                )}
-                <span>Printed by PrintHub Africa</span>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-10 md:py-16">
+        <div className="grid gap-16 lg:grid-cols-12 items-start">
+          {/* Left: Gallery (Sticky on desktop) */}
+          <div className="lg:col-span-7 lg:sticky lg:top-24">
+            <ProductImageGallery images={galleryImages} />
+          </div>
 
-      <ProductReviewsSection productSlug={product.slug} />
+          {/* Right: Info */}
+          <div className="lg:col-span-5">
+            <ProductInfoBlock product={product} business={business} />
+          </div>
+        </div>
+
+        {/* Bottom Content: Detailed Tabs */}
+        <div className="mt-32 max-w-5xl">
+          <Tabs defaultValue="description" className="w-full">
+            <TabsList className="bg-transparent border-b border-slate-100 w-full justify-start rounded-none h-auto p-0 gap-12">
+              <TabsTrigger 
+                value="description" 
+                className="rounded-none border-b-4 border-transparent data-[state=active]:border-[#FF4D00] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-5 font-black text-base text-slate-300 data-[state=active]:text-slate-900 transition-all uppercase tracking-widest"
+              >
+                Story
+              </TabsTrigger>
+              {(product as any).isPOD && (
+                <TabsTrigger 
+                  value="specs" 
+                  className="rounded-none border-b-4 border-transparent data-[state=active]:border-[#FF4D00] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-5 font-black text-base text-slate-300 data-[state=active]:text-slate-900 transition-all uppercase tracking-widest"
+                >
+                  Tech
+                </TabsTrigger>
+              )}
+              <TabsTrigger 
+                value="reviews" 
+                className="rounded-none border-b-4 border-transparent data-[state=active]:border-[#FF4D00] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-5 font-black text-base text-slate-300 data-[state=active]:text-slate-900 transition-all uppercase tracking-widest"
+              >
+                Proof
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="description" className="py-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+              <div className="prose prose-slate max-w-none">
+                <p className="text-xl text-slate-600 leading-relaxed whitespace-pre-wrap font-medium font-serif italic mb-10">
+                  {formatDescription(product.shortDescription)}
+                </p>
+                <div className="text-slate-700 leading-relaxed text-lg space-y-6">
+                   {formatDescription(product.description).split('\n\n').map((para, i) => (
+                     <p key={i}>{para}</p>
+                   ))}
+                </div>
+                
+                {product.externalModel && (
+                  <div className="mt-16 p-10 bg-slate-50 rounded-[40px] border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-10 shadow-sm">
+                    <div className="space-y-4 text-center md:text-left">
+                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Artist Spotlight</p>
+                      <h4 className="text-2xl font-bold text-slate-900">Masterfully designed by <span className="text-[#FF4D00]">{product.externalModel.designerName}</span></h4>
+                      <div className="flex justify-center md:justify-start gap-4">
+                        <LicenceBadge licence={product.externalModel.licenceType} size="sm" />
+                      </div>
+                    </div>
+                    {product.externalModel.designerUrl && (
+                      <Button variant="outline" className="rounded-2xl h-14 px-8 border-slate-200 font-bold hover:bg-white" asChild>
+                        <a href={product.externalModel.designerUrl} target="_blank">Explore Portfolio</a>
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="specs" className="py-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+               <div className="grid md:grid-cols-2 gap-12">
+                  <div className="space-y-8">
+                     <h4 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Precision Engineering</h4>
+                     <dl className="space-y-4">
+                        <div className="flex justify-between items-center border-b border-slate-50 pb-4">
+                           <dt className="text-slate-500 font-bold">Process</dt>
+                           <dd className="font-black text-slate-900">FDM 3D Manufacture</dd>
+                        </div>
+                        {(product as any).printTimeEstimate && (
+                          <div className="flex justify-between items-center border-b border-slate-50 pb-4">
+                            <dt className="text-slate-500 font-bold">Production Cycle</dt>
+                            <dd className="font-black text-slate-900">{(product as any).printTimeEstimate}</dd>
+                          </div>
+                        )}
+                        {(product as any).filamentWeightGrams && (
+                          <div className="flex justify-between items-center border-b border-slate-50 pb-4">
+                            <dt className="text-slate-500 font-bold">Net Material weight</dt>
+                            <dd className="font-black text-slate-900">{(product as any).filamentWeightGrams}g</dd>
+                          </div>
+                        )}
+                     </dl>
+                  </div>
+                  <div className="p-10 bg-[#FFF5F0] rounded-[40px] border border-orange-100/50">
+                     <h4 className="text-2xl font-black text-[#FF4D00] uppercase tracking-tighter mb-4">Material Excellence</h4>
+                     <p className="text-slate-700 leading-relaxed font-medium">
+                        Crafted using premium, industrial-grade filaments. Our PLA+ and PETG selections offer superior tensile strength, thermal stability, and an exquisite matte finish that standard materials cannot match.
+                     </p>
+                  </div>
+               </div>
+            </TabsContent>
+
+            <TabsContent value="reviews" className="py-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+               <ProductReviewsSection productSlug={product.slug} />
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
     </div>
   );
 }

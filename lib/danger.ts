@@ -2,7 +2,7 @@
  * Danger zone: confirm phrase + password (and optional 2FA) validation.
  */
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
@@ -36,7 +36,7 @@ export async function validateDanger(
     throw new Error(`Type "${phrase}" exactly to confirm`);
   }
 
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   if (!session?.user?.id) {
     throw new Error("Unauthorized");
   }

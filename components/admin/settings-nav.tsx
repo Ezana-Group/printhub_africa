@@ -66,7 +66,7 @@ export function SettingsNav({ items }: SettingsNavProps) {
   }, {});
 
   return (
-    <nav className="p-2 space-y-4 w-56 shrink-0">
+    <nav className="p-2 space-y-4 w-56 shrink-0 sticky top-0 self-start overflow-y-auto max-h-screen border-r border-border">
       {Object.entries(groups).map(([groupName, groupItems]) => (
         <div key={groupName}>
           <p className="px-3 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wider">

@@ -133,11 +133,11 @@ export function CouriersSection() {
           <div className="grid grid-cols-2 gap-2">
             <div>
               <Label>City</Label>
-              <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Nairobi" />
+              <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Eldoret" />
             </div>
             <div>
               <Label>County</Label>
-              <Input value={county} onChange={(e) => setCounty(e.target.value)} placeholder="Nairobi" />
+              <Input value={county} onChange={(e) => setCounty(e.target.value)} placeholder="Uasin Gishu" />
             </div>
           </div>
           <div className="flex gap-2">

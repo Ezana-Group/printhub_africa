@@ -14,6 +14,7 @@ import {
 import { Plus, Trash2, Copy, FileText, Send } from "lucide-react";
 import type { QuoteDraftLF } from "@/lib/quote-draft";
 import { clearQuoteDraft } from "@/lib/quote-draft";
+import { FileUploader } from "@/components/upload/FileUploader";
 
 const MAX_LINE_ITEMS = 20;
 const DEFAULT_WA = "254700000000";
@@ -29,6 +30,7 @@ type LFLineItem = {
   eyelets: "NONE" | "STANDARD" | "HEAVY";
   hemming: "NONE" | "ALL_4" | "TOP_BOTTOM";
   marginPercentOverride?: number;
+  uploadedFileId?: string;
 };
 
 function newLFLineItem(): LFLineItem {
@@ -332,7 +334,20 @@ export function SalesLFCalculator({
                             updateLine(line.id, { description: e.target.value })
                           }
                           placeholder="e.g. Banner A"
-                          className="h-8 text-sm"
+                          className="h-8 text-sm mb-2"
+                        />
+                        <FileUploader
+                          context="SALES_QUOTE_LF"
+                          accept={[".ai", "application/pdf", ".psd", "application/postscript", "image/png", "image/svg+xml", ".svg", "image/tiff", ".tiff", ".tif", ".dxf", "image/jpeg"]}
+                          maxFiles={1}
+                          onUploadComplete={(files) => {
+                            const f = files[0];
+                            if (f) {
+                              updateLine(line.id, { uploadedFileId: f.uploadId });
+                            }
+                          }}
+                          onRemove={() => updateLine(line.id, { uploadedFileId: undefined })}
+                          className="min-w-[150px]"
                         />
                       </td>
                       <td className="p-2">
@@ -541,6 +556,7 @@ export function SalesLFCalculator({
               asChild
               className="min-w-[140px]"
             >
+              {/* TODO: replace with template slug: lf-print-quote-whatsapp */}
               <a
                 href={`https://wa.me/${whatsappDigits}?text=${encodeURIComponent(
                   `PrintHub quote for ${clientName || "customer"}\nValid until: ${validUntil}\nTotal: ${formatKes(finalTotal)}\n\nDetails: ${lines.map((l, i) => `${i + 1}. ${l.description || "Item"} ${l.widthCm}×${l.heightCm}cm × ${l.quantity} = ${lineResults.find((r) => r.lineId === l.id) ? formatKes(lineResults.find((r) => r.lineId === l.id)!.lineTotal) : "—"}`).join("\n")}`

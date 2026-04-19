@@ -14,7 +14,7 @@ CREATE TABLE "JobListing" (
     "slug" TEXT NOT NULL,
     "department" TEXT NOT NULL,
     "type" "JobType" NOT NULL,
-    "location" TEXT NOT NULL DEFAULT 'Nairobi, Kenya',
+    "location" TEXT NOT NULL DEFAULT 'Eldoret, Kenya',
     "isRemote" BOOLEAN NOT NULL DEFAULT false,
     "description" TEXT NOT NULL,
     "responsibilities" TEXT NOT NULL,

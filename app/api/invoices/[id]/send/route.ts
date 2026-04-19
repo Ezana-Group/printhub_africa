@@ -3,7 +3,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { prisma } from "@/lib/prisma";
 import { getObjectBuffer, isR2Configured } from "@/lib/r2";
 import { generateInvoicePdfBuffer } from "@/lib/invoice-pdf";
@@ -15,7 +15,7 @@ export async function POST(
   _req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user || !["ADMIN", "SUPER_ADMIN", "STAFF"].includes(role ?? "")) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

@@ -59,32 +59,37 @@ export function Header({ business }: { business?: BusinessPublic }) {
 
   useEffect(() => {
     setMounted(true);
-    fetch("/api/navigation/shop-categories")
+    fetch("/api/products/categories")
       .then(res => res.json())
-      .then(categories => {
-        if (Array.isArray(categories)) {
-          const shopChildren: {label: string, href: string}[] = [];
-          if (categories.length === 0) {
+      .then(tree => {
+        if (Array.isArray(tree)) {
+          // Filter tree to only show levels that contain items marked for nav
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const buildNavItems = (nodes: any[], depth = 0): {label: string, href: string}[] => {
+            const items: {label: string, href: string}[] = [];
+            nodes.forEach(node => {
+              // Should we show it? Yes if it's marked showInNav OR if it has children that are marked
+              // For simplicity, we show it if it's in the top 2 levels or explicitly marked
+              const showThis = node.showInNav || depth < 1;
+              if (showThis) {
+                const indent = depth > 0 ? "\u00A0\u00A0".repeat(depth) + "— " : "";
+                items.push({ label: `${indent}${node.name}`, href: `/shop?category=${node.slug}` });
+                if (node.children?.length && depth < 2) {
+                  items.push(...buildNavItems(node.children, depth + 1));
+                }
+              }
+            });
+            return items;
+          };
+
+          const shopChildren = buildNavItems(tree);
+          if (shopChildren.length === 0) {
             shopChildren.push({ label: "All Products", href: "/shop" });
-          } else {
-            const parents = categories.filter((c) => !c.parentId);
-            const children = categories.filter((c) => c.parentId);
-            parents.forEach((p) => {
-              shopChildren.push({ label: p.name, href: `/shop?category=${p.slug}` });
-              const pChildren = children.filter((c) => c.parentId === p.id);
-              pChildren.forEach((c) => {
-                shopChildren.push({ label: `\u00A0\u00A0— ${c.name}`, href: `/shop?category=${c.slug}` });
-              });
-            });
-            const orphans = children.filter((c) => !parents.some((p) => p.id === c.parentId));
-            orphans.forEach((c) => {
-              shopChildren.push({ label: c.name, href: `/shop?category=${c.slug}` });
-            });
           }
           
           setNavLinks(prev => prev.map(link => 
             link.label === "Shop" 
-              ? { ...link, children: shopChildren }
+              ? { ...link, children: [{ label: "All Products", href: "/shop" }, ...shopChildren] }
               : link
           ));
         }
@@ -113,7 +118,7 @@ export function Header({ business }: { business?: BusinessPublic }) {
             {/* Fixed header — logo (close button is absolute in SheetContent) */}
             <div className="flex flex-shrink-0 items-center border-b border-slate-200 px-6 py-4 pr-14">
               <Image
-                src={business?.logo ?? "/logo.png"}
+                src={business?.logo || "/logo.png"}
                 alt={siteName}
                 width={120}
                 height={32}
@@ -268,7 +273,7 @@ export function Header({ business }: { business?: BusinessPublic }) {
           className="font-display text-xl font-bold text-slate-900 flex items-center gap-2.5"
         >
           <Image
-            src={business?.logo ?? "/logo.png"}
+            src={business?.logo || "/logo.png"}
             alt={siteName}
             width={140}
             height={36}
@@ -363,10 +368,11 @@ export function Header({ business }: { business?: BusinessPublic }) {
                     </Link>
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem asChild>
-                  <Link href="/api/auth/signout" className="focus:bg-slate-50 focus:text-slate-900 rounded-lg mx-1">
-                    Sign out
-                  </Link>
+                <DropdownMenuItem
+                  className="focus:bg-red-50 focus:text-red-900 rounded-lg mx-1 text-red-600 cursor-pointer"
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                >
+                  Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

@@ -3,13 +3,14 @@ import { notFound } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/utils";
 import { getBusinessPublic } from "@/lib/business-public";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { QuoteAcceptDecline } from "@/components/account/quote-accept-decline";
+import { QuoteUploadedFilesCustomer } from "@/components/account/quote-uploaded-files";
 
 const TYPE_LABELS: Record<string, string> = {
   large_format: "Large Format",
@@ -24,7 +25,7 @@ export default async function AccountQuoteDetailPage({
 }) {
   try {
 
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   if (!session?.user?.id) redirect("/login");
   const { id } = await params;
 
@@ -33,7 +34,13 @@ export default async function AccountQuoteDetailPage({
   const [quoteByAccount, quoteByEmail, business] = await Promise.all([
     prisma.quote.findFirst({
       where: { id, customerId: userId },
-      include: { cancelledByAdmin: { select: { name: true } } },
+      include: {
+        cancelledByAdmin: { select: { name: true } },
+        uploadedFiles: {
+          orderBy: { createdAt: "asc" },
+          select: { id: true, originalName: true, filename: true, mimeType: true, size: true, fileType: true, createdAt: true },
+        },
+      },
     }),
     userEmail
       ? prisma.quote.findFirst({
@@ -42,7 +49,13 @@ export default async function AccountQuoteDetailPage({
             customerId: null,
             customerEmail: { equals: userEmail, mode: "insensitive" },
           },
-          include: { cancelledByAdmin: { select: { name: true } } },
+          include: {
+            cancelledByAdmin: { select: { name: true } },
+            uploadedFiles: {
+              orderBy: { createdAt: "asc" },
+              select: { id: true, originalName: true, filename: true, mimeType: true, size: true, fileType: true, createdAt: true },
+            },
+          },
         })
       : Promise.resolve(null),
     getBusinessPublic(),
@@ -143,6 +156,10 @@ export default async function AccountQuoteDetailPage({
             <QuoteAcceptDecline quoteId={quote.id} />
           </CardContent>
         </Card>
+      )}
+
+      {quote.uploadedFiles && quote.uploadedFiles.length > 0 && (
+        <QuoteUploadedFilesCustomer files={quote.uploadedFiles as any} />
       )}
 
       {(quote.status === "accepted" || quote.status === "completed") && (

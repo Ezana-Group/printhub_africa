@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
@@ -11,7 +11,7 @@ export async function POST(
   req: Request,
   { params }: { params: Promise<{ section: string[] }> }
 ) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user || !role) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -48,11 +48,30 @@ export async function POST(
     const body = await req.json().catch(() => ({}));
     const key = `adminSettings:${firstSegment}`;
     const valueJson = JSON.stringify(body);
+    
+    // Standard JSON persistence
     await prisma.pricingConfig.upsert({
       where: { key },
       update: { valueJson },
       create: { key, valueJson },
     });
+
+    // Special handling for System model synchronization
+    if (firstSegment === "system") {
+      const bFrequency = body.backupFrequencyHours ? parseInt(body.backupFrequencyHours, 10) : 24;
+      const existing = await prisma.systemSettings.findFirst();
+      if (existing) {
+        await prisma.systemSettings.update({
+          where: { id: existing.id },
+          data: { backupFrequencyHours: bFrequency },
+        });
+      } else {
+        await prisma.systemSettings.create({
+          data: { backupFrequencyHours: bFrequency },
+        });
+      }
+    }
+
     return NextResponse.json({ success: true });
   } catch (e) {
     console.error("Settings save error:", e);
@@ -65,7 +84,7 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ section: string[] }> }
 ) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user || !role) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

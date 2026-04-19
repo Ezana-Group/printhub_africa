@@ -24,6 +24,7 @@ interface RichTextEditorProps {
   onChange: (html: string) => void;
   placeholder?: string;
   minHeight?: string;
+  onFocus?: () => void;
 }
 
 export interface SmartTextEditorHandle {
@@ -166,7 +167,7 @@ function Toolbar({ editor }: { editor: Editor }) {
 }
 
 export const SmartTextEditor = forwardRef<SmartTextEditorHandle, RichTextEditorProps>(
-  ({ value, onChange, placeholder = "Write your message…", minHeight = "180px" }, ref) => {
+  ({ value, onChange, placeholder = "Write your message…", minHeight = "180px", onFocus }, ref) => {
     const [mode, setMode] = useState<"rich" | "html">("rich");
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -207,6 +208,9 @@ export const SmartTextEditor = forwardRef<SmartTextEditorHandle, RichTextEditorP
     content: value || "",
     onUpdate: ({ editor: e }) => {
       onChange(e.getHTML());
+    },
+    onFocus: () => {
+      onFocus?.();
     },
     editorProps: {
       attributes: {
@@ -279,6 +283,7 @@ export const SmartTextEditor = forwardRef<SmartTextEditorHandle, RichTextEditorP
           ref={textareaRef}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onFocus={onFocus}
           placeholder={placeholder}
           className="w-full resize-y p-3 outline-none font-mono text-sm"
           style={{ minHeight }}

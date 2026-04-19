@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useCartStore, isCatalogueCartItem } from "@/store/cart-store";
 import { useCheckoutStore } from "@/store/checkout-store";
+import { trackInitiateCheckout, trackEvent } from "@/lib/marketing/event-tracker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -157,6 +158,9 @@ export default function CheckoutPage() {
     paymentTerms: string;
     canUseNetTerms: boolean;
   } | null>(null);
+  const [loyalty, setLoyalty] = useState<{ points: number; tier: string; kesValue: number } | null>(null);
+  const [redeemedPoints, setRedeemedPoints] = useState(0);
+  const [useLoyalty, setUseLoyalty] = useState(false);
 
   const shippingFee =
     delivery.method === "PICKUP"
@@ -175,16 +179,30 @@ export default function CheckoutPage() {
     ? Math.round(baseTotals.subtotalInclVat * (corporate.discountPercent / 100))
     : 0;
   const totals =
-    corporateDiscountKes === 0
+    corporateDiscountKes === 0 && !useLoyalty
       ? baseTotals
       : calculateCartTotals(
           items.map((i) => ({ unitPrice: i.unitPrice, quantity: i.quantity })),
           shippingFee,
-          couponDiscount + corporateDiscountKes
+          couponDiscount + corporateDiscountKes + (useLoyalty ? (loyalty?.kesValue ?? 0) : 0)
         );
 
   useEffect(() => {
-    if (items.length === 0) router.push("/cart");
+    if (items.length === 0) {
+      router.push("/cart");
+      return;
+    }
+
+    // Fire InitiateCheckout event
+    trackInitiateCheckout({
+      items: items.map(i => ({
+        id: i.productId || (i as any).catalogueItemId,
+        name: i.name,
+        price: i.unitPrice,
+        quantity: i.quantity
+      })),
+      total: totals.total
+    });
   }, [items.length, router]);
 
   useEffect(() => {
@@ -218,6 +236,44 @@ export default function CheckoutPage() {
       })
       .catch(() => {});
   }, [session?.user]);
+
+  // ABANDONED CART RECOVERY: Debounced contact saving
+  useEffect(() => {
+    const email = contact.email?.trim();
+    const phone = contact.phone?.trim();
+    if (!email && !phone) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const payload = {
+          sessionId: cartSessionId ?? undefined,
+          cartId: cartId ?? undefined,
+          email: email || undefined,
+          phone: phone || undefined,
+          items: items.map((i) =>
+            isCatalogueCartItem(i)
+              ? { catalogueItemId: i.catalogueItemId, quantity: i.quantity, unitPrice: i.unitPrice, name: i.name, slug: i.slug, type: "CATALOGUE" }
+              : { productId: i.productId, variantId: i.variantId, quantity: i.quantity, unitPrice: i.unitPrice, name: i.name, slug: i.slug }
+          ),
+        };
+        const res = await fetch("/api/checkout/cart", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.cartId && data.cartId !== cartId) {
+            setCartId(data.cartId, data.sessionId ?? data.cartId);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to sync abandoned cart data:", err);
+      }
+    }, 2000); // 2 second debounce
+
+    return () => clearTimeout(timer);
+  }, [contact.email, contact.phone, cartId, cartSessionId, items, setCartId]);
 
   useEffect(() => {
     if (step !== 1 || !session?.user) return;
@@ -409,7 +465,8 @@ export default function CheckoutPage() {
     deliveryZoneId: !isPickup ? (delivery.deliveryZoneId ?? undefined) : undefined,
     estimatedDelivery: !isPickup && delivery.estimatedDelivery ? delivery.estimatedDelivery : undefined,
     shippingCost: shippingFee,
-    discount: couponDiscount,
+    discount: totals.discountKes,
+    loyaltyPoints: useLoyalty ? loyalty?.points : 0,
   });
 
   const createOrder = async (): Promise<{ id: string; orderNumber: string } | null> => {
@@ -1004,7 +1061,16 @@ export default function CheckoutPage() {
                     </Button>
                     <Button
                       className="flex-1 bg-primary hover:bg-primary/90"
-                      onClick={() => setStep(3)}
+                      onClick={() => {
+                        setStep(3);
+                        // Fire AddPaymentInfo event
+                        trackEvent("AddPaymentInfo", {
+                          currency: "KES",
+                          value: totals.total,
+                          content_type: "product",
+                          content_ids: items.map(i => i.productId || (i as any).catalogueItemId)
+                        });
+                      }}
                       disabled={!canContinueStep2}
                     >
                       Continue to Payment →
@@ -1236,8 +1302,36 @@ export default function CheckoutPage() {
                       onChange={(e) => setTermsAccepted(e.target.checked)}
                       className="rounded border-input"
                     />
-                    <Label htmlFor="terms-step3">I agree to the Terms of Service and Refund Policy *</Label>
+                  <Label htmlFor="terms-step3">I agree to the Terms of Service and Refund Policy *</Label>
                   </div>
+
+                  {loyalty && loyalty.points > 0 && (
+                    <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-primary">
+                          <Smartphone className="h-5 w-5" />
+                          <span className="font-semibold">Loyalty Rewards</span>
+                        </div>
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                          {loyalty.tier}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <p className="text-muted-foreground">Available: <span className="font-medium text-foreground">{loyalty.points} points</span></p>
+                        <p className="text-muted-foreground">Worth: <span className="font-medium text-foreground">{formatPrice(loyalty.kesValue)}</span></p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setUseLoyalty(!useLoyalty)}
+                        className={`w-full py-2 px-4 rounded-lg border-2 transition-all flex items-center justify-between ${useLoyalty ? "border-primary bg-primary text-white" : "border-primary/30 text-primary hover:bg-primary/5"}`}
+                      >
+                        <span className="text-sm font-medium">{useLoyalty ? "Applied to Order" : "Apply Points to Order"}</span>
+                        {useLoyalty ? <Loader2 className="h-4 w-4 animate-spin" /> : <span>-{loyalty.points} pts</span>}
+                      </button>
+                      <p className="text-[10px] text-muted-foreground text-center">Points will be deducted upon successful order placement.</p>
+                    </div>
+                  )}
+
                   <div className="flex gap-2 pt-2">
                     <Button variant="outline" onClick={() => setStep(2)} className="flex-1">
                       ← Back

@@ -1,0 +1,103 @@
+{
+  "name": "Cron - Admin Session Cleanup (Hourly)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger-hourly",
+      "name": "Schedule: Hourly",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "adminUrl",
+              "value": "={{ $vars.ADMIN_URL || 'https://admin.printhub.africa' }}"
+            },
+            {
+              "name": "webhookSecret",
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "configure-vars",
+      "name": "Configure Vars",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "={{$node[\"Configure Vars\"].json[\"adminUrl\"]}}/api/n8n/cleanup-sessions",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{$node[\"Configure Vars\"].json[\"webhookSecret\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "http-cleanup-sessions",
+      "name": "HTTP: Cleanup Sessions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        450,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule: Hourly": {
+      "main": [
+        [
+          {
+            "node": "Configure Vars",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configure Vars": {
+      "main": [
+        [
+          {
+            "node": "HTTP: Cleanup Sessions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "meta": {
+    "instanceId": "printhub-n8n-production"
+  },
+  "settings": {
+    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+  }
+}

@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { sendEmail } from "@/lib/email";
+import { writeAudit } from "@/lib/audit";
 
-/** POST: Send a test email to the current user (or to the email in the body). Uses env RESEND_API_KEY. */
+/** POST: Send a test email to the current user (or to the email in the body). Uses DB settings with env fallback. */
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user || !["ADMIN", "SUPER_ADMIN"].includes(role ?? "")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -21,11 +22,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "No email address to send to" }, { status: 400 });
   }
   try {
-    await sendEmail({
+    const result = await sendEmail({
       to,
       subject: "PrintHub — Test email",
       html: "<p>This is a test email from your PrintHub admin notification settings. If you received this, email is configured correctly.</p>",
     });
+
+    if (result && 'success' in result && result.success === false) {
+      return NextResponse.json({ error: "Email configuration missing or invalid" }, { status: 400 });
+    }
+
+    await writeAudit({
+      userId: session.user.id,
+      action: "TEST_EMAIL_SENT",
+      entity: "SYSTEM",
+      details: `Test email sent to ${to}`,
+      request: req
+    });
+
     return NextResponse.json({ success: true, message: "Test email sent to " + to });
   } catch (e) {
     console.error("Test email error:", e);

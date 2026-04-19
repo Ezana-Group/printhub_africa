@@ -33,9 +33,10 @@ export async function POST(
     data: { paymentLinkToken: token, paymentLinkExpiresAt: expiresAt },
   });
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.VERCEL_URL ?? "";
-  const protocol = baseUrl.startsWith("http") ? "" : "https://";
-  const url = `${protocol}${baseUrl}/pay/${id}?token=${token}`;
+  // NEXT_PUBLIC_APP_URL is always set in Railway Variables; RAILWAY_PUBLIC_DOMAIN is the auto-provided fallback.
+  const rawDomain = process.env.NEXT_PUBLIC_APP_URL ?? process.env.RAILWAY_PUBLIC_DOMAIN ?? "";
+  const baseUrl = rawDomain.startsWith("http") ? rawDomain : `https://${rawDomain}`;
+  const url = `${baseUrl}/pay/${id}?token=${token}`;
 
   return NextResponse.json({ url });
 }

@@ -1,0 +1,159 @@
+{
+  "name": "99. PrintHub - Global Error Handler",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "error-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const errorData = $json.error || {};\nconst workflowData = $json.workflow || {};\nconst executionData = $json.execution || {};\n\nconst workflowName = workflowData.name || 'Unknown Workflow';\nconst workflowId = workflowData.id || 'N/A';\nconst executionId = executionData.id || 'N/A';\nconst failedNode = $json.node?.name || 'Unknown Node';\nconst errorMessage = errorData.message || 'No error message provided';\nconst executionLink = `https://n8n.printhub.africa/execution/${executionId}`;\n\n// Determine Urgency\nlet urgency = 'CRITICAL';\nif (workflowName.toLowerCase().includes('marketing') || workflowName.toLowerCase().includes('intelligence')) {\n  urgency = 'HIGH';\n}\n\nreturn {\n  urgency,\n  alertType: 'N8N WORKFLOW FAILURE',\n  workflowName,\n  errorMessage,\n  failedNode,\n  executionId,\n  executionLink,\n  message: `🚨 Workflow Failed: ${workflowName}\\n📍 Node: ${failedNode}\\n⚠️ Error: ${errorMessage}\\n🆔 Execution ID: ${executionId}`,\n  orderId: `wf-${workflowId}`,\n  customerId: 'n8n-system',\n  payload: {\n    workflowId,\n    executionId,\n    failedNode,\n    executionLink,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "id": "format-error-payload",
+      "name": "Format Error Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.N8N_BASE_URL || 'https://n8n.printhub.africa' }}/webhook/staff-alert",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "urgency",
+              "value": "={{ $json.urgency }}"
+            },
+            {
+              "name": "alertType",
+              "value": "={{ $json.alertType }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "orderId",
+              "value": "={{ $json.orderId }}"
+            },
+            {
+              "name": "customerId",
+              "value": "={{ $json.customerId }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "dispatch-to-staff-alert",
+      "name": "Dispatch to Staff Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        700,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.ADMIN_URL || 'https://admin.printhub.africa' }}/api/n8n/log-error",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
+            },
+            {
+              "name": "x-printhub-timestamp",
+              "value": "={{ Date.now().toString() }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "workflowName",
+              "value": "={{ $json.workflowName }}"
+            },
+            {
+              "name": "errorMessage",
+              "value": "={{ $json.errorMessage }}"
+            },
+            {
+              "name": "payload",
+              "value": "={{ JSON.stringify($json.payload) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "log-to-app-database",
+      "name": "Log to App Database",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        700,
+        200
+      ]
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Format Error Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error Payload": {
+      "main": [
+        [
+          {
+            "node": "Dispatch to Staff Alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log to App Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "instanceId": "printhub-n8n-production"
+  }
+}
+

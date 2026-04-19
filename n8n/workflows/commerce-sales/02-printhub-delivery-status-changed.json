@@ -1,0 +1,121 @@
+{
+  "name": "2. PrintHub - Order Status Changed (Multi-Channel Notify)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "order-status-changed",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "webhook-status-changed",
+      "name": "Webhook: Status Changed",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ],
+      "webhookId": "order-status-changed"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst signature = $node[\"Webhook: Status Changed\"].json.headers[\"x-printhub-signature\"];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node[\"Webhook: Status Changed\"].json.body)).digest('hex');\nif (signature !== hmac) throw new Error('Invalid');\nreturn $node[\"Webhook: Status Changed\"].json.body;"
+      },
+      "id": "verify-internal-auth",
+      "name": "Verify Internal Auth",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.newStatus}}",
+              "value2": "DISPATCHED"
+            }
+          ]
+        }
+      },
+      "id": "if-dispatched",
+      "name": "If Dispatched",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        540,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$vars.RESEND_API_KEY}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"from\": \"PrintHub Africa <shipping@printhub.africa>\", \"to\": \"{{$json.customerEmail}}\", \"subject\": \"Your order {{$json.orderNumber}} is on its way!\", \"html\": \"<p>Exciting news {{$json.customerName}}! Your order is dispatched. Tracking: {{$json.trackingNumber}}</p><p><a href='{{$vars.APP_URL}}/track/{{$json.orderNumber}}'>Track Order →</a></p>\" }"
+      },
+      "id": "email-dispatched",
+      "name": "Email: Dispatched",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        760,
+        200
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: Status Changed": {
+      "main": [
+        [
+          {
+            "node": "Verify Internal Auth",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Internal Auth": {
+      "main": [
+        [
+          {
+            "node": "If Dispatched",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Dispatched": {
+      "main": [
+        [
+          {
+            "node": "Email: Dispatched",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "meta": {
+    "instanceId": "printhub-n8n-production"
+  },
+  "settings": {
+    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+  }
+}

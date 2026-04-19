@@ -1,0 +1,402 @@
+{
+  "name": "AI-8 — Generate Lifestyle Mockups (DALL-E 3 + Stability AI)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-mockups",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "name": "Webhook or Execute Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ],
+      "webhookId": "generate-mockups"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst sig = $node['Webhook or Execute Trigger'].json.headers['x-printhub-signature'];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node['Webhook or Execute Trigger'].json.body)).digest('hex');\nif (sig !== hmac) throw new Error('Invalid signature');\nreturn $node['Webhook or Execute Trigger'].json.body;"
+      },
+      "name": "Verify Signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { productId, productName, category, platform } = $json;\nconst cat = category || 'product';\nconst instagramPrompt = `Professional lifestyle photograph of ${productName} in a modern Nairobi home or office setting. Clean, bright, aspirational. The ${cat} is displayed prominently. Warm Kenyan interior aesthetics. Shot on Canon 5D, f/2.8, natural light. No text, no watermarks, no people.`;\nconst linkedinPrompt = `Professional corporate photograph of ${productName} in a modern Nairobi office environment. Clean desk setup, corporate aesthetic. Professional lighting. B2B context. No text, no watermarks.`;\nconst tiktokPrompt = `Vibrant, eye-catching flat lay of ${productName}. Colourful props, trendy aesthetic, Gen-Z appeal. African textile patterns as background. Bright natural light. No text, no watermarks.`;\nreturn [{ productId, productName, category, instagramPrompt, linkedinPrompt, tiktokPrompt }];"
+      },
+      "name": "Build DALL-E Prompts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/images/generations",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$vars.OPENAI_API_KEY}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"model\": \"dall-e-3\", \"prompt\": \"{{ $json.instagramPrompt }}\", \"n\": 1, \"size\": \"1024x1024\", \"quality\": \"standard\", \"style\": \"natural\" }"
+      },
+      "name": "DALL-E 3: Instagram Mockup",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        860,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/images/generations",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$vars.OPENAI_API_KEY}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"model\": \"dall-e-3\", \"prompt\": \"{{ $json.linkedinPrompt }}\", \"n\": 1, \"size\": \"1792x1024\", \"quality\": \"standard\", \"style\": \"natural\" }"
+      },
+      "name": "DALL-E 3: LinkedIn Mockup",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        860,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/images/generations",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$vars.OPENAI_API_KEY}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"model\": \"dall-e-3\", \"prompt\": \"{{ $json.tiktokPrompt }}\", \"n\": 1, \"size\": \"1024x1792\", \"quality\": \"standard\", \"style\": \"natural\" }"
+      },
+      "name": "DALL-E 3: TikTok Mockup",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        860,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$vars.STABILITY_API_KEY}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"text_prompts\": [{ \"text\": \"{{ $json.instagramPrompt }} photorealistic\", \"weight\": 1 }, { \"text\": \"blurry, low quality, text, watermark, logo\", \"weight\": -1 }], \"cfg_scale\": 7, \"height\": 1024, \"width\": 1024, \"samples\": 2, \"steps\": 30 }"
+      },
+      "name": "Stability AI: Variations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        860,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const productId = $node['Build DALL-E Prompts'].json.productId;\nconst instagramPrompt = $node['Build DALL-E Prompts'].json.instagramPrompt;\nconst dalleIG = $node['DALL-E 3: Instagram Mockup'].json.data?.[0]?.url;\nconst dalleLinkedIn = $node['DALL-E 3: LinkedIn Mockup'].json.data?.[0]?.url;\nconst dalleTikTok = $node['DALL-E 3: TikTok Mockup'].json.data?.[0]?.url;\nconst stabilityImages = $node['Stability AI: Variations'].json.artifacts || [];\nconst imageUrls = [\n  dalleIG ? { url: dalleIG, platform: 'instagram', generator: 'dalle3', prompt: instagramPrompt } : null,\n  dalleLinkedIn ? { url: dalleLinkedIn, platform: 'linkedin', generator: 'dalle3', prompt: $node['Build DALL-E Prompts'].json.linkedinPrompt } : null,\n  dalleTikTok ? { url: dalleTikTok, platform: 'tiktok', generator: 'dalle3', prompt: $node['Build DALL-E Prompts'].json.tiktokPrompt } : null,\n  ...stabilityImages.map((img, i) => img.base64 ? null : { url: `data:image/png;base64,${img.base64}`, platform: 'variation', generator: 'stabilityai', prompt: instagramPrompt + ' variation ' + (i+1) })\n].filter(Boolean);\nreturn [{ productId, imageUrls }];"
+      },
+      "name": "Collect All Image URLs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1080,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://admin.printhub.africa/api/n8n/upload-mockup-images",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={{ JSON.stringify({ productId: $json.productId, imageUrls: $json.imageUrls }) }}"
+      },
+      "name": "Upload Mockups to R2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1300,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://admin.printhub.africa/api/n8n/save-mockup-urls",
+        "method": "PATCH",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={{ JSON.stringify({ productId: $node['Upload Mockups to R2'].json.results[0]?.productId || $node['Build DALL-E Prompts'].json.productId, mockups: $node['Upload Mockups to R2'].json.results }) }}"
+      },
+      "name": "Save Mockup URLs to DB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1520,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$vars.RESEND_API_KEY}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"from\": \"PrintHub AI <ai@printhub.africa>\", \"to\": \"{{$vars.ADMIN_EMAIL}}\", \"subject\": \"Mockups Ready for Approval: {{$node['Build DALL-E Prompts'].json.productName}}\", \"html\": \"<h2>Lifestyle Mockups Ready</h2><p>{{$node['Upload Mockups to R2'].json.results.length}} mockups generated for <strong>{{$node['Build DALL-E Prompts'].json.productName}}</strong>.</p><p><a href='https://admin.printhub.africa/admin/ai'>Approve in AI Control Centre →</a></p>\" }"
+      },
+      "name": "Email Admin: Mockups Ready",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1740,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://printhub.africa/api/n8n/log-error",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{$vars.N8N_WEBHOOK_SECRET}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "body",
+              "value": "={{ JSON.stringify({ workflowName: 'AI-8 Lifestyle Mockups', errorMessage: $json.message || 'Unknown error', node: $json.node || 'Unknown node', executionId: $execution.id }) }}"
+            }
+          ]
+        }
+      },
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1740,
+        600
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook or Execute Trigger": {
+      "main": [
+        [
+          {
+            "node": "Verify Signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Signature": {
+      "main": [
+        [
+          {
+            "node": "Build DALL-E Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build DALL-E Prompts": {
+      "main": [
+        [
+          {
+            "node": "DALL-E 3: Instagram Mockup",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "DALL-E 3: LinkedIn Mockup",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "DALL-E 3: TikTok Mockup",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Stability AI: Variations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DALL-E 3: Instagram Mockup": {
+      "main": [
+        [
+          {
+            "node": "Collect All Image URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DALL-E 3: LinkedIn Mockup": {
+      "main": [
+        [
+          {
+            "node": "Collect All Image URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DALL-E 3: TikTok Mockup": {
+      "main": [
+        [
+          {
+            "node": "Collect All Image URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stability AI: Variations": {
+      "main": [
+        [
+          {
+            "node": "Collect All Image URLs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect All Image URLs": {
+      "main": [
+        [
+          {
+            "node": "Upload Mockups to R2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Mockups to R2": {
+      "main": [
+        [
+          {
+            "node": "Save Mockup URLs to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "error": [
+        [
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Mockup URLs to DB": {
+      "main": [
+        [
+          {
+            "node": "Email Admin: Mockups Ready",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "error": [
+        [
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+  }
+}

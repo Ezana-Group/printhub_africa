@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import { getObjectBuffer, headObject, publicFileUrl, isR2Configured } from "@/lib/r2";
 import { scanFile } from "@/lib/virustotal";
@@ -13,36 +14,49 @@ const VALIDATION_MAX_BYTES = 50 * 1024 * 1024;
 const VT_MAX_BYTES = 32 * 1024 * 1024;
 
 async function processUploadAsync(file: UploadedFile): Promise<void> {
+  const isProd = process.env.NODE_ENV === "production";
+  const apiKey = process.env.VIRUSTOTAL_API_KEY;
+
   try {
-    if (
-      process.env.VIRUSTOTAL_API_KEY &&
-      file.size <= VT_MAX_BYTES &&
-      file.bucket === "private" &&
-      file.storageKey
-    ) {
+    if (!apiKey) {
+      if (isProd) {
+        throw new Error("VIRUSTOTAL_API_KEY is mandatory in production.");
+      }
+      // Dev bypass
+      await prisma.uploadedFile.update({
+        where: { id: file.id },
+        data: {
+          status: "UPLOADED",
+          virusScanStatus: "SKIPPED",
+          virusScanAt: new Date(),
+        },
+      });
+      return;
+    }
+
+    if (file.size <= VT_MAX_BYTES && file.bucket === "private" && file.storageKey) {
       await prisma.uploadedFile.update({
         where: { id: file.id },
         data: { status: "VIRUS_SCANNING" },
       });
       const buf = await getObjectBuffer("private", file.storageKey);
       if (buf) {
-        const result = await scanFile(
-          buf,
-          file.originalName,
-          process.env.VIRUSTOTAL_API_KEY
-        );
+        const result = await scanFile(buf, file.originalName, apiKey);
+        
         const status =
           result.status === "clean"
             ? "CLEAN"
             : result.status === "infected"
               ? "INFECTED"
               : "UPLOADED";
+              
         const virusScanStatus =
           result.status === "clean"
             ? "clean"
             : result.status === "infected"
               ? "infected"
               : "error";
+
         await prisma.uploadedFile.update({
           where: { id: file.id },
           data: {
@@ -53,16 +67,18 @@ async function processUploadAsync(file: UploadedFile): Promise<void> {
         });
         return;
       }
-      await prisma.uploadedFile.update({
-        where: { id: file.id },
-        data: {
-          status: "UPLOADED",
-          virusScanStatus: "error",
-          virusScanAt: new Date(),
-        },
-      });
-      return;
     }
+    
+    // File exceeds limit or storage issue
+    await prisma.uploadedFile.update({
+      where: { id: file.id },
+      data: {
+        status: "UPLOADED",
+        virusScanStatus: file.size > VT_MAX_BYTES ? "error" : "error",
+        virusScanAt: new Date(),
+      },
+    });
+
   } catch (e) {
     console.error("Virus scan error for upload", file.id, e);
     await prisma.uploadedFile.update({
@@ -73,6 +89,7 @@ async function processUploadAsync(file: UploadedFile): Promise<void> {
         virusScanAt: new Date(),
       },
     });
+    if (isProd) throw e; // Reraise in production to trigger visibility
   }
 }
 
@@ -129,8 +146,11 @@ export async function POST(req: Request) {
 
     // When upload has an owner, only that user may confirm (defence in depth; presign is session-gated).
     if (file.userId) {
-      const session = await getServerSession(authOptions);
-      if (!session?.user?.id || file.userId !== session.user.id) {
+      // Try both sessions — admin uploads originate from the admin portal (different session cookie)
+      const adminSession = await getServerSession(authOptionsAdmin);
+      const customerSession = await getServerSession(authOptionsCustomer);
+      const userId = adminSession?.user?.id || customerSession?.user?.id;
+      if (!userId || file.userId !== userId) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
     }

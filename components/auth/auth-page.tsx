@@ -84,6 +84,23 @@ function LoginMessagesWithParams({ error }: { error: string }) {
 }
 
 /**
+ * Helper to ensure a string is a legitimate asset URL (starts with /, http, or data:).
+ * Prevents "Failed to load resource: 404 (login)" when config is invalid.
+ */
+function isValidAssetUrl(url: string | null | undefined): boolean {
+  if (!url || typeof url !== "string") return false;
+  const trimmed = url.trim();
+  if (trimmed.length === 0) return false;
+  // If it's just "login" or similar, it's likely a misconfiguration
+  return (
+    trimmed.startsWith("/") ||
+    trimmed.startsWith("http") ||
+    trimmed.startsWith("data:") ||
+    trimmed.includes(".") // Catch paths like "bg.jpg"
+  );
+}
+
+/**
  * Login form is rendered immediately (no Suspense around it) so E2E and WebKit
  * see #email / #password on first paint. Only the URL-dependent messages use Suspense.
  */
@@ -162,10 +179,17 @@ export function AuthPage({
   const [registerPassword, setRegisterPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
-  const [marketingConsent, setMarketingConsent] = useState(false);
   const [registerLoading, setRegisterLoading] = useState(false);
   const [registerError, setRegisterError] = useState("");
   const [registerSuccess, setRegisterSuccess] = useState(false);
+  const [referralCode, setReferralCode] = useState("");
+  const [marketingConsent, setMarketingConsent] = useState(false);
+
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) setReferralCode(ref);
+  }, [searchParams]);
 
   const passwordsMatch = registerPassword === confirmPassword;
   const confirmPasswordTouched = confirmPassword.length > 0;
@@ -175,33 +199,31 @@ export function AuthPage({
     setLoginError("");
     setLoginLoading(true);
     try {
-      const res = await fetch("/api/auth/validate-login", {
+      const res = await fetch("/api/auth/customer/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: loginEmail, password: loginPassword }),
       });
       const data = await res.json().catch(() => ({}));
-      if (res.ok && data.requires2FA && data.token) {
-        const callbackUrl = getCallbackUrl();
-        window.location.href = `/login/verify?t=${encodeURIComponent(data.token)}&callbackUrl=${encodeURIComponent(callbackUrl)}`;
-        return;
-      }
-      if (res.ok && !data.requires2FA) {
-        const result = await signIn("credentials", {
-          email: loginEmail,
-          password: loginPassword,
-          callbackUrl: getCallbackUrl(),
-          redirect: false,
-        });
+      if (!res.ok) {
+        setLoginError(data.error ?? "Invalid email or password.");
         setLoginLoading(false);
-        if (result?.ok && result?.url) {
-          window.location.href = result.url;
-          return;
-        }
-        setLoginError(result?.error === "CredentialsSignin" ? "Invalid email or password." : result?.error ?? "Sign in failed.");
         return;
       }
-      setLoginError(data.error ?? "Invalid email or password.");
+      
+      const result = await signIn("credentials", {
+        email: loginEmail,
+        password: loginPassword,
+        callbackUrl: getCallbackUrl(),
+        redirect: false,
+      });
+
+      setLoginLoading(false);
+      if (result?.ok && result?.url) {
+        window.location.href = result.url;
+        return;
+      }
+      setLoginError(result?.error === "CredentialsSignin" ? "Invalid email or password." : result?.error ?? "Sign in failed.");
     } catch {
       setLoginError("Something went wrong");
     } finally {
@@ -233,6 +255,7 @@ export function AuthPage({
           lastName: lastName.trim(),
           acceptTerms: true,
           marketingConsent,
+          referralCode: referralCode.trim() || undefined,
         }),
       });
       const data = await res.json();
@@ -256,8 +279,9 @@ export function AuthPage({
     }
   };
 
-  const asideStyle: React.CSSProperties = panel.backgroundImagePath
-    ? { backgroundImage: `url(${panel.backgroundImagePath})`, backgroundSize: "cover", backgroundPosition: "center" }
+  const hasValidBg = isValidAssetUrl(panel.backgroundImagePath);
+  const asideStyle: React.CSSProperties = hasValidBg
+    ? { backgroundImage: `url("${panel.backgroundImagePath}")`, backgroundSize: "cover", backgroundPosition: "center" }
     : { backgroundColor: panel.backgroundColor };
 
   const asideContent = (
@@ -273,11 +297,11 @@ export function AuthPage({
         </Link>
       </div>
       <div className="relative mt-6 space-y-3 flex-1 flex flex-col justify-center">
-        {currentSlide?.imagePath && (
+        {isValidAssetUrl(currentSlide?.imagePath) && (
           <div className="relative w-full aspect-video max-h-32 rounded-lg overflow-hidden mb-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={currentSlide.imagePath}
+              src={currentSlide.imagePath as string}
               alt=""
               className="object-cover w-full h-full"
             />
@@ -605,6 +629,24 @@ export function AuthPage({
                         style={{ outline: "none", boxShadow: "0 0 0 0 transparent" }}
                       />
                     </div>
+
+                    <div className="space-y-2">
+                       <Label
+                         htmlFor="referralCode"
+                         className="text-[12px] font-medium tracking-[0.03em] uppercase text-muted-foreground"
+                       >
+                         Referral Code (Optional)
+                       </Label>
+                       <Input
+                         id="referralCode"
+                         type="text"
+                         placeholder="e.g. PRINT-123"
+                         value={referralCode}
+                         onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                         className="h-10 rounded-lg border border-border/70 bg-white text-sm focus-visible:ring-offset-0 focus-visible:ring-[1.5px]"
+                         style={{ outline: "none", boxShadow: "0 0 0 0 transparent" }}
+                       />
+                     </div>
 
                     <div className="space-y-2">
                       <Label

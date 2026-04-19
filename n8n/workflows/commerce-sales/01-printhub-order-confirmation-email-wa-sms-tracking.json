@@ -1,0 +1,184 @@
+{
+  "name": "1. PrintHub - Order Confirmation (Email + WA + SMS + Tracking)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "order-confirmed",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "webhook-order-confirmed",
+      "name": "Webhook: Order Confirmed",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ],
+      "webhookId": "order-confirmed"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst signature = $node[\"Webhook: Order Confirmed\"].json.headers[\"x-printhub-signature\"];\nconst hmac = crypto.createHmac('sha256', process.env.N8N_WEBHOOK_SECRET).update(JSON.stringify($node[\"Webhook: Order Confirmed\"].json.body)).digest('hex');\nif (signature !== hmac) throw new Error('Invalid Signature');\nreturn $node[\"Webhook: Order Confirmed\"].json.body;"
+      },
+      "id": "verify-signature",
+      "name": "Verify Signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.resend.com/emails",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$vars.RESEND_API_KEY}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"from\": \"PrintHub Africa <orders@printhub.africa>\", \"to\": \"{{$json.customerEmail}}\", \"subject\": \"Order Confirmed: {{$json.orderNumber}}\", \"html\": \"<div style='font-family:sans-serif;max-width:600px;margin:0 auto'><h2>Order Confirmed!</h2><p>Hi {{$json.customerName}}, your order <strong>{{$json.orderNumber}}</strong> (KES {{$json.total}}) is confirmed! We will notify you when it's dispatched.</p><p><a href='{{$vars.APP_URL}}/track/{{$json.orderNumber}}' style='background:#f97316;color:white;padding:10px 20px;border-radius:5px;text-decoration:none'>Track Your Order</a></p></div>\" }"
+      },
+      "id": "resend-email",
+      "name": "Resend: Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        540,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://graph.facebook.com/v19.0/{{$vars.WHATSAPP_PHONE_NUMBER_ID}}/messages",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$vars.WHATSAPP_ACCESS_TOKEN}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{$json.customerPhone}}\", \"type\": \"template\", \"template\": { \"name\": \"order_confirmation\", \"language\": { \"code\": \"en\" }, \"components\": [ { \"type\": \"body\", \"parameters\": [ { \"type\": \"text\", \"text\": \"{{$json.customerName}}\" }, { \"type\": \"text\", \"text\": \"{{$json.orderNumber}}\" } ] } ] } }"
+      },
+      "id": "whatsapp-notify",
+      "name": "WhatsApp: Notify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        750,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.africastalking.com/version1/messaging",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apiKey",
+              "value": "={{$vars.AT_API_KEY}}"
+            }
+          ]
+        },
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "username",
+              "value": "={{$vars.AT_USERNAME}}"
+            },
+            {
+              "name": "to",
+              "value": "={{$json.customerPhone}}"
+            },
+            {
+              "name": "message",
+              "value": "=Hi {{$json.customerName}}, order {{$json.orderNumber}} confirmed. Tracking: printhub.africa/track/{{$json.orderNumber}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "sms-africas-talking",
+      "name": "SMS: Africa's Talking",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        540,
+        450
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://graph.facebook.com/v19.0/{{$vars.META_PIXEL_ID}}/events",
+        "method": "POST",
+        "bodyParametersJson": "={ \"data\": [ { \"event_name\": \"Purchase\", \"event_time\": {{Math.floor(Date.now()/1000)}}, \"action_source\": \"website\", \"user_data\": { \"em\": [\"{{$json.customerEmail}}\"], \"ph\": [\"{{$json.customerPhone}}\"] }, \"custom_data\": { \"value\": {{$json.total}}, \"currency\": \"KES\", \"order_id\": \"{{$json.orderNumber}}\" } } ], \"access_token\": \"{{$vars.META_ACCESS_TOKEN}}\" }"
+      },
+      "id": "meta-capi-purchase",
+      "name": "Meta CAPI: Purchase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        950,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: Order Confirmed": {
+      "main": [
+        [
+          {
+            "node": "Verify Signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Signature": {
+      "main": [
+        [
+          {
+            "node": "Resend: Email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "WhatsApp: Notify",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SMS: Africa's Talking",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Meta CAPI: Purchase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "meta": {
+    "instanceId": "printhub-n8n-production"
+  },
+  "settings": {
+    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+  }
+}

@@ -6,6 +6,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
+import { trackPurchase } from "@/lib/marketing/event-tracker";
 
 interface ConfirmationOrder {
   id: string;
@@ -45,13 +46,31 @@ export default function OrderConfirmationPage() {
   );
   const pollAttempts = useRef(0);
   const pesapalOrderTrackingIdRef = useRef<string | null>(null);
+  const trackedRef = useRef(false);
 
   useEffect(() => {
     if (!orderId) return;
     fetch(`/api/orders/${orderId}/confirmation`)
       .then((r) => r.json())
-      .then((data) => {
-        if (data.orderNumber) setOrder(data);
+      .then((data: any) => {
+        if (data.orderNumber) {
+          setOrder(data);
+          
+          // Fire Purchase Event once order is loaded
+          if (!trackedRef.current && data.status !== "CANCELLED") {
+             trackPurchase({
+               id: data.id,
+               total: data.total,
+               items: data.items.map((i: any) => ({
+                 productId: i.id,
+                 name: i.productName,
+                 price: i.unitPrice,
+                 quantity: i.quantity
+               }))
+             });
+             trackedRef.current = true;
+          }
+        }
         if (data.status === "CONFIRMED") setPesapalState("confirmed");
         if (data.pesapalOrderTrackingId) pesapalOrderTrackingIdRef.current = data.pesapalOrderTrackingId;
       })

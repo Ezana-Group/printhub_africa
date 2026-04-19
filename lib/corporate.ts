@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsCustomer } from "@/lib/auth-customer";
 import type { CorporateAccount, CorporateTeamMember, CorporateTier } from "@prisma/client";
 
 /** Get the corporate account for the current session user (via active team membership). */
 export async function getCorporateAccount() {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   if (!session?.user?.id) return null;
 
   const membership = await prisma.corporateTeamMember.findFirst({
@@ -23,7 +23,7 @@ export async function getCorporateAccount() {
 
 /** Get the team member record for the current user within a corporate account. */
 export async function getCorporateMember(corporateId: string) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   if (!session?.user?.id) return null;
 
   return prisma.corporateTeamMember.findFirst({
@@ -33,7 +33,7 @@ export async function getCorporateMember(corporateId: string) {
 
 /** Check if current user is OWNER or ADMIN of their corporate account. */
 export async function isCorporateAdmin(): Promise<boolean> {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsCustomer);
   if (!session?.user?.id) return false;
 
   const member = await prisma.corporateTeamMember.findFirst({

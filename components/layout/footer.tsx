@@ -60,6 +60,7 @@ const FOOTER_COLUMNS: { title: string; links: FooterLink[] }[] = [
       { label: "Track Order", href: "/track" },
       { label: "FAQ", href: "/faq" },
       { label: "Refund Policy", href: "/refund-policy" },
+      { label: "Shipping Policy", href: "/shipping-policy" },
     ],
   },
 ];

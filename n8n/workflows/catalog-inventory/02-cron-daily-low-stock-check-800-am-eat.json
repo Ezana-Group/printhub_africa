@@ -1,0 +1,192 @@
+{
+  "name": "2. Cron - Daily Low Stock Check (8:00 AM EAT)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger-8am",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$vars.ADMIN_URL}}/api/n8n/stock-levels",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{$vars.N8N_WEBHOOK_SECRET}}"
+            }
+          ]
+        }
+      },
+      "id": "pull-inventory-audit",
+      "name": "Pull Inventory Audit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.stock}}",
+              "operation": "smaller",
+              "value2": 5
+            }
+          ]
+        }
+      },
+      "id": "filter-stock-low",
+      "name": "Filter: Stock < 5",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        540,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://admin.printhub.africa/api/admin/content/templates/fetch/staff-alert-whatsapp",
+        "method": "GET",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{$vars.N8N_WEBHOOK_SECRET}}"
+            }
+          ]
+        }
+      },
+      "name": "Fetch Template",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        760,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{$vars.WHATSAPP_PHONE_NUMBER_ID}}/messages",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$vars.WHATSAPP_ACCESS_TOKEN}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"messaging_product\": \"whatsapp\", \"to\": \"{{$vars.STAFF_WHATSAPP_NUMBER}}\", \"type\": \"text\", \"text\": { \"body\": \"{{ $node['Fetch Template'].json.body.replace('{{title}}', 'LOW STOCK ALERT').replace('{{message}}', $node['Filter: Stock < 5'].json.name + ' (SKU: ' + $node['Filter: Stock < 5'].json.sku + ') has only ' + $node['Filter: Stock < 5'].json.stock + ' units left.').replace('{{actionUrl}}', $vars.ADMIN_URL + '/admin/inventory') }}\" } }"
+      },
+      "id": "whatsapp-notify-staff",
+      "name": "WhatsApp: Notify Staff",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        980,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$vars.ADMIN_URL}}/api/n8n/log",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{$vars.N8N_WEBHOOK_SECRET}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={{ JSON.stringify({\n  action: 'LOW_STOCK_ALERT',\n  details: $json\n}) }}"
+      },
+      "id": "audit-log-low-stock",
+      "name": "AuditLog: Low Stock Flagged",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        980,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Pull Inventory Audit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pull Inventory Audit": {
+      "main": [
+        [
+          {
+            "node": "Filter: Stock < 5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter: Stock < 5": {
+      "main": [
+        [
+          {
+            "node": "Fetch Template",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Fetch Template": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp: Notify Staff",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AuditLog: Low Stock Flagged",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "meta": {
+    "instanceId": "printhub-n8n-production"
+  },
+  "settings": {
+    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+  }
+}

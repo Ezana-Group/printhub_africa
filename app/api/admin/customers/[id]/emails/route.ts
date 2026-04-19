@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { Resend } from "resend";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { prisma } from "@/lib/prisma";
 import { canAccessRoute } from "@/lib/admin-permissions";
 
@@ -58,7 +58,7 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const user = (session?.user as SessionUser | undefined) ?? {};
 
   if (!user.id || !user.role || !ADMIN_ROLES.includes(user.role)) {
@@ -161,7 +161,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const user = (session?.user as SessionUser | undefined) ?? {};
 
   if (!user.id || !user.role || !ADMIN_ROLES.includes(user.role)) {

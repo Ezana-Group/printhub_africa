@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptionsAdmin } from "@/lib/auth-admin";
 import { sendSMS } from "@/lib/africas-talking";
+import { writeAudit } from "@/lib/audit";
 
-/** POST: Send a test SMS. Body: { to?: string } — phone number (defaults to current user's phone if set). Uses env AT_API_KEY / AT_USERNAME. */
+/** POST: Send a test SMS. Body: { to?: string } — phone number (defaults to current user's phone if set). Uses DB settings with env fallback. */
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptionsAdmin);
   const role = (session?.user as { role?: string })?.role;
   if (!session?.user || !["ADMIN", "SUPER_ADMIN"].includes(role ?? "")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -26,7 +27,16 @@ export async function POST(req: Request) {
   }
   const ok = await sendSMS(to, "PrintHub test SMS. Notifications are configured.");
   if (!ok) {
-    return NextResponse.json({ error: "Failed to send test SMS (check AT_API_KEY / AT_USERNAME)" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to send test SMS (check API credentials in settings)" }, { status: 500 });
   }
+
+  await writeAudit({
+    userId: session.user.id,
+    action: "TEST_SMS_SENT",
+    entity: "SYSTEM",
+    details: `Test SMS sent to ${to}`,
+    request: req
+  });
+
   return NextResponse.json({ success: true, message: "Test SMS sent to " + to });
 }

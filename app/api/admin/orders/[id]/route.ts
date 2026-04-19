@@ -38,7 +38,7 @@ export async function GET(
     include: {
       items: {
         include: {
-          product: { select: { name: true, images: true, sku: true } },
+          product: { select: { name: true, images: true, sku: true, productionFiles: true } },
           productVariant: { select: { name: true, sku: true, attributes: true, image: true } },
         },
       },
@@ -52,7 +52,30 @@ export async function GET(
     },
   });
   if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
-  return NextResponse.json(order);
+
+  // Fetch associated UploadedFiles
+  const fileIds = order.items.map((item) => item.uploadedFileId).filter(Boolean) as string[];
+  let uploadedFiles: any[] = [];
+  if (fileIds.length > 0) {
+    uploadedFiles = await prisma.uploadedFile.findMany({
+      where: { id: { in: fileIds } },
+    });
+  }
+
+  // Attach them to items
+  const itemsWithFiles = order.items.map((item) => {
+    return {
+      ...item,
+      uploadedFile: item.uploadedFileId ? uploadedFiles.find((f) => f.id === item.uploadedFileId) : null,
+    };
+  });
+
+  const fullOrder = {
+    ...order,
+    items: itemsWithFiles,
+  };
+
+  return NextResponse.json(fullOrder);
 }
 
 export async function PATCH(

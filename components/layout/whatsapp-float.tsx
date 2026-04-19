@@ -3,9 +3,18 @@
 const DEFAULT_WHATSAPP = "254700000000";
 const MESSAGE = "Hi, I'd like to enquire about your printing services.";
 
-export function WhatsAppFloat({ whatsapp }: { whatsapp?: string | null }) {
+export function WhatsAppFloat({ 
+  whatsapp, 
+  message, 
+  visible = true 
+}: { 
+  whatsapp?: string | null;
+  message?: string | null;
+  visible?: boolean;
+}) {
+  if (!visible) return null;
   const digits = (whatsapp ?? DEFAULT_WHATSAPP).replace(/\D/g, "") || DEFAULT_WHATSAPP;
-  const url = `https://wa.me/${digits}?text=${encodeURIComponent(MESSAGE)}`;
+  const url = `https://wa.me/${digits}?text=${encodeURIComponent(message ?? MESSAGE)}`;
 
   return (
     <a

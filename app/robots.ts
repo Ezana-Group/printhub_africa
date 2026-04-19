@@ -44,13 +44,26 @@ function parseRobotsTxt(txt: string): MetadataRoute.Robots | null {
 
 export default async function robots(): Promise<MetadataRoute.Robots> {
   try {
-    const seo = await prisma.seoSettings.findUnique({ where: { id: "default" } });
-    if (seo?.robotsTxt) {
-      const parsed = parseRobotsTxt(seo.robotsTxt);
-      if (parsed) return parsed;
+    const settings = await prisma.businessSettings.findUnique({ 
+      where: { id: "default" },
+      select: { robotsTxt: true, canonicalDomain: true }
+    }).catch(() => null);
+
+    const base = settings?.canonicalDomain || process.env.NEXT_PUBLIC_APP_URL || "https://printhub.africa";
+    const currentDefaultRobots = {
+      ...defaultRobots,
+      sitemap: `${base}/sitemap.xml`,
+    };
+
+    if (settings?.robotsTxt) {
+      const parsed = parseRobotsTxt(settings.robotsTxt);
+      if (parsed) return {
+        ...parsed,
+        sitemap: parsed.sitemap || currentDefaultRobots.sitemap,
+      };
     }
+    return currentDefaultRobots;
   } catch {
-    // fallback
+    return defaultRobots;
   }
-  return defaultRobots;
 }

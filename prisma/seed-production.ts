@@ -1,39 +1,51 @@
 import { PrismaClient } from '@prisma/client'
+import { Pool } from 'pg'
+import { PrismaPg } from '@prisma/adapter-pg'
 import bcrypt from 'bcryptjs'
 
-const prisma = new PrismaClient()
+const connectionString = process.env.DATABASE_URL || process.env.DATABASE_URL_UNPOOLED
+if (!connectionString) {
+  console.error('⚠️ DATABASE_URL is not set. Skipping seed.')
+  process.exit(0) // Exit 0 so the container still starts
+}
+const pool = new Pool({ connectionString })
+const adapter = new PrismaPg(pool)
+const prisma = new PrismaClient({ adapter })
 
 async function main() {
   console.log('🌱 Starting production seed...')
 
   // 1. Create admin user if not exists
-  const adminEmail = process.env.ADMIN_EMAIL
-  const adminPassword = process.env.ADMIN_PASSWORD
+  const adminEmail = process.env.ADMIN_EMAIL || process.env.SUPER_ADMIN_EMAIL
+  // Support both ADMIN_PASSWORD and SUPER_ADMIN_PASSWORD (Railway env var naming)
+  const adminPassword = process.env.ADMIN_PASSWORD || process.env.SUPER_ADMIN_PASSWORD
 
   if (!adminEmail || !adminPassword) {
-    console.error('❌ Missing ADMIN_EMAIL or ADMIN_PASSWORD environment variables.')
-    process.exit(1)
+    console.warn('⚠️ Missing ADMIN_EMAIL/SUPER_ADMIN_EMAIL or ADMIN_PASSWORD/SUPER_ADMIN_PASSWORD — skipping admin user seed.')
+    // Do NOT process.exit(1) here — let the server start without seeding
   }
 
-  const existingAdmin = await prisma.user.findUnique({
-    where: { email: adminEmail },
-  })
-
-  if (!existingAdmin) {
-    console.log(`Creating admin user: ${adminEmail}`)
-    const passwordHash = await bcrypt.hash(adminPassword, 10)
-    await prisma.user.create({
-      data: {
-        email: adminEmail,
-        passwordHash,
-        role: 'ADMIN',
-        status: 'ACTIVE',
-        emailVerified: new Date(),
-      },
+  if (adminEmail && adminPassword) {
+    const existingAdmin = await prisma.user.findUnique({
+      where: { email: adminEmail },
     })
-    console.log('✅ Admin user created.')
-  } else {
-    console.log('ℹ️ Admin user already exists. Skipping.')
+
+    if (!existingAdmin) {
+      console.log(`Creating admin user: ${adminEmail}`)
+      const passwordHash = await bcrypt.hash(adminPassword, 10)
+      await prisma.user.create({
+        data: {
+          email: adminEmail,
+          passwordHash,
+          role: 'ADMIN',
+          status: 'ACTIVE',
+          emailVerified: new Date(),
+        },
+      })
+      console.log('✅ Admin user created.')
+    } else {
+      console.log('ℹ️ Admin user already exists. Skipping.')
+    }
   }
 
   // 2. Seed legal pages if not exists
@@ -74,8 +86,9 @@ async function main() {
 
 main()
   .catch((e) => {
-    console.error('❌ Seed failed:', e)
-    process.exit(1)
+    // Log the error but exit 0 so the container can still start
+    console.error('⚠️ Seed encountered an error (non-fatal):', e.message || e)
+    process.exit(0)
   })
   .finally(async () => {
     await prisma.$disconnect()

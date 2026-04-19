@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState, useMemo } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { ProductCard } from "@/components/shop/product-card";
+import { trackSearch } from "@/lib/marketing/event-tracker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -120,7 +121,7 @@ export function ShopContent() {
   const [sliderRange, setSliderRange] = useState<[number, number] | null>(null);
 
   useEffect(() => {
-    fetch("/api/categories")
+    fetch("/api/products/categories")
       .then((r) => r.json())
       .then((list) => setCategories(Array.isArray(list) ? list : []))
       .catch(() => setCategories([]));
@@ -189,6 +190,15 @@ export function ShopContent() {
     }
   }, [q, category, sort, inStock, selectedTags, minPrice, maxPrice, page]);
 
+  // Track Search Event
+  useEffect(() => {
+    if (!q || q.length < 3) return;
+    const timer = setTimeout(() => {
+      trackSearch(q);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [q]);
+
   // Derived Values
   const allAvailableTags = useMemo(() => {
     const set = new Set<string>();
@@ -210,12 +220,35 @@ export function ShopContent() {
     }
   }, [loading, allProducts, sliderRange, minPrice, maxPrice, absMin, absMax]);
 
-  // Helper to get cat and children slugs
+  // Helper to get cat and ALL descendant slugs (recursive)
   const getCategorySlugs = useCallback((slug: string) => {
-    const parent = categories.find(c => c.slug === slug);
-    if (!parent) return [slug];
-    const childrenSlugs = categories.filter(c => c.parentId === parent.id).map(c => c.slug);
-    return [slug, ...childrenSlugs];
+    const findInTree = (nodes: Category[], targetSlug: string): Category | undefined => {
+      for (const node of nodes) {
+        if (node.slug === targetSlug) return node;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if ((node as any).children) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const found = findInTree((node as any).children, targetSlug);
+          if (found) return found;
+        }
+      }
+      return undefined;
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const getDescendants = (node: any): string[] => {
+      let slugs = [node.slug];
+      if (node.children) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        node.children.forEach((child: any) => {
+          slugs = [...slugs, ...getDescendants(child)];
+        });
+      }
+      return slugs;
+    };
+
+    const targetNode = findInTree(categories, slug);
+    return targetNode ? getDescendants(targetNode) : [slug];
   }, [categories]);
 
   // Client-Side Apply Filters
@@ -247,10 +280,20 @@ export function ShopContent() {
 
     // Calculate dynamic category counts
     const counts: Record<string, number> = {};
-    categories.forEach(c => {
-       const slugs = [c.slug, ...categories.filter(sub => sub.parentId === c.id).map(s => s.slug)];
-       counts[c.slug] = filtered.filter(p => slugs.includes(p.category.slug)).length;
-    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const countNode = (node: any) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const getDeepSlugs = (n: any): string[] => {
+         let s = [n.slug];
+         // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         if (n.children) n.children.forEach((c: any) => s = [...s, ...getDeepSlugs(c)]);
+         return s;
+      };
+      const allSlugs = getDeepSlugs(node);
+      counts[node.slug] = filtered.filter(p => allSlugs.includes(p.category.slug)).length;
+      if (node.children) node.children.forEach(countNode);
+    };
+    categories.forEach(countNode);
 
     // Finally apply Category Filter
     if (category) {
@@ -324,40 +367,35 @@ export function ShopContent() {
             All Products
           </button>
           
-          {categories.filter(c => !c.parentId).map(c => {
-            const count = categoryCounts[c.slug] || 0;
-            const subcats = categories.filter(sub => sub.parentId === c.id);
-            return (
-              <div key={c.id}>
-                <button 
-                  onClick={() => { setCategory(c.slug); setPage(1); }}
-                  disabled={count === 0}
-                  className={cn("text-sm flex w-full items-center justify-between text-left", count === 0 ? "opacity-50" : "", category === c.slug ? "text-[#FF4D00] font-medium" : "text-slate-600 hover:text-slate-900", "mb-1.5 mt-1.5")}
-                >
-                  <span>{c.name}</span>
-                  <span className="text-xs text-slate-400">({count})</span>
-                </button>
-                {/* Subcategories */}
-                {subcats.length > 0 && (
-                  <div className="pl-3 mt-1.5 space-y-1.5 border-l border-slate-100 ml-2">
-                     {subcats.map(sub => {
-                       const subCount = categoryCounts[sub.slug] || 0;
-                       return (
-                         <button 
-                           key={sub.id}
-                           disabled={subCount === 0}
-                           onClick={() => { setCategory(sub.slug); setPage(1); }}
-                           className={cn("text-sm flex w-full py-0.5 items-center justify-between text-left", subCount === 0 ? "opacity-50" : "", category === sub.slug ? "text-[#FF4D00] font-medium" : "text-slate-500 hover:text-slate-800")}
-                         >
-                           <span>{sub.name}</span>
-                           <span className="text-xs text-slate-400">({subCount})</span>
-                         </button>
-                       )
-                     })}
-                  </div>
-                )}
-              </div>
-            );
+          {categories.map(c => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const renderCategory = (node: any, depth = 0) => {
+              const count = categoryCounts[node.slug] || 0;
+              const isSelected = category === node.slug;
+              return (
+                <div key={node.id} className={depth > 0 ? "ml-3 border-l border-slate-100 pl-2 mt-1.5" : ""}>
+                  <button 
+                    onClick={() => { setCategory(node.slug); setPage(1); }}
+                    disabled={count === 0}
+                    className={cn(
+                      "text-sm flex w-full items-center justify-between text-left transition-colors", 
+                      count === 0 ? "opacity-40" : "hover:text-slate-900", 
+                      isSelected ? "text-[#FF4D00] font-bold" : "text-slate-600"
+                    )}
+                  >
+                    <span className="truncate">{node.name}</span>
+                    <span className="text-[10px] text-slate-400 font-mono">({count})</span>
+                  </button>
+                  {node.children && node.children.length > 0 && (
+                    <div className="mt-1">
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                      {node.children.map((child: any) => renderCategory(child, depth + 1))}
+                    </div>
+                  )}
+                </div>
+              );
+            };
+            return renderCategory(c);
           })}
         </div>
       </div>

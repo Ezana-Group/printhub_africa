@@ -28,6 +28,8 @@ function scheduleCartSync() {
 export interface ShopCartItem {
   productId: string;
   variantId?: string;
+  colorName?: string;
+  colorHex?: string;
   quantity: number;
   unitPrice: number;
   name: string;
@@ -69,16 +71,17 @@ function cartItemKey(i: CartItem): string {
   if (isCatalogueCartItem(i)) {
     return `cat:${i.catalogueItemId}:${i.materialCode}:${i.colourHex}`;
   }
-  return `shop:${i.productId}:${i.variantId ?? ""}`;
+  const s = i as ShopCartItem;
+  return `shop:${s.productId}:${s.variantId ?? ""}:${s.colorHex ?? ""}`;
 }
 
 interface CartState {
   items: CartItem[];
   appliedCoupon: AppliedCoupon | null;
   addItem: (item: CartItem) => void;
-  updateQuantity: (productId: string, variantId: string | undefined, quantity: number) => void;
+  updateQuantity: (productId: string, variantId: string | undefined, colorHex: string | undefined, quantity: number) => void;
   updateCatalogueQuantity: (catalogueItemId: string, materialCode: string, colourHex: string, quantity: number) => void;
-  removeItem: (productId: string, variantId?: string) => void;
+  removeItem: (productId: string, variantId: string | undefined, colorHex: string | undefined) => void;
   removeCatalogueItem: (catalogueItemId: string, materialCode: string, colourHex: string) => void;
   clearCart: () => void;
   setAppliedCoupon: (coupon: AppliedCoupon | null) => void;
@@ -111,12 +114,12 @@ export const useCartStore = create<CartState>()(
         });
         scheduleCartSync();
       },
-      updateQuantity: (productId, variantId, quantity) => {
+      updateQuantity: (productId, variantId, colorHex, quantity) => {
         if (quantity < 1) {
-          get().removeItem(productId, variantId);
+          get().removeItem(productId, variantId, colorHex);
           return;
         }
-        const key = `shop:${productId}:${variantId ?? ""}`;
+        const key = `shop:${productId}:${variantId ?? ""}:${colorHex ?? ""}`;
         set((state) => ({
           items: state.items.map((i) =>
             cartItemKey(i) === key ? { ...i, quantity } : i
@@ -137,8 +140,8 @@ export const useCartStore = create<CartState>()(
         }));
         scheduleCartSync();
       },
-      removeItem: (productId, variantId) => {
-        const key = `shop:${productId}:${variantId ?? ""}`;
+      removeItem: (productId, variantId, colorHex) => {
+        const key = `shop:${productId}:${variantId ?? ""}:${colorHex ?? ""}`;
         set((state) => ({
           items: state.items.filter((i) => cartItemKey(i) !== key),
         }));

@@ -19,6 +19,9 @@ import {
   Activity,
   Download,
   Store,
+  FileText,
+  Box,
+  Image as ImageIcon,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -143,6 +146,7 @@ type Order = {
   timeline: { id: string; status: string; message?: string | null; timestamp: string; updatedBy?: string | null }[];
   delivery?: DeliveryRecord | null;
   trackingEvents?: Array<{ status: string; title: string; description?: string | null; createdAt: string; isPublic?: boolean }>;
+  corporate?: { id: string; companyName: string; logoImageUrl?: string | null; brandGuidelineUrl?: string | null; brandNotes?: string | null } | null;
 };
 
 type TimelineEvent = {
@@ -722,6 +726,42 @@ export function OrderDetailClient({ orderId, initialOrder }: { orderId: string; 
                           SKU: {item.product?.sku ?? item.productVariant?.sku}
                         </p>
                       )}
+                      {item.uploadedFile && (
+                        <div className="mt-2 p-2 bg-slate-50 border rounded flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-sm text-slate-700 min-w-0">
+                            <FileText className="w-4 h-4 flex-shrink-0 text-slate-400" />
+                            <span className="truncate" title={item.uploadedFile.originalName}>
+                              {item.uploadedFile.originalName || item.uploadedFile.filename}
+                            </span>
+                          </div>
+                          <a
+                            href={item.uploadedFile.url || `/api/upload/${item.uploadedFile.id}/download`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-medium text-primary hover:underline whitespace-nowrap flex-shrink-0 ml-4"
+                          >
+                            <Download className="w-3 h-3 inline pb-0.5" /> Download
+                          </a>
+                        </div>
+                      )}
+                      {item.product?.productionFiles?.map((url: string, i: number) => (
+                        <div key={i} className="mt-2 p-2 bg-blue-50 border border-blue-100 rounded flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-sm text-blue-800 min-w-0">
+                            <Box className="w-4 h-4 flex-shrink-0 text-blue-400" />
+                            <span className="truncate" title={url.split('/').pop()}>
+                              {url.split('/').pop()}
+                            </span>
+                          </div>
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-medium text-primary hover:underline whitespace-nowrap flex-shrink-0 ml-4"
+                          >
+                            <Download className="w-3 h-3 inline pb-0.5" /> Download
+                          </a>
+                        </div>
+                      ))}
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className="text-sm text-gray-500">
@@ -990,6 +1030,56 @@ export function OrderDetailClient({ orderId, initialOrder }: { orderId: string; 
                     )}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Corporate Brand Identity */}
+          {order.corporate && (
+            <Card className="border-primary/20 bg-primary/20 mb-6">
+              <CardHeader className="pb-3 pt-6 px-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <CardTitle className="text-primary flex items-center gap-2 text-lg font-bold">
+                       <CheckCircle className="h-5 w-5" />
+                       Brand Identity
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground font-medium">Production assets for {order.corporate.companyName}</p>
+                  </div>
+                  {order.corporate.logoImageUrl && (
+                    <div className="h-14 w-14 rounded-xl bg-white p-2 border border-primary/10 shadow-lg flex items-center justify-center overflow-hidden shrink-0 group">
+                      <Image src={order.corporate.logoImageUrl} alt="Logo" width={48} height={48} className="object-contain group-hover:scale-110 transition-transform duration-500" />
+                    </div>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-5 pb-6 px-6 pt-2">
+                {order.corporate.brandNotes && (
+                   <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-black text-primary/40 tracking-[0.2em]">Designer Brief</Label>
+                      <div className="bg-white p-4 rounded-2xl border border-primary/5 text-[13px] text-slate-700 whitespace-pre-wrap leading-relaxed shadow-sm">
+                         {order.corporate.brandNotes}
+                      </div>
+                   </div>
+                )}
+                <div className="flex flex-wrap gap-3 pt-1">
+                   {order.corporate.logoImageUrl && (
+                      <Button variant="outline" size="sm" className="h-10 rounded-xl bg-white hover:bg-primary/5 border-primary/10 text-primary font-bold shadow-sm" asChild>
+                         <a href={order.corporate.logoImageUrl} target="_blank" rel="noopener noreferrer">
+                            <ImageIcon className="w-4 h-4 mr-2" />
+                            Full Logo
+                         </a>
+                      </Button>
+                   )}
+                   {order.corporate.brandGuidelineUrl && (
+                      <Button variant="outline" size="sm" className="h-10 rounded-xl bg-white hover:bg-primary/5 border-primary/10 text-primary font-bold shadow-sm" asChild>
+                         <a href={order.corporate.brandGuidelineUrl} target="_blank" rel="noopener noreferrer">
+                            <FileText className="w-4 h-4 mr-2" />
+                            Guidelines Manual
+                         </a>
+                      </Button>
+                   )}
+                </div>
               </CardContent>
             </Card>
           )}

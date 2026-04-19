@@ -1,0 +1,1755 @@
+[
+  {
+    "name": "1. Cron - Abandoned Cart Detector (30m)",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "minutes",
+                "value": 30
+              }
+            ]
+          }
+        },
+        "name": "Schedule: 30m",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [
+          100,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://admin.printhub.africa/api/n8n/get-abandoned-carts",
+          "method": "GET",
+          "authentication": "none",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "x-n8n-secret",
+                "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+              }
+            ]
+          }
+        },
+        "name": "Fetch High Intent Carts",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          320,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "fieldToSplit": "carts",
+          "options": {}
+        },
+        "name": "Split Batches",
+        "type": "n8n-nodes-base.splitInBatches",
+        "typeVersion": 1,
+        "position": [
+          540,
+          300
+        ]
+      }
+    ],
+    "connections": {
+      "Schedule: 30m": {
+        "main": [
+          [
+            {
+              "node": "Fetch High Intent Carts",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch High Intent Carts": {
+        "main": [
+          [
+            {
+              "node": "Split Batches",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  },
+  {
+    "name": "2. Cron - Daily Low Stock Check (8:00 AM EAT)",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "days"
+              }
+            ],
+            "time": "08:00"
+          }
+        },
+        "name": "Schedule: 8AM",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [
+          100,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://admin.printhub.africa/api/n8n/stock-levels",
+          "method": "GET",
+          "authentication": "none",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "x-printhub-signature",
+                "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+              }
+            ]
+          }
+        },
+        "name": "Pull Inventory Audit",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          320,
+          300
+        ]
+      },
+      {
+        "name": "Filter: Stock < 5",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 1,
+        "position": [
+          540,
+          300
+        ],
+        "parameters": {
+          "conditions": {
+            "number": [
+              {
+                "value1": "={{$json.stock}}",
+                "operation": "smaller",
+                "value2": 5
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "WhatsApp: Notify Staff",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          760,
+          200
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "=https://graph.facebook.com/v19.0/{{$env.WHATSAPP_PHONE_NUMBER_ID}}/messages",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "=Bearer {{$env.WHATSAPP_ACCESS_TOKEN}}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "messaging_product",
+                "value": "whatsapp"
+              },
+              {
+                "name": "to",
+                "value": "={{$env.STAFF_WHATSAPP_NUMBER}}"
+              },
+              {
+                "name": "type",
+                "value": "text"
+              },
+              {
+                "name": "text",
+                "value": "={ \"body\": \"⚠️ LOW STOCK ALERT: \" + $json.name + \" (SKU: \" + $json.sku + \") has only \" + $json.stock + \" units left. Reorder soon!\" }"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "AuditLog: Low Stock Flagged",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          760,
+          400
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "https://printhub.africa/api/n8n/log",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "x-printhub-signature",
+                "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "action",
+                "value": "LOW_STOCK_ALERT"
+              },
+              {
+                "name": "details",
+                "value": "={{JSON.stringify($json)}}"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Schedule: 8AM": {
+        "main": [
+          [
+            {
+              "node": "Pull Inventory Audit",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Pull Inventory Audit": {
+        "main": [
+          [
+            {
+              "node": "Filter: Stock < 5",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Filter: Stock < 5": {
+        "main": [
+          [
+            {
+              "node": "WhatsApp: Notify Staff",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "AuditLog: Low Stock Flagged",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  },
+  {
+    "name": "3. Cron - Daily Social Feed Sync (6:00 AM EAT)",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "days"
+              }
+            ],
+            "time": "06:00"
+          }
+        },
+        "name": "Schedule: 6AM",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [
+          100,
+          300
+        ]
+      },
+      {
+        "name": "HTTP: Trigger Sync",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          320,
+          300
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "https://admin.printhub.africa/api/n8n/sync-catalog",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "x-printhub-signature",
+                "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "AuditLog: Catalog Sync",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          540,
+          300
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "https://printhub.africa/api/n8n/log",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "x-printhub-signature",
+                "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "action",
+                "value": "CATALOG_SYNC_CRON"
+              },
+              {
+                "name": "details",
+                "value": "Daily automated sync performed"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Schedule: 6AM": {
+        "main": [
+          [
+            {
+              "node": "HTTP: Trigger Sync",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "HTTP: Trigger Sync": {
+        "main": [
+          [
+            {
+              "node": "AuditLog: Catalog Sync",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  },
+  {
+    "name": "4. Cron - Admin Session Cleanup (Hourly)",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "hours"
+              }
+            ]
+          }
+        },
+        "name": "Schedule: Hourly",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [
+          100,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://admin.printhub.africa/api/n8n/cleanup-sessions",
+          "method": "POST",
+          "authentication": "none",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "x-n8n-secret",
+                "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+              }
+            ]
+          }
+        },
+        "name": "Purge Expired Sessions",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          320,
+          300
+        ]
+      }
+    ],
+    "connections": {
+      "Schedule: Hourly": {
+        "main": [
+          [
+            {
+              "node": "Purge Expired Sessions",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  },
+  {
+    "name": "Cron AI-4 — Google Maps Weekly Re-post",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "cronExpression",
+                "expression": "0 5 * * 1"
+              }
+            ]
+          }
+        },
+        "name": "Schedule Trigger",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [
+          0,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://printhub.africa/api/n8n/top-products-for-maps",
+          "method": "GET"
+        },
+        "name": "Get Top Products",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          200,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "batchSize": 1,
+          "splitIntoItems": true
+        },
+        "name": "Each Product",
+        "type": "n8n-nodes-base.splitInBatches",
+        "typeVersion": 1,
+        "position": [
+          400,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://api.openai.com/v1/chat/completions",
+          "method": "POST",
+          "bodyParametersJson": "={ \"model\": \"claude-opus-4-6-mini\", \"messages\": [{ \"role\": \"system\", \"content\": \"Write a fresh Google Maps post...\" }, { \"role\": \"user\", \"content\": \"Product: {{ $json.name }}\" }] }"
+        },
+        "name": "GPT-4o: Maps Copy",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          600,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "url": "=https://mybusiness.googleapis.com/v4/accounts/{{$env.GOOGLE_ACCOUNT_ID}}/locations/{{$env.GOOGLE_LOCATION_ID}}/localPosts",
+          "method": "POST",
+          "authentication": "oAuth2",
+          "bodyParametersJson": "={ \"summary\": \"{{ $json.choices[0].message.content }}\", \"callToAction\": { \"actionType\": \"SHOP\", \"url\": \"https://printhub.africa/shop/{{ $node['Each Product'].json.productSlug }}\" }, \"media\": [{ \"mediaFormat\": \"PHOTO\", \"sourceUrl\": \"{{ $node['Each Product'].json.approvedMockupUrl }}\" }], \"topicType\": \"PRODUCT\" }"
+        },
+        "name": "Google Maps: Post",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          800,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "amount": 30,
+          "unit": "minutes"
+        },
+        "name": "Wait 30m",
+        "type": "n8n-nodes-base.wait",
+        "typeVersion": 1,
+        "position": [
+          1000,
+          0
+        ]
+      }
+    ],
+    "connections": {
+      "Schedule Trigger": {
+        "main": [
+          [
+            {
+              "node": "Get Top Products",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Get Top Products": {
+        "main": [
+          [
+            {
+              "node": "Each Product",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Each Product": {
+        "main": [
+          [
+            {
+              "node": "GPT-4o: Maps Copy",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "GPT-4o: Maps Copy": {
+        "main": [
+          [
+            {
+              "node": "Google Maps: Post",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Google Maps: Post": {
+        "main": [
+          [
+            {
+              "node": "Wait 30m",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Wait 30m": {
+        "main": [
+          [
+            {
+              "node": "Each Product",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  },
+  {
+    "name": "Cron AI-5 — Weekly Reset",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "cronExpression",
+                "expression": "1 21 * * 0"
+              }
+            ]
+          }
+        },
+        "name": "Schedule Trigger",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [
+          0,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://printhub.africa/api/n8n/weekly-reset",
+          "method": "POST",
+          "authentication": "none",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "x-printhub-signature",
+                "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+              }
+            ]
+          }
+        },
+        "name": "Trigger Reset",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          200,
+          0
+        ]
+      }
+    ],
+    "connections": {
+      "Schedule Trigger": {
+        "main": [
+          [
+            {
+              "node": "Trigger Reset",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  },
+  {
+    "name": "Cron AI-2 — Weekly Trend Report (Mon 7AM EAT)",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "cronExpression",
+                "expression": "0 4 * * 1"
+              }
+            ]
+          }
+        },
+        "name": "Schedule: Monday 7AM EAT",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [
+          200,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://api.perplexity.ai/chat/completions",
+          "method": "POST",
+          "authentication": "none",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "=Bearer {{$env.PERPLEXITY_API_KEY}}"
+              }
+            ]
+          },
+          "bodyParametersJson": "={ \"model\": \"llama-3.1-sonar-large-128k-online\", \"messages\": [{ \"role\": \"system\", \"content\": \"You are a market research analyst for PrintHub Africa, a Nairobi printing company. Research current trends relevant to their business.\" }, { \"role\": \"user\", \"content\": \"Research and report on: 1. Top trending 3D printable models this week on Printables and Thingiverse. 2. Trending topics in Kenya relevant to banner/signage printing (elections, sports, events, holidays). 3. What Nairobi businesses are currently ordering (trade shows, conferences, events this month). 4. Competitor activity in Nairobi print shops. 5. Recommended products to promote this week. Return a structured report with sources.\" }], \"max_tokens\": 2000, \"return_citations\": true, \"search_recency_filter\": \"week\" }"
+        },
+        "name": "Perplexity: Kenya Market Trends",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          420,
+          200
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://api.perplexity.ai/chat/completions",
+          "method": "POST",
+          "authentication": "none",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "=Bearer {{$env.PERPLEXITY_API_KEY}}"
+              }
+            ]
+          },
+          "bodyParametersJson": "={ \"model\": \"llama-3.1-sonar-large-128k-online\", \"messages\": [{ \"role\": \"user\", \"content\": \"What content formats and topics are trending this week on TikTok, Instagram and LinkedIn in Kenya and East Africa? What hashtags are trending? What should a Nairobi business be posting about right now?\" }], \"max_tokens\": 1000, \"return_citations\": true, \"search_recency_filter\": \"week\" }"
+        },
+        "name": "Perplexity: Social Media Trends",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          420,
+          500
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://admin.printhub.africa/api/n8n/product-catalogue-summary",
+          "method": "GET",
+          "authentication": "none",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "x-n8n-secret",
+                "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+              }
+            ]
+          }
+        },
+        "name": "Fetch Product Catalogue",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          420,
+          350
+        ]
+      },
+      {
+        "parameters": {
+          "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={{$env.GEMINI_API_KEY}}",
+          "method": "POST",
+          "bodyParametersJson": "={ \"contents\": [{ \"parts\": [{ \"text\": \"You are the marketing strategist for PrintHub Africa, a Nairobi printing company.\\n\\nMarket research from Perplexity:\\n{{ $node['Perplexity: Kenya Market Trends'].json.choices[0].message.content }}\\n\\nSocial media trends:\\n{{ $node['Perplexity: Social Media Trends'].json.choices[0].message.content }}\\n\\nOur product catalogue:\\n{{ JSON.stringify($node['Fetch Product Catalogue'].json.products) }}\\n\\nCreate a weekly content and promotion strategy:\\n1. Top 3 products to promote this week and why\\n2. Content angles for each platform\\n3. Hashtags to use this week\\n4. Time-sensitive opportunities\\n5. Recommended ad spend focus\\n\\nReturn as JSON: { 'summary': 'text', 'topProducts': [], 'hashtags': [], 'opportunities': [], 'adFocus': 'text' }\" }] }], \"generationConfig\": { \"maxOutputTokens\": 2000 } }"
+        },
+        "name": "Gemini: Synthesise Strategy",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          700,
+          350
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const raw = $node['Gemini: Synthesise Strategy'].json.candidates?.[0]?.content?.parts?.[0]?.text || '{}';\nlet strategy;\ntry { strategy = JSON.parse(raw.match(/\\{[\\s\\S]*\\}/)?.[0] || raw); } catch { strategy = { summary: raw }; }\nreturn [{ strategy }];"
+        },
+        "name": "Parse Strategy",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [
+          920,
+          350
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://api.anthropic.com/v1/messages",
+          "method": "POST",
+          "authentication": "none",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "x-api-key",
+                "value": "={{ $env.ANTHROPIC_API_KEY }}"
+              },
+              {
+                "name": "anthropic-version",
+                "value": "2023-06-01"
+              }
+            ]
+          },
+          "bodyParametersJson": "={ \"model\": \"claude-opus-4-6\", \"max_tokens\": 3000, \"system\": \"You are the content and customer service AI for PrintHub Africa, a professional large-format and 3D printing company based in Nairobi, Kenya. Your tone is warm, professional, and expert. You understand the Kenyan market. Prices are always in KES. You never promise specific delivery times unless given them explicitly. You never invent product specs. When writing for customers, be friendly and helpful. When writing social media content, be engaging and locally relevant. Always write in British English (used in Kenya). Never use American spellings.\", \"messages\": [{ \"role\": \"user\", \"content\": \"Based on this weekly strategy, write a 7-day social media content calendar for PrintHub Africa.\\n\\nStrategy: {{ JSON.stringify($json.strategy) }}\\n\\nWrite posts for each day (Monday to Sunday) for Instagram and TikTok. Each post should be ready to copy-paste with emoji.\\n\\nReturn JSON: { 'days': [{ 'date': 'Monday', 'posts': [{ 'platform': 'instagram', 'content': '...', 'hashtags': '...' }, { 'platform': 'tiktok', 'content': '...' }] }] }\" }] }"
+        },
+        "name": "Claude: Write Content Calendar",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          1140,
+          350
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const raw = $node['Claude: Write Content Calendar'].json.content?.[0]?.text || '{}';\nlet calendar;\ntry { calendar = JSON.parse(raw.match(/\\{[\\s\\S]*\\}/)?.[0] || raw); } catch { calendar = { days: [] }; }\nreturn [{ calendar, strategy: $node['Parse Strategy'].json.strategy }];"
+        },
+        "name": "Parse Calendar",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [
+          1360,
+          350
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://admin.printhub.africa/api/n8n/save-content-calendar",
+          "method": "POST",
+          "authentication": "none",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "x-printhub-signature",
+                "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+              }
+            ]
+          },
+          "bodyParametersJson": "={{ JSON.stringify({ weekStarting: new Date().toISOString(), strategy: $json.strategy, contentCalendar: $json.calendar }) }}"
+        },
+        "name": "Save Content Calendar",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          1580,
+          350
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://api.resend.com/emails",
+          "method": "POST",
+          "authentication": "none",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "=Bearer {{$env.RESEND_API_KEY}}"
+              }
+            ]
+          },
+          "bodyParametersJson": "={ \"from\": \"PrintHub AI <ai@printhub.africa>\", \"to\": \"{{$env.ADMIN_EMAIL}}\", \"subject\": \"PrintHub Weekly Content Strategy — w/c {{ new Date().toLocaleDateString('en-GB') }}\", \"html\": \"<h2>Weekly Marketing Strategy 🚀</h2><h3>Market Insights</h3><p>{{ $node['Perplexity: Kenya Market Trends'].json.choices[0].message.content.slice(0, 500) }}...</p><h3>Strategy Summary</h3><p>{{ $node['Parse Strategy'].json.strategy.summary }}</p><h3>Top Products to Push This Week</h3><ul>{{ ($node['Parse Strategy'].json.strategy.topProducts || []).map(p => '<li>' + p + '</li>').join('') }}</ul><h3>Trending Hashtags</h3><p>{{ ($node['Parse Strategy'].json.strategy.hashtags || []).join(' ') }}</p><p><a href='https://admin.printhub.africa/admin/ai'>View full content calendar →</a></p>\" }"
+        },
+        "name": "Email Weekly Report",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          1800,
+          350
+        ]
+      }
+    ],
+    "connections": {
+      "Schedule: Monday 7AM EAT": {
+        "main": [
+          [
+            {
+              "node": "Perplexity: Kenya Market Trends",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Perplexity: Social Media Trends",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Fetch Product Catalogue",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Perplexity: Kenya Market Trends": {
+        "main": [
+          [
+            {
+              "node": "Gemini: Synthesise Strategy",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Perplexity: Social Media Trends": {
+        "main": [
+          [
+            {
+              "node": "Gemini: Synthesise Strategy",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch Product Catalogue": {
+        "main": [
+          [
+            {
+              "node": "Gemini: Synthesise Strategy",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Gemini: Synthesise Strategy": {
+        "main": [
+          [
+            {
+              "node": "Parse Strategy",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse Strategy": {
+        "main": [
+          [
+            {
+              "node": "Claude: Write Content Calendar",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Claude: Write Content Calendar": {
+        "main": [
+          [
+            {
+              "node": "Parse Calendar",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Parse Calendar": {
+        "main": [
+          [
+            {
+              "node": "Save Content Calendar",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Save Content Calendar": {
+        "main": [
+          [
+            {
+              "node": "Email Weekly Report",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  },
+  {
+    "name": "Cron AI-3 — Monthly Business Intelligence Report (1st of Month 6AM EAT)",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "cronExpression",
+                "expression": "0 3 1 * *"
+              }
+            ]
+          }
+        },
+        "name": "Schedule: 1st of Month 6AM EAT",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [
+          200,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://admin.printhub.africa/api/n8n/business-data-export",
+          "method": "GET",
+          "authentication": "none",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "x-n8n-secret",
+                "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+              }
+            ]
+          }
+        },
+        "name": "Fetch Business Data",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          420,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={{$env.GEMINI_API_KEY}}",
+          "method": "POST",
+          "bodyParametersJson": "={ \"contents\": [{ \"parts\": [{ \"text\": \"You are the business analyst for PrintHub Africa, a Nairobi printing company.\\n\\nAnalyse this month's complete business data and produce:\\n1. Executive summary (key wins, key concerns)\\n2. Revenue analysis with MoM comparison\\n3. Product performance (stars, dogs, risers, fallers)\\n4. Customer analysis (LTV trends, churn signals)\\n5. Operational insights (production efficiency, stock)\\n6. Top 5 actionable recommendations for next month\\n7. Forecast for next month based on trends\\n\\nBusiness data:\\n{{ JSON.stringify($json) }}\" }] }], \"generationConfig\": { \"maxOutputTokens\": 3000 } }"
+        },
+        "name": "Gemini: Analyse Business Data",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          640,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://api.anthropic.com/v1/messages",
+          "method": "POST",
+          "authentication": "none",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "x-api-key",
+                "value": "={{ $env.ANTHROPIC_API_KEY }}"
+              },
+              {
+                "name": "anthropic-version",
+                "value": "2023-06-01"
+              }
+            ]
+          },
+          "bodyParametersJson": "={ \"model\": \"claude-opus-4-6\", \"max_tokens\": 3000, \"system\": \"You are the content and customer service AI for PrintHub Africa, a professional large-format and 3D printing company based in Nairobi, Kenya. Your tone is warm, professional, and expert. You understand the Kenyan market. Prices are always in KES. You never promise specific delivery times unless given them explicitly. You never invent product specs. When writing for customers, be friendly and helpful. When writing social media content, be engaging and locally relevant. Always write in British English (used in Kenya). Never use American spellings.\", \"messages\": [{ \"role\": \"user\", \"content\": \"Format this analysis as a professional HTML report for PrintHub Africa. Include: executive summary at top, sections with clear h2 headings, key metrics in styled div callout boxes, recommendations as numbered list. Use inline styles only (no external CSS). Keep it clean and readable.\\n\\nAnalysis:\\n{{ $node['Gemini: Analyse Business Data'].json.candidates[0].content.parts[0].text }}\" }] }"
+        },
+        "name": "Claude: Format HTML Report",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          860,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const now = new Date();\nconst month = now.getMonth(); // previous month (data-export is for last month)\nconst year = now.getFullYear();\nconst htmlReport = $node['Claude: Format HTML Report'].json.content?.[0]?.text || '<p>Report generation failed</p>';\nreturn [{ htmlReport, month, year }];"
+        },
+        "name": "Prepare PDF Payload",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 1,
+        "position": [
+          1080,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://admin.printhub.africa/api/n8n/generate-insights-pdf",
+          "method": "POST",
+          "authentication": "none",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "x-printhub-signature",
+                "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+              }
+            ]
+          },
+          "bodyParametersJson": "={{ JSON.stringify({ htmlReport: $json.htmlReport, month: $json.month, year: $json.year }) }}"
+        },
+        "name": "Generate PDF",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          1300,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://api.resend.com/emails",
+          "method": "POST",
+          "authentication": "none",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "=Bearer {{$env.RESEND_API_KEY}}"
+              }
+            ]
+          },
+          "bodyParametersJson": "={ \"from\": \"PrintHub Reports <reports@printhub.africa>\", \"to\": \"{{$env.SUPER_ADMIN_EMAIL || $env.ADMIN_EMAIL}}\", \"subject\": \"PrintHub Monthly Business Report — {{ new Date().toLocaleString('en-GB', { month: 'long', year: 'numeric' }) }}\", \"html\": \"<h2>Monthly Business Intelligence Report</h2><p>Your full business report is ready.</p><p><a href='{{ $node['Generate PDF'].json.pdfUrl }}' style='display:inline-block;background:#0066cc;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;'>Download PDF Report →</a></p><hr><h3>Key Highlights</h3>{{ $node['Claude: Format HTML Report'].json.content?.[0]?.text?.slice(0, 1500) }}...\" }"
+        },
+        "name": "Email Report to SUPER_ADMIN",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          1520,
+          300
+        ]
+      }
+    ],
+    "connections": {
+      "Schedule: 1st of Month 6AM EAT": {
+        "main": [
+          [
+            {
+              "node": "Fetch Business Data",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch Business Data": {
+        "main": [
+          [
+            {
+              "node": "Gemini: Analyse Business Data",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Gemini: Analyse Business Data": {
+        "main": [
+          [
+            {
+              "node": "Claude: Format HTML Report",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Claude: Format HTML Report": {
+        "main": [
+          [
+            {
+              "node": "Prepare PDF Payload",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare PDF Payload": {
+        "main": [
+          [
+            {
+              "node": "Generate PDF",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Generate PDF": {
+        "main": [
+          [
+            {
+              "node": "Email Report to SUPER_ADMIN",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  },
+  {
+    "name": "AI-12 — SMS Weekly Broadcast",
+    "nodes": [
+      {
+        "name": "Schedule: Sunday 7PM EAT",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [
+          100,
+          300
+        ],
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "cronExpression",
+                "expression": "0 19 * * 0"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "Fetch Top Deals",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          320,
+          300
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "https://printhub.africa/api/n8n/get-weekly-deals",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "x-printhub-signature",
+                "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "GPT-4o: Format SMS",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          540,
+          300
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.openai.com/v1/chat/completions",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer {{$env.OPENAI_API_KEY}}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "body",
+                "value": "={{ JSON.stringify({ model: 'claude-opus-4-6-mini', messages: [{ role: 'system', content: 'You are a marketing specialist for PrintHub Africa. Write a single SMS (max 160 chars) highlighting these deals. Use professional marketing tone.' }, { role: 'user', content: 'Deals: ' + JSON.stringify($json) }] }) }}"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "Africa's Talking: Send Broadcast",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          760,
+          300
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.africastalking.com/version1/messaging",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "apiKey",
+                "value": "={{$env.AT_API_KEY}}"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "username",
+                "value": "={{$env.AT_USERNAME}}"
+              },
+              {
+                "name": "to",
+                "value": "={{$env.MARKETING_SMS_LIST}}"
+              },
+              {
+                "name": "message",
+                "value": "={{$json.choices[0].message.content}}"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "AuditLog: SMS Broadcast",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          980,
+          300
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "https://printhub.africa/api/n8n/log",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "x-printhub-signature",
+                "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "action",
+                "value": "WEEKLY_SMS_BROADCAST"
+              },
+              {
+                "name": "details",
+                "value": "Broadcast sent to marketing list"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Schedule: Sunday 7PM EAT": {
+        "main": [
+          [
+            {
+              "node": "Fetch Top Deals",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch Top Deals": {
+        "main": [
+          [
+            {
+              "node": "GPT-4o: Format SMS",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "GPT-4o: Format SMS": {
+        "main": [
+          [
+            {
+              "node": "Africa's Talking: Send Broadcast",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Africa's Talking: Send Broadcast": {
+        "main": [
+          [
+            {
+              "node": "AuditLog: SMS Broadcast",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  },
+  {
+    "name": "AI-13 — Long-Form SEO Content Engine",
+    "nodes": [
+      {
+        "name": "Schedule: 1st & 15th",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [
+          100,
+          300
+        ],
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "cronExpression",
+                "expression": "0 9 1,15 * *"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "Perplexity: SEO Keywords",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          320,
+          300
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.perplexity.ai/chat/completions",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer {{$env.PERPLEXITY_API_KEY}}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "body",
+                "value": "={{ JSON.stringify({ model: 'llama-3.1-sonar-large-128k-online', messages: [{ role: 'system', content: 'You are an SEO expert in Kenya. Find high-volume keywords for printing services in Nairobi.' }, { role: 'user', content: 'Suggest a title and outline for a 1500-word blog post.' }] }) }}"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "GPT-4o: Generate Outline",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          540,
+          300
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.openai.com/v1/chat/completions",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "Bearer {{$env.OPENAI_API_KEY}}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "body",
+                "value": "={{ JSON.stringify({ model: 'claude-opus-4-6', messages: [{ role: 'system', content: 'Create a detailed blog outline.' }, { role: 'user', content: $json.choices[0].message.content }] }) }}"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "Claude: Write Full Post",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          760,
+          300
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "https://api.anthropic.com/v1/messages",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "x-api-key",
+                "value": "={{$env.ANTHROPIC_API_KEY}}"
+              },
+              {
+                "name": "anthropic-version",
+                "value": "2023-06-01"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "body",
+                "value": "={{ JSON.stringify({ model: 'claude-opus-4-6', max_tokens: 4000, messages: [{ role: 'user', content: 'Write a 1500 word SEO blog post based on this outline: ' + $json.choices[0].message.content }] }) }}"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "name": "Save Blog Post",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          980,
+          300
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "https://printhub.africa/api/n8n/save-blog-post",
+          "sendHeaders": true,
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "x-printhub-signature",
+                "value": "={{$env.N8N_WEBHOOK_SECRET}}"
+              }
+            ]
+          },
+          "sendBody": true,
+          "bodyParameters": {
+            "parameters": [
+              {
+                "name": "title",
+                "value": "={{$node['Perplexity: SEO Keywords'].json.choices[0].message.content.split('\\n')[0]}}"
+              },
+              {
+                "name": "content",
+                "value": "={{$json.content[0].text}}"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "connections": {
+      "Schedule: 1st & 15th": {
+        "main": [
+          [
+            {
+              "node": "Perplexity: SEO Keywords",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Perplexity: SEO Keywords": {
+        "main": [
+          [
+            {
+              "node": "GPT-4o: Generate Outline",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "GPT-4o: Generate Outline": {
+        "main": [
+          [
+            {
+              "node": "Claude: Write Full Post",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Claude: Write Full Post": {
+        "main": [
+          [
+            {
+              "node": "Save Blog Post",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  },
+  {
+    "name": "Cron AI-1 — Daily Sentiment Report (Claude)",
+    "nodes": [
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "cronExpression",
+                "expression": "0 6 * * *"
+              }
+            ]
+          }
+        },
+        "name": "Schedule: Daily 9AM EAT",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [
+          200,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://admin.printhub.africa/api/n8n/business-data-export",
+          "method": "GET",
+          "authentication": "none",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "x-printhub-signature",
+                "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+              }
+            ]
+          },
+          "qs": [
+            {
+              "name": "type",
+              "value": "sentiment-summary"
+            },
+            {
+              "name": "days",
+              "value": "1"
+            }
+          ]
+        },
+        "name": "Fetch Daily Sentiment",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          420,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://api.anthropic.com/v1/messages",
+          "method": "POST",
+          "authentication": "none",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "x-api-key",
+                "value": "={{ $env.ANTHROPIC_API_KEY }}"
+              },
+              {
+                "name": "anthropic-version",
+                "value": "2023-06-01"
+              }
+            ]
+          },
+          "bodyParametersJson": "={ \"model\": \"claude-opus-4-6\", \"max_tokens\": 1000, \"system\": \"You are the business intelligence analyst for PrintHub Africa...\", \"messages\": [{ \"role\": \"user\", \"content\": \"Summarise yesterday's customer sentiment data: {{ JSON.stringify($json) }}. Highlight any critical issues or very happy customers. Provide a concise 'Health of Customer Base' score out of 100.\" }] }"
+        },
+        "name": "Claude: Daily Summary",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          640,
+          300
+        ]
+      },
+      {
+        "parameters": {
+          "url": "https://api.resend.com/emails",
+          "method": "POST",
+          "authentication": "none",
+          "headerParameters": {
+            "parameters": [
+              {
+                "name": "Authorization",
+                "value": "=Bearer {{$env.RESEND_API_KEY}}"
+              }
+            ]
+          },
+          "bodyParametersJson": "={ \"from\": \"PrintHub AI <ai@printhub.africa>\", \"to\": \"{{$env.ADMIN_EMAIL}}\", \"subject\": \"Daily Customer Sentiment Report — {{ new Date().toLocaleDateString() }}\", \"html\": \"{{ $json.content[0].text }}\" }"
+        },
+        "name": "Email Daily Report",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.1,
+        "position": [
+          860,
+          300
+        ]
+      }
+    ],
+    "connections": {
+      "Schedule: Daily 9AM EAT": {
+        "main": [
+          [
+            {
+              "node": "Fetch Daily Sentiment",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Fetch Daily Sentiment": {
+        "main": [
+          [
+            {
+              "node": "Claude: Daily Summary",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Claude: Daily Summary": {
+        "main": [
+          [
+            {
+              "node": "Email Daily Report",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "settings": {
+      "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+    }
+  }
+]

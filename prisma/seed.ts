@@ -1,3 +1,10 @@
+/**
+ * @file prisma/seed.ts
+ * ⚠️ WARNING: This seed script is for initial setup and development.
+ * DO NOT run this in a production environment after the initial setup as it may 
+ * cause data inconsistencies or allow unauthorized access if misconfigured.
+ */
+
 if (process.env.PRINTHUB_SEED_ALLOW !== '1') {
   console.error('❌ Dev seed blocked in production.')
   process.exit(1)
@@ -26,28 +33,55 @@ const prisma = new PrismaClient({
   log: ["error", "warn"],
 });
 
-const TEST_PASSWORD = "Test@12345";
-const ADMIN_PASSWORD = "Admin@Printhub2025!";
-
 async function main() {
   await assertPrinthubDatabase(prisma);
 
-  const defaultHash = await bcrypt.hash(TEST_PASSWORD, 12);
-  const adminHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
+  // 🔴 CRIT-2: Secure Credentials (No hardcoded passwords)
+  const adminEmail = process.env.SUPER_ADMIN_EMAIL || "admin@printhub.africa";
+  let adminRawPassword = process.env.SUPER_ADMIN_PASSWORD;
+  let isGenerated = false;
 
-  // Super Admin (existing account – password unchanged if already present)
+  if (!adminRawPassword && process.env.PRINTHUB_SEED_ALLOW === '1') {
+    const crypto = await import("node:crypto");
+    adminRawPassword = crypto.randomBytes(12).toString('hex') + "A1!";
+    isGenerated = true;
+  }
+
+  if (!adminRawPassword) {
+    throw new Error("SUPER_ADMIN_PASSWORD must be set in .env for initial seeding.");
+  }
+
+  const adminHash = await bcrypt.hash(adminRawPassword, 12);
+  const testHash = await bcrypt.hash(process.env.SEED_TEST_PASSWORD || "Test@Temporary123!", 12);
+
+  // Super Admin
+  const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
+  
   const admin = await prisma.user.upsert({
-    where: { email: "admin@printhub.africa" },
-    update: {},
+    where: { email: adminEmail },
+    update: {
+      role: UserRole.SUPER_ADMIN,
+      status: "ACTIVE",
+      // Only reset password if explicitly requested via env or it's a new user
+      ...(process.env.RESET_ADMIN_PASSWORD === '1' && { passwordHash: adminHash })
+    },
     create: {
-      email: "admin@printhub.africa",
+      email: adminEmail,
       name: "PrintHub Super Admin",
       passwordHash: adminHash,
       role: UserRole.SUPER_ADMIN,
       emailVerified: new Date(),
     },
   });
-  console.log("Super Admin:", admin.email);
+
+  if (isGenerated && !existingAdmin) {
+    console.log('\n================================================');
+    console.log('⚠️  SUPER_ADMIN INITIAL PASSWORD:', adminRawPassword);
+    console.log('      PLEASE SAVE THIS PASSWORD IMMEDIATELY!    ');
+    console.log('================================================\n');
+  } else {
+    console.log("Super Admin:", admin.email);
+  }
 
   // Admin (non-super)
   const admin2 = await prisma.user.upsert({
@@ -56,7 +90,7 @@ async function main() {
     create: {
       email: "admin2@printhub.africa",
       name: "PrintHub Admin",
-      passwordHash: defaultHash,
+      passwordHash: testHash,
       role: UserRole.ADMIN,
       emailVerified: new Date(),
     },
@@ -90,7 +124,7 @@ async function main() {
     create: {
       email: "sales@printhub.africa",
       name: "Sales User",
-      passwordHash: defaultHash,
+      passwordHash: testHash,
       role: UserRole.STAFF,
       emailVerified: new Date(),
     },
@@ -116,7 +150,7 @@ async function main() {
     create: {
       email: "marketing@printhub.africa",
       name: "Marketing User",
-      passwordHash: defaultHash,
+      passwordHash: testHash,
       role: UserRole.STAFF,
       emailVerified: new Date(),
     },
@@ -140,7 +174,7 @@ async function main() {
     create: {
       email: "customer@printhub.africa",
       name: "Test Customer",
-      passwordHash: defaultHash,
+      passwordHash: testHash,
       role: UserRole.CUSTOMER,
       emailVerified: new Date(),
     },
@@ -655,16 +689,71 @@ async function main() {
   });
   console.log("Seed coupon WELCOME10 created");
 
-  // Kenya delivery zones (county rates: Nairobi 200, Central 400, etc.)
+  // Kenya delivery zones (region-based with county coverage)
   const kenyaZones = [
-    { name: "Nairobi", county: "Nairobi", counties: null, feeKes: 200, minDays: 1, maxDays: 2, sortOrder: 0 },
-    { name: "Central", county: null, counties: "Kiambu,Murang'a,Nyeri,Kirinyaga,Nyandarua", feeKes: 400, minDays: 2, maxDays: 4, sortOrder: 1 },
-    { name: "Coast", county: null, counties: "Mombasa,Kilifi,Kwale,Lamu,Taita-Taveta,Tana River", feeKes: 450, minDays: 3, maxDays: 5, sortOrder: 2 },
-    { name: "Eastern", county: null, counties: "Embu,Machakos,Makueni,Meru,Tharaka-Nithi,Kitui,Isiolo", feeKes: 450, minDays: 3, maxDays: 5, sortOrder: 3 },
-    { name: "Rift Valley", county: null, counties: "Nakuru,Eldoret,Uasin Gishu,Kericho,Bomet,Narok,Kajiado,Baringo", feeKes: 500, minDays: 3, maxDays: 6, sortOrder: 4 },
-    { name: "Western", county: null, counties: "Kakamega,Bungoma,Busia,Vihiga", feeKes: 500, minDays: 4, maxDays: 6, sortOrder: 5 },
-    { name: "Nyanza", county: null, counties: "Kisumu,Siaya,Kisii,Migori,Homa Bay,Nyamira", feeKes: 500, minDays: 4, maxDays: 6, sortOrder: 6 },
-    { name: "North Eastern", county: null, counties: "Garissa,Wajir,Mandera", feeKes: 600, minDays: 5, maxDays: 8, sortOrder: 7 },
+    {
+      name: "Eldoret (Home Base)",
+      county: "Uasin Gishu",
+      counties: "Uasin Gishu",
+      feeKes: 0,
+      minDays: 0,
+      maxDays: 1,
+      sortOrder: 1,
+    },
+    {
+      name: "Nairobi Metro",
+      county: "Nairobi",
+      counties: "Nairobi, Kiambu, Machakos, Kajiado",
+      feeKes: 350,
+      minDays: 1,
+      maxDays: 2,
+      sortOrder: 2,
+    },
+    {
+      name: "Western & Nyanza",
+      county: "Kisumu",
+      counties: "Kisumu, Kakamega, Bungoma, Busia, Vihiga, Siaya, Homa Bay, Migori, Kisii, Nyamira",
+      feeKes: 450,
+      minDays: 2,
+      maxDays: 3,
+      sortOrder: 3,
+    },
+    {
+      name: "Coast Region",
+      county: "Mombasa",
+      counties: "Mombasa, Kwale, Kilifi, Tana River, Lamu, Taita Taveta",
+      feeKes: 600,
+      minDays: 3,
+      maxDays: 5,
+      sortOrder: 4,
+    },
+    {
+      name: "Central & Mount Kenya",
+      county: "Nyeri",
+      counties: "Nyeri, Kirinyaga, Murang'a, Nyandarua, Meru, Tharaka-Nithi, Embu, Laikipia",
+      feeKes: 400,
+      minDays: 2,
+      maxDays: 3,
+      sortOrder: 5,
+    },
+    {
+      name: "Rift Valley (North & South)",
+      county: "Nakuru",
+      counties: "Nakuru, Kericho, Bomet, Nandi, Trans Nzoia, Elgeyo-Marakwet, West Pokot, Baringo, Samburu, Narok",
+      feeKes: 400,
+      minDays: 1,
+      maxDays: 3,
+      sortOrder: 6,
+    },
+    {
+      name: "Northern Kenya (Arid/Remote)",
+      county: "Garissa",
+      counties: "Garissa, Wajir, Mandera, Marsabit, Isiolo, Turkana",
+      feeKes: 1000,
+      minDays: 5,
+      maxDays: 10,
+      sortOrder: 7,
+    }
   ];
   for (const z of kenyaZones) {
     const existing = await prisma.deliveryZone.findFirst({
@@ -755,7 +844,7 @@ async function main() {
   if (orderingCat) {
     faqs.push(
       { categoryId: orderingCat.id, question: "How do I get a quote for large format printing?", answer: '<p>You can get an instant estimate using our <a href="/quote">online quote calculator</a>. Select your material, enter dimensions, quantity and finishing options — you\'ll see a price range immediately. For complex or large jobs, upload your file and our team will confirm the final price within 2 business hours.</p>', isPopular: true, sortOrder: 1 },
-      { categoryId: orderingCat.id, question: "How long does it take to get my order?", answer: "<p>Standard turnaround is <strong>2–5 business days</strong> from file approval and payment. Express 24-hour service is available for most items at an additional charge.</p><p>Delivery adds 1–2 days for Nairobi, 2–5 days for other counties.</p>", isPopular: true, sortOrder: 2 },
+      { categoryId: orderingCat.id, question: "How long does it take to get my order?", answer: "<p>Standard turnaround is <strong>2–5 business days</strong> from file approval and payment. Express 24-hour service is available for most items at an additional charge.</p><p>Delivery adds 1–2 days for Eldoret, 2–5 days for other counties.</p>", isPopular: true, sortOrder: 2 },
       { categoryId: orderingCat.id, question: "Can I order in small quantities?", answer: "<p>Yes — our minimum order value is KES 500. There is no minimum quantity for custom prints. We print from 1 piece upwards, though larger quantities reduce your cost per unit.</p>", isPopular: false, sortOrder: 3 },
       { categoryId: orderingCat.id, question: "Do you offer design services?", answer: "<p>Yes. Our design team can create or adapt artwork for your print job. Design fees start from KES 1,500 and are quoted based on complexity. Contact us with your brief for a design quote.</p>", isPopular: false, sortOrder: 4 },
     );
@@ -777,7 +866,7 @@ async function main() {
   if (deliveryCat) {
     faqs.push(
       { categoryId: deliveryCat.id, question: "Do you deliver to my county?", answer: "<p>Yes — we deliver to all 47 counties in Kenya. Delivery fees and estimated times vary by location and are calculated at checkout.</p>", isPopular: true, sortOrder: 1 },
-      { categoryId: deliveryCat.id, question: "Can I collect my order?", answer: "<p>Yes. Click & Collect is free from our Nairobi location. Select \"Collection\" at checkout. We'll SMS and email you when your order is ready. Collection is available Mon–Fri 8am–6pm, Saturday 9am–3pm.</p>", isPopular: false, sortOrder: 2 },
+      { categoryId: deliveryCat.id, question: "Can I collect my order?", answer: "<p>Yes. Click & Collect is free from our Eldoret location. Select \"Collection\" at checkout. We'll SMS and email you when your order is ready. Collection is available Mon–Fri 8am–6pm, Saturday 9am–3pm.</p>", isPopular: false, sortOrder: 2 },
       { categoryId: deliveryCat.id, question: "How do I track my order?", answer: '<p>Once your order is shipped, you\'ll receive an SMS and email with a tracking link. You can also track at any time at <a href="/track">printhub.africa/track</a> using your order number.</p>', isPopular: true, sortOrder: 3 },
     );
   }
@@ -797,7 +886,7 @@ async function main() {
   if (lfCat) {
     faqs.push(
       { categoryId: lfCat.id, question: "What is the maximum width you can print?", answer: "<p>Our large format printer handles up to 1.52 metres wide. Length is virtually unlimited (roll-fed). For widths above 1.52m, we can print in panels and join seamlessly.</p>", isPopular: false, sortOrder: 1 },
-      { categoryId: lfCat.id, question: "Do you do vehicle wraps?", answer: "<p>Yes. We print full and partial vehicle wraps using premium cast vinyl. Bring your vehicle to our Nairobi location for installation. Contact us for a vehicle wrap quote — we'll need photos and your vehicle make/model.</p>", isPopular: true, sortOrder: 2 },
+      { categoryId: lfCat.id, question: "Do you do vehicle wraps?", answer: "<p>Yes. We print full and partial vehicle wraps using premium cast vinyl. Bring your vehicle to our Eldoret location for installation. Contact us for a vehicle wrap quote — we'll need photos and your vehicle make/model.</p>", isPopular: true, sortOrder: 2 },
     );
   }
   if (corporateCat) {
@@ -825,7 +914,7 @@ async function main() {
       slug: "print-technician-large-format",
       department: "Production",
       type: "FULL_TIME" as const,
-      location: "Nairobi, Kenya",
+      location: "Eldoret, Kenya",
       isRemote: false,
       description:
         "Join our production team to operate and maintain our large format printers. You'll work with Roland and Mimaki equipment, prepare substrates, and ensure quality output. Full training provided for the right candidate.",
@@ -845,7 +934,7 @@ async function main() {
       slug: "sales-representative",
       department: "Sales",
       type: "FULL_TIME" as const,
-      location: "Nairobi, Kenya",
+      location: "Eldoret, Kenya",
       isRemote: false,
       description:
         "We're looking for a sales representative to grow our B2B and walk-in client base. You'll handle quotes, follow-ups, and customer relationships for large format and 3D print jobs.",
@@ -957,7 +1046,7 @@ async function main() {
     create: {
       email: "corporate@printhub.africa",
       name: "Corporate Test Contact",
-      passwordHash: defaultHash,
+      passwordHash: testHash,
       role: UserRole.CUSTOMER,
       emailVerified: new Date(),
     },
@@ -976,8 +1065,8 @@ async function main() {
         companySize: CompanySize.SMALL,
         primaryUserId: corporateUser.id,
         billingAddress: "123 Test Street",
-        billingCity: "Nairobi",
-        billingCounty: "Nairobi",
+        billingCity: "Eldoret",
+        billingCounty: "Uasin Gishu",
         paymentTerms: PaymentTerms.NET_30,
         creditLimit: 100000,
         status: CorporateStatus.APPROVED,

@@ -1,0 +1,95 @@
+{
+  "name": "AI-6 — Sentiment Analysis (GPT-4o)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sentiment-analysis",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "name": "Webhook: Analyse Sentiment",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ],
+      "webhookId": "sentiment-analysis"
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$vars.OPENAI_API_KEY}}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"model\": \"gpt-4o-mini\", \"messages\": [{ \"role\": \"system\", \"content\": \"Analyse the sentiment of this customer message for PrintHub Africa. Is it Positive, Neutral, or Negative? Give a score from 1-10 where 10 is very happy and 1 is furious.\" }, { \"role\": \"user\", \"content\": \"Message: {{ $json.message }}\" }] }"
+      },
+      "name": "GPT-4o: Analyse Sentiment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://admin.printhub.africa/api/n8n/save-sentiment",
+        "method": "POST",
+        "authentication": "none",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-printhub-signature",
+              "value": "={{ $vars.N8N_WEBHOOK_SECRET }}"
+            }
+          ]
+        },
+        "bodyParametersJson": "={ \"email\": \"{{ $node['Webhook: Analyse Sentiment'].json.email }}\", \"phone\": \"{{ $node['Webhook: Analyse Sentiment'].json.phone }}\", \"sentiment\": \"{{ $json.choices[0].message.content.match(/(Positive|Neutral|Negative)/)[0] }}\", \"score\": {{ parseInt($json.choices[0].message.content.match(/\\d+/)[0]) }}, \"message\": \"{{ $node['Webhook: Analyse Sentiment'].json.message }}\" }"
+      },
+      "name": "Save Sentiment",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        640,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: Analyse Sentiment": {
+      "main": [
+        [
+          {
+            "node": "GPT-4o: Analyse Sentiment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o: Analyse Sentiment": {
+      "main": [
+        [
+          {
+            "node": "Save Sentiment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "errorWorkflow": "{{GLOBAL_ERROR_HANDLER_ID}}"
+  }
+}

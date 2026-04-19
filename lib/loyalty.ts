@@ -45,3 +45,60 @@ export async function awardLoyaltyPoints(orderId: string): Promise<void> {
     }),
   ]);
 }
+
+/**
+ * Get current loyalty balance and tier for a user.
+ */
+export async function getLoyaltyBalance(userId: string) {
+  const [loyalty, account] = await Promise.all([
+    prisma.loyaltySettings.findUnique({ where: { id: "default" } }),
+    prisma.loyaltyAccount.findUnique({ where: { userId } }),
+  ]);
+  
+  if (!loyalty?.enabled || !account) return { points: 0, pointsEarned: 0, tier: "NONE" };
+  
+  const tiers = (loyalty.tiers as Array<{ name: string; minPoints: number }>) ?? [];
+  const tier = tiers.filter((t) => account.pointsEarned >= t.minPoints).pop();
+  
+  return {
+    points: account.points,
+    pointsEarned: account.pointsEarned,
+    tier: tier?.name ?? "BRONZE",
+    kesValue: Math.floor(account.points * (loyalty.kesPerPointRedeemed ?? 1)),
+  };
+}
+
+/**
+ * Redeem loyalty points for a discount.
+ */
+export async function redeemLoyaltyPoints(userId: string, points: number, reference: string): Promise<{ ok: boolean; discountKes?: number; error?: string }> {
+  if (points <= 0) return { ok: false, error: "Invalid points value" };
+
+  const [loyalty, account] = await Promise.all([
+    prisma.loyaltySettings.findUnique({ where: { id: "default" } }),
+    prisma.loyaltyAccount.findUnique({ where: { userId } }),
+  ]);
+
+  if (!loyalty?.enabled) return { ok: false, error: "Loyalty program is disabled" };
+  if (!account || account.points < points) return { ok: false, error: "Insufficient loyalty points" };
+
+  const discountKes = Math.floor(points * (loyalty.kesPerPointRedeemed ?? 1));
+
+  await prisma.$transaction([
+    prisma.loyaltyAccount.update({
+      where: { userId },
+      data: { points: { decrement: points } },
+    }),
+    prisma.loyaltyTransaction.create({
+      data: {
+        accountId: account.id,
+        type: "REDEEM",
+        points: -points,
+        reference,
+        description: `Redemption for discount on Order ${reference}`,
+      },
+    }),
+  ]);
+
+  return { ok: true, discountKes };
+}
