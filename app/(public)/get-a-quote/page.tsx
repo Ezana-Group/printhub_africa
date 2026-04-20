@@ -60,6 +60,24 @@ const BUDGET_OPTIONS = [
   "Not sure yet",
 ];
 
+const QUOTE_FAQ = [
+  {
+    question: "How fast can I get a 3D printing quote in Kenya?",
+    answer:
+      "Most quote requests are reviewed within 2 business hours during working hours. Complex multi-part jobs can take slightly longer.",
+  },
+  {
+    question: "Which file types can I upload for a 3D print quote?",
+    answer:
+      "You can upload STL, OBJ, 3MF, STEP, and related 3D model formats directly in the quote form.",
+  },
+  {
+    question: "Do you deliver 3D printed orders outside Nairobi?",
+    answer:
+      "Yes. PrintHub delivers across Kenya, with same-day or next-day options in Nairobi depending on the job and timeline.",
+  },
+];
+
 type ThreeDOptions = {
   materials: { id: string; slug: string; name: string; pricePerGram: number }[];
   turnaround: { code: string; name: string; surchargePercent: number }[];
@@ -969,6 +987,29 @@ export default function GetAQuotePage() {
             </>
           )}
         </div>
+        <section className="mt-12 rounded-2xl border border-slate-200 bg-white p-6 md:p-8">
+          <h2 className="font-display text-2xl font-bold text-slate-900">
+            Frequently asked questions
+          </h2>
+          <p className="mt-2 text-sm text-slate-600">
+            Common questions about getting a 3D printing quote in Kenya.
+          </p>
+          <div className="mt-6 space-y-4">
+            {QUOTE_FAQ.map((item) => (
+              <details
+                key={item.question}
+                className="group rounded-xl border border-slate-200 bg-slate-50 p-4"
+              >
+                <summary className="cursor-pointer list-none font-medium text-slate-900">
+                  {item.question}
+                </summary>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                  {item.answer}
+                </p>
+              </details>
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   );
