@@ -18,16 +18,16 @@ function parseBoolean(value: unknown, fallback: boolean): boolean {
 }
 
 export async function getServiceFlags(): Promise<ServiceFlags> {
-  const row = await prisma.pricingConfig.findUnique({
-    where: { key: SYSTEM_SETTINGS_KEY },
-    select: { valueJson: true },
-  });
-
-  if (!row?.valueJson) {
-    return { largeFormatEnabled: false };
-  }
-
   try {
+    const row = await prisma.pricingConfig.findUnique({
+      where: { key: SYSTEM_SETTINGS_KEY },
+      select: { valueJson: true },
+    });
+
+    if (!row?.valueJson) {
+      return { largeFormatEnabled: false };
+    }
+
     const parsed = JSON.parse(row.valueJson) as RawSystemSettings;
     return {
       largeFormatEnabled: parseBoolean(
@@ -35,7 +35,10 @@ export async function getServiceFlags(): Promise<ServiceFlags> {
         false
       ),
     };
-  } catch {
+  } catch (error) {
+    // Build-time and cold-start environments may not have DB connectivity.
+    // Default to hiding large format until settings can be loaded safely.
+    console.warn("[service-flags] Falling back to defaults:", error);
     return { largeFormatEnabled: false };
   }
 }
