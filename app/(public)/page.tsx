@@ -1,10 +1,10 @@
 import { Hero } from "@/components/marketing/hero";
 import { CategoryStrip } from "@/components/marketing/category-strip";
-import { ServicesOverview } from "@/components/marketing/services-overview";
 import { HowItWorks } from "@/components/marketing/how-it-works";
 import { FeaturedProducts } from "@/components/marketing/featured-products";
 import { FeaturedCatalogueSection } from "@/components/marketing/featured-catalogue";
-import { PriceCalculatorTeaser } from "@/components/marketing/price-calculator-teaser";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { getCachedCategories } from "@/lib/cache/unstable-cache";
 import { getSiteImageSlots, SITE_IMAGE_DEFAULTS } from "@/lib/site-images";
 import { prisma } from "@/lib/prisma";
@@ -30,14 +30,39 @@ export default async function HomePage() {
   return (
     <>
       <Hero heroImage={siteImages.marketing_hero} largeFormatEnabled={largeFormatEnabled} />
-      <CategoryStrip categories={homepageCategories} />
       <FeaturedProducts />
       <FeaturedCatalogueSection />
-      <ServicesOverview
-        largeFormatImage={siteImages.marketing_services_large_format}
-        threeDImage={siteImages.marketing_services_3d}
-        largeFormatEnabled={largeFormatEnabled}
-      />
+      <section className="bg-slate-50 py-10">
+        <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary">Custom jobs</p>
+              <h3 className="mt-1 text-lg font-bold text-slate-900">Need a custom 3D part?</h3>
+              <p className="mt-1 text-sm text-slate-600">Upload your model and receive a fast production quote.</p>
+              <Button asChild size="sm" className="mt-4 rounded-xl">
+                <Link href="/get-a-quote">Upload model</Link>
+              </Button>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary">Best value</p>
+              <h3 className="mt-1 text-lg font-bold text-slate-900">Shop by budget</h3>
+              <p className="mt-1 text-sm text-slate-600">Discover top 3D products under KES 1,500 and weekly deals.</p>
+              <Button asChild size="sm" variant="outline" className="mt-4 rounded-xl">
+                <Link href="/shop?maxPrice=1500">View budget picks</Link>
+              </Button>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary">For businesses</p>
+              <h3 className="mt-1 text-lg font-bold text-slate-900">Prototype or batch production</h3>
+              <p className="mt-1 text-sm text-slate-600">From one-off prototypes to repeatable small-batch runs.</p>
+              <Button asChild size="sm" variant="outline" className="mt-4 rounded-xl">
+                <Link href="/services/3d-printing">Explore 3D services</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+      <CategoryStrip categories={homepageCategories} />
       <HowItWorks
         stepImages={[
           siteImages.how_it_works_step_01,
@@ -46,7 +71,6 @@ export default async function HomePage() {
           siteImages.how_it_works_step_04,
         ]}
       />
-      <PriceCalculatorTeaser largeFormatEnabled={largeFormatEnabled} />
     </>
   );
 }
