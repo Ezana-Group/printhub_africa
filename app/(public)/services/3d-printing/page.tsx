@@ -397,6 +397,14 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: `3D Printing ${city} | FDM & Resin Printing | ${name} Kenya`,
     description: `3D printing services in ${city}, Kenya. FDM and resin printing for prototypes, consumer products, engineering parts & more. Upload your STL file and get a quote in 2 hours. ${name}.`,
+    keywords: [
+      "3D printing Kenya",
+      `3D printing ${city}`,
+      "rapid prototyping Kenya",
+      "resin 3D printing Nairobi",
+      "FDM printing Kenya",
+      "STL print service Kenya",
+    ],
     openGraph: {
       title: `3D Printing ${city} | ${name} Kenya`,
       description: "FDM and resin 3D printing. Upload your STL and get a quote in 2 hours. Delivered across Kenya.",
@@ -745,10 +753,11 @@ export default async function ThreeDPrintingPage() {
 
       <div className="bg-[var(--surface-dark)] border-t border-white/10 py-6 px-6 text-center">
         <p className="text-sm text-white/60">
-          Need banners or large format?{" "}
-          <Link href="/services/large-format-printing" className="text-[var(--brand-orange)] hover:underline">
-            Explore our large format printing service
+          Ready to start?{" "}
+          <Link href="/get-a-quote" className="text-[var(--brand-orange)] hover:underline">
+            Upload your 3D file and request a quote
           </Link>
+          .
         </p>
       </div>
 
@@ -767,6 +776,35 @@ export default async function ThreeDPrintingPage() {
               url: baseUrl,
             },
             areaServed: "Kenya",
+          }),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              {
+                "@type": "ListItem",
+                position: 1,
+                name: "Home",
+                item: `${baseUrl}/`,
+              },
+              {
+                "@type": "ListItem",
+                position: 2,
+                name: "Services",
+                item: `${baseUrl}/services`,
+              },
+              {
+                "@type": "ListItem",
+                position: 3,
+                name: "3D Printing",
+                item: `${baseUrl}/services/3d-printing`,
+              },
+            ],
           }),
         }}
       />

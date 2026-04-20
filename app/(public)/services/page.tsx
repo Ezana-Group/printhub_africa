@@ -17,9 +17,31 @@ import { getBusinessPublic } from "@/lib/business-public";
 import { getSiteImageSlots } from "@/lib/site-images";
 import { prisma } from "@/lib/prisma";
 import { getServiceFlags } from "@/lib/service-flags";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
 export const revalidate = 3600; // 1 hour — services overview changes rarely
+
+export const metadata: Metadata = {
+  title: "3D Printing Services Kenya | PrintHub",
+  description:
+    "Explore PrintHub 3D printing services in Kenya. Upload models, get instant estimates, and request custom production for prototypes and products.",
+  keywords: [
+    "3D printing services Kenya",
+    "3D printing Nairobi",
+    "prototype printing Kenya",
+    "custom 3D printing",
+  ],
+  alternates: {
+    canonical: "/services",
+  },
+  openGraph: {
+    title: "3D Printing Services Kenya | PrintHub",
+    description:
+      "Professional 3D printing services for prototypes, products, and production parts across Kenya.",
+    url: "/services",
+  },
+};
 
 const MAIN_SERVICES = [
   {

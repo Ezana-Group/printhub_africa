@@ -19,6 +19,12 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title,
     description,
+    keywords: [
+      "about PrintHub",
+      "3D printing company Kenya",
+      "3D printing Nairobi",
+      "rapid prototyping team Kenya",
+    ],
     openGraph: {
       title: `About ${business.businessName}`,
       description: description,

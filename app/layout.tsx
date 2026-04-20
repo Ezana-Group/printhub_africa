@@ -54,11 +54,11 @@ export async function generateMetadata(): Promise<Metadata> {
       favicon: null, updatedAt: null, businessName: "PrintHub", tagline: null, logo: null, seo: null, googleSiteVerification: null 
     }));
   const businessName = meta.seo?.siteName || meta.businessName || "PrintHub";
-  const defaultTitle = meta.seo?.defaultTitle || `${businessName} | Large Format & 3D Printing | Eldoret, Kenya`;
+  const defaultTitle = meta.seo?.defaultTitle || `${businessName} | 3D Printing Services Kenya | Nairobi`;
   const description =
     meta.seo?.defaultDescription ||
     meta.tagline ||
-    "Large format printing and 3D printing for Eldoret and all of Kenya. Banners, signage, vehicle wraps, canvas, custom 3D prints. An Ezana Group Company.";
+    "Professional 3D printing services in Kenya. FDM and resin printing for prototypes, products, engineering parts, and custom orders with nationwide delivery.";
   
   const updatedAtTime = meta.updatedAt ? new Date(meta.updatedAt).getTime() : 0;
   const faviconUrl =
@@ -76,6 +76,15 @@ export async function generateMetadata(): Promise<Metadata> {
       template: meta.seo?.titleTemplate || `%s | ${businessName}`,
     },
     description,
+    keywords: [
+      "3D printing Kenya",
+      "3D printing Nairobi",
+      "rapid prototyping Kenya",
+      "resin printing Kenya",
+      "FDM printing Kenya",
+      "custom 3D printed products Kenya",
+      "PrintHub Africa",
+    ],
     metadataBase,
     alternates: {
       canonical: "./",
@@ -100,7 +109,7 @@ export async function generateMetadata(): Promise<Metadata> {
           apple: "/api/branding/favicon",
         },
     openGraph: {
-      title: `${businessName} | Printing the Future, Made in Kenya`,
+      title: `${businessName} | 3D Printing Services in Kenya`,
       description: description,
       locale: "en_KE",
       siteName: businessName,
@@ -110,12 +119,17 @@ export async function generateMetadata(): Promise<Metadata> {
           url: ogImage,
           width: 1200,
           height: 630,
-          alt: `${businessName} — Large Format & 3D Printing Kenya`,
+          alt: `${businessName} — 3D Printing Services Kenya`,
         },
       ],
     },
     twitter: {
-      card: (meta.seo?.twitterCardType as any) || "summary_large_image",
+      card:
+        meta.seo?.twitterCardType === "summary" ||
+        meta.seo?.twitterCardType === "app" ||
+        meta.seo?.twitterCardType === "player"
+          ? meta.seo.twitterCardType
+          : "summary_large_image",
       site: meta.seo?.twitterHandle || undefined,
       creator: meta.seo?.twitterHandle || undefined,
       images: [ogImage],

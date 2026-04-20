@@ -4,12 +4,23 @@ import { ShopContent } from "./shop-content";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const metadata: Metadata = {
-  title: "Shop | PrintHub Kenya",
+  title: "3D Printed Products Shop Kenya | PrintHub",
   description:
-    "Browse our print products and services. Order online, delivered across Kenya.",
+    "Shop ready-made 3D printed products in Kenya. Order online from PrintHub with secure checkout and nationwide delivery.",
+  keywords: [
+    "3D printed products Kenya",
+    "buy 3D prints Kenya",
+    "3D printing shop Nairobi",
+    "custom 3D products Kenya",
+  ],
   openGraph: {
-    title: "Shop | PrintHub Kenya",
+    title: "3D Printed Products Shop Kenya | PrintHub",
+    description:
+      "Browse and buy quality 3D printed products online in Kenya. Nationwide delivery available.",
     url: "/shop",
+  },
+  alternates: {
+    canonical: "/shop",
   },
 };
 
