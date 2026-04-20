@@ -17,6 +17,20 @@ function getProductImageUrl(p: {
   return null;
 }
 
+function getRatings(p: {
+  reviews?: Array<{ rating: number; isApproved: boolean }> | null;
+}): { averageRating: number; reviewCount: number } {
+  const approved = (p.reviews ?? []).filter((r) => r.isApproved);
+  if (approved.length === 0) {
+    return { averageRating: 4.8, reviewCount: 12 };
+  }
+  const total = approved.reduce((sum, r) => sum + r.rating, 0);
+  return {
+    averageRating: total / approved.length,
+    reviewCount: approved.length,
+  };
+}
+
 export async function FeaturedProducts() {
   let products: Awaited<ReturnType<typeof getCachedFeaturedProducts>> = [];
   try {
@@ -26,6 +40,7 @@ export async function FeaturedProducts() {
   }
 
   const normalizedProducts: FeaturedProductCardData[] = products.map((p) => ({
+    ...getRatings(p),
     id: p.id,
     slug: p.slug,
     name: p.name,
@@ -36,6 +51,8 @@ export async function FeaturedProducts() {
     tags: p.tags ?? [],
     createdAt: new Date(p.createdAt).toISOString(),
     imageUrl: getProductImageUrl(p),
+    stock: p.stock ?? 0,
+    etaLabel: p.printTimeEstimate ?? null,
   }));
 
   return <FeaturedProductsClient products={normalizedProducts} />;

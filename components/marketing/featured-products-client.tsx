@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Cuboid } from "lucide-react";
+import { Cuboid, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
@@ -41,6 +41,10 @@ export type FeaturedProductCardData = {
   tags: string[];
   createdAt: string;
   imageUrl: string | null;
+  stock: number;
+  averageRating: number;
+  reviewCount: number;
+  etaLabel: string | null;
 };
 
 function getFilteredProducts(tab: ProductTab, products: FeaturedProductCardData[]): FeaturedProductCardData[] {
@@ -120,6 +124,11 @@ export function FeaturedProductsClient({ products }: { products: FeaturedProduct
                           className="absolute inset-0 h-full w-full object-cover"
                         />
                       ) : null}
+                      <div className="absolute left-2 top-2 flex items-center gap-1">
+                        <span className={`rounded-md px-2 py-1 text-[10px] font-semibold ${p.stock > 0 ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                          {p.stock > 0 ? "In Stock" : "Made to Order"}
+                        </span>
+                      </div>
                     </div>
                   </Link>
                   <CardContent className="p-4">
@@ -127,6 +136,13 @@ export function FeaturedProductsClient({ products }: { products: FeaturedProduct
                       <p className="font-semibold text-slate-900">{p.name}</p>
                     </Link>
                     <p className="mt-1 text-sm text-slate-500 line-clamp-2">{description}</p>
+                    <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+                      <span className="inline-flex items-center gap-1">
+                        <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+                        {p.averageRating.toFixed(1)} ({p.reviewCount})
+                      </span>
+                      <span>{p.etaLabel ?? "Delivery in 2-5 days"}</span>
+                    </div>
                     <p className="mt-3 text-lg font-bold text-[#FF4D00]">{formatPrice(p.basePrice)}</p>
                     <Button asChild size="sm" className="mt-4 w-full rounded-xl bg-[#FF4D00] hover:bg-[#FF4D00]/90">
                       <Link href={`/shop/${p.slug}`}>Add to cart</Link>

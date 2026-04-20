@@ -3,6 +3,7 @@ import { CategoryStrip } from "@/components/marketing/category-strip";
 import { HowItWorks } from "@/components/marketing/how-it-works";
 import { FeaturedProducts } from "@/components/marketing/featured-products";
 import { FeaturedCatalogueSection } from "@/components/marketing/featured-catalogue";
+import { StickyMiniCartCTA } from "@/components/marketing/sticky-mini-cart-cta";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { getCachedCategories } from "@/lib/cache/unstable-cache";
@@ -30,6 +31,30 @@ export default async function HomePage() {
   return (
     <>
       <Hero heroImage={siteImages.marketing_hero} largeFormatEnabled={largeFormatEnabled} />
+      <section className="bg-white py-5 border-b border-slate-100">
+        <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/shop?sort=bestselling"
+              className="rounded-full bg-orange-100 px-3 py-1.5 text-xs font-semibold text-orange-700"
+            >
+              Best sellers
+            </Link>
+            <Link
+              href="/shop?sort=newest"
+              className="rounded-full bg-blue-100 px-3 py-1.5 text-xs font-semibold text-blue-700"
+            >
+              New arrivals
+            </Link>
+            <Link
+              href="/shop?maxPrice=1500"
+              className="rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-700"
+            >
+              Under KES 1,500
+            </Link>
+          </div>
+        </div>
+      </section>
       <FeaturedProducts />
       <FeaturedCatalogueSection />
       <section className="bg-slate-50 py-10">
@@ -71,6 +96,7 @@ export default async function HomePage() {
           siteImages.how_it_works_step_04,
         ]}
       />
+      <StickyMiniCartCTA />
     </>
   );
 }

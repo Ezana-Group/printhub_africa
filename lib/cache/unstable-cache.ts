@@ -37,6 +37,9 @@ const DEFAULTS: BusinessPublic = {
   showStatsMachines: false,
   showStatsStaff: false,
 };
+const defaultWhatsappPrefilledMessage =
+  (DEFAULTS as unknown as { whatsappPrefilledMessage?: string | null })
+    .whatsappPrefilledMessage ?? null;
 
 /** Metadata-only cache for root layout (favicon, title, OG). Revalidate with tag 'business'. */
 export type BusinessMetadata = {
@@ -153,7 +156,7 @@ export const getCachedBusinessPublic = unstable_cache(
       showStatsMachines: row.showStatsMachines ?? false,
       showStatsStaff: row.showStatsStaff ?? false,
       whatsappFloatingButton: row.whatsappFloatingButton ?? true,
-      whatsappPrefilledMessage: row.whatsappPrefilledMessage ?? (DEFAULTS as any).whatsappPrefilledMessage,
+      whatsappPrefilledMessage: row.whatsappPrefilledMessage ?? defaultWhatsappPrefilledMessage,
     };
   },
   ["business-public"],
@@ -214,6 +217,12 @@ export const getCachedFeaturedProducts = unstable_cache(
       where: { isActive: true, isFeatured: true },
       include: {
         productImages: { orderBy: { sortOrder: "asc" } },
+        reviews: {
+          select: {
+            rating: true,
+            isApproved: true,
+          },
+        },
       },
       take: 8,
       orderBy: { createdAt: "desc" },
