@@ -6,12 +6,12 @@ import { getBusinessPublic } from "@/lib/business-public";
 import { ProductImageGallery } from "@/components/shop/ProductImageGallery";
 import { ProductInfoBlock } from "@/components/shop/ProductInfoBlock";
 import { ProductReviewsSection } from "./reviews-section";
-import { formatDescription, serializeDecimal } from "@/lib/utils";
+import { formatDescription, serializeDecimal, toParagraphs } from "@/lib/utils";
 import { LicenceBadge } from "@/components/catalogue/LicenceBadge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ViewContentTracker } from "@/components/marketing/ViewContentTracker";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Truck, ShieldCheck, BadgeCheck } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   });
   if (!product) return { title: "Shop | PrintHub Kenya" };
   const title = product.metaTitle ?? `${product.name} | PrintHub Kenya`;
-  const description = product.metaDescription ?? product.shortDescription ?? undefined;
+  const description = formatDescription(product.metaDescription ?? product.shortDescription) || undefined;
   const image = product.images?.[0] || "/images/og/default-og.webp";
 
   const url = `${process.env.NEXT_PUBLIC_APP_URL}/shop/${slug}`;
@@ -87,6 +87,11 @@ export default async function ProductPage({ params }: Props) {
 
   // Serialize Decimal objects to numbers for Client Components
   const product = serializeDecimal(rawProduct);
+  const viewProduct = product as typeof product & {
+    isPOD?: boolean;
+    printTimeEstimate?: string | null;
+    filamentWeightGrams?: number | null;
+  };
 
   // Merge modern productImages relation with legacy images JSON array
   const legacyImages = Array.isArray(product.images) ? product.images : [];
@@ -107,6 +112,8 @@ export default async function ProductPage({ params }: Props) {
     }));
 
   const galleryImages = [...adhocImages, ...mergedLegacy];
+  const descriptionParagraphs = toParagraphs(product.description);
+  const shortDescription = formatDescription(product.shortDescription);
 
   return (
     <div className="bg-white min-h-screen">
@@ -153,8 +160,38 @@ export default async function ProductPage({ params }: Props) {
           </div>
         </div>
 
+        <div className="mt-12 grid gap-4 md:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <div className="flex items-center gap-2 text-slate-900">
+              <Truck className="h-4 w-4 text-primary" />
+              <p className="text-sm font-semibold">Delivery across Kenya</p>
+            </div>
+            <p className="mt-2 text-sm text-slate-600">
+              Tracked nationwide delivery with careful packaging for 3D printed items.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <div className="flex items-center gap-2 text-slate-900">
+              <ShieldCheck className="h-4 w-4 text-primary" />
+              <p className="text-sm font-semibold">Quality checked before dispatch</p>
+            </div>
+            <p className="mt-2 text-sm text-slate-600">
+              Every item is inspected for print quality, finish consistency, and fit.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <div className="flex items-center gap-2 text-slate-900">
+              <BadgeCheck className="h-4 w-4 text-primary" />
+              <p className="text-sm font-semibold">Secure payments</p>
+            </div>
+            <p className="mt-2 text-sm text-slate-600">
+              Pay safely via M-Pesa, cards, or bank transfer with clear pricing.
+            </p>
+          </div>
+        </div>
+
         {/* Bottom Content: Detailed Tabs */}
-        <div className="mt-32 max-w-5xl">
+        <div className="mt-20 max-w-5xl">
           <Tabs defaultValue="description" className="w-full">
             <TabsList className="bg-transparent border-b border-slate-100 w-full justify-start rounded-none h-auto p-0 gap-12">
               <TabsTrigger 
@@ -163,7 +200,7 @@ export default async function ProductPage({ params }: Props) {
               >
                 Story
               </TabsTrigger>
-              {(product as any).isPOD && (
+              {viewProduct.isPOD && (
                 <TabsTrigger 
                   value="specs" 
                   className="rounded-none border-b-4 border-transparent data-[state=active]:border-[#FF4D00] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-5 font-black text-base text-slate-300 data-[state=active]:text-slate-900 transition-all uppercase tracking-widest"
@@ -181,13 +218,17 @@ export default async function ProductPage({ params }: Props) {
             
             <TabsContent value="description" className="py-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
               <div className="prose prose-slate max-w-none">
-                <p className="text-xl text-slate-600 leading-relaxed whitespace-pre-wrap font-medium font-serif italic mb-10">
-                  {formatDescription(product.shortDescription)}
-                </p>
+                {shortDescription && (
+                  <p className="text-xl text-slate-600 leading-relaxed whitespace-pre-wrap font-medium font-serif italic mb-10">
+                    {shortDescription}
+                  </p>
+                )}
                 <div className="text-slate-700 leading-relaxed text-lg space-y-6">
-                   {formatDescription(product.description).split('\n\n').map((para, i) => (
-                     <p key={i}>{para}</p>
-                   ))}
+                  {descriptionParagraphs.length > 0 ? (
+                    descriptionParagraphs.map((para, i) => <p key={i}>{para}</p>)
+                  ) : (
+                    <p>No product story available yet. Message us for full details and customization options.</p>
+                  )}
                 </div>
                 
                 {product.externalModel && (
@@ -218,16 +259,16 @@ export default async function ProductPage({ params }: Props) {
                            <dt className="text-slate-500 font-bold">Process</dt>
                            <dd className="font-black text-slate-900">FDM 3D Manufacture</dd>
                         </div>
-                        {(product as any).printTimeEstimate && (
+                        {viewProduct.printTimeEstimate && (
                           <div className="flex justify-between items-center border-b border-slate-50 pb-4">
                             <dt className="text-slate-500 font-bold">Production Cycle</dt>
-                            <dd className="font-black text-slate-900">{(product as any).printTimeEstimate}</dd>
+                            <dd className="font-black text-slate-900">{viewProduct.printTimeEstimate}</dd>
                           </div>
                         )}
-                        {(product as any).filamentWeightGrams && (
+                        {viewProduct.filamentWeightGrams && (
                           <div className="flex justify-between items-center border-b border-slate-50 pb-4">
                             <dt className="text-slate-500 font-bold">Net Material weight</dt>
-                            <dd className="font-black text-slate-900">{(product as any).filamentWeightGrams}g</dd>
+                            <dd className="font-black text-slate-900">{viewProduct.filamentWeightGrams}g</dd>
                           </div>
                         )}
                      </dl>

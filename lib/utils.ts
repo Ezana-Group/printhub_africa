@@ -35,22 +35,47 @@ export function capitalizeSentence(s: string): string {
   return lowered.charAt(0).toUpperCase() + lowered.slice(1);
 }
 
+/** Remove basic HTML tags from rich text content. */
+export function stripHtmlTags(text: string | null | undefined): string {
+  if (!text) return "";
+  return text
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>\s*<p>/gi, "\n\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .trim();
+}
+
+/** Convert rich HTML/plain text into clean readable paragraphs. */
+export function toParagraphs(text: string | null | undefined): string[] {
+  const cleaned = stripHtmlTags(text);
+  if (!cleaned) return [];
+  return cleaned
+    .split(/\n{2,}/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
 /**
  * Fixes ALL CAPS names and descriptions to be more human-friendly.
  * If more than 50% of the string is uppercase, it converts it to sentence case.
  */
 export function formatDescription(text: string | null | undefined): string {
-  if (!text) return "";
+  const cleaned = stripHtmlTags(text);
+  if (!cleaned) return "";
   
   // Simple heuristic: if most chars are uppercase, it's probably an import/legacy data issue
-  const upperCount = (text.match(/[A-Z]/g) || []).length;
-  const alphaCount = (text.match(/[a-z]/i) || []).length;
+  const upperCount = (cleaned.match(/[A-Z]/g) || []).length;
+  const alphaCount = (cleaned.match(/[a-z]/i) || []).length;
   
   if (alphaCount > 5 && upperCount / alphaCount > 0.6) {
-    return text.toLowerCase().split('. ').map(s => capitalizeSentence(s)).join('. ');
+    return cleaned.toLowerCase().split('. ').map(s => capitalizeSentence(s)).join('. ');
   }
   
-  return text;
+  return cleaned;
 }
 
 /**
@@ -67,19 +92,26 @@ export function serializeDecimal<T>(obj: T): T {
   }
 
   // Handle Decimal.js objects (they usually have a "d" and "s" and "e" property or an isDecimal flag)
-  if (typeof obj === 'object' && (obj as any).d && (obj as any).s !== undefined && (obj as any).e !== undefined) {
+  if (
+    typeof obj === "object" &&
+    obj !== null &&
+    "d" in (obj as Record<string, unknown>) &&
+    "s" in (obj as Record<string, unknown>) &&
+    "e" in (obj as Record<string, unknown>)
+  ) {
     return Number(obj) as unknown as T;
   }
 
   // Handle plain Objects
   if (typeof obj === 'object' && obj.constructor === Object) {
-    const result: any = {};
-    for (const key in obj) {
-      if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        result[key] = serializeDecimal((obj as any)[key]);
+    const source = obj as Record<string, unknown>;
+    const result: Record<string, unknown> = {};
+    for (const key in source) {
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
+        result[key] = serializeDecimal(source[key]);
       }
     }
-    return result as T;
+    return result as unknown as T;
   }
 
   // Return primitives
