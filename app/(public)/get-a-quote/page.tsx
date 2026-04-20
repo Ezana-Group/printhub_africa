@@ -340,6 +340,17 @@ export default function GetAQuotePage() {
           <p className="mt-3 text-slate-600 text-lg max-w-xl mx-auto">
             No design files yet? Start with &quot;I Have an Idea&quot;. Already have artwork? Choose {largeFormatEnabled ? "Large Format or " : ""}3D Print for a custom quote within 2 business days.
           </p>
+          <p className="mt-3 text-sm text-slate-600 max-w-2xl mx-auto">
+            Need help selecting material? Explore{" "}
+            <Link href="/services/3d-printing#materials" className="text-primary font-medium hover:underline">
+              3D printing materials in Kenya
+            </Link>{" "}
+            or read our{" "}
+            <Link href="/services/3d-printing" className="text-primary font-medium hover:underline">
+              3D printing service guide for Nairobi and nationwide delivery
+            </Link>
+            .
+          </p>
           <div className="mt-6 flex flex-wrap justify-center gap-4 md:gap-6">
             {steps.map(({ num, label }) => (
               <div key={num} className="flex items-center gap-2 text-slate-600">
