@@ -8,9 +8,10 @@ import { BusinessStats } from "@/components/stats/BusinessStats";
 
 interface HeroProps {
   heroImage?: any;
+  largeFormatEnabled?: boolean;
 }
 
-export function Hero({ heroImage }: HeroProps) {
+export function Hero({ heroImage, largeFormatEnabled = false }: HeroProps) {
   return (
     <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-black">
       <WebGLShader />
@@ -20,7 +21,7 @@ export function Hero({ heroImage }: HeroProps) {
 
       <div className="container max-w-7xl mx-auto relative z-10 px-4 md:px-6 lg:px-8 py-24 text-center">
         <p className="text-primary font-semibold text-sm uppercase tracking-widest mb-4">
-          Large format & 3D printing
+          {largeFormatEnabled ? "Large format & 3D printing" : "3D printing"}
         </p>
         <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold max-w-4xl mx-auto leading-[1.1] text-white tracking-tight">
           Print Anything.
@@ -28,7 +29,9 @@ export function Hero({ heroImage }: HeroProps) {
           <span className="text-primary">Deliver Everywhere.</span>
         </h1>
         <p className="mt-6 text-lg md:text-xl text-slate-300 max-w-xl mx-auto">
-          From Eldoret to all of Kenya — banners, signage, vehicle wraps, and custom 3D prints.
+          {largeFormatEnabled
+            ? "From Eldoret to all of Kenya — banners, signage, vehicle wraps, and custom 3D prints."
+            : "From Eldoret to all of Kenya — custom 3D prints, prototypes, and production-ready parts."}
         </p>
         <div className="mt-10 flex flex-wrap gap-6 justify-center items-center">
           <ShinyButton

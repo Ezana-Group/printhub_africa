@@ -8,6 +8,7 @@ import { WhatsAppFloat } from "@/components/layout/whatsapp-float";
 import { CookieBanner } from "@/components/CookieBanner";
 import { TawkTo } from "@/components/TawkTo";
 import { getCachedBusinessPublic, getCachedBusinessMetadata } from "@/lib/cache/unstable-cache";
+import { getServiceFlags } from "@/lib/service-flags";
 
 export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
 // Revalidate every 5 min so public pages can be cached (TTFB optimisation)
@@ -37,6 +38,7 @@ export default async function PublicLayout({
   children: React.ReactNode;
 }) {
   const business = await getCachedBusinessPublic();
+  const { largeFormatEnabled } = await getServiceFlags();
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://printhub.africa";
   const address = [business.address1, business.city, business.county, business.country].filter(Boolean).join(", ") || undefined;
   const localBusinessJsonLd = {
@@ -68,10 +70,10 @@ export default async function PublicLayout({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessJsonLd) }}
       />
       <AnnouncementBar business={business} />
-      <Header business={business} />
+      <Header business={business} largeFormatEnabled={largeFormatEnabled} />
       <EmailVerificationBanner />
       <main id="main-content" className="min-h-[calc(100vh-8rem)]">{children}</main>
-      <Footer business={business} />
+      <Footer business={business} largeFormatEnabled={largeFormatEnabled} />
       <WhatsAppFloat 
         whatsapp={business.whatsapp} 
         message={business.whatsappPrefilledMessage}

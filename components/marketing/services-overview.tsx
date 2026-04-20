@@ -27,14 +27,16 @@ const SERVICES = [
 export function ServicesOverview({
   largeFormatImage,
   threeDImage,
+  largeFormatEnabled = false,
 }: {
   largeFormatImage?: string;
   threeDImage?: string;
+  largeFormatEnabled?: boolean;
 } = {}) {
-  const images = [
-    largeFormatImage ?? SERVICES[0].defaultImage,
-    threeDImage ?? SERVICES[1].defaultImage,
-  ];
+  const visibleServices = largeFormatEnabled ? SERVICES : SERVICES.filter((service) => service.title !== "Large Format Printing");
+  const images = largeFormatEnabled
+    ? [largeFormatImage ?? SERVICES[0].defaultImage, threeDImage ?? SERVICES[1].defaultImage]
+    : [threeDImage ?? SERVICES[1].defaultImage];
   return (
     <section id="our-services" className="py-20 md:py-28 bg-slate-50/80">
       <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
@@ -45,7 +47,7 @@ export function ServicesOverview({
           Professional printing solutions for businesses and creatives across Kenya.
         </p>
         <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
-          {SERVICES.map((service, i) => {
+          {visibleServices.map((service, i) => {
             const src = images[i] ?? service.defaultImage;
             const isExternal = src.startsWith("http");
             return (

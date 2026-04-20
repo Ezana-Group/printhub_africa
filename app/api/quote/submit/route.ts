@@ -4,6 +4,7 @@ import { authOptionsCustomer } from "@/lib/auth-customer";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { rateLimit, getRateLimitClientIp } from "@/lib/rate-limit";
+import { getServiceFlags } from "@/lib/service-flags";
 
 const schema = z.object({
   quoteType: z.enum(["large_format", "3d"]),
@@ -35,6 +36,14 @@ export async function POST(req: Request) {
     }
 
     const { quoteType, estimatedTotal, inputs } = parsed.data;
+    const { largeFormatEnabled } = await getServiceFlags();
+    if (quoteType === "large_format" && !largeFormatEnabled) {
+      return NextResponse.json(
+        { error: "Large format printing is currently unavailable." },
+        { status: 403 }
+      );
+    }
+
     const quantity = Number((inputs as { quantity?: number }).quantity) || 1;
     const material =
       (inputs as { materialSlug?: string; material?: string }).materialSlug ??

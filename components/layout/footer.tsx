@@ -65,9 +65,25 @@ const FOOTER_COLUMNS: { title: string; links: FooterLink[] }[] = [
   },
 ];
 
-export function Footer({ business }: { business: BusinessPublic }) {
+export function Footer({
+  business,
+  largeFormatEnabled = false,
+}: {
+  business: BusinessPublic;
+  largeFormatEnabled?: boolean;
+}) {
   const [contactOpen, setContactOpen] = useState(false);
   const socialLinks = socialLinksFromBusiness(business);
+  const footerColumns = largeFormatEnabled
+    ? FOOTER_COLUMNS
+    : FOOTER_COLUMNS.map((col) =>
+        col.title === "Services"
+          ? {
+              ...col,
+              links: col.links.filter((link) => link.href !== "/services/large-format"),
+            }
+          : col
+      );
 
   return (
     <>
@@ -89,7 +105,7 @@ export function Footer({ business }: { business: BusinessPublic }) {
               </p>
               <p className="text-xs text-slate-500 mt-1">{business.tradingName}</p>
             </div>
-            {FOOTER_COLUMNS.map((col) => (
+            {footerColumns.map((col) => (
               <div key={col.title}>
                 <h3 className="font-semibold text-sm text-white mb-4">{col.title}</h3>
                 <ul className="space-y-3">

@@ -95,6 +95,7 @@ export function ShopLanding({ categories, featuredProducts, whatsapp: whatsappPr
   const [productsLoading, setProductsLoading] = useState(false);
   const [whatsappFromApi, setWhatsappFromApi] = useState<string | null>(null);
   const [businessLabel, setBusinessLabel] = useState<string>("PrintHub Nairobi");
+  const [largeFormatEnabled, setLargeFormatEnabled] = useState(false);
   const whatsapp = whatsappProp ?? whatsappFromApi;
   const waDigits = (whatsapp ?? DEFAULT_WHATSAPP).replace(/\D/g, "") || DEFAULT_WHATSAPP;
   const waHref = `https://wa.me/${waDigits}`;
@@ -102,6 +103,15 @@ export function ShopLanding({ categories, featuredProducts, whatsapp: whatsappPr
   useEffect(() => {
     setSearchInput(q);
   }, [q]);
+
+  useEffect(() => {
+    fetch("/api/public/service-flags")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((flags: { largeFormatEnabled?: boolean } | null) => {
+        setLargeFormatEnabled(Boolean(flags?.largeFormatEnabled));
+      })
+      .catch(() => setLargeFormatEnabled(false));
+  }, []);
 
   useEffect(() => {
     fetch("/api/settings/business-public")
@@ -137,6 +147,9 @@ export function ShopLanding({ categories, featuredProducts, whatsapp: whatsappPr
 
   const showSearchResults = !!q;
   const hasFeatured = featuredProducts.length > 0;
+  const visibleCategories = largeFormatEnabled
+    ? categories
+    : categories.filter((cat) => cat.slug !== "large-format");
 
   return (
     <main id="main-content" className="min-h-screen bg-[var(--brand-black)]">
@@ -152,8 +165,7 @@ export function ShopLanding({ categories, featuredProducts, whatsapp: whatsappPr
             We Make.
           </h1>
           <p className="mt-6 max-w-2xl font-body text-lg text-white/55">
-            From large format printing to 3D-printed products — browse our services and
-            ready-made products below.
+            From 3D printing services to ready-made products — browse options below.
           </p>
           <form
             method="get"
@@ -239,7 +251,7 @@ export function ShopLanding({ categories, featuredProducts, whatsapp: whatsappPr
           <section className="px-6 py-16 md:px-12 lg:px-16" aria-label="Shop categories">
             <div className="mx-auto max-w-7xl">
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {categories.map((cat, i) => {
+                {visibleCategories.map((cat, i) => {
                   const config = getCardConfig(cat.slug);
                   return (
                     <motion.div

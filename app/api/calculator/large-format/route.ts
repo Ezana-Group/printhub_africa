@@ -1,10 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { calculateLargeFormatEstimate } from "@/lib/pricing";
+import { getServiceFlags } from "@/lib/service-flags";
 
 /** GET: fetch all options for the large-format calculator (materials, lamination, finishing, design, turnaround) */
 export async function GET() {
   try {
+    const { largeFormatEnabled } = await getServiceFlags();
+    if (!largeFormatEnabled) {
+      return NextResponse.json(
+        { error: "Large format printing is currently unavailable." },
+        { status: 403 }
+      );
+    }
+
     const [materials, lamination, finishing, design, turnaround] = await Promise.all([
       prisma.printingMedium.findMany({
         where: { isActive: true, slug: { not: null } },
@@ -63,6 +72,14 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const { largeFormatEnabled } = await getServiceFlags();
+    if (!largeFormatEnabled) {
+      return NextResponse.json(
+        { error: "Large format printing is currently unavailable." },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
     const widthCm = Number(body.widthCm) || 0;
     const heightCm = Number(body.heightCm) || 0;

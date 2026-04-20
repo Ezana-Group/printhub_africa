@@ -1,7 +1,14 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { notFound } from "next/navigation";
+import { getServiceFlags } from "@/lib/service-flags";
 
-export default function LargeFormatPage() {
+export default async function LargeFormatPage() {
+  const { largeFormatEnabled } = await getServiceFlags();
+  if (!largeFormatEnabled) {
+    notFound();
+  }
+
   return (
     <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-12">
       <div className="mb-12">

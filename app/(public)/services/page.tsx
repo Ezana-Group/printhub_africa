@@ -16,6 +16,7 @@ import {
 import { getBusinessPublic } from "@/lib/business-public";
 import { getSiteImageSlots } from "@/lib/site-images";
 import { prisma } from "@/lib/prisma";
+import { getServiceFlags } from "@/lib/service-flags";
 
 export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
 export const revalidate = 3600; // 1 hour — services overview changes rarely
@@ -76,15 +77,18 @@ const WHY_US = (city: string) => [
 ];
 
 export default async function ServicesPage() {
-  const [business, siteImages] = await Promise.all([
+  const [business, siteImages, { largeFormatEnabled }] = await Promise.all([
     getBusinessPublic(),
     getSiteImageSlots(prisma),
+    getServiceFlags(),
   ]);
   const whyUs = WHY_US(business.city ?? "Nairobi");
-  const serviceImages = [
-    siteImages.services_page_large_format,
-    siteImages.services_page_3d,
-  ];
+  const visibleServices = largeFormatEnabled
+    ? MAIN_SERVICES
+    : MAIN_SERVICES.filter((service) => service.href !== "/services/large-format-printing");
+  const serviceImages = largeFormatEnabled
+    ? [siteImages.services_page_large_format, siteImages.services_page_3d]
+    : [siteImages.services_page_3d];
   return (
     <div className="min-h-screen bg-[#FAFAF8]">
       {/* Hero */}
@@ -94,7 +98,9 @@ export default async function ServicesPage() {
             Professional printing solutions for Kenya
           </h1>
           <p className="text-slate-600 text-lg mt-4 max-w-2xl">
-            Large format printing and 3D printing for businesses, creatives, and makers. Upload your design for a quote, or shop ready-made products. Fast turnaround, nationwide delivery.
+            {largeFormatEnabled
+              ? "Large format printing and 3D printing for businesses, creatives, and makers. Upload your design for a quote, or shop ready-made products. Fast turnaround, nationwide delivery."
+              : "3D printing for businesses, creatives, and makers. Upload your design for a quote, or shop ready-made products. Fast turnaround, nationwide delivery."}
           </p>
           <div className="flex flex-wrap gap-3 mt-8">
             <Button asChild className="rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
@@ -114,10 +120,12 @@ export default async function ServicesPage() {
             Our services
           </h2>
           <p className="text-slate-600 max-w-2xl mb-12">
-            Two core offerings — large format for signage and branding, and 3D printing for prototypes and products. Both support custom file uploads and instant quoting.
+            {largeFormatEnabled
+              ? "Two core offerings — large format for signage and branding, and 3D printing for prototypes and products. Both support custom file uploads and instant quoting."
+              : "Our 3D printing service supports prototypes and products with custom file uploads and instant quoting."}
           </p>
           <div className="grid md:grid-cols-2 gap-8 max-w-6xl">
-            {MAIN_SERVICES.map((service, i) => {
+            {visibleServices.map((service, i) => {
               const src = serviceImages[i] ?? service.image;
               const isExternal = src.startsWith("http");
               return (

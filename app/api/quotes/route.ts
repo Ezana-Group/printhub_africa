@@ -7,6 +7,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { generateQuoteNumber, QUOTE_TYPE_API_TO_DB } from "@/lib/quote-utils";
 import { sendQuoteReceivedEmail } from "@/lib/email";
+import { getServiceFlags } from "@/lib/service-flags";
 
 const fileMetaSchema = z.object({
   url: z.string().url(),
@@ -119,6 +120,14 @@ export async function POST(req: NextRequest) {
       );
     }
     const data = parsed.data;
+    const { largeFormatEnabled } = await getServiceFlags();
+    if (data.type === "large_format" && !largeFormatEnabled) {
+      return NextResponse.json(
+        { error: "Large format printing is currently unavailable." },
+        { status: 403 }
+      );
+    }
+
     const typeDb = QUOTE_TYPE_API_TO_DB[data.type];
     const quoteNumber = await generateQuoteNumber();
     const deadline = data.deadline

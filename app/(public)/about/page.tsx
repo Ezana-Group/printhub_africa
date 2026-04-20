@@ -6,6 +6,7 @@ import { getBusinessPublic } from "@/lib/business-public";
 import { getCachedPublicTeamMembers } from "@/lib/cache/unstable-cache";
 import { getSiteImageSlots } from "@/lib/site-images";
 import { prisma } from "@/lib/prisma";
+import { getServiceFlags } from "@/lib/service-flags";
 
 export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
 export const revalidate = 3600; // 1 hour — about page changes rarely
@@ -14,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const business = await getBusinessPublic();
   const location = [business.city, business.country].filter(Boolean).join(", ") || "Kenya";
   const title = `About ${business.businessName} | Professional Printing in ${location}`;
-  const description = `${business.businessName} is ${business.city ? `${business.city}'s` : "a"} professional large format and 3D printing studio. Fast turnaround, premium materials, nationwide delivery.`;
+  const description = `${business.businessName} is ${business.city ? `${business.city}'s` : "a"} professional 3D printing studio. Fast turnaround, premium materials, nationwide delivery.`;
   return {
     title,
     description,
@@ -27,10 +28,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AboutPage() {
-  const [business, teamMembers, siteImages] = await Promise.all([
+  const [business, teamMembers, siteImages, { largeFormatEnabled }] = await Promise.all([
     getBusinessPublic(),
     getCachedPublicTeamMembers(),
     getSiteImageSlots(prisma),
+    getServiceFlags(),
   ]);
   const whatsappDigits = (business.whatsapp ?? "").replace(/\D/g, "") || "254700000000";
   const whatsappHref = `https://wa.me/${whatsappDigits}`;
@@ -64,8 +66,8 @@ export default async function AboutPage() {
             That Get Noticed.
           </h1>
           <p className="font-body text-base md:text-xl text-white/60 max-w-[560px] mt-6 leading-relaxed">
-            {business.businessName} is {business.city ? `${business.city}'s` : "your"} professional large format and 3D printing
-            studio. From vehicle wraps to architectural models, we bring ideas to
+            {business.businessName} is {business.city ? `${business.city}'s` : "your"} professional 3D printing
+            studio. From prototypes to architectural models, we bring ideas to
             life with precision and speed.
           </p>
           <AboutHero />
@@ -107,13 +109,12 @@ export default async function AboutPage() {
                 take for granted.
               </p>
               <p>
-                We started with a single large format printer in {business.city || "Kenya"} and a
+                We started with a single 3D printer in {business.city || "Kenya"} and a
                 commitment to fast turnaround, honest pricing, and work that
                 genuinely represents our clients&apos; brands.
               </p>
               <p>
-                Today we operate across large format printing, 3D printing, and
-                custom merchandise — serving everyone from solo entrepreneurs to
+                Today we operate across 3D printing and custom merchandise — serving everyone from solo entrepreneurs to
                 government agencies and multinational brands.
               </p>
             </div>
@@ -147,15 +148,6 @@ export default async function AboutPage() {
             {[
               {
                 num: "01",
-                title: "Large Format",
-                subtitle: "Printing",
-                desc: "Banners, vehicle wraps, signage, canvas, wallpaper and floor graphics. Any size. Any substrate.",
-                cta: "Explore service",
-                href: "/services/large-format-printing",
-                image: siteImages.about_card_01,
-              },
-              {
-                num: "02",
                 title: "3D Printing",
                 subtitle: "",
                 desc: "FDM and resin printing for prototypes, products, architecture, jewellery and engineering parts.",
@@ -164,7 +156,7 @@ export default async function AboutPage() {
                 image: siteImages.about_card_02,
               },
               {
-                num: "03",
+                num: "02",
                 title: "3D Printed",
                 subtitle: "Merchandise",
                 desc: "Ready-made and custom printed products shipped across Kenya.",
@@ -172,6 +164,17 @@ export default async function AboutPage() {
                 href: "/shop",
                 image: siteImages.about_card_03,
               },
+              ...(largeFormatEnabled
+                ? [{
+                    num: "03",
+                    title: "Large Format",
+                    subtitle: "Printing",
+                    desc: "Banners, vehicle wraps, signage, canvas, wallpaper and floor graphics. Any size. Any substrate.",
+                    cta: "Explore service",
+                    href: "/services/large-format-printing",
+                    image: siteImages.about_card_01,
+                  }]
+                : []),
             ].map((card) => (
               <ServiceCard key={card.num} {...card} />
             ))}

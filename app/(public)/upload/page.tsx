@@ -6,20 +6,19 @@ import { FileUploader } from "@/components/upload/FileUploader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import type { UploadedFileResult } from "@/components/upload/FileUploader";
-import { Box, FileCode } from "lucide-react";
+import { Box } from "lucide-react";
 
-type Tab = "3d" | "large_format";
+type Tab = "3d";
 
 export default function UploadPage() {
   const [tab, setTab] = useState<Tab>("3d");
   const [, setUploaded3d] = useState<UploadedFileResult[]>([]);
-  const [, setUploadedLf] = useState<UploadedFileResult[]>([]);
 
   return (
     <div className="container max-w-4xl mx-auto px-4 py-12">
       <h1 className="font-display text-3xl font-bold text-slate-900">Upload your files</h1>
       <p className="text-slate-600 mt-2">
-        Choose 3D print or large format, then upload your design files. You can request a quote after uploading.
+        Upload your 3D model files, then request a quote.
       </p>
 
       <div className="mt-8 flex w-full gap-3 overflow-x-auto rounded-xl bg-slate-50 p-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
@@ -35,18 +34,6 @@ export default function UploadPage() {
           <Box className="h-4 w-4" />
           3D Print
         </button>
-        <button
-          type="button"
-          onClick={() => setTab("large_format")}
-          className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
-            tab === "large_format"
-              ? "bg-[#FF4D00] text-white shadow-sm"
-              : "bg-[#FFF3E0] text-[#E65100] hover:brightness-95"
-          }`}
-        >
-          <FileCode className="h-4 w-4" />
-          Large Format
-        </button>
       </div>
 
       <Card className="mt-6">
@@ -58,14 +45,7 @@ export default function UploadPage() {
                 STL, OBJ, 3MF, STEP · Max 500MB per file · Up to 5 files
               </p>
             </>
-          ) : (
-            <>
-              <h2 className="text-lg font-semibold">Large format design files</h2>
-              <p className="text-sm text-slate-500">
-                AI, PDF, PSD, EPS, PNG, SVG, TIFF · Max 500MB per file · Up to 3 files
-              </p>
-            </>
-          )}
+          ) : null}
         </CardHeader>
         <CardContent>
           {tab === "3d" && (
@@ -95,37 +75,6 @@ export default function UploadPage() {
                 <div>✓ OBJ — with textures</div>
                 <div>✓ 3MF — Bambu Lab native format</div>
                 <div>✓ STEP — engineering/CAD files</div>
-              </div>
-            </>
-          )}
-          {tab === "large_format" && (
-            <>
-              <FileUploader
-                context="CUSTOMER_LARGE_FORMAT"
-                accept={[
-                  "application/pdf",
-                  "image/png",
-                  "image/jpeg",
-                  "image/tiff",
-                  "image/svg+xml",
-                  "application/postscript",
-                  "image/vnd.adobe.photoshop",
-                  "application/dxf",
-                ]}
-                maxSizeMB={500}
-                maxFiles={3}
-                label="Upload your print file"
-                hint="AI, PDF, PSD, EPS, PNG (300dpi+), SVG, TIFF · Max 500MB"
-                onUploadComplete={setUploadedLf}
-              />
-              <div className="mt-4 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
-                <strong>For best results:</strong>
-                <ul className="mt-1 list-inside list-disc space-y-0.5 text-xs text-slate-600">
-                  <li>Resolution: minimum 100dpi at print size (300dpi preferred)</li>
-                  <li>Colour mode: CMYK for prints, RGB for backlit/lightbox</li>
-                  <li>Include 5mm bleed on all sides</li>
-                  <li>Embed all fonts or convert to outlines</li>
-                </ul>
               </div>
             </>
           )}

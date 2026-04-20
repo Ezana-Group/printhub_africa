@@ -13,6 +13,8 @@ import { LargeFormatServiceGrid } from "@/components/services/LargeFormatService
 import { getBusinessPublic } from "@/lib/business-public";
 import { getSiteImageSlots } from "@/lib/site-images";
 import { prisma } from "@/lib/prisma";
+import { notFound } from "next/navigation";
+import { getServiceFlags } from "@/lib/service-flags";
 
 export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
 export const revalidate = 3600; // 1 hour — service page content changes rarely
@@ -374,6 +376,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function LargeFormatPrintingPage() {
+  const { largeFormatEnabled } = await getServiceFlags();
+  if (!largeFormatEnabled) {
+    notFound();
+  }
+
   const [business, siteImages] = await Promise.all([
     getBusinessPublic(),
     getSiteImageSlots(prisma),

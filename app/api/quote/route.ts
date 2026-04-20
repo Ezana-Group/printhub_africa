@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email";
 import { getBusinessPublic } from "@/lib/business-public";
 import { rateLimit, getRateLimitClientIp } from "@/lib/rate-limit";
+import { getServiceFlags } from "@/lib/service-flags";
 
 const bodySchema = z.object({
   type: z.enum(["large_format", "3d_print"]),
@@ -40,6 +41,13 @@ export async function POST(req: NextRequest) {
       );
     }
     const data = parsed.data;
+    const { largeFormatEnabled } = await getServiceFlags();
+    if (data.type === "large_format" && !largeFormatEnabled) {
+      return NextResponse.json(
+        { error: "Large format printing is currently unavailable." },
+        { status: 403 }
+      );
+    }
 
     if (session?.user?.id) {
       await prisma.printQuote.create({

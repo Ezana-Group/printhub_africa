@@ -67,7 +67,18 @@ type ThreeDOptions = {
   finishing: { code: string; name: string; pricePerUnit: number }[];
 };
 
+type QuotePart3D = {
+  material: string;
+  materialName?: string;
+  color?: string;
+  quantity: number;
+  weightGrams: number;
+  printTimeHours: number;
+  postProcessing?: boolean;
+};
+
 export default function GetAQuotePage() {
+  const [largeFormatEnabled, setLargeFormatEnabled] = useState(false);
   const [serviceType, setServiceType] = useState<ServiceType>("design_and_print");
   const [referenceUploadedFiles, setReferenceUploadedFiles] = useState<UploadedFileResult[]>([]);
   const [designUploadedFiles, setDesignUploadedFiles] = useState<UploadedFileResult[]>([]);
@@ -114,9 +125,22 @@ export default function GetAQuotePage() {
   const [finishingCode3d] = useState("FINISH_RAW");
   const [turnaroundCode3d] = useState("STD_3D");
   const [postProcessing3d] = useState(false);
-  const [parts3d, setParts3d] = useState<any[]>([]);
+  const [parts3d, setParts3d] = useState<QuotePart3D[]>([]);
   const [selectedMaterialName3d, setSelectedMaterialName3d] = useState<string | null>(null);
   const [selectedColor3d, setSelectedColor3d] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/public/service-flags")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((flags: { largeFormatEnabled?: boolean } | null) => {
+        const enabled = Boolean(flags?.largeFormatEnabled);
+        setLargeFormatEnabled(enabled);
+        if (!enabled && serviceType === "large_format") {
+          setServiceType("3d_print");
+        }
+      })
+      .catch(() => setLargeFormatEnabled(false));
+  }, [serviceType]);
 
   const fetchThreeDOptions = useCallback(async () => {
     try {
@@ -314,7 +338,7 @@ export default function GetAQuotePage() {
             Get a Quote
           </h1>
           <p className="mt-3 text-slate-600 text-lg max-w-xl mx-auto">
-            No design files yet? Start with &quot;I Have an Idea&quot;. Already have artwork? Choose Large Format or 3D Print for a custom quote within 2 business days.
+            No design files yet? Start with &quot;I Have an Idea&quot;. Already have artwork? Choose {largeFormatEnabled ? "Large Format or " : ""}3D Print for a custom quote within 2 business days.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-4 md:gap-6">
             {steps.map(({ num, label }) => (
@@ -337,26 +361,28 @@ export default function GetAQuotePage() {
             </h2>
             {/* AUDIT FIX: Card order [Large Format] [3D Print] [I Have an Idea]; no blue — orange only */}
             <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setServiceType("large_format");
-                  setDesignUploadedFiles([]);
-                  setStatus("idle");
-                  setErrorMsg("");
-                }}
-                className={`group flex items-start gap-4 rounded-2xl border-2 p-5 text-left transition-all ${
-                  serviceType === "large_format" ? "border-primary bg-primary/5 shadow-sm" : "border-slate-200 bg-card hover:border-primary/50"
-                }`}
-              >
-                <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${serviceType === "large_format" ? "bg-primary text-white" : "bg-slate-100 text-slate-600 group-hover:bg-primary/10 group-hover:text-primary"}`}>
-                  <Layout className="h-6 w-6" />
-                </span>
-                <div>
-                  <span className="font-display font-semibold text-slate-900">Large format print</span>
-                  <p className="mt-1 text-sm text-slate-600">Banners, posters, signage — AI, PDF, PSD, EPS, PNG, JPG, SVG</p>
-                </div>
-              </button>
+              {largeFormatEnabled && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setServiceType("large_format");
+                    setDesignUploadedFiles([]);
+                    setStatus("idle");
+                    setErrorMsg("");
+                  }}
+                  className={`group flex items-start gap-4 rounded-2xl border-2 p-5 text-left transition-all ${
+                    serviceType === "large_format" ? "border-primary bg-primary/5 shadow-sm" : "border-slate-200 bg-card hover:border-primary/50"
+                  }`}
+                >
+                  <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${serviceType === "large_format" ? "bg-primary text-white" : "bg-slate-100 text-slate-600 group-hover:bg-primary/10 group-hover:text-primary"}`}>
+                    <Layout className="h-6 w-6" />
+                  </span>
+                  <div>
+                    <span className="font-display font-semibold text-slate-900">Large format print</span>
+                    <p className="mt-1 text-sm text-slate-600">Banners, posters, signage — AI, PDF, PSD, EPS, PNG, JPG, SVG</p>
+                  </div>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {

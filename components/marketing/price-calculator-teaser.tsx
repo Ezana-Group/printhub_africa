@@ -2,7 +2,13 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
-export function PriceCalculatorTeaser() {
+export function PriceCalculatorTeaser({
+  largeFormatEnabled = false,
+}: {
+  largeFormatEnabled?: boolean;
+}) {
+  if (!largeFormatEnabled) return null;
+
   return (
     <section className="py-20 md:py-28 bg-slate-50/80">
       <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8">

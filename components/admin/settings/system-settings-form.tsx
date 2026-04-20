@@ -11,6 +11,7 @@ import { Loader2 } from "lucide-react";
 
 const API = "/api/admin/settings/system";
 const FEATURE_FLAGS = [
+  "Large Format Printing",
   "Loyalty Points",
   "Referral Programme",
   "Corporate Accounts",
@@ -178,7 +179,13 @@ export function SystemSettingsForm() {
             <SettingsSwitch
               key={name}
               name={flagKey(name)}
-              defaultValue={name === "Referral Programme" ? flagChecked(name) : flagChecked(name) !== false}
+              defaultValue={
+                name === "Large Format Printing"
+                  ? flagChecked(name)
+                  : name === "Referral Programme"
+                    ? flagChecked(name)
+                    : flagChecked(name) !== false
+              }
               label={name}
             />
           ))}

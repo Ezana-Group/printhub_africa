@@ -14,16 +14,36 @@ export function QuoteTypeSelector() {
   const typeFromUrl = searchParams.get("type");
   const [type, setType] = useState<QuoteType>("3d");
   const [initialDraft, setInitialDraft] = useState<QuoteDraft | null>(null);
+  const [largeFormatEnabled, setLargeFormatEnabled] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/public/service-flags")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((flags: { largeFormatEnabled?: boolean } | null) => {
+        const enabled = Boolean(flags?.largeFormatEnabled);
+        setLargeFormatEnabled(enabled);
+        if (!enabled) {
+          setType("3d");
+        }
+      })
+      .catch(() => setLargeFormatEnabled(false));
+  }, []);
 
   useEffect(() => {
     const draft = getQuoteDraft();
     if (draft) {
       setInitialDraft(draft);
-      setType(draft.type === "3d" ? "3d" : "large_format");
+      setType(
+        draft.type === "3d"
+          ? "3d"
+          : largeFormatEnabled
+            ? "large_format"
+            : "3d"
+      );
     } else if (typeFromUrl === "3d" || typeFromUrl === "large_format") {
-      setType(typeFromUrl);
+      setType(typeFromUrl === "large_format" && !largeFormatEnabled ? "3d" : typeFromUrl);
     }
-  }, [typeFromUrl]);
+  }, [typeFromUrl, largeFormatEnabled]);
 
   return (
     <div className="space-y-4">
@@ -40,25 +60,27 @@ export function QuoteTypeSelector() {
           <Box className="h-4 w-4" />
           3D Print
         </button>
-        <button
-          type="button"
-          onClick={() => setType("large_format")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-t text-sm font-medium ${
-            type === "large_format"
-              ? "bg-primary text-primary-foreground"
-              : "bg-muted text-muted-foreground hover:bg-muted/80"
-          }`}
-        >
-          <Layout className="h-4 w-4" />
-          Large format
-        </button>
+        {largeFormatEnabled && (
+          <button
+            type="button"
+            onClick={() => setType("large_format")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-t text-sm font-medium ${
+              type === "large_format"
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            <Layout className="h-4 w-4" />
+            Large format
+          </button>
+        )}
       </div>
       {type === "3d" && (
         <SalesPrintCalculator
           initialDraft={initialDraft?.type === "3d" ? initialDraft : undefined}
         />
       )}
-      {type === "large_format" && (
+      {type === "large_format" && largeFormatEnabled && (
         <SalesLFCalculator
           initialDraft={initialDraft?.type === "large_format" ? initialDraft : undefined}
         />

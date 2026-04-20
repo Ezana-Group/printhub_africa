@@ -1,8 +1,10 @@
 import { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
 import { JobStatus } from "@prisma/client";
+import { getServiceFlags } from "@/lib/service-flags";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const { largeFormatEnabled } = await getServiceFlags();
   const settings = await prisma.businessSettings.findUnique({ 
     where: { id: "default" },
     select: {
@@ -28,7 +30,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         "/get-a-quote",
         "/cart",
         "/checkout",
-        "/services/large-format",
+        ...(largeFormatEnabled ? ["/services/large-format"] : []),
         "/services/3d-printing",
         "/faq",
         "/track",

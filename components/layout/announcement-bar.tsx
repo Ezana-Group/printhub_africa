@@ -8,7 +8,7 @@ import type { BusinessPublic } from "@/lib/business-public";
 
 const MESSAGES = (city: string) => [
   { id: 1, text: `Free delivery on orders over KES 5,000 in ${city || "Eldoret"}`, href: "/shop" },
-  { id: 2, text: "48hr turnaround on large format prints", href: "/services/large-format" },
+  { id: 2, text: "Fast turnaround on 3D print orders", href: "/services/3d-printing" },
   { id: 3, text: "Upload your design — we'll print it. Get a quote today.", href: "/get-a-quote" },
 ];
 

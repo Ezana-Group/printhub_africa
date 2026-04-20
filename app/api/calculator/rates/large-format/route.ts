@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { LFPrinterSettings, LFBusinessSettings } from "@/lib/lf-calculator-engine";
+import { getServiceFlags } from "@/lib/service-flags";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 300;
@@ -43,6 +44,14 @@ const DEFAULT_BUSINESS: LFBusinessSettings = {
 /** GET: Full rates for LF cost engine — printer (from inventory hardware if printerId given), business, materials, laminations, ink, finishing. */
 export async function GET(req: Request) {
   try {
+    const { largeFormatEnabled } = await getServiceFlags();
+    if (!largeFormatEnabled) {
+      return NextResponse.json(
+        { error: "Large format printing is currently unavailable." },
+        { status: 403 }
+      );
+    }
+
     const { searchParams } = new URL(req.url);
     const printerId = searchParams.get("printerId") ?? undefined;
 

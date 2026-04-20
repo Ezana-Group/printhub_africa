@@ -48,13 +48,32 @@ function isActive(href: string, pathname: string, hasChildren?: boolean) {
   return hasChildren ? pathname.startsWith(href) : pathname === href;
 }
 
-export function Header({ business }: { business?: BusinessPublic }) {
+export function Header({
+  business,
+  largeFormatEnabled = false,
+}: {
+  business?: BusinessPublic;
+  largeFormatEnabled?: boolean;
+}) {
   const pathname = usePathname();
   const siteName = business?.businessName ?? "PrintHub";
   const { data: session, status } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [navLinks, setNavLinks] = useState(NAV_LINKS);
+  const [navLinks, setNavLinks] = useState(() =>
+    largeFormatEnabled
+      ? NAV_LINKS
+      : NAV_LINKS.map((link) =>
+          link.label === "Services" && link.children
+            ? {
+                ...link,
+                children: link.children.filter(
+                  (child) => child.href !== "/services/large-format-printing"
+                ),
+              }
+            : link
+        )
+  );
   const cartCount = useCartStore((s) => s.itemCount());
 
   useEffect(() => {

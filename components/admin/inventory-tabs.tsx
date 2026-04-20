@@ -6,6 +6,7 @@ import { Inventory3DSection } from "@/components/admin/inventory-3d-section";
 import { InventoryHardwareSection, type HardwareItemSerialized } from "@/components/admin/inventory-hardware-section";
 import { ShopProductsInventorySection, type ShopProductRow } from "@/components/admin/shop-products-inventory-section";
 import { Package, LayoutTemplate, Cpu, Wrench, Cable, Box } from "lucide-react";
+import { useEffect } from "react";
 
 export type LFStockItemSerialized = {
   id: string;
@@ -82,6 +83,23 @@ export function InventoryTabs({
   const [topTab, setTopTab] = useState<"shop" | "print-materials" | "hardware">("shop");
   const [hardwareSubTab, setHardwareSubTab] = useState<"hardware" | "maintenance" | "accessories">("hardware");
   const [printMaterialsSubTab, setPrintMaterialsSubTab] = useState<"large-format" | "3d-printing">("large-format");
+  const [largeFormatEnabled, setLargeFormatEnabled] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/public/service-flags")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((flags: { largeFormatEnabled?: boolean } | null) => {
+        const enabled = Boolean(flags?.largeFormatEnabled);
+        setLargeFormatEnabled(enabled);
+        if (!enabled) {
+          setPrintMaterialsSubTab("3d-printing");
+        }
+      })
+      .catch(() => {
+        setLargeFormatEnabled(false);
+        setPrintMaterialsSubTab("3d-printing");
+      });
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -108,7 +126,10 @@ export function InventoryTabs({
       {topTab === "print-materials" && (
         <>
           <div className="flex gap-2 border-b border-border/50 flex-wrap">
-            {PRINT_MATERIALS_SUB_TABS.map(({ id, label, icon: Icon }) => (
+            {(largeFormatEnabled
+              ? PRINT_MATERIALS_SUB_TABS
+              : PRINT_MATERIALS_SUB_TABS.filter((tab) => tab.id !== "large-format")
+            ).map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 type="button"
@@ -122,7 +143,7 @@ export function InventoryTabs({
               </button>
             ))}
           </div>
-          {printMaterialsSubTab === "large-format" && (
+          {printMaterialsSubTab === "large-format" && largeFormatEnabled && (
             <LargeFormatInventorySection lfStockItems={lfStockItems} />
           )}
           {printMaterialsSubTab === "3d-printing" && (
