@@ -5,7 +5,7 @@ import { formatPrice, formatDescription } from "@/lib/utils";
 import { ProductMaterialSelector } from "./ProductMaterialSelector";
 import { AddToCartButton } from "./AddToCartButton";
 import { ProductTrustBadges } from "./ProductTrustBadges";
-import { Clock, Weight, MessageCircle } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface Props {
@@ -13,14 +13,19 @@ interface Props {
   product: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   business: any;
+  freeDeliveryThresholdKes?: number;
 }
 
-export function ProductInfoBlock({ product, business }: Props) {
+export function ProductInfoBlock({ product, business, freeDeliveryThresholdKes }: Props) {
   const [selectedMaterial, setSelectedMaterial] = useState<{ id: string; name: string; colorHex: string; brand: string } | null>(null);
   
   const basePrice = Number(product.basePrice);
   const comparePrice = product.comparePrice != null ? Number(product.comparePrice) : null;
   const isPOD = !!product.isPOD;
+  const deliveryCopy =
+    freeDeliveryThresholdKes && freeDeliveryThresholdKes > 0
+      ? `Free delivery for orders above ${formatPrice(freeDeliveryThresholdKes)}.`
+      : "Delivery fees are calculated at checkout.";
 
   const waHref = (text: string) => {
     const digits = (business.whatsapp ?? "").replace(/\D/g, "") || "254700000000";
@@ -52,7 +57,7 @@ export function ProductInfoBlock({ product, business }: Props) {
           )}
         </div>
         <p className="text-sm text-slate-400 font-medium italic">
-          Prices include 16% VAT. Free delivery for orders above KES 10,000.
+          Prices include 16% VAT. {deliveryCopy}
         </p>
       </div>
 

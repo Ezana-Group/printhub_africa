@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getBusinessPublic } from "@/lib/business-public";
 import { ProductImageGallery } from "@/components/shop/ProductImageGallery";
 import { ProductInfoBlock } from "@/components/shop/ProductInfoBlock";
+import { ProductDetailConversionRails } from "@/components/shop/ProductDetailConversionRails";
 import { ProductReviewsSection } from "./reviews-section";
 import { formatDescription, serializeDecimal, toParagraphs } from "@/lib/utils";
 import { LicenceBadge } from "@/components/catalogue/LicenceBadge";
@@ -72,6 +73,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
   const business = await getBusinessPublic();
+  const shippingSettings = await prisma.shippingSettings
+    .findUnique({
+      where: { id: "default" },
+      select: { freeShippingEnabled: true, freeShippingThresholdKes: true },
+    })
+    .catch(() => null);
+  const freeDeliveryThresholdKes =
+    shippingSettings?.freeShippingEnabled && shippingSettings?.freeShippingThresholdKes
+      ? shippingSettings.freeShippingThresholdKes
+      : undefined;
   
   const rawProduct = await prisma.product.findFirst({
     where: { slug, isActive: true },
@@ -115,6 +126,87 @@ export default async function ProductPage({ params }: Props) {
   const descriptionParagraphs = toParagraphs(product.description);
   const shortDescription = formatDescription(product.shortDescription);
 
+  const sharedUpsellWhere = {
+    isActive: true,
+    id: { not: product.id },
+  };
+
+  const frequentRaw = await prisma.product.findMany({
+    where: {
+      ...sharedUpsellWhere,
+      categoryId: product.categoryId,
+      ...(Array.isArray(product.tags) && product.tags.length > 0
+        ? { tags: { hasSome: product.tags.slice(0, 6) } }
+        : {}),
+    },
+    take: 3,
+    orderBy: [{ soldThisMonth: "desc" }, { isFeatured: "desc" }, { createdAt: "desc" }],
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      shortDescription: true,
+      basePrice: true,
+      comparePrice: true,
+      stock: true,
+      images: true,
+      productImages: { select: { url: true }, orderBy: { sortOrder: "asc" }, take: 1 },
+      variants: { select: { id: true }, orderBy: { price: "asc" }, take: 1 },
+    },
+  });
+
+  const relatedRaw = await prisma.product.findMany({
+    where: {
+      ...sharedUpsellWhere,
+      categoryId: product.categoryId,
+    },
+    take: 6,
+    orderBy: [{ isFeatured: "desc" }, { soldThisMonth: "desc" }, { createdAt: "desc" }],
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      shortDescription: true,
+      basePrice: true,
+      comparePrice: true,
+      stock: true,
+      images: true,
+      productImages: { select: { url: true }, orderBy: { sortOrder: "asc" }, take: 1 },
+      variants: { select: { id: true }, orderBy: { price: "asc" }, take: 1 },
+    },
+  });
+
+  const normalizeRailProduct = (
+    item: (typeof frequentRaw)[number]
+  ): {
+    id: string;
+    slug: string;
+    name: string;
+    shortDescription: string | null;
+    basePrice: number;
+    comparePrice: number | null;
+    imageUrl: string | null;
+    stock: number;
+    defaultVariantId?: string;
+  } => ({
+    id: item.id,
+    slug: item.slug,
+    name: item.name,
+    shortDescription: item.shortDescription,
+    basePrice: Number(item.basePrice),
+    comparePrice: item.comparePrice != null ? Number(item.comparePrice) : null,
+    imageUrl: item.productImages[0]?.url ?? item.images[0] ?? null,
+    stock: item.stock ?? 0,
+    defaultVariantId: item.variants[0]?.id ?? undefined,
+  });
+
+  const frequentProducts = frequentRaw.map(normalizeRailProduct);
+  const frequentIds = new Set(frequentProducts.map((p) => p.id));
+  const relatedProducts = relatedRaw
+    .map(normalizeRailProduct)
+    .filter((item) => !frequentIds.has(item.id))
+    .slice(0, 3);
+
   return (
     <div className="bg-white min-h-screen">
       <ViewContentTracker 
@@ -156,7 +248,11 @@ export default async function ProductPage({ params }: Props) {
 
           {/* Right: Info */}
           <div className="lg:col-span-5">
-            <ProductInfoBlock product={product} business={business} />
+            <ProductInfoBlock
+              product={product}
+              business={business}
+              freeDeliveryThresholdKes={freeDeliveryThresholdKes}
+            />
           </div>
         </div>
 
@@ -287,6 +383,23 @@ export default async function ProductPage({ params }: Props) {
             </TabsContent>
           </Tabs>
         </div>
+
+        <ProductDetailConversionRails
+          currentProduct={{
+            id: product.id,
+            slug: product.slug,
+            name: product.name,
+            shortDescription: product.shortDescription,
+            basePrice: Number(product.basePrice),
+            comparePrice: product.comparePrice != null ? Number(product.comparePrice) : null,
+            imageUrl: galleryImages[0]?.url ?? null,
+            stock: product.stock ?? 0,
+            defaultVariantId: product.variants[0]?.id ?? undefined,
+          }}
+          frequentlyBoughtTogether={frequentProducts}
+          relatedProducts={relatedProducts}
+          freeDeliveryThresholdKes={freeDeliveryThresholdKes}
+        />
       </div>
     </div>
   );
