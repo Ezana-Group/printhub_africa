@@ -11,7 +11,7 @@ const updateSchema = z.object({
   description: z.string().max(50000).optional(),
   shortDescription: z.string().max(500).optional(),
   categoryId: z.string().min(1).optional(),
-  productType: z.enum(["READYMADE_3D", "LARGE_FORMAT", "CUSTOM", "POD", "SERVICE"]).optional(),
+  productType: z.enum(["READYMADE_3D", "LARGE_FORMAT", "CUSTOM", "PRINT_ON_DEMAND", "POD", "SERVICE"]).optional(),
   isPOD: z.boolean().optional(),
   printTimeEstimate: z.string().nullable().optional(),
   filamentWeightGrams: z.number().nullable().optional(),
@@ -59,6 +59,11 @@ const updateSchema = z.object({
   exportToYoutube: z.boolean().optional(),
 });
 
+function normalizeProductType(type: z.infer<typeof updateSchema>["productType"]) {
+  if (!type) return type;
+  return type === "POD" ? "PRINT_ON_DEMAND" : type;
+}
+
 import { detectBackInStock } from "@/lib/marketing/back-in-stock";
 
 export async function PATCH(
@@ -74,6 +79,7 @@ export async function PATCH(
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
   const data = parsed.data;
+  const normalizedProductType = normalizeProductType(data.productType);
 
   // --- Fetch current product for stock comparison ---
   const currentProduct = await prisma.product.findUnique({
@@ -113,7 +119,7 @@ export async function PATCH(
     if (data.description !== undefined) updateData.description = data.description;
     if (data.shortDescription !== undefined) updateData.shortDescription = data.shortDescription;
     if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
-    if (data.productType !== undefined) updateData.productType = data.productType;
+    if (normalizedProductType !== undefined) updateData.productType = normalizedProductType;
     if (data.isPOD !== undefined) updateData.isPOD = data.isPOD;
     if (data.printTimeEstimate !== undefined) updateData.printTimeEstimate = data.printTimeEstimate;
     if (data.filamentWeightGrams !== undefined) updateData.filamentWeightGrams = data.filamentWeightGrams;

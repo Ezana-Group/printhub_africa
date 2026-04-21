@@ -18,7 +18,7 @@ const createSchema = z.object({
   description: z.string().max(50000).optional(),
   shortDescription: z.string().max(500).optional(),
   categoryId: z.string().min(1),
-  productType: z.enum(["READYMADE_3D", "LARGE_FORMAT", "CUSTOM", "POD", "SERVICE"]),
+  productType: z.enum(["READYMADE_3D", "LARGE_FORMAT", "CUSTOM", "PRINT_ON_DEMAND", "POD", "SERVICE"]),
   isPOD: z.boolean().optional(),
   printTimeEstimate: z.string().nullable().optional(),
   filamentWeightGrams: z.number().nullable().optional(),
@@ -65,6 +65,10 @@ const createSchema = z.object({
   featuredThisWeek: z.boolean().optional(),
 });
 
+function normalizeProductType(type: z.infer<typeof createSchema>["productType"]) {
+  return type === "POD" ? "PRINT_ON_DEMAND" : type;
+}
+
 export async function POST(req: Request) {
   const auth = await requireAdminApi({ permission: "products_edit" });
   if (auth instanceof NextResponse) return auth;
@@ -74,6 +78,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
   const data = parsed.data;
+  const normalizedProductType = normalizeProductType(data.productType);
   const slug = data.slug?.trim() || slugify(data.name);
   const existing = await prisma.product.findUnique({ where: { slug } });
   let finalSlug = slug;
@@ -103,14 +108,14 @@ export async function POST(req: Request) {
       description: data.description ?? null,
       shortDescription: data.shortDescription ?? null,
       categoryId: data.categoryId,
-      productType: data.productType,
+      productType: normalizedProductType,
       images: data.images ?? [],
       productionFiles: data.productionFiles ?? [],
       basePrice: data.basePrice,
       comparePrice: data.comparePrice ?? null,
       sku,
       stock: data.stock !== undefined ? data.stock : 0,
-      isPOD: data.isPOD ?? (data.productType === "POD"),
+      isPOD: data.isPOD ?? normalizedProductType === "PRINT_ON_DEMAND",
       printTimeEstimate: data.printTimeEstimate ?? null,
       filamentWeightGrams: data.filamentWeightGrams ?? null,
       minOrderQty: data.minOrderQty ?? 1,

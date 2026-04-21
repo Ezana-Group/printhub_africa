@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/settings-api";
 import { writeAudit } from "@/lib/audit";
@@ -22,10 +23,13 @@ export async function POST(req: Request) {
   try {
     const formData = await req.formData();
     const url = await uploadOgImage(formData);
-    await prisma.seoSettings.update({
+    await prisma.businessSettings.upsert({
       where: { id: "default" },
-      data: { defaultOgImageUrl: url, updatedAt: new Date() },
+      update: { defaultOgImage: url, updatedAt: new Date() },
+      create: { id: "default", defaultOgImage: url },
     });
+    revalidateTag("business");
+    revalidateTag("homepage");
     await writeAudit({
       userId: auth.userId,
       action: "SEO_OG_IMAGE_UPDATED",

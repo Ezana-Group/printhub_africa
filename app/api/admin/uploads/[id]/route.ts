@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/admin-api-guard";
-import { deleteObject } from "@/lib/s3";
+import { deleteFile } from "@/lib/r2";
 
 export async function DELETE(
   _req: NextRequest,
@@ -24,8 +24,9 @@ export async function DELETE(
     // Optionally delete the object from R2 Storage if its private or public.
     const key = upload.storageKey;
     if (key) {
-      await deleteObject(key).catch((err) => {
-        console.error("Failed to delete file from S3 bucket:", err);
+      const bucket = upload.bucket === "public" ? "public" : "private";
+      await deleteFile(bucket, key).catch((err) => {
+        console.error("Failed to delete file from R2 bucket:", err);
       });
     }
 

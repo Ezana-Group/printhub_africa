@@ -64,6 +64,8 @@ export type ProductRow = {
   isPOD: boolean;
   images: string[];
   productionFiles: string[];
+  metaTitle: string | null;
+  metaDescription: string | null;
   createdAt: Date;
   _variantsCount?: number;
 };
@@ -104,6 +106,22 @@ export function ProductsAdminClient({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductRow | null>(null);
 
+  const applyBulkAction = useCallback(
+    async (action: "set_active" | "set_inactive" | "delete") => {
+      const ids = Array.from(selected);
+      if (ids.length === 0) return;
+      const res = await fetch("/api/admin/products/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids, action }),
+      });
+      if (!res.ok) return;
+      setSelected(new Set());
+      router.refresh();
+    },
+    [router, selected]
+  );
+
   useEffect(() => {
     const field = url.sort || "name";
     const dir = url.dir === "desc";
@@ -122,7 +140,15 @@ export function ProductsAdminClient({
       );
     }
     if (categoryFilter) list = list.filter((p) => p.categoryId === categoryFilter);
-    if (typeFilter) list = list.filter((p) => p.productType === typeFilter);
+    if (typeFilter) {
+      if (typeFilter === "PRINT_ON_DEMAND") {
+        list = list.filter(
+          (p) => p.productType === "PRINT_ON_DEMAND" || p.productType === "POD"
+        );
+      } else {
+        list = list.filter((p) => p.productType === typeFilter);
+      }
+    }
     if (statusFilter === "active") list = list.filter((p) => p.isActive);
     if (statusFilter === "inactive") list = list.filter((p) => !p.isActive);
     const field = (url.sort || "name") as keyof ProductRow;
@@ -557,15 +583,7 @@ export function ProductsAdminClient({
               variant="outline"
               size="sm"
               onClick={async () => {
-                for (const id of selected) {
-                  await fetch(`/api/admin/products/${id}`, {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ isActive: true }),
-                  });
-                }
-                setSelected(new Set());
-                router.refresh();
+                await applyBulkAction("set_active");
               }}
             >
               Set Active
@@ -574,15 +592,7 @@ export function ProductsAdminClient({
               variant="outline"
               size="sm"
               onClick={async () => {
-                for (const id of selected) {
-                  await fetch(`/api/admin/products/${id}`, {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ isActive: false }),
-                  });
-                }
-                setSelected(new Set());
-                router.refresh();
+                await applyBulkAction("set_inactive");
               }}
             >
               Set Inactive
@@ -612,11 +622,7 @@ export function ProductsAdminClient({
               size="sm"
               onClick={async () => {
                 if (!confirm(`Delete ${selected.size} product(s)? This cannot be undone.`)) return;
-                for (const id of selected) {
-                  await fetch(`/api/admin/products/${id}`, { method: "DELETE" });
-                }
-                setSelected(new Set());
-                router.refresh();
+                await applyBulkAction("delete");
               }}
             >
               Delete

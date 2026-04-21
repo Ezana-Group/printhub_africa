@@ -19,6 +19,7 @@ import type { ProductRow } from "@/components/admin/products-admin-client";
 import { ProductImagesTab } from "@/components/admin/product-images-tab";
 import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 import { ProductMaterialSelector } from "@/components/admin/ProductMaterialSelector";
+import { FileUploader } from "@/components/upload/FileUploader";
 import { Sparkles, Zap, Megaphone, CheckCircle2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -433,7 +434,7 @@ export function ProductFormSheet({
                     <option value="READYMADE_3D">Ready-made 3D</option>
                     <option value="LARGE_FORMAT">Large Format</option>
                     <option value="CUSTOM">3D Service</option>
-                    <option value="POD">Print-On-Demand (POD)</option>
+                    <option value="PRINT_ON_DEMAND">Print-On-Demand (POD)</option>
                     <option value="SERVICE">Other Service</option>
                   </select>
                 </div>
@@ -580,7 +581,9 @@ export function ProductFormSheet({
                       accept={productType === "LARGE_FORMAT" ? [".pdf", ".ai", ".eps", ".tiff"] : [".stl", ".obj", ".3mf", ".step"]}
                       maxFiles={5}
                       onUploadComplete={(files) => {
-                        const urls = files.map(f => f.publicUrl);
+                        const urls = files
+                          .map((f) => f.publicUrl ?? f.storageKey)
+                          .filter((value): value is string => Boolean(value));
                         setProductionFiles(prev => [...new Set([...prev, ...urls])]);
                       }}
                     />

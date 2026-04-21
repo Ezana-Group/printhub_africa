@@ -21,7 +21,7 @@ export async function GET(
       return NextResponse.json({ error: "Backup not found or no file associated" }, { status: 404 });
     }
 
-    if (record.status !== "COMPLETE") {
+    if (record.status !== "COMPLETED" && record.status !== "COMPLETE") {
       return NextResponse.json({ error: "Backup is not ready for download" }, { status: 400 });
     }
 

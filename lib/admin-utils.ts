@@ -8,6 +8,7 @@ export const PRODUCT_TYPE_LABELS: Record<string, { label: string; dotColor: stri
   LARGE_FORMAT: { label: "Large Format", dotColor: "#3B82F6" },
   CUSTOM: { label: "3D Service", dotColor: "#8B5CF6" },
   PRINT_ON_DEMAND: { label: "Print-On-Demand", dotColor: "#10B981" },
+  POD: { label: "Print-On-Demand", dotColor: "#10B981" },
   SERVICE: { label: "Service", dotColor: "#F59E0B" },
 };
 

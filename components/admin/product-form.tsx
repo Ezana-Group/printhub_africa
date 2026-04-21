@@ -110,7 +110,7 @@ export function ProductForm({ categories, product, postizUrl }: ProductFormProps
   
   const handleTypeChange = (value: ProductType) => {
     setProductType(value);
-    if (value === "POD") {
+    if (value === "POD" || value === "PRINT_ON_DEMAND") {
       setStock("0");
     }
   };
@@ -400,7 +400,6 @@ export function ProductForm({ categories, product, postizUrl }: ProductFormProps
                     <option value="LARGE_FORMAT">Large format</option>
                     <option value="CUSTOM">3D Service</option>
                     <option value="PRINT_ON_DEMAND">Print-On-Demand</option>
-                    <option value="POD">POD</option>
                     <option value="SERVICE">Other Service</option>
                   </select>
                 </div>
@@ -575,7 +574,9 @@ export function ProductForm({ categories, product, postizUrl }: ProductFormProps
                 ]}
                 maxFiles={10}
                 onUploadComplete={(files) => {
-                  const newUrls = files.map((f) => f.publicUrl).filter(Boolean) as string[];
+                  const newUrls = files
+                    .map((f) => f.publicUrl ?? f.storageKey)
+                    .filter((value): value is string => Boolean(value));
                   setProductionFiles((prev) => [...prev, ...newUrls]);
                 }}
               />

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -77,7 +78,7 @@ export function AdminUploadsClient({
       } else {
         alert("Failed to delete upload.");
       }
-    } catch (err) {
+    } catch {
       alert("Error deleting upload.");
     } finally {
       setIsDeleting(null);
