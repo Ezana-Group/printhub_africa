@@ -8,9 +8,18 @@ import { PixelTracker } from "./PixelTracker";
 export async function PixelTrackerWrapper() {
   try {
     const business = await getCachedBusinessPublic();
-    return <PixelTracker ga4Id={business?.ga4MeasurementId} />;
+    return (
+      <PixelTracker
+        ga4Id={
+          business?.ga4MeasurementId ??
+          process.env.NEXT_PUBLIC_GA4_ID ??
+          process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ??
+          undefined
+        }
+      />
+    );
   } catch (error) {
     console.error("Error in PixelTrackerWrapper:", error);
-    return <PixelTracker />;
+    return <PixelTracker ga4Id={process.env.NEXT_PUBLIC_GA4_ID ?? process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />;
   }
 }

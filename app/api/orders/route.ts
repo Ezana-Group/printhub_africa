@@ -79,9 +79,9 @@ export async function POST(req: Request) {
     corporateId: reqCorporateId, 
     isNetTerms: reqIsNetTerms, 
     poReference: reqPoReference,
-    loyaltyPoints: reqLoyaltyPoints = 0
-  purchaseEventId = undefined,
-  eventSourceUrl,
+    loyaltyPoints: reqLoyaltyPoints = 0,
+    purchaseEventId,
+    eventSourceUrl,
   } = parsed.data;
 
   const isPickup = reqAddress.deliveryMethod?.toLowerCase() === "pickup";

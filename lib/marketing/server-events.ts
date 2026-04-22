@@ -155,7 +155,7 @@ export async function sendMetaServerEvent(eventName: string, eventData: ServerEv
   const payload = buildMetaPayload(mappedEventName, eventData);
   const url = `https://graph.facebook.com/v18.0/${MARKETING_CONFIG.META_PIXEL_ID}/events?access_token=${MARKETING_CONFIG.META_ACCESS_TOKEN}`;
 
-  if (isDev) {
+  if (isDev()) {
     console.log("[Meta CAPI] Dry run", url, payload);
     return { success: true, platform: "meta", status: 0, payload };
   }
@@ -191,7 +191,7 @@ export async function sendTikTokServerEvent(eventName: string, eventData: Server
   const payload = buildTikTokPayload(mappedEventName, eventData);
   const url = "https://business-api.tiktok.com/open_api/v1.3/event/track/";
 
-  if (isDev) {
+  if (isDev()) {
     console.log("[TikTok] Dry run", url, payload);
     return { success: true, platform: "tiktok", status: 0, payload };
   }
@@ -230,7 +230,7 @@ export async function sendSnapServerEvent(eventName: string, eventData: ServerEv
   const payload = buildSnapPayload(mappedEventName, eventData);
   const url = "https://tr.snapchat.com/v2/conversion";
 
-  if (isDev) {
+  if (isDev()) {
     console.log("[Snapchat] Dry run", url, payload);
     return { success: true, platform: "snap", status: 0, payload };
   }
@@ -269,7 +269,7 @@ export async function sendPinterestServerEvent(eventName: string, eventData: Ser
   const payload = buildPinterestPayload(mappedEventName, eventData);
   const url = `https://api.pinterest.com/v5/ad_accounts/${MARKETING_CONFIG.PINTEREST_AD_ACCOUNT_ID}/events`;
 
-  if (isDev) {
+  if (isDev()) {
     console.log("[Pinterest] Dry run", url, payload);
     return { success: true, platform: "pinterest", status: 0, payload };
   }
@@ -295,7 +295,7 @@ export async function sendServerEvent(eventName: string, eventData: ServerEventD
   const eventId = eventData.eventId ?? crypto.randomUUID();
   const data = { ...eventData, eventId };
 
-  if (isDev) {
+  if (isDev()) {
     console.log("[Server Events] Sending", eventName, sanitizeEventData(data));
   }
 
