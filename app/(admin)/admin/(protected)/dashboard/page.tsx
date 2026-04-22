@@ -254,7 +254,6 @@ export default async function AdminDashboardPage() {
             <p className="text-2xl font-bold">{uploadsAwaiting}</p>
           </CardContent>
         </Card>
-        <N8nHealthCard />
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">

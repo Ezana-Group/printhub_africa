@@ -32,8 +32,7 @@ export default async function AdminLayout({
     pendingCatalogue,
     pendingMockups,
     pendingVideos,
-    pendingBroadcasts,
-    pendingAiImports
+    pendingBroadcasts
   ] = await Promise.all([
     prisma.quote.count({ where: { status: "new" } }).catch((err) => {
       console.error("[Layout Data Error] Quote count failed:", err);
@@ -52,20 +51,9 @@ export default async function AdminLayout({
       return 0;
     }),
     prisma.marketingBroadcast ? prisma.marketingBroadcast.count({ where: { status: "PENDING" } }).catch(() => 0) : Promise.resolve(0),
-    prisma.catalogueImportQueue.count({ 
-      where: { 
-        OR: [
-          { status: "PENDING" },
-          { aiEnhancementStatus: "pending" }
-        ]
-      } 
-    }).catch((err) => {
-      console.error("[Layout Data Error] CatalogueImportQueue count failed:", err);
-      return 0;
-    }),
   ]);
 
-  const pendingApprovalCount = pendingCatalogue + pendingMockups + pendingVideos + pendingBroadcasts + pendingAiImports;
+  const pendingApprovalCount = pendingCatalogue + pendingMockups + pendingVideos + pendingBroadcasts;
 
   return (
     <div className="min-h-screen bg-background">

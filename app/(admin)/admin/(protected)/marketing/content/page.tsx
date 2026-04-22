@@ -6,8 +6,8 @@ import { Metadata } from "next";
 import { MarketingContentClient } from "./marketing-content-client";
 
 export const metadata: Metadata = {
-  title: "Media & Content Manager - PrintHub Admin",
-  description: "Unified dashboard for AI content approval, weekly calendar, and social media exports.",
+  title: "Product Social Distribution - PrintHub Admin",
+  description: "Manage product visibility in external platforms and shopping feeds.",
 };
 
 export default async function MarketingContentPage() {
@@ -16,38 +16,7 @@ export default async function MarketingContentPage() {
     redirect("/login");
   }
 
-  // Get monday of current week
-  const now = new Date();
-  const dayOfWeek = now.getDay();
-  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  const monday = new Date(now);
-  monday.setDate(monday.getDate() + mondayOffset);
-  monday.setHours(0, 0, 0, 0);
-
-  const [
-    pendingMockups,
-    pendingVideos,
-    currentWeekCalendar,
-    products,
-    categories,
-    pendingBroadcasts
-  ] = await Promise.all([
-    prisma.productMockup.findMany({
-      where: { status: "PENDING_REVIEW" },
-      orderBy: { createdAt: "desc" },
-      take: 50,
-      include: { product: { select: { name: true, slug: true } } },
-    }),
-    prisma.productVideo.findMany({
-      where: { status: "PENDING_REVIEW" },
-      orderBy: { createdAt: "desc" },
-      take: 20,
-      include: { product: { select: { name: true } } },
-    }),
-    prisma.contentCalendar.findFirst({
-      where: { weekStarting: { gte: monday } },
-      orderBy: { createdAt: "desc" },
-    }),
+  const [products, categories] = await Promise.all([
     prisma.product.findMany({
       where: { isActive: true },
       select: {
@@ -89,54 +58,15 @@ export default async function MarketingContentPage() {
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
-    prisma.marketingBroadcast.findMany({
-      where: { status: "PENDING" },
-      orderBy: { createdAt: "desc" },
-    }),
   ]);
 
-  // Parse calendar
-  type CalendarDay = { date: string; posts: { platform: string; content: string; hashtags?: string }[] };
-  let calendarDays: CalendarDay[] = [];
-  let strategyText = "";
-
-  if (currentWeekCalendar) {
-    try {
-      const cal = currentWeekCalendar.contentCalendar as { days?: CalendarDay[] };
-      calendarDays = cal?.days ?? [];
-      const strat = currentWeekCalendar.strategy as { summary?: string };
-      strategyText = strat?.summary ?? "";
-    } catch {
-      calendarDays = [];
-    }
-  }
-
   return (
-    <MarketingContentClient 
-      mockups={pendingMockups.map(m => ({
-        ...m,
-        createdAt: m.createdAt.toISOString()
-      }))}
-      videos={pendingVideos.map(v => ({
-        ...v,
-        createdAt: v.createdAt.toISOString()
-      }))}
-      calendar={{
-        weekStarting: monday.toISOString(),
-        days: calendarDays,
-        strategy: strategyText
-      }}
+    <MarketingContentClient
       products={products.map(p => ({
         ...p,
         categoryName: p.category?.name || "Uncategorized"
       }))}
       categories={categories}
-      broadcasts={pendingBroadcasts.map(b => ({
-        ...b,
-        createdAt: b.createdAt.toISOString(),
-        updatedAt: b.updatedAt.toISOString(),
-        scheduledAt: b.scheduledAt?.toISOString() || null
-      }))}
     />
   );
 }

@@ -77,21 +77,8 @@ export default async function AdminMarketingPage() {
           className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg font-bold text-sm shadow-sm hover:scale-[1.02] transition-all"
         >
           <LayoutDashboard className="h-4 w-4" />
-          AI Media & Content
+          Media & Content
         </Link>
-        {process.env.POSTIZ_BASE_URL && (
-          <a 
-            href={process.env.POSTIZ_BASE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold text-sm shadow-sm hover:scale-[1.02] transition-all"
-          >
-            <div className="bg-white/20 p-1 rounded">
-              <Share2 className="h-3 w-3 text-white" />
-            </div>
-            Social Media Dashboard (Postiz)
-          </a>
-        )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

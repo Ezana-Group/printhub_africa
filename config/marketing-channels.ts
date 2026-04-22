@@ -5,14 +5,14 @@
 
 export const MARKETING_CONFIG = {
   // META (Facebook/Instagram)
-  META_PIXEL_ENABLED: process.env.NEXT_PUBLIC_META_PIXEL_ENABLED === 'true',
-  META_PIXEL_ID: process.env.NEXT_PUBLIC_META_PIXEL_ID,
+  META_PIXEL_ENABLED: process.env.NEXT_PUBLIC_META_PIXEL_ENABLED === 'true' || true, // Always enabled in production
+  META_PIXEL_ID: process.env.NEXT_PUBLIC_META_PIXEL_ID ?? '2035196960739715',
   META_CONVERSIONS_API_ENABLED: process.env.META_CONVERSIONS_API_ENABLED === 'true',
   META_ACCESS_TOKEN: process.env.META_ACCESS_TOKEN,
 
   // GOOGLE (ADS/GA4/GTM)
-  GTM_ENABLED: process.env.NEXT_PUBLIC_GTM_ENABLED === 'true',
-  GTM_ID: process.env.NEXT_PUBLIC_GTM_ID,
+  GTM_ENABLED: process.env.NEXT_PUBLIC_GTM_ENABLED === 'true' || true, // Always enabled in production
+  GTM_ID: process.env.NEXT_PUBLIC_GTM_ID ?? 'GTM-K5G6H3HP',
   GA4_ID: process.env.NEXT_PUBLIC_GA4_ID,
   GOOGLE_ADS_ID: process.env.NEXT_PUBLIC_GOOGLE_ADS_ID,
   GOOGLE_MERCHANT_ID: process.env.NEXT_PUBLIC_GOOGLE_MERCHANT_ID,

@@ -33,7 +33,6 @@ interface Category {
 
 interface ProductFormProps {
   categories: Category[];
-  postizUrl?: string;
   product?: {
     id: string;
     name: string;
@@ -92,11 +91,10 @@ function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
-export function ProductForm({ categories, product, postizUrl }: ProductFormProps) {
+export function ProductForm({ categories, product }: ProductFormProps) {
   const router = useRouter();
   const isEdit = !!product;
   const [loading, setLoading] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -143,7 +141,6 @@ export function ProductForm({ categories, product, postizUrl }: ProductFormProps
     exportToInstagramReels: product?.exportToInstagramReels ?? false,
     exportToInstagramStories: product?.exportToInstagramStories ?? false,
     exportToJiji: product?.exportToJiji ?? false,
-    exportToPostiz: product?.exportToPostiz ?? true,
     exportToTelegram: product?.exportToTelegram ?? false,
     exportToWhatsappStatus: product?.exportToWhatsappStatus ?? false,
     exportToWhatsappChannel: product?.exportToWhatsappChannel ?? false,
@@ -176,55 +173,6 @@ export function ProductForm({ categories, product, postizUrl }: ProductFormProps
   const handleNameChange = (v: string) => {
     setName(v);
     if (autoSlug) setSlug(slugify(v));
-  };
-
-  const handleAiGenerate = async (action: string) => {
-    if (!isEdit) {
-      setError("Please save the product first before generating AI content.");
-      return;
-    }
-    setAiLoading(true);
-    setError(null);
-    setSuccess(null);
-    try {
-      const res = await fetch("/api/admin/ai/n8n/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, productId: product.id }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "AI generation failed");
-      
-      setSuccess("AI Brain is thinking... results will appear here in 15-30 seconds.");
-
-      // Polling for results
-      let attempts = 0;
-      const maxAttempts = 30; // 60 seconds
-      while (attempts < maxAttempts) {
-        attempts++;
-        await new Promise(r => setTimeout(r, 2000));
-        
-        const statusRes = await fetch(`/api/admin/products/${product.id}/ai-status`);
-        if (statusRes.ok) {
-          const statusData = await statusRes.json();
-          if (statusData.complete) {
-            // Success! Update the local state
-            if (statusData.description) setDescription(statusData.description);
-            if (statusData.shortDescription) setShortDescription(statusData.shortDescription);
-            if (statusData.metaTitle) setMetaTitle(statusData.metaTitle);
-            if (statusData.metaDescription) setMetaDescription(statusData.metaDescription);
-            
-            setSuccess("AI Content generated! Fields updated.");
-            router.refresh();
-            break;
-          }
-        }
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "AI generation failed");
-    } finally {
-      setAiLoading(false);
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -620,14 +568,6 @@ export function ProductForm({ categories, product, postizUrl }: ProductFormProps
                 </h2>
                 <p className="text-[10px] text-indigo-500 uppercase font-bold tracking-wider mt-1">Automatic Cloud Sync Settings</p>
               </div>
-              {postizUrl && (
-                <Button variant="outline" size="sm" className="bg-white border-indigo-200 text-indigo-700 hover:bg-indigo-50" asChild>
-                  <a href={postizUrl} target="_blank" rel="noopener noreferrer" className="gap-2">
-                    <ExternalLink className="h-3 w-3" />
-                    Open Postiz
-                  </a>
-                </Button>
-              )}
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
               <div className="space-y-4">
@@ -684,7 +624,6 @@ export function ProductForm({ categories, product, postizUrl }: ProductFormProps
                     { field: "exportToNextdoor", label: "Nextdoor" },
                     { field: "exportToGoogleDiscover", label: "Discover" },
                     { field: "exportToGoogleMapsPost", label: "Maps Post" },
-                    { field: "exportToPostiz", label: "Postiz" },
                   ].map((item) => (
                     <label key={item.field} className="flex items-center gap-2 p-2 rounded-lg border border-slate-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/50 cursor-pointer transition-all">
                       <input

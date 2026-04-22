@@ -153,40 +153,6 @@ export function CatalogueItemForm({ categories }: CatalogueItemFormProps) {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="description">Description</Label>
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-7 text-[10px] font-bold text-primary hover:bg-primary/5 gap-1.5 border border-primary/10"
-                  onClick={async () => {
-                    if (!name) {
-                      setError("Please enter a name first to get AI suggestions.");
-                      return;
-                    }
-                    setLoading(true);
-                    try {
-                      const res = await fetch("/api/admin/ai/n8n/generate", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ 
-                          action: "GENERATE_CATALOGUE_SUGGESTION", 
-                          name, 
-                          categoryId 
-                        }),
-                      });
-                      if (res.ok) {
-                        setError("AI suggestion request sent. The record will be updated in ~30 seconds.");
-                      }
-                    } catch (e) {
-                      setError("AI suggestion failed.");
-                    } finally {
-                      setLoading(false);
-                    }
-                  }}
-                >
-                  <div className="h-1 w-1 rounded-full bg-primary animate-pulse" />
-                  Ask AI to write
-                </Button>
               </div>
               <div className="mt-1">
                 <SmartTextEditor

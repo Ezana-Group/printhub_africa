@@ -32,17 +32,6 @@ export function AdminHeaderClient({
           Security
         </Link>
         
-        {isAdmin && (
-          <a 
-            href="/api/admin/n8n/sso" 
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-sm text-primary hover:text-primary-hover font-medium mr-2"
-          >
-            <Zap className="h-3.5 w-3.5" />
-            Automations
-          </a>
-        )}
 
         <a 
           href={process.env.NEXT_PUBLIC_APP_URL || "https://printhub.africa"} 

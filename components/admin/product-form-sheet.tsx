@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { CategoryCascadingSelect } from "@/components/admin/CategoryCascadingSelect";
 import { Switch } from "@/components/ui/switch";
 import type { ProductRow } from "@/components/admin/products-admin-client";
@@ -20,7 +19,7 @@ import { ProductImagesTab } from "@/components/admin/product-images-tab";
 import { SmartTextEditor } from "@/components/admin/smart-text-editor";
 import { ProductMaterialSelector } from "@/components/admin/ProductMaterialSelector";
 import { FileUploader } from "@/components/upload/FileUploader";
-import { Sparkles, Zap, Megaphone, CheckCircle2, Loader2 } from "lucide-react";
+import { Megaphone } from "lucide-react";
 import { toast } from "sonner";
 
 import type { ProductType } from "@prisma/client";
@@ -93,8 +92,6 @@ export function ProductFormSheet({
   const [exportToReddit, setExportToReddit] = useState(false);
   const [exportToSnapchat, setExportToSnapchat] = useState(false);
   const [exportToYoutube, setExportToYoutube] = useState(false);
-  const [aiGenerating, setAiGenerating] = useState<string | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
     if (product) {
@@ -266,12 +263,7 @@ export function ProductFormSheet({
         
         // AUTO-VISION TRIGGER: DISABLED (per user request for manual-first flow)
         /*
-        if (images && images.length > 0) {
-          setIsAnalyzing(true);
-          handleAiGenerate("GENERATE_DESCRIPTION", data.product?.id);
-        } else {
-          onSuccess();
-        }
+        onSuccess();
         */
         onSuccess();
       }
@@ -291,86 +283,6 @@ export function ProductFormSheet({
     { id: "seo" as const, label: "SEO" },
     { id: "marketing" as const, label: "Marketing" },
   ];
-
-  const handleAiGenerate = async (action: string, overrideId?: string) => {
-    const targetId = overrideId || product?.id;
-    if (!targetId) return;
-    setAiGenerating(action);
-    setError(null);
-    try {
-      const res = await fetch("/api/admin/ai/n8n/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, productId: targetId }),
-      });
-      
-      if (!res.ok) {
-        let errMsg = "AI Trigger failed";
-        try {
-          const data = await res.json();
-          errMsg = data.error || data.message || `AI Trigger failed (${res.status})`;
-        } catch {
-          errMsg = `AI Trigger failed with status ${res.status}`;
-        }
-        throw new Error(errMsg);
-      }
-
-      // POLL FOR RESULT
-      let attempts = 0;
-      const maxAttempts = 30; // 60 seconds max
-      while (attempts < maxAttempts) {
-        attempts++;
-        await new Promise(r => setTimeout(r, 2000));
-        
-        const statusRes = await fetch(`/api/admin/products/${targetId}/ai-status`);
-        if (statusRes.ok) {
-          const statusData = await statusRes.json();
-          if (statusData.complete) {
-            // Update fields based on what was generated, only if empty or user confirms
-            const updateIfEmptyOrConfirmed = (val: string, setter: (v: string) => void, current: string, label: string) => {
-              if (!val) return;
-              const cleanVal = val.trim();
-              const cleanCurrent = (current || "").trim();
-              
-              if (!cleanCurrent) {
-                setter(cleanVal);
-              } else if (cleanVal !== cleanCurrent) {
-                if (confirm(`AI has generated a new ${label}. Overwrite your current content?`)) {
-                  setter(cleanVal);
-                }
-              }
-            };
-
-            // If we specifically requested SEO, we mainly care about titles/desc
-            if (action === "GENERATE_SEO") {
-              if (statusData.metaTitle) setMetaTitle(statusData.metaTitle);
-              if (statusData.metaDescription) setMetaDescription(statusData.metaDescription);
-            } else {
-              // Direct update for descriptions if they are currently short or empty
-              const isShort = (s: string) => !s || s.length < 150;
-              
-              if (statusData.description && (isShort(description) || confirm("AI generated a new long description. Overwrite?"))) {
-                setDescription(statusData.description);
-              }
-              if (statusData.shortDescription && isShort(shortDescription)) {
-                setShortDescription(statusData.shortDescription);
-              }
-              if (statusData.metaTitle && isShort(metaTitle)) setMetaTitle(statusData.metaTitle);
-              if (statusData.metaDescription && isShort(metaDescription)) setMetaDescription(statusData.metaDescription);
-            }
-            
-            toast.success("AI Content Updated!");
-            break;
-          }
-        }
-      }
-    } catch (e) {
-      console.error("[AI Generate Error]", e);
-      setError(e instanceof Error ? e.message : "AI generation failed");
-    } finally {
-      setAiGenerating(null);
-    }
-  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -460,17 +372,6 @@ export function ProductFormSheet({
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <Label htmlFor="description">Description</Label>
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-7 text-[10px] font-bold text-primary hover:bg-primary/5 gap-1.5"
-                      onClick={() => handleAiGenerate("GENERATE_DESCRIPTION")}
-                      disabled={aiGenerating === "GENERATE_DESCRIPTION" || !isEdit}
-                    >
-                      {aiGenerating === "GENERATE_DESCRIPTION" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                      Generate with AI
-                    </Button>
                   </div>
                   <div className="mt-1">
                     <SmartTextEditor
@@ -484,17 +385,6 @@ export function ProductFormSheet({
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <Label htmlFor="shortDescription">Short description (150 chars)</Label>
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-7 text-[10px] font-bold text-indigo-600 hover:bg-indigo-50 gap-1.5"
-                      onClick={() => handleAiGenerate("GENERATE_SHORT_DESCRIPTION")}
-                      disabled={aiGenerating === "GENERATE_SHORT_DESCRIPTION" || !isEdit}
-                    >
-                      {aiGenerating === "GENERATE_SHORT_DESCRIPTION" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
-                      Generate with AI
-                    </Button>
                   </div>
                   <Input
                     id="shortDescription"
@@ -623,17 +513,6 @@ export function ProductFormSheet({
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <Label htmlFor="metaTitle">Meta title ({metaTitle.length}/60)</Label>
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-7 text-[10px] font-bold text-primary hover:bg-primary/5 gap-1.5"
-                      onClick={() => handleAiGenerate("GENERATE_SEO")}
-                      disabled={aiGenerating === "GENERATE_SEO" || !isEdit}
-                    >
-                      {aiGenerating === "GENERATE_SEO" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                      Generate with AI
-                    </Button>
                   </div>
                   <Input
                     id="metaTitle"
@@ -646,17 +525,6 @@ export function ProductFormSheet({
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <Label htmlFor="metaDescription">Meta description ({metaDescription.length}/160)</Label>
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-7 text-[10px] font-bold text-primary hover:bg-primary/5 gap-1.5"
-                      onClick={() => handleAiGenerate("GENERATE_SEO")}
-                      disabled={aiGenerating === "GENERATE_SEO" || !isEdit}
-                    >
-                      {aiGenerating === "GENERATE_SEO" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                      Generate with AI
-                    </Button>
                   </div>
                   <Textarea
                     id="metaDescription"
@@ -681,66 +549,16 @@ export function ProductFormSheet({
 
             {activeTab === "marketing" && (
               <div className="space-y-8 pb-10">
-                {/* AI Section */}
+                {/* Marketing Info */}
                 <div className="bg-primary/5 border border-primary/10 rounded-xl p-5 space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                       <Sparkles className="h-4 w-4 text-primary" />
-                       AI Content Engine
+                       <Megaphone className="h-4 w-4 text-primary" />
+                       Product Marketing
                     </h3>
-                    {(isAnalyzing || aiGenerating) && (
-                      <Badge variant="outline" className="animate-pulse bg-primary/5 text-primary border-primary/20 gap-1.5 py-1">
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        Claude is drafting...
-                      </Badge>
-                    )}
                   </div>
-                  <p className="text-xs text-slate-600">Analyze product images and generate SEO-optimized descriptions automatically.</p>
-                  
-                  {isAnalyzing && (
-                    <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 flex items-center justify-between">
-                       <div className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-amber-500" />
-                          <p className="text-[11px] text-amber-700 font-medium">AI analysis triggered! n8n is processing your visual data.</p>
-                       </div>
-                       <Button 
-                         type="button" 
-                         variant="ghost" 
-                         size="sm" 
-                         className="h-7 text-xs font-bold text-amber-700 hover:bg-amber-100"
-                         onClick={() => {
-                            setIsAnalyzing(false);
-                            onSuccess(); // This will refresh the parent list
-                         }}
-                       >
-                         Finish & Refresh
-                       </Button>
-                    </div>
-                  )}
+                  <p className="text-xs text-slate-600">Manage product marketing and distribution settings here. Automation features have been removed from this workflow.</p>
 
-                  <div className="grid grid-cols-2 gap-3">
-                     <Button 
-                       type="button" 
-                       variant="outline" 
-                       className="gap-2 bg-white border-primary/20 hover:bg-primary/5 text-primary" 
-                       onClick={() => handleAiGenerate("GENERATE_DESCRIPTION")}
-                       disabled={aiGenerating === "GENERATE_DESCRIPTION" || !isEdit}
-                     >
-                       {aiGenerating === "GENERATE_DESCRIPTION" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                       Auto-Draft All
-                     </Button>
-                     <Button 
-                       type="button" 
-                       variant="outline" 
-                       className="gap-2 bg-white border-indigo-200 hover:bg-indigo-50 text-indigo-600" 
-                       onClick={() => handleAiGenerate("GENERATE_AD_COPY")}
-                       disabled={aiGenerating === "GENERATE_AD_COPY" || !isEdit}
-                     >
-                        {aiGenerating === "GENERATE_AD_COPY" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-                        Social Ad Copy
-                     </Button>
-                  </div>
-                  {!isEdit && <p className="text-[10px] text-amber-600 font-medium italic">Save the product first to enable AI generation.</p>}
                 </div>
 
                 {/* Spotlight Section */}
@@ -748,7 +566,7 @@ export function ProductFormSheet({
                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest px-1">Campaign Targeting</h3>
                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center justify-between">
                        <div className="space-y-0.5">
-                          <p className="text-sm font-bold text-slate-800">Weekly AI Spotlight</p>
+                          <p className="text-sm font-bold text-slate-800">Weekly Spotlight</p>
                           <p className="text-[11px] text-slate-500">Nominate this item for weekly SMS & broadcast campaigns.</p>
                        </div>
                        <Switch 
