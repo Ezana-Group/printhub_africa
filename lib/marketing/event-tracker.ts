@@ -22,6 +22,9 @@ declare global {
  * Should be passed to both fbq/ttq and the backend CAPI call.
  */
 export const generateEventId = () => {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
   return "ev-" + Math.random().toString(36).substring(2, 11) + "-" + Date.now();
 };
 
@@ -69,6 +72,7 @@ export const trackEvent = (eventName: string, params: Record<string, any> = {}, 
     if (ga4EventMap[eventName]) {
       window.dataLayer.push({
         event: ga4EventMap[eventName],
+        event_id: dedupeId,
         ecommerce: {
           currency: params.currency || "KES",
           value: params.value,
@@ -107,17 +111,18 @@ export const trackEvent = (eventName: string, params: Record<string, any> = {}, 
 
   // --- META CONVERSIONS API (Server-side) ---
   // We trigger this from the client to the backend proxy
-  fetch("/api/track/meta", {
+  fetch("/api/marketing/track", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       eventName,
-      params,
       eventId: dedupeId,
-      url: window.location.href,
-      testEventCode: new URLSearchParams(window.location.search).get("test_event_code") || undefined,
+      eventData: {
+        ...params,
+        eventSourceUrl: window.location.href,
+      },
     }),
-  }).catch((err) => console.error("[Tracking] Meta CAPI Error:", err));
+  }).catch((err) => console.error("[Tracking] Marketing server event error:", err));
 
   return dedupeId;
 };
@@ -187,21 +192,25 @@ export const trackInitiateCheckout = (cart: { items: any[]; total: number }) => 
   });
 };
 
-export const trackPurchase = (order: { id: string; total: number; items: any[] }) => {
-  return trackEvent("Purchase", {
-    content_ids: order.items.map((i) => formatCatalogId(i.productId || i.id)),
-    contents: order.items.map((i) => ({ id: formatCatalogId(i.productId || i.id), quantity: i.quantity })),
-    content_type: "product",
-    value: order.total,
-    currency: "KES",
-    transaction_id: order.id,
-    items: order.items.map(i => ({
-      item_id: formatCatalogId(i.productId || i.id),
-      item_name: i.name || i.product?.name,
-      price: i.unitPrice || i.price,
-      quantity: i.quantity
-    }))
-  });
+export const trackPurchase = (order: { id: string; total: number; items: any[] }, eventId?: string) => {
+  return trackEvent(
+    "Purchase",
+    {
+      content_ids: order.items.map((i) => formatCatalogId(i.productId || i.id)),
+      contents: order.items.map((i) => ({ id: formatCatalogId(i.productId || i.id), quantity: i.quantity })),
+      content_type: "product",
+      value: order.total,
+      currency: "KES",
+      transaction_id: order.id,
+      items: order.items.map(i => ({
+        item_id: formatCatalogId(i.productId || i.id),
+        item_name: i.name || i.product?.name,
+        price: i.unitPrice || i.price,
+        quantity: i.quantity
+      }))
+    },
+    eventId
+  );
 };
 
 export const trackSearch = (query: string) => {

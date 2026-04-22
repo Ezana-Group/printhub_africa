@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useCartStore, isCatalogueCartItem } from "@/store/cart-store";
 import { useCheckoutStore } from "@/store/checkout-store";
-import { trackInitiateCheckout, trackEvent } from "@/lib/marketing/event-tracker";
+import { generateEventId, trackInitiateCheckout, trackEvent } from "@/lib/marketing/event-tracker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -418,12 +418,13 @@ export default function CheckoutPage() {
       (delivery.county ?? "").trim() &&
       (delivery.city ?? "").trim();
 
-  const buildOrderPayload = () => ({
+  const buildOrderPayload = (purchaseEventId: string) => ({
     cartId: cartId ?? undefined,
     corporateId: corporate?.id ?? undefined,
     isNetTerms:
       payment.method === "INVOICE_NET_30" || payment.method === "INVOICE_NET_60",
     poReference: payment.poReference?.trim() || undefined,
+    purchaseEventId,
     items: items.map((i) =>
       isCatalogueCartItem(i)
         ? {
@@ -473,13 +474,17 @@ export default function CheckoutPage() {
     setPlacingOrder(true);
     setError("");
     try {
-      const res = await fetch("/api/orders", {
+      const purchaseEventId = generateEventId();
+    const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildOrderPayload()),
+        body: JSON.stringify(buildOrderPayload(purchaseEventId)),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Failed to create order");
+      if (data.order?.id) {
+        window.localStorage.setItem(`purchase_event_id_${data.order.id}`, purchaseEventId);
+      }
       setOrderId(data.order.id);
       setPlacedOrderId(data.order.id);
       setPlacedOrderNumber(data.order.orderNumber);

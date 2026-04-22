@@ -58,6 +58,10 @@ export default function OrderConfirmationPage() {
           
           // Fire Purchase Event once order is loaded
           if (!trackedRef.current && data.status !== "CANCELLED") {
+             const storedEventId = typeof window !== "undefined" ? window.localStorage.getItem(`purchase_event_id_${orderId}`) : undefined;
+             if (storedEventId) {
+               window.localStorage.removeItem(`purchase_event_id_${orderId}`);
+             }
              trackPurchase({
                id: data.id,
                total: data.total,
@@ -67,7 +71,7 @@ export default function OrderConfirmationPage() {
                  price: i.unitPrice,
                  quantity: i.quantity
                }))
-             });
+             }, storedEventId || undefined);
              trackedRef.current = true;
           }
         }

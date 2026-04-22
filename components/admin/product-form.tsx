@@ -706,38 +706,6 @@ export function ProductForm({ categories, product }: ProductFormProps) {
                 </div>
               </div>
 
-              {isEdit && (
-                <div className="pt-4 border-t space-y-3">
-                   <Label className="text-xs font-semibold uppercase text-muted-foreground tracking-wider font-mono">AI Content Engine</Label>
-                   <div className="grid grid-cols-2 gap-3">
-                     <Button 
-                       type="button" 
-                       variant="outline" 
-                       size="sm" 
-                       className="w-full flex items-center justify-center gap-2 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
-                       disabled={aiLoading}
-                       onClick={() => handleAiGenerate("GENERATE_DESCRIPTION")}
-                     >
-                       <div className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-ping" />
-                       {aiLoading ? "Thinking..." : "AI Description"}
-                     </Button>
-                     <Button 
-                       type="button" 
-                       variant="outline" 
-                       size="sm" 
-                       className="w-full flex items-center justify-center gap-2 border-pink-200 hover:bg-pink-50 hover:text-pink-700 transition-colors"
-                       disabled={aiLoading}
-                       onClick={() => handleAiGenerate("GENERATE_AD_COPY")}
-                     >
-                       <div className="h-1.5 w-1.5 rounded-full bg-pink-500 animate-ping" />
-                       {aiLoading ? "Strategizing..." : "AI Ad Copy"}
-                     </Button>
-                   </div>
-                   <p className="text-[10px] text-muted-foreground text-center italic">
-                     Generates professional descriptions, SEO tags and multi-platform ad variations.
-                   </p>
-                </div>
-              )}
               
               <div className="pt-4 border-t space-y-4">
                 <div>

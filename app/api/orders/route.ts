@@ -6,6 +6,7 @@ import { ensureUniqueOrderNumber } from "@/lib/order-utils";
 import { createTrackingEvent } from "@/lib/tracking";
 import { calculateOrderPriceServerSide } from "@/lib/order-price-calculator";
 import { reserveOrderStock } from "@/lib/order-stock";
+import { sendServerEvent } from "@/lib/marketing/server-events";
 import { z } from "zod";
 
 const createOrderSchema = z.object({
@@ -43,6 +44,8 @@ const createOrderSchema = z.object({
   isNetTerms: z.boolean().optional(),
   poReference: z.string().max(200).optional(),
   loyaltyPoints: z.number().min(0).optional(),
+  purchaseEventId: z.string().optional(),
+  eventSourceUrl: z.string().optional(),
 });
 
 export async function POST(req: Request) {
@@ -77,6 +80,8 @@ export async function POST(req: Request) {
     isNetTerms: reqIsNetTerms, 
     poReference: reqPoReference,
     loyaltyPoints: reqLoyaltyPoints = 0
+  purchaseEventId = undefined,
+  eventSourceUrl,
   } = parsed.data;
 
   const isPickup = reqAddress.deliveryMethod?.toLowerCase() === "pickup";
@@ -279,6 +284,19 @@ export async function POST(req: Request) {
     });
 
     await createTrackingEvent(order.id, "PENDING");
+
+    void sendServerEvent("Purchase", {
+      eventId: purchaseEventId,
+      value: calculatedTotal,
+      currency: "KES",
+      contentIds: items.map((item) => item.productId || item.catalogueItemId || item.variantId).filter(Boolean) as string[],
+      numItems: items.reduce((sum, item) => sum + item.quantity, 0),
+      userEmail: reqAddress.email,
+      userPhone: reqAddress.phone,
+      userIp: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || undefined,
+      userAgent: req.headers.get("user-agent") || undefined,
+      eventSourceUrl: eventSourceUrl || "https://printhub.africa/checkout",
+    });
 
     if (reqCartId) {
       try { await prisma.cart.updateMany({ where: { id: reqCartId, convertedAt: null }, data: { convertedAt: new Date() } }); } catch {}
