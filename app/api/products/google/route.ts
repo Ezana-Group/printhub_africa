@@ -21,7 +21,12 @@ export async function GET(req: NextRequest) {
     const products = await prisma.product.findMany({
       where: { 
         isActive: true, 
-        exportToGoogle: true 
+        OR: [
+          { exportToGoogle: true },
+          { exportToGoogleBiz: true },
+          { exportToGoogleDiscover: true },
+          { exportToGoogleMapsPost: true }
+        ]
       },
       include: {
         category: { select: { name: true } },
@@ -44,9 +49,7 @@ export async function GET(req: NextRequest) {
         .join("\n");
 
       // Map local category to Google's taxonomy or fallback
-      const googleCategory = p.category.name.toLowerCase().includes("3d") 
-        ? "Toys & Games > Toys > Specialized Toys > 3D Printers" 
-        : "Arts & Entertainment > Hobbies & Creative Arts > Arts & Crafts > Art & Crafting Materials > Printing & Printmaking";
+      const googleCategory = "Arts & Entertainment > Hobbies & Creative Arts > Arts & Crafts > Art & Crafting Materials > Mixed Media";
 
       const availability = AVAILABILITY_MAP[p.availability] || "in stock";
 

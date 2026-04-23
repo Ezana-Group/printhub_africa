@@ -33,7 +33,8 @@ export function getProductImageUrl(
   }
 
   if (featured?.storageKey) {
-    return safePublicFileUrl(featured.storageKey);
+    const url = safePublicFileUrl(featured.storageKey);
+    if (url) return url;
   }
 
   if (featured?.url) {

@@ -59,29 +59,18 @@ interface ProductFormProps {
     featuredThisWeek: boolean;
     exportToGoogle: boolean;
     exportToGoogleBiz: boolean;
-    exportToLinkedIn: boolean;
     exportToMeta: boolean;
-    exportToPinterest: boolean;
     exportToTiktok: boolean;
-    exportToX: boolean;
     exportToGoogleDiscover: boolean;
-    exportToInstagramReels: boolean;
-    exportToInstagramStories: boolean;
     exportToJiji: boolean;
-    exportToTelegram: boolean;
-    exportToWhatsappChannel: boolean;
-    exportToWhatsappStatus: boolean;
-    exportToYoutubeShorts: boolean;
     exportToAppleMaps: boolean;
     exportToBingPlaces: boolean;
     exportToGoogleMapsPost: boolean;
-    exportToLinkedInNewsletter: boolean;
     exportToMedium: boolean;
     exportToNextdoor: boolean;
     exportToOlxKenya: boolean;
     exportToPigiaMe: boolean;
     exportToReddit: boolean;
-    exportToSnapchat: boolean;
     exportToYoutube: boolean;
     exportToPostiz: boolean;
   };
@@ -134,26 +123,15 @@ export function ProductForm({ categories, product }: ProductFormProps) {
     exportToMeta: product?.exportToMeta ?? true,
     exportToTiktok: product?.exportToTiktok ?? true,
     exportToGoogleMapsPost: product?.exportToGoogleMapsPost ?? true,
-    exportToLinkedIn: product?.exportToLinkedIn ?? false,
-    exportToPinterest: product?.exportToPinterest ?? false,
-    exportToX: product?.exportToX ?? false,
     exportToGoogleDiscover: product?.exportToGoogleDiscover ?? false,
-    exportToInstagramReels: product?.exportToInstagramReels ?? false,
-    exportToInstagramStories: product?.exportToInstagramStories ?? false,
     exportToJiji: product?.exportToJiji ?? false,
-    exportToTelegram: product?.exportToTelegram ?? false,
-    exportToWhatsappStatus: product?.exportToWhatsappStatus ?? false,
-    exportToWhatsappChannel: product?.exportToWhatsappChannel ?? false,
-    exportToYoutubeShorts: product?.exportToYoutubeShorts ?? false,
     exportToAppleMaps: product?.exportToAppleMaps ?? false,
     exportToBingPlaces: product?.exportToBingPlaces ?? false,
-    exportToLinkedInNewsletter: product?.exportToLinkedInNewsletter ?? false,
     exportToMedium: product?.exportToMedium ?? false,
     exportToNextdoor: product?.exportToNextdoor ?? false,
     exportToOlxKenya: product?.exportToOlxKenya ?? false,
     exportToPigiaMe: product?.exportToPigiaMe ?? false,
     exportToReddit: product?.exportToReddit ?? false,
-    exportToSnapchat: product?.exportToSnapchat ?? false,
     exportToYoutube: product?.exportToYoutube ?? false,
   });
 
@@ -601,43 +579,6 @@ export function ProductForm({ categories, product }: ProductFormProps) {
                 </div>
               </div>
 
-              <div className="space-y-4 pt-4 border-t border-indigo-100/50">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                  <span className="w-8 h-[1px] bg-indigo-100"></span>
-                  Social Posting & Advertising
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {[
-                    { field: "exportToInstagramReels", label: "IG Reels" },
-                    { field: "exportToInstagramStories", label: "IG Stories" },
-                    { field: "exportToYoutubeShorts", label: "YT Shorts" },
-                    { field: "exportToWhatsappStatus", label: "WA Status" },
-                    { field: "exportToWhatsappChannel", label: "WA Channel" },
-                    { field: "exportToLinkedIn", label: "LinkedIn" },
-                    { field: "exportToPinterest", label: "Pinterest" },
-                    { field: "exportToX", label: "X (Twitter)" },
-                    { field: "exportToSnapchat", label: "Snapchat" },
-                    { field: "exportToYoutube", label: "YouTube" },
-                    { field: "exportToTelegram", label: "Telegram" },
-                    { field: "exportToReddit", label: "Reddit" },
-                    { field: "exportToLinkedInNewsletter", label: "LI News" },
-                    { field: "exportToMedium", label: "Medium" },
-                    { field: "exportToNextdoor", label: "Nextdoor" },
-                    { field: "exportToGoogleDiscover", label: "Discover" },
-                    { field: "exportToGoogleMapsPost", label: "Maps Post" },
-                  ].map((item) => (
-                    <label key={item.field} className="flex items-center gap-2 p-2 rounded-lg border border-slate-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/50 cursor-pointer transition-all">
-                      <input
-                        type="checkbox"
-                        checked={exportSettings[item.field as keyof typeof exportSettings]}
-                        onChange={() => toggleExport(item.field as keyof typeof exportSettings)}
-                        className="w-4 h-4 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500"
-                      />
-                      <span className="text-xs font-medium text-slate-600">{item.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -669,34 +610,8 @@ export function ProductForm({ categories, product }: ProductFormProps) {
 
               <div className="space-y-3 pt-2">
                 <p className="text-sm font-medium text-slate-700">Tags</p>
-                <div className="flex flex-wrap gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={hasTag("New arrival")}
-                      onChange={(e) => setTagPreset("New arrival", e.target.checked)}
-                    />
-                    <span className="text-sm">New arrival</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={hasTag("Staff pick")}
-                      onChange={(e) => setTagPreset("Staff pick", e.target.checked)}
-                    />
-                    <span className="text-sm">Staff pick</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={hasTag("Popular")}
-                      onChange={(e) => setTagPreset("Popular", e.target.checked)}
-                    />
-                    <span className="text-sm">Popular</span>
-                  </label>
-                </div>
                 <div>
-                  <Label htmlFor="tags">Custom tags</Label>
+                  <Label htmlFor="tags">Tags</Label>
                   <Input
                     id="tags"
                     value={tagsStr}
@@ -704,10 +619,30 @@ export function ProductForm({ categories, product }: ProductFormProps) {
                     placeholder="New design, Bestseller"
                     className="mt-1"
                   />
+                  <p className="text-xs text-slate-500 mt-1">Add comma-separated tags here for search and filters.</p>
+                </div>
+                <div className="grid gap-3 md:grid-cols-3">
+                  {[
+                    "New arrival",
+                    "Staff pick",
+                    "Popular",
+                  ].map((tag) => (
+                    <label
+                      key={tag}
+                      className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 hover:border-slate-300 hover:bg-slate-100 transition-colors cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={hasTag(tag)}
+                        onChange={(e) => setTagPreset(tag, e.target.checked)}
+                        className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                      />
+                      <span>{tag}</span>
+                    </label>
+                  ))}
                 </div>
               </div>
 
-              
               <div className="pt-4 border-t space-y-4">
                 <div>
                   <Label htmlFor="metaTitle">Meta title (SEO)</Label>

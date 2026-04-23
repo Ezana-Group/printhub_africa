@@ -7,6 +7,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { safePublicFileUrl } from "@/lib/r2";
+import { AVAILABILITY_MAP } from "@/lib/marketing/feed-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,12 @@ export async function GET(req: NextRequest) {
     const products = await prisma.product.findMany({
       where: {
         isActive: true,
-        exportToGoogle: true,
+        OR: [
+          { exportToGoogle: true },
+          { exportToGoogleBiz: true },
+          { exportToGoogleDiscover: true },
+          { exportToGoogleMapsPost: true }
+        ]
       },
       include: {
         category: { select: { name: true } },
@@ -58,11 +64,15 @@ export async function GET(req: NextRequest) {
         link: `${baseUrl}/shop/${p.slug}`,
         imageLink: imageUrl,
         price: `${Number(p.basePrice || 0).toFixed(2)} KES`,
-        availability: (p.stock ?? 0) > 0 ? "in_stock" : (p.isPOD ? "in_stock" : "out_of_stock"),
+        availability: AVAILABILITY_MAP[p.availability] || "in stock",
         condition: "new",
         brand: "PrintHub Africa",
-        googleProductCategory: "Arts & Entertainment > Hobbies & Creative Arts > Arts & Crafts > Art & Craft Supplies > Craft Supplies > 3D Printing",
-        shipping: "KE:::200 KES", // Kenya, standard shipping 200 KES
+        googleProductCategory: "Arts & Entertainment > Hobbies & Creative Arts > Arts & Crafts > Art & Crafting Materials > Mixed Media",
+        shipping: `<g:shipping>
+        <g:country>KE</g:country>
+        <g:service>Standard</g:service>
+        <g:price>200 KES</g:price>
+      </g:shipping>`,
         identifierExists: "no", // Custom/handmade products
         customLabel0: p.category?.name || "3D Printing",
         customLabel1: Number(p.basePrice) < 5000 ? "budget" : Number(p.basePrice) < 15000 ? "mid" : "premium",
@@ -93,7 +103,7 @@ export async function GET(req: NextRequest) {
       <g:condition>${item!.condition}</g:condition>
       <g:brand>${escapeXml(item!.brand)}</g:brand>
       <g:google_product_category>${escapeXml(item!.googleProductCategory)}</g:google_product_category>
-      <g:shipping>${item!.shipping}</g:shipping>
+      ${item!.shipping}
       <g:identifier_exists>${item!.identifierExists}</g:identifier_exists>
       <g:custom_label_0>${escapeXml(item!.customLabel0)}</g:custom_label_0>
       <g:custom_label_1>${item!.customLabel1}</g:custom_label_1>

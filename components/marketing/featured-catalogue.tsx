@@ -18,9 +18,12 @@ export async function FeaturedCatalogueSection() {
   }> = [];
   try {
     const rows = await prisma.catalogueItem.findMany({
-      where: { isFeatured: true, status: "LIVE" },
+      where: {
+        status: "LIVE",
+        OR: [{ isFeatured: true }, { isPOD: true }],
+      },
       take: 8,
-      orderBy: { sortOrder: "asc" },
+      orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }],
       select: {
         id: true,
         name: true,

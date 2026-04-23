@@ -28,6 +28,7 @@ export default async function AdminProductsPage() {
         productionFiles: true,
         metaTitle: true,
         metaDescription: true,
+        tags: true,
         createdAt: true,
         category: { select: { id: true, name: true } },
         variants: { select: { id: true } }, // Minimal to replace _count
@@ -64,8 +65,7 @@ export default async function AdminProductsPage() {
     images: p.images ?? [],
     productionFiles: p.productionFiles ?? [],
     metaTitle: p.metaTitle ?? null,
-    metaDescription: p.metaDescription ?? null,
-    createdAt: p.createdAt,
+    metaDescription: p.metaDescription ?? null,    tags: p.tags ?? [],    createdAt: p.createdAt,
     _variantsCount: p.variants?.length || 0,
   }));
 

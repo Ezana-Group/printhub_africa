@@ -68,6 +68,7 @@ export type ProductRow = {
   metaDescription: string | null;
   createdAt: Date;
   _variantsCount?: number;
+  tags: string[];
 };
 
 function StockBadge({ stock, productType, isPOD }: { stock: number | null; productType: string; isPOD?: boolean }) {
