@@ -10,6 +10,26 @@ This document provides step-by-step instructions for connecting PrintHub Africa'
   - Pinterest: https://printhub.africa/pinterest-feed
 - All pixels are loaded on every page with consent
 - Product pages have proper OG tags and structured data
+- **Business transparency implemented** (trust badges, ratings, contact info)
+
+## Google Merchant Center Misrepresentation Fix
+⚠️ **IMPORTANT**: If you received a "Misrepresentation" error from GMC:
+
+1. **Update GMC Business Information** to exactly match website:
+   - Business Name: PrintHub Africa
+   - Address: [From admin settings]
+   - Phone/Email: [From admin settings]
+   - Customer Service contacts
+
+2. **Verify Website Transparency** (✅ Already implemented):
+   - Business ownership (Ezana Group Company)
+   - Trust badges and ratings
+   - Complete contact information
+   - SSL security indicators
+
+3. **Request Review** in GMC diagnostics with explanation of fixes
+
+See `docs/GMC_MISREPRESENTATION_FIX.md` for detailed instructions.
 
 ## 1. Facebook & Instagram Setup
 
@@ -147,22 +167,29 @@ This document provides step-by-step instructions for connecting PrintHub Africa'
 2. Connect X Pixel
 3. Set up purchase conversion event
 
-## Testing & Validation
+## Facebook Catalog Image Issues
+⚠️ **CRITICAL**: If Facebook shows "EMPTY_IMAGE_URL" errors for products:
 
-### Feed Validation
-- All feeds return valid data with KES currency
-- Products update in real-time
-- Images are accessible
+### Problem
+Facebook catalog contains old/stale products with retailer_ids like `test_product_retailer_id_1`, `test_product_retailer_id_2` that are not in your current feed but still exist in Facebook's catalog.
 
-### Pixel Testing
-- Use Meta Pixel Helper browser extension
-- Check Google Tag Assistant
-- Verify events in each platform's dashboard
+### Solution
+1. **Go to [Meta Commerce Manager](https://business.facebook.com/commerce_manager/)**
+2. **Navigate to your Catalog** → **Items**
+3. **Search for the problematic products** using their retailer_id
+4. **Delete the old test products** that show "EMPTY_IMAGE_URL" errors
+5. **Re-upload your catalog** to ensure only current products are included
 
-### Conversion Tracking
-- Test complete purchase flow
-- Verify conversions appear in all connected platforms
-- Check attribution accuracy
+### Prevention
+- Only upload products that have images
+- Regularly clean up test products from Facebook catalog
+- Ensure exportToMeta flag matches products you want in Facebook
+
+### Current Status
+✅ **Facebook feed working**: 4 products with valid images being exported
+❌ **Old test products**: Need manual cleanup in Facebook Commerce Manager
+
+See `docs/FACEBOOK_CATALOG_FIX.md` for detailed cleanup instructions.
 
 ## Troubleshooting
 

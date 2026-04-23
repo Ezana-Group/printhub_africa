@@ -35,8 +35,19 @@ export async function GET(req: NextRequest) {
         ?? img?.url
         ?? (p.images?.[0]?.startsWith("/") ? `${baseUrl}${p.images[0]}` : null);
 
-      // Skip items without images
-      if (!imageUrl) return null;
+      // Skip items without valid images
+      if (!imageUrl || imageUrl.trim() === '') {
+        console.warn(`[Facebook Catalog] Skipping product ${p.id} (${p.name}) - no valid image URL`);
+        return null;
+      }
+
+      // Verify image URL is accessible (basic check)
+      try {
+        new URL(imageUrl);
+      } catch {
+        console.warn(`[Facebook Catalog] Skipping product ${p.id} (${p.name}) - invalid image URL: ${imageUrl}`);
+        return null;
+      }
 
       return {
         id: `shop-${p.id}`,
@@ -51,6 +62,8 @@ export async function GET(req: NextRequest) {
         google_product_category: "Arts & Entertainment > Hobbies & Creative Arts > Arts & Crafts > Art & Craft Supplies > Craft Supplies > 3D Printing",
       };
     }).filter(Boolean);
+
+    console.log(`[Facebook Catalog] Exported ${csvRows.length} products with valid images`);
 
     // Generate CSV
     const csvHeader = "id,title,description,availability,condition,price,link,image_link,brand,google_product_category\n";

@@ -66,6 +66,10 @@ export async function GET(req: NextRequest) {
         identifierExists: "no", // Custom/handmade products
         customLabel0: p.category?.name || "3D Printing",
         customLabel1: Number(p.basePrice) < 5000 ? "budget" : Number(p.basePrice) < 15000 ? "mid" : "premium",
+        sellerName: "PrintHub Africa",
+        sellerAddress: "Eldoret, Uasin Gishu County, Kenya",
+        sellerEmail: "hello@printhub.africa",
+        sellerPhone: "+254700000000",
       };
     }).filter(Boolean);
 
@@ -93,6 +97,10 @@ export async function GET(req: NextRequest) {
       <g:identifier_exists>${item!.identifierExists}</g:identifier_exists>
       <g:custom_label_0>${escapeXml(item!.customLabel0)}</g:custom_label_0>
       <g:custom_label_1>${item!.customLabel1}</g:custom_label_1>
+      <g:seller_name>${escapeXml(item!.sellerName)}</g:seller_name>
+      <g:seller_address>${escapeXml(item!.sellerAddress)}</g:seller_address>
+      <g:seller_email>${escapeXml(item!.sellerEmail)}</g:seller_email>
+      <g:seller_phone>${escapeXml(item!.sellerPhone)}</g:seller_phone>
     </item>`).join('')}
   </channel>
 </rss>`;

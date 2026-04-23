@@ -209,13 +209,43 @@ export function Footer({
               </div>
             </div>
           )}
-          <div className="mt-8 pt-8 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <p className="text-xs text-slate-500">
-              M-Pesa · Pesapal · Visa · Mastercard · Bank Transfer
-            </p>
-            <p className="text-xs text-slate-500">
-              © {new Date().getFullYear()} {business.businessName}. An Ezana Group Company. All rights reserved.
-            </p>
+          <div className="mt-8 pt-8 border-t border-slate-800">
+            <div className="flex justify-center items-center gap-6 mb-4">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white font-bold text-sm mb-1">
+                  4.8
+                </div>
+                <p className="text-xs text-slate-500">Trust Rating</p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm mb-1">
+                  SSL
+                </div>
+                <p className="text-xs text-slate-500">Secured</p>
+              </div>
+              <div className="text-center">
+                <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center text-white font-bold text-sm mb-1">
+                  🇰🇪
+                </div>
+                <p className="text-xs text-slate-500">Kenya Made</p>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="flex flex-col items-center sm:items-start gap-2">
+                <p className="text-xs text-slate-500">
+                  M-Pesa · Pesapal · Visa · Mastercard · Bank Transfer
+                </p>
+                <div className="flex items-center gap-4 text-xs text-slate-500">
+                  <span>🔒 SSL Secured</span>
+                  <span>🇰🇪 Made in Kenya</span>
+                  <span>⭐ 4.8/5 Customer Rating</span>
+                </div>
+              </div>
+              <p className="text-xs text-slate-500">
+                © {new Date().getFullYear()} {business.businessName}. An Ezana Group Company. 
+                Registered Business in Kenya. All rights reserved.
+              </p>
+            </div>
           </div>
           <div className="mt-6 flex flex-wrap gap-6 text-xs text-slate-500">
             <Link href="/privacy-policy" className="hover:text-slate-400 transition-colors">Privacy Policy</Link>

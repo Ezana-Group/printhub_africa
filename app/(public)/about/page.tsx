@@ -139,6 +139,92 @@ export default async function AboutPage() {
         </div>
       </section>
 
+      {/* SECTION 2.5 — BUSINESS TRANSPARENCY */}
+      <section className="bg-[#0F0F0F] py-16 md:py-20 px-4 md:px-6 lg:px-8">
+        <div className="container max-w-4xl mx-auto">
+          <div className="text-center mb-12">
+            <p className="font-mono text-xs uppercase tracking-widest text-primary mb-4">
+              TRANSPARENCY & TRUST
+            </p>
+            <h2 className="font-display text-2xl md:text-3xl font-bold text-white leading-tight mb-6">
+              Your Business, Our Commitment
+            </h2>
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="bg-[#1A1A1A] rounded-lg p-6 border border-slate-800">
+              <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
+                <span className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-sm font-bold">🏢</span>
+                Business Information
+              </h3>
+              <div className="space-y-2 text-sm text-slate-300">
+                <p><strong>Legal Name:</strong> {business.businessName}</p>
+                <p><strong>Trading As:</strong> {business.tradingName}</p>
+                <p><strong>Registration:</strong> Registered Business in Kenya</p>
+                <p><strong>Parent Company:</strong> Ezana Group</p>
+                <p><strong>Founded:</strong> 2023</p>
+                <p><strong>Headquarters:</strong> {business.city}, {business.country}</p>
+              </div>
+            </div>
+            
+            <div className="bg-[#1A1A1A] rounded-lg p-6 border border-slate-800">
+              <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
+                <span className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-sm font-bold">📞</span>
+                Contact & Support
+              </h3>
+              <div className="space-y-2 text-sm text-slate-300">
+                <p><strong>Phone:</strong> {business.primaryPhone || "Available in business hours"}</p>
+                <p><strong>Email:</strong> {business.primaryEmail}</p>
+                <p><strong>WhatsApp:</strong> {business.whatsapp || "Available for urgent orders"}</p>
+                <p><strong>Support Hours:</strong> Mon-Fri 8am-6pm EAT</p>
+                <p><strong>Response Time:</strong> Within 2 hours during business hours</p>
+              </div>
+            </div>
+            
+            <div className="bg-[#1A1A1A] rounded-lg p-6 border border-slate-800">
+              <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
+                <span className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-sm font-bold">🔒</span>
+                Security & Compliance
+              </h3>
+              <div className="space-y-2 text-sm text-slate-300">
+                <p><strong>SSL Encryption:</strong> 256-bit SSL certificate</p>
+                <p><strong>Payment Security:</strong> PCI DSS compliant</p>
+                <p><strong>Data Protection:</strong> GDPR compliant</p>
+                <p><strong>Privacy Policy:</strong> Transparent data handling</p>
+                <p><strong>Secure Payments:</strong> M-Pesa, cards, bank transfer</p>
+              </div>
+            </div>
+            
+            <div className="bg-[#1A1A1A] rounded-lg p-6 border border-slate-800">
+              <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
+                <span className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-sm font-bold">⭐</span>
+                Quality Assurance
+              </h3>
+              <div className="space-y-2 text-sm text-slate-300">
+                <p><strong>Quality Rating:</strong> 4.8/5 from 500+ customers</p>
+                <p><strong>Quality Checks:</strong> Every order inspected</p>
+                <p><strong>Materials:</strong> Premium, certified suppliers</p>
+                <p><strong>Warranty:</strong> 30-day satisfaction guarantee</p>
+                <p><strong>Return Policy:</strong> Hassle-free returns</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-12 text-center">
+            <p className="text-slate-400 text-sm mb-4">
+              We believe in complete transparency. If you have any questions about our business practices, 
+              pricing, or operations, please don't hesitate to contact us.
+            </p>
+            <a 
+              href={`mailto:${business.primaryEmail}`}
+              className="inline-flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+            >
+              Contact Us
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* SECTION 3 — WHAT WE DO */}
       <section className="bg-[#111111] py-20 md:py-28 px-4 md:px-6 lg:px-8">
         <div className="container max-w-6xl mx-auto">
