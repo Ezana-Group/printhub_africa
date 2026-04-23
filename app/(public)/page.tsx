@@ -2,7 +2,6 @@ import { Hero } from "@/components/marketing/hero";
 import { CategoryStrip } from "@/components/marketing/category-strip";
 import { HowItWorks } from "@/components/marketing/how-it-works";
 import { FeaturedProducts } from "@/components/marketing/featured-products";
-import { FeaturedCatalogueSection } from "@/components/marketing/featured-catalogue";
 import { StickyMiniCartCTA } from "@/components/marketing/sticky-mini-cart-cta";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -56,7 +55,6 @@ export default async function HomePage() {
         </div>
       </section>
       <FeaturedProducts />
-      <FeaturedCatalogueSection />
       <section className="bg-slate-50 py-10">
         <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
           <div className="grid gap-4 md:grid-cols-3">

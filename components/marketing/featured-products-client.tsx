@@ -94,9 +94,6 @@ export function FeaturedProductsClient({ products }: { products: FeaturedProduct
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
             <span className="mb-3 block h-[3px] w-10 rounded-[2px] bg-[#FF4D00]" />
-            <h2 className="font-display text-2xl font-extrabold text-slate-900 md:text-[2rem]">
-              Shop Ready-Made 3D Prints
-            </h2>
           </div>
           <Link href="/shop" className="text-[15px] font-medium text-[#FF4D00] hover:underline">
             View all products →

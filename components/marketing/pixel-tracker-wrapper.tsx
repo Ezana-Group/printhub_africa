@@ -14,12 +14,12 @@ export async function PixelTrackerWrapper() {
           business?.ga4MeasurementId ??
           process.env.NEXT_PUBLIC_GA4_ID ??
           process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ??
-          undefined
+          "G-DPPDS1G5P1"
         }
       />
     );
   } catch (error) {
     console.error("Error in PixelTrackerWrapper:", error);
-    return <PixelTracker ga4Id={process.env.NEXT_PUBLIC_GA4_ID ?? process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />;
+    return <PixelTracker ga4Id={process.env.NEXT_PUBLIC_GA4_ID ?? process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "G-DPPDS1G5P1"} />;
   }
 }
