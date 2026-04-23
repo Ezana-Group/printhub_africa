@@ -48,18 +48,35 @@ export type FeaturedProductCardData = {
 };
 
 function getFilteredProducts(tab: ProductTab, products: FeaturedProductCardData[]): FeaturedProductCardData[] {
+  const normalizedTags = products.map((p) => ({
+    ...p,
+    normalizedTags: p.tags.map((tag) => tag.trim().toLowerCase()),
+  }));
+
+  const bestSellerTags = new Set([
+    "best-seller",
+    "best seller",
+    "bestseller",
+    "popular",
+    "top-seller",
+    "staff pick",
+  ]);
+  const newArrivalTags = new Set(["new arrival", "new-arrival", "arrival", "new"]);
+
   if (tab === "new-arrivals") {
+    const byTag = normalizedTags.filter((p) => p.normalizedTags.some((tag) => newArrivalTags.has(tag)));
+    if (byTag.length > 0) return byTag;
+
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    const fresh = products.filter((p) => new Date(p.createdAt).getTime() >= thirtyDaysAgo);
+    const fresh = normalizedTags.filter((p) => new Date(p.createdAt).getTime() >= thirtyDaysAgo);
     return fresh.length > 0 ? fresh : products;
   }
 
   if (tab === "on-sale") {
-    return products.filter((p) => p.comparePrice != null && p.comparePrice > p.basePrice);
+    return normalizedTags.filter((p) => p.comparePrice != null && p.comparePrice > p.basePrice);
   }
 
-  const bestSellerTags = new Set(["best-seller", "best seller", "bestseller", "popular", "top-seller"]);
-  const best = products.filter((p) => p.tags.some((tag) => bestSellerTags.has(tag.toLowerCase())));
+  const best = normalizedTags.filter((p) => p.normalizedTags.some((tag) => bestSellerTags.has(tag)));
   return best.length > 0 ? best : products;
 }
 

@@ -63,6 +63,7 @@ const createSchema = z.object({
   exportToSnapchat: z.boolean().optional(),
   exportToYoutube: z.boolean().optional(),
   featuredThisWeek: z.boolean().optional(),
+  tags: z.array(z.string().max(50)).optional(),
 });
 
 function normalizeProductType(type: z.infer<typeof createSchema>["productType"]) {
@@ -124,6 +125,7 @@ export async function POST(req: Request) {
       colors: data.colors ?? [],
       isActive: data.isActive ?? true,
       isFeatured: data.isFeatured ?? false,
+      tags: data.tags ?? [],
       metaTitle: data.metaTitle ?? null,
       metaDescription: data.metaDescription ?? null,
       exportToGoogle: data.exportToGoogle ?? true,

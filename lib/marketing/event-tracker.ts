@@ -57,7 +57,7 @@ export const trackEvent = (eventName: string, params: Record<string, any> = {}, 
 
   // --- GOOGLE ANALYTICS / GTAG (Standard) ---
   if (window.gtag) {
-    window.gtag("event", eventName, params);
+    window.gtag("event", eventName, { ...params, event_id: dedupeId });
   }
 
   // --- GTM / GA4 DATALAYER (E-commerce) ---

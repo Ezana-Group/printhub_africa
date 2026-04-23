@@ -199,6 +199,7 @@ export function ProductForm({ categories, product }: ProductFormProps) {
       isActive,
       isFeatured,
       featuredThisWeek,
+      tags: tagsArray,
       metaTitle: metaTitle || undefined,
       metaDescription: metaDescription || undefined,
       ...exportSettings,
@@ -656,8 +657,8 @@ export function ProductForm({ categories, product }: ProductFormProps) {
                 <label className="flex items-center gap-2 cursor-pointer border border-indigo-100 bg-indigo-50/30 p-2 rounded-md">
                   <input type="checkbox" checked={featuredThisWeek} onChange={(e) => setFeaturedThisWeek(e.target.checked)} />
                   <div className="flex flex-col">
-                    <span className="text-sm font-bold text-indigo-700">Weekly AI Spotlight</span>
-                    <span className="text-[10px] text-indigo-500 uppercase font-bold tracking-tight">SMS Broadcast Candidate</span>
+                    <span className="text-sm font-bold text-indigo-700">Weekly spotlight</span>
+                    <span className="text-[10px] text-indigo-500 uppercase font-bold tracking-tight">SMS broadcast candidate</span>
                   </div>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer border border-slate-100 p-2 rounded-md">
