@@ -53,7 +53,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       url,
       siteName: "PrintHub Africa",
       images: [{ url: image, width: 1200, height: 630 }],
-      type: "website",
+      type: "product",
     },
     twitter: {
       card: "summary_large_image",
@@ -65,7 +65,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       "product:price:amount": Number(price).toString(),
       "product:price:currency": "KES",
       "product:availability": product.availability === "IN_STOCK" ? "instock" : "out of stock",
-      "og:product:condition": "new",
+      "product:condition": "new",
+      "og:type": "product",
+      "og:title": title,
+      "og:description": description,
+      "og:image": image,
+      "og:price:amount": Number(price).toString(),
+      "og:price:currency": "KES",
+      "product:availability": product.availability === "IN_STOCK" ? "instock" : "out of stock",
+      "product:condition": "new",
     }
   };
 }
@@ -209,6 +217,37 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <div className="bg-white min-h-screen">
+      {/* Google Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            "name": product.name,
+            "description": product.shortDescription || product.description,
+            "image": galleryImages.filter(img => img.isPrimary).map(img => img.url) || galleryImages[0]?.url,
+            "brand": {
+              "@type": "Brand",
+              "name": "PrintHub Africa"
+            },
+            "offers": {
+              "@type": "Offer",
+              "price": Number(product.basePrice),
+              "priceCurrency": "KES",
+              "availability": (product.stock ?? 0) > 0 ? "https://schema.org/InStock" : (product.isPOD ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"),
+              "url": url,
+              "seller": {
+                "@type": "Organization",
+                "name": "PrintHub Africa"
+              }
+            },
+            "category": product.category?.name,
+            "sku": `shop-${product.id}`
+          })
+        }}
+      />
+      
       <ViewContentTracker 
         product={{ 
           id: product.id, 

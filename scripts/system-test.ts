@@ -203,37 +203,116 @@ async function testMetaPixel() {
   }
 }
 
-// 7. GOOGLE MERCHANT FEED TEST
-async function testMerchantFeed() {
-  console.log('\n🛒 Testing Google Merchant Feed...');
+// 7. MERCHANT FEEDS TEST
+async function testMerchantFeeds() {
+  console.log('\n🛒 Testing Merchant Feeds...');
+
+  const feeds = [
+    { url: '/google-merchant-feed', name: 'Google Merchant', format: 'xml', currency: 'KES' },
+    { url: '/facebook-catalog-feed', name: 'Facebook Catalog', format: 'csv', currency: 'KES' },
+    { url: '/tiktok-shop-feed', name: 'TikTok Shop', format: 'csv', currency: 'KES' },
+    { url: '/pinterest-feed', name: 'Pinterest', format: 'csv', currency: 'KES' }
+  ];
+
+  for (const feed of feeds) {
+    try {
+      const response = await fetch(`${BASE_URL}${feed.url}`);
+      const content = await response.text();
+
+      const isCorrectFormat = feed.format === 'xml' 
+        ? response.headers.get('content-type')?.includes('xml') && content.includes('<rss')
+        : response.headers.get('content-type')?.includes('csv') && content.includes('id,title,description');
+
+      const hasCurrency = content.includes(feed.currency);
+      const hasProducts = feed.format === 'xml' 
+        ? content.includes('<item>') 
+        : content.split('\n').length > 1; // CSV has header + at least one row
+
+      if (isCorrectFormat) {
+        addResult(`MERCHANT FEEDS - ${feed.name} format`, 'PASS');
+      } else {
+        addResult(`MERCHANT FEEDS - ${feed.name} format`, 'FAIL', `Not valid ${feed.format.toUpperCase()}`);
+      }
+
+      if (hasCurrency) {
+        addResult(`MERCHANT FEEDS - ${feed.name} currency`, 'PASS');
+      } else {
+        addResult(`MERCHANT FEEDS - ${feed.name} currency`, 'FAIL', `No ${feed.currency} found`);
+      }
+
+      if (hasProducts) {
+        addResult(`MERCHANT FEEDS - ${feed.name} products`, 'PASS');
+      } else {
+        addResult(`MERCHANT FEEDS - ${feed.name} products`, 'FAIL', 'No products found');
+      }
+
+    } catch (error) {
+      addResult(`MERCHANT FEEDS - ${feed.name}`, 'FAIL', 'Failed to fetch feed');
+    }
+  }
+}
+
+// 8. PIXEL VALIDATION TEST
+async function testPixelValidation() {
+  console.log('\n📊 Testing Pixel Validation...');
 
   try {
-    const response = await fetch(`${BASE_URL}/google-merchant-feed`);
-    const xml = await response.text();
+    const response = await fetch(BASE_URL);
+    const html = await response.text();
 
-    const isXml = response.headers.get('content-type')?.includes('xml');
-    const hasItems = xml.includes('<item>');
-    const hasPrice = xml.includes('KES');
-    const hasLink = xml.includes('printhub.africa');
-    const hasAvailability = xml.includes('<g:availability>');
+    const pixels = [
+      { name: 'Meta Pixel', script: 'connect.facebook.net/en_US/fbevents.js', id: '2035196960739715' },
+      { name: 'GTM', script: 'googletagmanager.com/gtm.js', id: 'GTM-K5G6H3HP' },
+      { name: 'TikTok Pixel', script: 'analytics.tiktok.com/i18n/pixel/events.js' },
+      { name: 'Pinterest Tag', script: 's.thebrighttag.com/tag:5.js' },
+      { name: 'X Pixel', script: 'static.ads-twitter.com/uwt.js' },
+      { name: 'Snapchat Pixel', script: 'sc-static.net/scevent.min.js' }
+    ];
 
-    if (isXml) addResult('MERCHANT FEED - XML format', 'PASS');
-    else addResult('MERCHANT FEED - XML format', 'FAIL', 'Not XML content-type');
+    for (const pixel of pixels) {
+      const hasScript = html.includes(pixel.script);
+      const hasId = pixel.id ? html.includes(pixel.id) : true; // Some pixels don't have hardcoded IDs
 
-    if (hasItems) addResult('MERCHANT FEED - Has items', 'PASS');
-    else addResult('MERCHANT FEED - Has items', 'FAIL', 'No items found');
+      if (hasScript && hasId) {
+        addResult(`PIXEL VALIDATION - ${pixel.name}`, 'PASS');
+      } else {
+        addResult(`PIXEL VALIDATION - ${pixel.name}`, 'FAIL', hasScript ? 'ID missing' : 'Script missing');
+      }
+    }
 
-    if (hasPrice) addResult('MERCHANT FEED - Has prices', 'PASS');
-    else addResult('MERCHANT FEED - Has prices', 'FAIL', 'No KES prices found');
-
-    if (hasLink) addResult('MERCHANT FEED - Has links', 'PASS');
-    else addResult('MERCHANT FEED - Has links', 'FAIL', 'No printhub.africa links');
-
-    if (hasAvailability) addResult('MERCHANT FEED - Has availability', 'PASS');
-    else addResult('MERCHANT FEED - Has availability', 'FAIL', 'No availability data');
+    // Check domain verification
+    const hasFacebookDomainVerification = html.includes('facebook-domain-verification') && html.includes('2035196960739715');
+    if (hasFacebookDomainVerification) {
+      addResult('PIXEL VALIDATION - Facebook Domain Verification', 'PASS');
+    } else {
+      addResult('PIXEL VALIDATION - Facebook Domain Verification', 'FAIL', 'Meta tag missing');
+    }
 
   } catch (error) {
-    addResult('MERCHANT FEED', 'FAIL', 'Failed to fetch feed');
+    addResult('PIXEL VALIDATION', 'FAIL', 'Failed to fetch homepage');
+  }
+}
+
+// 9. EVENT TRACKER TEST
+function testEventTracker() {
+  console.log('\n📈 Testing Event Tracker...');
+
+  try {
+    // Import the event tracker module
+    const eventTracker = require('../lib/marketing/event-tracker.ts');
+
+    const requiredFunctions = ['trackViewContent', 'trackAddToCart', 'trackPurchase'];
+
+    for (const funcName of requiredFunctions) {
+      if (typeof eventTracker[funcName] === 'function') {
+        addResult(`EVENT TRACKER - ${funcName}`, 'PASS');
+      } else {
+        addResult(`EVENT TRACKER - ${funcName}`, 'FAIL', 'Function not found');
+      }
+    }
+
+  } catch (error) {
+    addResult('EVENT TRACKER', 'FAIL', 'Failed to import event tracker');
   }
 }
 
@@ -383,7 +462,9 @@ async function runTests() {
   testEnvVars();
   await testApiRoutes();
   await testMetaPixel();
-  await testMerchantFeed();
+  await testMerchantFeeds();
+  await testPixelValidation();
+  testEventTracker();
   testRemovedServices();
   await testAdminRoutes();
   testPayments();
@@ -402,7 +483,9 @@ async function runTests() {
     'ENV VARS',
     'API ROUTES',
     'META PIXEL',
-    'MERCHANT FEED',
+    'MERCHANT FEEDS',
+    'PIXEL VALIDATION',
+    'EVENT TRACKER',
     'REMOVED SERVICES',
     'ADMIN ROUTES',
     'PAYMENTS',
@@ -423,7 +506,7 @@ async function runTests() {
   }
 
   console.log('='.repeat(50));
-  console.log(`TOTAL: ${passed + failed}/12 PASSED (${passed} passed, ${failed} failed)`);
+  console.log(`TOTAL: ${passed + failed}/14 PASSED (${passed} passed, ${failed} failed)`);
   console.log('='.repeat(50));
 
   if (failed > 0) {

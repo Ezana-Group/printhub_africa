@@ -1,0 +1,292 @@
+/**
+ * N8N INTEGRATION DISABLED
+ * 
+ * This file has been disabled as part of removing all N8N and Postiz integrations from PrintHub Africa.
+ * The n8n module is kept for backwards compatibility but all methods now perform no-ops.
+ * 
+ * To restore N8N functionality, restore from version control history.
+ */
+
+// All type definitions preserved for backwards compatibility
+export interface OrderConfirmedPayload {
+  orderId: string
+  orderNumber: string
+  customerId: string
+  customerEmail: string
+  customerPhone: string
+  customerName: string
+  totalAmount: number
+  currency: 'KES'
+  items: Array<{
+    name: string
+    quantity: number
+    price: number
+    imageUrl?: string
+  }>
+  paymentMethod: string
+  deliveryMethod: string
+  isCorporate: boolean
+  corporateId?: string
+}
+
+export interface OrderStatusPayload {
+  orderId: string
+  orderNumber: string
+  customerEmail: string
+  customerPhone: string
+  customerName: string
+  previousStatus: string
+  newStatus: string
+  trackingUrl?: string
+  estimatedDelivery?: string
+}
+
+export interface PaymentFailedPayload {
+  orderId: string
+  customerEmail: string
+  customerPhone: string
+  customerName: string
+  amount: number
+  paymentMethod: string
+  retryUrl: string
+}
+
+export interface AbandonedCartPayload {
+  cartId: string
+  customerId: string
+  customerEmail: string
+  customerPhone?: string
+  customerName: string
+  items: Array<{ name: string; price: number; imageUrl?: string }>
+  totalValue: number
+  cartUrl: string
+  abandonedAt: string
+  reminderNumber: 1 | 2 | 3
+}
+
+export interface QuotePayload {
+  quoteId: string
+  customerEmail: string
+  customerName: string
+  quoteType: string
+  projectName?: string
+  estimatedValue?: number
+  reviewUrl: string
+  pdfBase64?: string
+  specifications?: any
+}
+
+export interface QuoteReadyPayload {
+  quoteId: string
+  customerEmail: string
+  customerPhone: string
+  customerName: string
+  quotedAmount: number
+  pdfUrl: string
+  validUntil: string
+}
+
+export interface StaffAlertPayload {
+  type: 'NEW_ORDER' | 'PAYMENT_MANUAL' | 'NEW_QUOTE' | 'LOW_STOCK' | 'PRODUCTION_DELAYED' | 'SUPPORT_TICKET' | 'PRODUCT_PUBLISHED'
+  title: string
+  message: string
+  urgency: 'low' | 'medium' | 'high' | 'critical'
+  actionUrl: string
+  targetRoles: ('STAFF' | 'ADMIN' | 'SUPER_ADMIN')[]
+}
+
+export interface SecurityAlertPayload {
+  type: 'IMPOSSIBLE_TRAVEL' | 'NEW_DEVICE' | 'ACCOUNT_LOCKED' | 'BRUTE_FORCE' | 'SESSION_REVOKED'
+  affectedUserId: string
+  affectedUserEmail: string
+  affectedUserName: string
+  details: Record<string, unknown>
+  superAdminEmail: string
+}
+
+export interface LowStockPayload {
+  items: Array<{
+    itemId: string
+    itemName: string
+    itemType: 'ThreeDConsumable' | 'LFStockItem' | 'Product'
+    currentStock: number
+    minimumStock: number
+    unit: string
+  }>
+}
+
+export interface ProductPublishedPayload {
+  productId: string
+  productName: string
+  productSlug: string
+  description: string
+  price: number
+  currency: 'KES'
+  imageUrls: string[]
+  category: string
+  productUrl: string
+  exportFlags: Record<string, boolean>
+}
+
+export interface ProductUpdatedPayload extends ProductPublishedPayload {
+  changedFields: string[]
+}
+
+export interface NewDeviceLoginPayload {
+  userId: string
+  userEmail: string
+  userName: string
+  ipAddress: string
+  userAgent: string
+  city: string | null
+  country: string | null
+  loginAt: string
+  revokeUrl: string
+}
+
+export interface ImpossibleTravelPayload {
+  userId: string
+  userEmail: string
+  userName: string
+  previousCountry: string
+  previousIp: string
+  previousLoginAt: string
+  newCountry: string
+  newIp: string
+  newLoginAt: string
+  superAdminEmail: string
+  adminProfileUrl: string
+}
+
+export interface CorporateAppPayload {
+  applicationId: string
+  companyName: string
+  contactEmail: string
+  contactName: string
+  reviewUrl: string
+}
+
+export interface DeliveryStatusPayload {
+  deliveryId: string
+  orderId: string
+  orderNumber: string
+  status: string
+  customerName: string
+  customerEmail: string | null
+  customerPhone?: string
+  trackingNumber?: string | null
+  failureReason?: string
+}
+
+export interface ProductionFinishedPayload {
+  orderId: string
+  orderNumber: string | null
+  productName: string
+  quantity: number
+  completedAt: string
+}
+
+export interface AdCopyPayload {
+  productId: string
+  productName: string
+  platforms: string[]
+  context?: string
+}
+
+export interface ProductDescriptionPayload {
+  productId: string
+  productName: string
+  imageUrls: string[]
+  currentDescription?: string
+}
+
+export interface MockupPayload {
+  productId: string
+  productName: string
+  imageUrls: string[]
+  platforms: ('Instagram' | 'LinkedIn' | 'TikTok')[]
+}
+
+export interface VideoPayload {
+  productId: string
+  productName: string
+  description: string
+  imageUrls: string[]
+}
+
+export interface SentimentPayload {
+  messages: Array<{ id: string; text: string; sender: string }>
+}
+
+export interface SeoContentPayload {
+  topic?: string
+  keywords?: string[]
+  productContext?: boolean
+}
+
+export interface CatalogueImportPayload {
+  importId: string
+  sourceUrl: string
+  platform: string
+  originalName: string | null
+  originalDescription: string | null
+  originalTags: string[]
+  imageUrls: string[]
+  designerName: string | null
+  licenseType: string | null
+  downloadCount: number | null
+  likeCount: number | null
+}
+
+export interface NewDeviceLoginPayload {
+  userId: string
+  userEmail: string
+  userName: string
+  ipAddress: string
+  userAgent: string
+  city: string | null
+  country: string | null
+  loginAt: string
+  revokeUrl: string
+}
+
+// Disabled n8n trigger function
+export async function triggerN8nWorkflow(
+  workflowWebhookPath: string,
+  payload: any,
+  options?: { blocking?: boolean }
+): Promise<void> {
+  // N8N integration is DISABLED. This is a no-op.
+  if (process.env.NODE_ENV === 'development') {
+    console.debug(`[N8N DISABLED] Would have triggered: ${workflowWebhookPath}`)
+  }
+}
+
+// All n8n methods are now no-ops
+export const n8n = {
+  orderConfirmed: (payload: OrderConfirmedPayload) => Promise.resolve(),
+  orderStatusChanged: (payload: OrderStatusPayload) => Promise.resolve(),
+  paymentFailed: (payload: PaymentFailedPayload) => Promise.resolve(),
+  cartAbandoned: (payload: AbandonedCartPayload) => Promise.resolve(),
+  quoteSubmitted: (payload: QuotePayload) => Promise.resolve(),
+  quoteReady: (payload: QuoteReadyPayload) => Promise.resolve(),
+  staffAlert: (payload: StaffAlertPayload) => Promise.resolve(),
+  securityAlert: (payload: SecurityAlertPayload) => Promise.resolve(),
+  impossibleTravel: (payload: ImpossibleTravelPayload) => Promise.resolve(),
+  lowStock: (payload: LowStockPayload) => Promise.resolve(),
+  productPublished: (payload: ProductPublishedPayload) => Promise.resolve(),
+  productUpdated: (payload: ProductUpdatedPayload) => Promise.resolve(),
+  syncAllFeeds: (payload: any) => Promise.resolve(),
+  newStaffLogin: (payload: NewDeviceLoginPayload) => Promise.resolve(),
+  corporateApplicationSubmitted: (payload: CorporateAppPayload) => Promise.resolve(),
+  catalogueImportEnhance: (payload: CatalogueImportPayload) => Promise.resolve(),
+  deliveryStatusChanged: (payload: DeliveryStatusPayload) => Promise.resolve(),
+  productionFinished: (payload: ProductionFinishedPayload) => Promise.resolve(),
+  generateAdCopy: (payload: AdCopyPayload) => Promise.resolve(),
+  generateProductDescription: (payload: ProductDescriptionPayload) => Promise.resolve(),
+  generateSocialPosts: (payload: ProductPublishedPayload) => Promise.resolve(),
+  generateMockups: (payload: MockupPayload) => Promise.resolve(),
+  generateVideo: (payload: VideoPayload) => Promise.resolve(),
+  sentimentAnalysis: (payload: SentimentPayload) => Promise.resolve(),
+  generateSeoContent: (payload: SeoContentPayload) => Promise.resolve(),
+}

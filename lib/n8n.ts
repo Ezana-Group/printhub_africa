@@ -1,63 +1,20 @@
-import crypto from 'crypto'
+/**
+ * N8N INTEGRATION DISABLED
+ * All N8N workflow triggers have been disabled as part of the removal of external automation integrations.
+ * This module is kept for backwards compatibility but all methods now perform no-ops.
+ */
 
-const N8N_BASE_URL = process.env.N8N_WEBHOOK_BASE_URL 
-  // e.g. https://n8n.printhub.africa/webhook
-
-const N8N_SECRET = process.env.N8N_WEBHOOK_SECRET
-
-function signPayload(payload: string): string {
-  if (!N8N_SECRET) {
-    console.warn('N8N_WEBHOOK_SECRET is not set. Payloads will not be signed.')
-    return ''
-  }
-  return crypto
-    .createHmac('sha256', N8N_SECRET!)
-    .update(payload)
-    .digest('hex')
-}
+// Disabled: Original N8N webhook configuration and payload signing
+// const N8N_BASE_URL = process.env.N8N_WEBHOOK_BASE_URL
+// const N8N_SECRET = process.env.N8N_WEBHOOK_SECRET
 
 export async function triggerN8nWorkflow(
   workflowWebhookPath: string,
   payload: any,
   options?: { blocking?: boolean }
 ): Promise<void> {
-  if (!N8N_BASE_URL) {
-    console.warn('N8N_WEBHOOK_BASE_URL is not set. Workflow not triggered:', workflowWebhookPath)
-    return
-  }
-  
-  const body = JSON.stringify(payload)
-  const signature = signPayload(body)
-  const url = `${N8N_BASE_URL}/${workflowWebhookPath}`
-  
-  const headers = {
-    'Content-Type': 'application/json',
-    'x-printhub-signature': signature,
-    'x-printhub-timestamp': Date.now().toString(),
-  }
-
-  if (options?.blocking) {
-    try {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers,
-        body,
-      })
-      if (!res.ok) {
-        console.error(`n8n workflow failed: ${workflowWebhookPath}`, await res.text())
-      }
-    } catch (err) {
-      console.error(`n8n trigger failed for ${workflowWebhookPath}:`, err)
-    }
-    return
-  }
-
-  // Non-blocking — fire and forget
-  fetch(url, {
-    method: 'POST', 
-    headers,
-    body,
-  }).catch(err => console.error('n8n trigger failed silently:', err))
+  // N8N integration is disabled. All triggers are no-ops.
+  console.debug(`[N8N DISABLED] Would have triggered workflow: ${workflowWebhookPath}`)
 }
 
 // Typed trigger functions — one per workflow

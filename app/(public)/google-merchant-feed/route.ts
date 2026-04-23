@@ -59,6 +59,13 @@ export async function GET(req: NextRequest) {
         imageLink: imageUrl,
         price: `${Number(p.basePrice || 0).toFixed(2)} KES`,
         availability: (p.stock ?? 0) > 0 ? "in_stock" : (p.isPOD ? "in_stock" : "out_of_stock"),
+        condition: "new",
+        brand: "PrintHub Africa",
+        googleProductCategory: "Arts & Entertainment > Hobbies & Creative Arts > Arts & Crafts > Art & Craft Supplies > Craft Supplies > 3D Printing",
+        shipping: "KE:::200 KES", // Kenya, standard shipping 200 KES
+        identifierExists: "no", // Custom/handmade products
+        customLabel0: p.category?.name || "3D Printing",
+        customLabel1: Number(p.basePrice) < 5000 ? "budget" : Number(p.basePrice) < 15000 ? "mid" : "premium",
       };
     }).filter(Boolean);
 
@@ -79,8 +86,13 @@ export async function GET(req: NextRequest) {
       <g:image_link>${escapeXml(item!.imageLink!)}</g:image_link>
       <g:price>${item!.price}</g:price>
       <g:availability>${item!.availability}</g:availability>
-      <g:condition>new</g:condition>
-      <g:brand>PrintHub Africa</g:brand>
+      <g:condition>${item!.condition}</g:condition>
+      <g:brand>${escapeXml(item!.brand)}</g:brand>
+      <g:google_product_category>${escapeXml(item!.googleProductCategory)}</g:google_product_category>
+      <g:shipping>${item!.shipping}</g:shipping>
+      <g:identifier_exists>${item!.identifierExists}</g:identifier_exists>
+      <g:custom_label_0>${escapeXml(item!.customLabel0)}</g:custom_label_0>
+      <g:custom_label_1>${item!.customLabel1}</g:custom_label_1>
     </item>`).join('')}
   </channel>
 </rss>`;

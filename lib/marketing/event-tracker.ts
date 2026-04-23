@@ -40,14 +40,18 @@ export const trackEvent = (eventName: string, params: Record<string, any> = {}, 
 
   // --- TIKTOK PIXEL ---
   if (window.ttq) {
-    window.ttq.track(eventName, { ...params, event_id: dedupeId });
+    const tiktokEventMap: Record<string, string> = {
+      Purchase: "PlaceAnOrder"
+    };
+    const tiktokEvent = tiktokEventMap[eventName] || eventName;
+    window.ttq.track(tiktokEvent, { ...params, event_id: dedupeId });
   }
 
   // --- PINTEREST ---
   if (window.pintrk) {
     const pinterestEventMap: Record<string, string> = {
-      ViewContent: "page_visit",
-      AddToCart: "add_to_cart",
+      ViewContent: "pagevisit",
+      AddToCart: "addtocart",
       InitiateCheckout: "checkout",
       Purchase: "checkout",
       Search: "search"
