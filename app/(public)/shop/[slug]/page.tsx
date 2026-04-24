@@ -21,61 +21,67 @@ interface Props {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
-  const product = await prisma.product.findFirst({
-    where: { slug, isActive: true },
-    select: { 
-      name: true, 
-      shortDescription: true, 
-      metaTitle: true, 
-      metaDescription: true, 
-      images: true,
-      basePrice: true,
-      availability: true,
-      variants: { select: { price: true }, take: 1 },
-    },
-  });
-  if (!product) return { title: "Shop | PrintHub Kenya" };
-  const title = product.metaTitle ?? `${product.name} | PrintHub Kenya`;
-  const description = formatDescription(product.metaDescription ?? product.shortDescription) || undefined;
-  const image = product.images?.[0] || "/images/og/default-og.webp";
+  try {
+    const { slug } = await params;
+    const product = await prisma.product.findFirst({
+      where: { slug, isActive: true },
+      select: {
+        name: true,
+        shortDescription: true,
+        metaTitle: true,
+        metaDescription: true,
+        images: true,
+        basePrice: true,
+        availability: true,
+        variants: { select: { price: true }, take: 1 },
+      },
+    });
+    if (!product) return { title: "Shop | PrintHub Kenya" };
+    const title = product.metaTitle ?? `${product.name} | PrintHub Kenya`;
+    const description = formatDescription(product.metaDescription ?? product.shortDescription) || undefined;
+    const image = Array.isArray(product.images)
+      ? product.images.find((img) => typeof img === "string" && img.trim().length > 0) ?? "/images/og/default-og.webp"
+      : "/images/og/default-og.webp";
 
-  const url = `${process.env.NEXT_PUBLIC_APP_URL}/shop/${slug}`;
-  const price = product.variants?.[0]?.price ?? product.basePrice;
+    const url = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://printhub.africa"}/shop/${slug}`;
+    const price = product.variants?.[0]?.price ?? product.basePrice;
 
-  return {
-    title,
-    description,
-    alternates: { canonical: url },
-    openGraph: {
+    return {
       title,
       description,
-      url,
-      siteName: "PrintHub Africa",
-      images: [{ url: image, width: 1200, height: 630 }],
-      type: "product",
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-      images: [image],
-    },
-    other: {
-      "product:price:amount": Number(price).toString(),
-      "product:price:currency": "KES",
-      "product:availability": product.availability === "IN_STOCK" ? "instock" : "out of stock",
-      "product:condition": "new",
-      "og:type": "product",
-      "og:title": title,
-      "og:description": description,
-      "og:image": image,
-      "og:price:amount": Number(price).toString(),
-      "og:price:currency": "KES",
-      "product:availability": product.availability === "IN_STOCK" ? "instock" : "out of stock",
-      "product:condition": "new",
-    }
-  };
+      alternates: { canonical: url },
+      openGraph: {
+        title,
+        description,
+        url,
+        siteName: "PrintHub Africa",
+        images: [{ url: image, width: 1200, height: 630 }],
+        type: "product",
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+        images: [image],
+      },
+      other: {
+        "product:price:amount": Number(price).toString(),
+        "product:price:currency": "KES",
+        "product:availability": product.availability === "IN_STOCK" ? "instock" : "out of stock",
+        "product:condition": "new",
+        "og:type": "product",
+        "og:title": title,
+        "og:description": description,
+        "og:image": image,
+        "og:price:amount": Number(price).toString(),
+        "og:price:currency": "KES",
+        "product:condition": "new",
+      }
+    };
+  } catch (error) {
+    console.error("[shop/slug] metadata fallback:", error);
+    return { title: "Shop | PrintHub Kenya" };
+  }
 }
 
 export default async function ProductPage({ params }: Props) {
