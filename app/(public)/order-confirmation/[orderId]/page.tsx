@@ -17,7 +17,15 @@ interface ConfirmationOrder {
   discount: number;
   total: number;
   currency: string;
-  items: { id: string; productName: string; quantity: number; unitPrice: number; total: number }[];
+  items: {
+    id: string;
+    productId: string | null;
+    productVariantId: string | null;
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+  }[];
   shippingAddress: {
     fullName: string;
     email: string;
@@ -66,7 +74,7 @@ export default function OrderConfirmationPage() {
                id: data.id,
                total: data.total,
                items: data.items.map((i: any) => ({
-                 productId: i.id,
+                 productId: i.productId || i.productVariantId || i.id,
                  name: i.productName,
                  price: i.unitPrice,
                  quantity: i.quantity
