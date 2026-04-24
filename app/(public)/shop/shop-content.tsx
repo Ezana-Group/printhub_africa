@@ -104,6 +104,7 @@ export function ShopContent() {
   const [page, setPage] = useState(parseInt(searchParams.get("page") ?? "1", 10));
   const [categories, setCategories] = useState<Category[]>([]);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [layoutSettings, setLayoutSettings] = useState({ shopGridColumns: 3, shopGridRows: 3 });
 
   // Filter States
   const [q, setQ] = useState(searchParams.get("q") ?? "");
@@ -125,6 +126,22 @@ export function ShopContent() {
       .then((r) => r.json())
       .then((list) => setCategories(Array.isArray(list) ? list : []))
       .catch(() => setCategories([]));
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/public/service-flags")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data && typeof data === "object") {
+          setLayoutSettings((prev) => ({
+            shopGridColumns: Number(data.shopGridColumns) || prev.shopGridColumns,
+            shopGridRows: Number(data.shopGridRows) || prev.shopGridRows,
+          }));
+        }
+      })
+      .catch(() => {
+        // Keep defaults if public settings are unavailable
+      });
   }, []);
 
   useEffect(() => {
@@ -316,7 +333,7 @@ export function ShopContent() {
   }, [allProducts, q, inStock, minPrice, maxPrice, selectedTags, category, sort, absMin, absMax, categories, getCategorySlugs]);
 
   // Pagination
-  const limit = 12;
+  const limit = Math.max(1, Math.min(24, layoutSettings.shopGridColumns * layoutSettings.shopGridRows));
   const totalPages = Math.ceil(filteredProducts.length / limit) || 1;
   const paginatedProducts = filteredProducts.slice((page - 1) * limit, page * limit);
 
@@ -545,7 +562,14 @@ export function ShopContent() {
                 {activeFiltersCount > 0 ? " (filtered)" : ""}
               </p>
               
-              <div className="grid grid-cols-1 gap-4 xs:grid-cols-2 sm:grid-cols-2 xl:grid-cols-3">
+              <div className={"grid grid-cols-1 gap-4 xs:grid-cols-2 sm:grid-cols-2 " + {
+                1: "xl:grid-cols-1",
+                2: "xl:grid-cols-2",
+                3: "xl:grid-cols-3",
+                4: "xl:grid-cols-4",
+                5: "xl:grid-cols-5",
+                6: "xl:grid-cols-6",
+              }[layoutSettings.shopGridColumns] ?? "xl:grid-cols-3"}>
                 {paginatedProducts.map((p) => (
                   <ProductCard
                     key={p.id}

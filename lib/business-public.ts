@@ -18,6 +18,7 @@ export type BusinessPublic = {
   county: string;
   country: string;
   googleMapsUrl: string | null;
+  foundingDate: string | null;
   businessHours: string;
   hoursWeekdays: string | null;
   hoursSaturday: string | null;
@@ -107,6 +108,7 @@ export async function getBusinessPublic(): Promise<BusinessPublic> {
     county: row.county ?? DEFAULTS.county,
     country: row.country ?? DEFAULTS.country,
     googleMapsUrl: row.googleMapsUrl ?? null,
+    foundingDate: row.foundingDate ? row.foundingDate.toISOString() : null,
     businessHours: row.businessHours ?? DEFAULTS.businessHours,
     hoursWeekdays: row.hoursWeekdays ?? null,
     hoursSaturday: row.hoursSaturday ?? null,

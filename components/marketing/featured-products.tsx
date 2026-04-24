@@ -31,7 +31,7 @@ function getRatings(p: {
   };
 }
 
-export async function FeaturedProducts() {
+export async function FeaturedProducts({ gridCols = 4, maxItems = 4 }: { gridCols?: number; maxItems?: number }) {
   let products: Awaited<ReturnType<typeof getCachedFeaturedProducts>> = [];
   try {
     products = await getCachedFeaturedProducts();
@@ -55,5 +55,10 @@ export async function FeaturedProducts() {
     etaLabel: p.printTimeEstimate ?? null,
   }));
 
-  return <FeaturedProductsClient products={normalizedProducts} />;
+  return (
+    <FeaturedProductsClient
+      products={normalizedProducts.slice(0, maxItems)}
+      gridCols={gridCols}
+    />
+  );
 }

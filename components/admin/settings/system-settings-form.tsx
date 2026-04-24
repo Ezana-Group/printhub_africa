@@ -171,6 +171,56 @@ export function SystemSettingsForm() {
         </div>
       </SectionCard>
       <SectionCard
+        title="Product Grid Layout"
+        description="Control how many products appear on the home featured section and the shop product grid."
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <Label>Home featured columns</Label>
+            <Input
+              name="homeFeaturedColumns"
+              type="number"
+              min={1}
+              max={6}
+              defaultValue={val("homeFeaturedColumns", "4")}
+            />
+          </div>
+          <div>
+            <Label>Home featured rows</Label>
+            <Input
+              name="homeFeaturedRows"
+              type="number"
+              min={1}
+              max={3}
+              defaultValue={val("homeFeaturedRows", "1")}
+            />
+          </div>
+          <div>
+            <Label>Shop grid columns</Label>
+            <Input
+              name="shopGridColumns"
+              type="number"
+              min={1}
+              max={6}
+              defaultValue={val("shopGridColumns", "3")}
+            />
+          </div>
+          <div>
+            <Label>Shop grid rows</Label>
+            <Input
+              name="shopGridRows"
+              type="number"
+              min={1}
+              max={4}
+              defaultValue={val("shopGridRows", "3")}
+            />
+          </div>
+        </div>
+        <p className="text-sm text-slate-500 mt-3">
+          The shop page will show columns × rows products per page and adjust the grid at larger screen sizes.
+        </p>
+      </SectionCard>
+      <SectionCard
         title="Feature Flags"
         description="Toggle experimental or optional features."
       >

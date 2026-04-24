@@ -60,7 +60,7 @@ export function ProductCard({ id, name, slug, image, imagesCount, basePrice, com
   };
 
   return (
-    <Link href={`/shop/${slug}`} className="group block rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-lg">
+    <Link href={`/shop/${slug}`} className="group block h-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-lg">
       <div className="relative aspect-square overflow-hidden rounded-xl bg-slate-100">
         {image && (image.startsWith("/") || image.startsWith("http")) ? (
           <Image src={image} alt={name} fill className="object-cover transition group-hover:scale-105" sizes="(max-width:768px) 100vw, 33vw" />
@@ -94,40 +94,44 @@ export function ProductCard({ id, name, slug, image, imagesCount, basePrice, com
             </span>
           ))}
         </div>
-          <Button
-            variant="secondary"
-            size="icon"
-            className="absolute right-2 top-2 rounded-full opacity-0 transition group-hover:opacity-100"
-            aria-label="Add to wishlist"
-          >
-            <Heart className="h-4 w-4" />
-          </Button>
-          {(reviewCount ?? 0) > 5 && (
-            <div className="absolute left-2 bottom-2">
-              <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-none text-[10px] py-0 px-2 shadow-sm uppercase font-bold tracking-tighter">
-                Bestseller
-              </Badge>
-            </div>
-          )}
-        </div>
-      <div className="mt-3">
-        <h3 className="font-semibold text-slate-900 line-clamp-2">{name}</h3>
-        {averageRating != null && averageRating > 0 && (
-          <div className="mt-1">
-            <StarRating rating={averageRating} count={reviewCount} />
+        <Button
+          variant="secondary"
+          size="icon"
+          className="absolute right-2 top-2 rounded-full opacity-0 transition group-hover:opacity-100"
+          aria-label="Add to wishlist"
+        >
+          <Heart className="h-4 w-4" />
+        </Button>
+        {(reviewCount ?? 0) > 5 && (
+          <div className="absolute left-2 bottom-2">
+            <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-none text-[10px] py-0 px-2 shadow-sm uppercase font-bold tracking-tighter">
+              Bestseller
+            </Badge>
           </div>
         )}
-        <div className="mt-1 flex items-center gap-2">
-          <span className="text-lg font-bold text-primary">KES {basePrice.toLocaleString()}</span>
-          {comparePrice != null && comparePrice > basePrice && (
-            <span className="text-sm text-slate-500 line-through">KES {comparePrice.toLocaleString()}</span>
-          )}
+      </div>
+      <div className="mt-3 flex h-full flex-col">
+        <div className="flex-1 space-y-3">
+          <div>
+            <h3 className="font-semibold text-slate-900 line-clamp-2">{name}</h3>
+            {averageRating != null && averageRating > 0 && (
+              <div className="mt-1">
+                <StarRating rating={averageRating} count={reviewCount} />
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-bold text-primary">KES {basePrice.toLocaleString()}</span>
+            {comparePrice != null && comparePrice > basePrice && (
+              <span className="text-sm text-slate-500 line-through">KES {comparePrice.toLocaleString()}</span>
+            )}
+          </div>
+          {stock < 1 ? (
+            <p className="text-sm font-medium text-amber-700 rounded-xl border border-amber-200 bg-amber-50 py-2 text-center">Out of stock</p>
+          ) : stock <= 5 ? (
+            <p className="text-xs text-slate-500">Only {stock} left</p>
+          ) : null}
         </div>
-        {stock < 1 ? (
-          <p className="mt-3 text-sm font-medium text-amber-700 rounded-xl border border-amber-200 bg-amber-50 py-2 text-center">Out of stock</p>
-        ) : stock <= 5 ? (
-          <p className="mt-2 text-xs text-slate-500">Only {stock} left</p>
-        ) : null}
         <Button
           size="sm"
           className="mt-3 w-full rounded-xl"

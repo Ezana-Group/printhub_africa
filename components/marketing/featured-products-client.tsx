@@ -80,13 +80,22 @@ function getFilteredProducts(tab: ProductTab, products: FeaturedProductCardData[
   return best.length > 0 ? best : products;
 }
 
-export function FeaturedProductsClient({ products }: { products: FeaturedProductCardData[] }) {
+export function FeaturedProductsClient({ products, gridCols = 4 }: { products: FeaturedProductCardData[]; gridCols?: number }) {
   const [activeTab, setActiveTab] = useState<ProductTab>("best-sellers");
 
   const visibleProducts = useMemo(
     () => getFilteredProducts(activeTab, products),
     [activeTab, products]
   );
+
+  const desktopColsClass = {
+    1: "lg:grid-cols-1",
+    2: "lg:grid-cols-2",
+    3: "lg:grid-cols-3",
+    4: "lg:grid-cols-4",
+    5: "lg:grid-cols-5",
+    6: "lg:grid-cols-6",
+  }[gridCols] ?? "lg:grid-cols-4";
 
   return (
     <section id="shop-3d-prints" className="bg-white py-[60px]">
@@ -122,12 +131,12 @@ export function FeaturedProductsClient({ products }: { products: FeaturedProduct
           ))}
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${desktopColsClass}`}>
           {visibleProducts.length > 0 ? (
             visibleProducts.map((p) => {
               const description = p.shortDescription ?? p.materials[0] ?? "Premium ready-made 3D print.";
               return (
-                <Card key={p.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-none">
+                <Card key={p.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-none h-full">
                   <Link href={`/shop/${p.slug}`}>
                     <div className="relative aspect-square overflow-hidden bg-[#F5F5F5]">
                       {p.imageUrl ? (
@@ -145,7 +154,7 @@ export function FeaturedProductsClient({ products }: { products: FeaturedProduct
                       </div>
                     </div>
                   </Link>
-                  <CardContent className="p-4">
+                  <CardContent className="p-4 flex h-full flex-col">
                     <Link href={`/shop/${p.slug}`}>
                       <p className="font-semibold text-slate-900">{p.name}</p>
                     </Link>
@@ -157,8 +166,10 @@ export function FeaturedProductsClient({ products }: { products: FeaturedProduct
                       </span>
                       <span>{p.etaLabel ?? "Delivery in 2-5 days"}</span>
                     </div>
-                    <p className="mt-3 text-lg font-bold text-[#FF4D00]">{formatPrice(p.basePrice)}</p>
-                    <Button asChild size="sm" className="mt-4 w-full rounded-xl bg-[#FF4D00] hover:bg-[#FF4D00]/90">
+                    <div className="mt-3 flex-1">
+                      <p className="text-lg font-bold text-[#FF4D00]">{formatPrice(p.basePrice)}</p>
+                    </div>
+                    <Button asChild size="sm" className="mt-auto w-full rounded-xl bg-[#FF4D00] hover:bg-[#FF4D00]/90">
                       <Link href={`/shop/${p.slug}`}>Add to cart</Link>
                     </Button>
                   </CardContent>

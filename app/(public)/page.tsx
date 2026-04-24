@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic"; // no DB at Docker build — render at r
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const [siteImages, categories, { largeFormatEnabled }] = await Promise.all([
+  const [siteImages, categories, serviceFlags] = await Promise.all([
     getSiteImageSlots(prisma).catch(() => SITE_IMAGE_DEFAULTS),
     getCachedCategories().catch(() => []),
     getServiceFlags(),
@@ -27,9 +27,12 @@ export default async function HomePage() {
     slug: category.slug,
   }));
 
+  const homeGridCols = serviceFlags.homeFeaturedColumns ?? 4;
+  const homeGridRows = serviceFlags.homeFeaturedRows ?? 1;
+
   return (
     <>
-      <Hero heroImage={siteImages.marketing_hero} largeFormatEnabled={largeFormatEnabled} />
+      <Hero heroImage={siteImages.marketing_hero} largeFormatEnabled={serviceFlags.largeFormatEnabled} />
       <section className="bg-white py-5 border-b border-slate-100">
         <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
           <div className="flex flex-wrap items-center gap-2">
@@ -54,7 +57,7 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
-      <FeaturedProducts />
+      <FeaturedProducts gridCols={homeGridCols} maxItems={homeGridCols * homeGridRows} />
       <section className="bg-slate-50 py-10">
         <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
           <div className="grid gap-4 md:grid-cols-3">
