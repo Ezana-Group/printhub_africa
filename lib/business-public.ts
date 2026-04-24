@@ -19,6 +19,14 @@ export type BusinessPublic = {
   country: string;
   googleMapsUrl: string | null;
   foundingDate: string | null;
+  registrationInfo: string | null;
+  parentCompany: string | null;
+  supportResponseTime: string | null;
+  qualityRating: string | null;
+  qualityChecks: string | null;
+  materialsInfo: string | null;
+  warrantyInfo: string | null;
+  returnPolicyInfo: string | null;
   businessHours: string;
   hoursWeekdays: string | null;
   hoursSaturday: string | null;
@@ -61,6 +69,15 @@ const DEFAULTS: BusinessPublic = {
   county: "Uasin Gishu County",
   country: "Kenya",
   googleMapsUrl: null,
+  foundingDate: null,
+  registrationInfo: "Registered Business in Kenya",
+  parentCompany: "Ezana Group",
+  supportResponseTime: "Within 2 hours during business hours",
+  qualityRating: "4.8/5 from 500+ customers",
+  qualityChecks: "Every order inspected",
+  materialsInfo: "Premium, certified suppliers",
+  warrantyInfo: "30-day satisfaction guarantee",
+  returnPolicyInfo: "Hassle-free returns",
   businessHours: "Mon–Fri 8am–6pm | Sat 9am–3pm",
   hoursWeekdays: null,
   hoursSaturday: null,
@@ -109,6 +126,14 @@ export async function getBusinessPublic(): Promise<BusinessPublic> {
     country: row.country ?? DEFAULTS.country,
     googleMapsUrl: row.googleMapsUrl ?? null,
     foundingDate: row.foundingDate ? row.foundingDate.toISOString() : null,
+    registrationInfo: row.registrationInfo ?? DEFAULTS.registrationInfo,
+    parentCompany: row.parentCompany ?? DEFAULTS.parentCompany,
+    supportResponseTime: row.supportResponseTime ?? DEFAULTS.supportResponseTime,
+    qualityRating: row.qualityRating ?? DEFAULTS.qualityRating,
+    qualityChecks: row.qualityChecks ?? DEFAULTS.qualityChecks,
+    materialsInfo: row.materialsInfo ?? DEFAULTS.materialsInfo,
+    warrantyInfo: row.warrantyInfo ?? DEFAULTS.warrantyInfo,
+    returnPolicyInfo: row.returnPolicyInfo ?? DEFAULTS.returnPolicyInfo,
     businessHours: row.businessHours ?? DEFAULTS.businessHours,
     hoursWeekdays: row.hoursWeekdays ?? null,
     hoursSaturday: row.hoursSaturday ?? null,

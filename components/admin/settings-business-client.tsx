@@ -42,6 +42,14 @@ const FORM_DEFAULTS: Record<string, string> = {
   socialTikTok: "",
   socialYouTube: "",
   foundingDate: "",
+  registrationInfo: "Registered Business in Kenya",
+  parentCompany: "Ezana Group",
+  supportResponseTime: "Within 2 hours during business hours",
+  qualityRating: "4.8/5 from 500+ customers",
+  qualityChecks: "Every order inspected",
+  materialsInfo: "Premium, certified suppliers",
+  warrantyInfo: "30-day satisfaction guarantee",
+  returnPolicyInfo: "Hassle-free returns",
   statsOrdersThreshold: "1000",
   statsClientsThreshold: "500",
 };
@@ -559,6 +567,72 @@ export function SettingsBusinessClient({
               <p className="text-xs text-amber-600 bg-amber-50 p-2 rounded-lg">
                 Note: Statistics will only be shown if their individual toggle is ON and they meet any applicable thresholds above.
               </p>
+            </div>
+          </div>
+        )}
+        onSave={saveFull}
+      />
+
+      <EditableSection
+        id="business-transparency"
+        title="Transparency & Trust"
+        description="Controls trust and compliance copy shown on the About page."
+        canEdit={canEdit}
+        viewContent={
+          <div className="space-y-0">
+            {[
+              { label: "Registration", value: getStr(data, "registrationInfo") },
+              { label: "Parent Company", value: getStr(data, "parentCompany") },
+              { label: "Support Response Time", value: getStr(data, "supportResponseTime") },
+              { label: "Quality Rating", value: getStr(data, "qualityRating") },
+              { label: "Quality Checks", value: getStr(data, "qualityChecks") },
+              { label: "Materials", value: getStr(data, "materialsInfo") },
+              { label: "Warranty", value: getStr(data, "warrantyInfo") },
+              { label: "Return Policy", value: getStr(data, "returnPolicyInfo") },
+            ].map((row, i) => (
+              <div
+                key={i}
+                className="flex flex-wrap items-baseline justify-between gap-2 py-2 border-b border-border/50 last:border-0 hover:bg-muted/30 rounded px-1 -mx-1"
+              >
+                <span className="text-sm text-muted-foreground">{row.label}</span>
+                <span className="text-sm font-medium text-foreground">{row.value || "—"}</span>
+              </div>
+            ))}
+          </div>
+        }
+        editContent={({ setHasChanges }) => (
+          <div className="space-y-4" onChange={() => setHasChanges(true)} onInput={() => setHasChanges(true)}>
+            <div className="space-y-1.5">
+              <Label>Registration</Label>
+              <Input value={getStr(data, "registrationInfo")} onChange={(e) => update("registrationInfo", e.target.value)} className="focus-visible:ring-orange-500" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Parent Company</Label>
+              <Input value={getStr(data, "parentCompany")} onChange={(e) => update("parentCompany", e.target.value)} className="focus-visible:ring-orange-500" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Support Response Time</Label>
+              <Input value={getStr(data, "supportResponseTime")} onChange={(e) => update("supportResponseTime", e.target.value)} className="focus-visible:ring-orange-500" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Quality Rating</Label>
+              <Input value={getStr(data, "qualityRating")} onChange={(e) => update("qualityRating", e.target.value)} className="focus-visible:ring-orange-500" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Quality Checks</Label>
+              <Input value={getStr(data, "qualityChecks")} onChange={(e) => update("qualityChecks", e.target.value)} className="focus-visible:ring-orange-500" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Materials</Label>
+              <Input value={getStr(data, "materialsInfo")} onChange={(e) => update("materialsInfo", e.target.value)} className="focus-visible:ring-orange-500" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Warranty</Label>
+              <Input value={getStr(data, "warrantyInfo")} onChange={(e) => update("warrantyInfo", e.target.value)} className="focus-visible:ring-orange-500" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Return Policy</Label>
+              <Input value={getStr(data, "returnPolicyInfo")} onChange={(e) => update("returnPolicyInfo", e.target.value)} className="focus-visible:ring-orange-500" />
             </div>
           </div>
         )}

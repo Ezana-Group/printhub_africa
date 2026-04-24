@@ -2,10 +2,12 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Cuboid, Star } from "lucide-react";
+import { Check, Cuboid, ShoppingCart, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
+import { useCartStore } from "@/store/cart-store";
+import type { CartItem } from "@/store/cart-store";
 
 type ProductTab = "best-sellers" | "new-arrivals" | "on-sale";
 
@@ -82,6 +84,8 @@ function getFilteredProducts(tab: ProductTab, products: FeaturedProductCardData[
 
 export function FeaturedProductsClient({ products, gridCols = 4 }: { products: FeaturedProductCardData[]; gridCols?: number }) {
   const [activeTab, setActiveTab] = useState<ProductTab>("best-sellers");
+  const [addedProductId, setAddedProductId] = useState<string | null>(null);
+  const addItem = useCartStore((s) => s.addItem);
 
   const visibleProducts = useMemo(
     () => getFilteredProducts(activeTab, products),
@@ -96,6 +100,23 @@ export function FeaturedProductsClient({ products, gridCols = 4 }: { products: F
     5: "lg:grid-cols-5",
     6: "lg:grid-cols-6",
   }[gridCols] ?? "lg:grid-cols-4";
+
+  const handleAddToCart = (product: FeaturedProductCardData) => {
+    const item: CartItem = {
+      productId: product.id,
+      quantity: 1,
+      unitPrice: product.basePrice,
+      name: product.name,
+      slug: product.slug,
+      image: product.imageUrl ?? undefined,
+    };
+
+    addItem(item);
+    setAddedProductId(product.id);
+    setTimeout(() => {
+      setAddedProductId((current) => (current === product.id ? null : current));
+    }, 1600);
+  };
 
   return (
     <section id="shop-3d-prints" className="bg-white py-[60px]">
@@ -169,8 +190,24 @@ export function FeaturedProductsClient({ products, gridCols = 4 }: { products: F
                     <div className="mt-3 flex-1">
                       <p className="text-lg font-bold text-[#FF4D00]">{formatPrice(p.basePrice)}</p>
                     </div>
-                    <Button asChild size="sm" className="mt-auto w-full rounded-xl bg-[#FF4D00] hover:bg-[#FF4D00]/90">
-                      <Link href={`/shop/${p.slug}`}>Add to cart</Link>
+                    <Button
+                      size="sm"
+                      className="mt-auto w-full rounded-xl bg-[#FF4D00] hover:bg-[#FF4D00]/90"
+                      onClick={() => handleAddToCart(p)}
+                      disabled={p.stock < 1}
+                      aria-label={`Add ${p.name} to cart`}
+                    >
+                      {addedProductId === p.id ? (
+                        <>
+                          <Check className="mr-2 h-4 w-4" />
+                          Added
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingCart className="mr-2 h-4 w-4" />
+                          Add to cart
+                        </>
+                      )}
                     </Button>
                   </CardContent>
                 </Card>
