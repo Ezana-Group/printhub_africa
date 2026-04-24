@@ -45,7 +45,7 @@ export async function GET() {
     logo: row.logo ?? null,
     favicon: row.favicon ?? null,
     primaryPhone: row.primaryPhone,
-    whatsapp: row.whatsapp,
+    whatsapp: row.whatsapp ?? row.whatsappNumber ?? null,
     primaryEmail: row.primaryEmail ?? "hello@printhub.africa",
     supportEmail: row.supportEmail ?? "support@printhub.africa",
     financeEmail: row.financeEmail ?? "finance@printhub.africa",

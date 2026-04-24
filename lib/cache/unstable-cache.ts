@@ -129,7 +129,7 @@ export const getCachedBusinessPublic = unstable_cache(
       logo: row.logo ?? null,
       favicon: row.favicon ?? null,
       primaryPhone: row.primaryPhone ?? null,
-      whatsapp: row.whatsapp ?? null,
+      whatsapp: row.whatsapp ?? row.whatsappNumber ?? null,
       primaryEmail: row.primaryEmail ?? DEFAULTS.primaryEmail,
       supportEmail: row.supportEmail ?? DEFAULTS.supportEmail,
       financeEmail: row.financeEmail ?? DEFAULTS.financeEmail,
