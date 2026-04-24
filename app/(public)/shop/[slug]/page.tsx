@@ -114,13 +114,19 @@ export default async function ProductPage({ params }: Props) {
   };
 
   // Merge modern productImages relation with legacy images JSON array
-  const legacyImages = Array.isArray(product.images) ? product.images : [];
-  const adhocImages = product.productImages.map(img => ({ 
-    id: img.id, 
-    url: img.url, 
-    altText: img.altText, 
-    isPrimary: img.isPrimary 
-  }));
+  const legacyImages = Array.isArray(product.images)
+    ? product.images.filter((url): url is string => typeof url === "string" && url.trim().length > 0)
+    : [];
+  const adhocImages = (Array.isArray(product.productImages) ? product.productImages : [])
+    .filter((img): img is { id: string; url: string; altText?: string | null; isPrimary?: boolean } => (
+      !!img && typeof img.url === "string" && img.url.trim().length > 0
+    ))
+    .map((img) => ({
+      id: img.id,
+      url: img.url,
+      altText: img.altText,
+      isPrimary: img.isPrimary,
+    }));
 
   // Create a combined list of unique images by URL
   const seenUrls = new Set(adhocImages.map(img => img.url));
@@ -197,17 +203,25 @@ export default async function ProductPage({ params }: Props) {
     imageUrl: string | null;
     stock: number;
     defaultVariantId?: string;
-  } => ({
-    id: item.id,
-    slug: item.slug,
-    name: item.name,
-    shortDescription: item.shortDescription,
-    basePrice: Number(item.basePrice),
-    comparePrice: item.comparePrice != null ? Number(item.comparePrice) : null,
-    imageUrl: item.productImages[0]?.url ?? item.images[0] ?? null,
-    stock: item.stock ?? 0,
-    defaultVariantId: item.variants[0]?.id ?? undefined,
-  });
+  } => {
+    const firstProductImage = Array.isArray(item.productImages)
+      ? item.productImages.find((img) => typeof img?.url === "string" && img.url.trim().length > 0)?.url
+      : undefined;
+    const firstLegacyImage = Array.isArray(item.images)
+      ? item.images.find((img) => typeof img === "string" && img.trim().length > 0)
+      : undefined;
+    return {
+      id: item.id,
+      slug: item.slug,
+      name: item.name,
+      shortDescription: item.shortDescription,
+      basePrice: Number(item.basePrice),
+      comparePrice: item.comparePrice != null ? Number(item.comparePrice) : null,
+      imageUrl: firstProductImage ?? firstLegacyImage ?? null,
+      stock: item.stock ?? 0,
+      defaultVariantId: item.variants[0]?.id ?? undefined,
+    };
+  };
 
   const frequentProducts = frequentRaw.map(normalizeRailProduct);
   const frequentIds = new Set(frequentProducts.map((p) => p.id));
@@ -227,7 +241,10 @@ export default async function ProductPage({ params }: Props) {
             "@type": "Product",
             "name": product.name,
             "description": product.shortDescription || product.description,
-            "image": galleryImages.filter(img => img.isPrimary).map(img => img.url) || galleryImages[0]?.url,
+            "image":
+              galleryImages.find((img) => img.isPrimary)?.url ??
+              galleryImages[0]?.url ??
+              "/images/og/default-og.webp",
             "brand": {
               "@type": "Brand",
               "name": "PrintHub Africa"
