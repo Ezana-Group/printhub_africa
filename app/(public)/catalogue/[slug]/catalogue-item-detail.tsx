@@ -191,7 +191,8 @@ export function CatalogueItemDetail({ slug }: CatalogueItemDetailProps) {
           id: item.id, 
           name: item.name, 
           price: unitPrice || (item.basePriceKes ?? 0), 
-          category: item.category?.name 
+          category: item.category?.name,
+          type: "catalogue"
         }} 
       />
       <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-8">

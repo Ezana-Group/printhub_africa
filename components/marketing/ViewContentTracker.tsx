@@ -9,6 +9,7 @@ interface Props {
     name: string;
     price: number;
     category?: string;
+    type?: "product" | "catalogue";
   };
 }
 
@@ -19,6 +20,7 @@ export function ViewContentTracker({ product }: Props) {
       name: product.name,
       price: product.price,
       category: product.category,
+      type: product.type,
     });
   }, [product]);
 
