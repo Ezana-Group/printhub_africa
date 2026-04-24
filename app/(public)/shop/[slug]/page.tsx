@@ -107,7 +107,7 @@ export default async function ProductPage({ params }: Props) {
       variants: { orderBy: { price: "asc" } },
       externalModel: true,
     },
-  });
+  }).catch(() => null);
 
   if (!rawProduct) notFound();
 
@@ -174,7 +174,7 @@ export default async function ProductPage({ params }: Props) {
       productImages: { select: { url: true }, orderBy: { sortOrder: "asc" }, take: 1 },
       variants: { select: { id: true }, orderBy: { price: "asc" }, take: 1 },
     },
-  });
+  }).catch(() => []);
 
   const relatedRaw = await prisma.product.findMany({
     where: {
@@ -195,7 +195,7 @@ export default async function ProductPage({ params }: Props) {
       productImages: { select: { url: true }, orderBy: { sortOrder: "asc" }, take: 1 },
       variants: { select: { id: true }, orderBy: { price: "asc" }, take: 1 },
     },
-  });
+  }).catch(() => []);
 
   const normalizeRailProduct = (
     item: (typeof frequentRaw)[number]
