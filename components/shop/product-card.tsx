@@ -60,7 +60,8 @@ export function ProductCard({ id, name, slug, image, imagesCount, basePrice, com
   };
 
   return (
-    <Link href={`/shop/${slug}`} className="group block h-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-lg">
+    <article className="group h-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-lg">
+      <Link href={`/shop/${slug}`} className="block">
       <div className="relative aspect-square overflow-hidden rounded-xl bg-slate-100">
         {image && (image.startsWith("/") || image.startsWith("http")) ? (
           <Image src={image} alt={name} fill className="object-cover transition group-hover:scale-105" sizes="(max-width:768px) 100vw, 33vw" />
@@ -110,10 +111,13 @@ export function ProductCard({ id, name, slug, image, imagesCount, basePrice, com
           </div>
         )}
       </div>
+      </Link>
       <div className="mt-3 flex h-full flex-col">
-        <div className="flex-1 space-y-3">
+        <div className="space-y-3">
           <div>
-            <h3 className="font-semibold text-slate-900 line-clamp-2">{name}</h3>
+            <Link href={`/shop/${slug}`} className="hover:text-primary">
+              <h3 className="font-semibold text-slate-900 line-clamp-2">{name}</h3>
+            </Link>
             {averageRating != null && averageRating > 0 && (
               <div className="mt-1">
                 <StarRating rating={averageRating} count={reviewCount} />
@@ -134,14 +138,15 @@ export function ProductCard({ id, name, slug, image, imagesCount, basePrice, com
         </div>
         <Button
           size="sm"
-          className="mt-3 w-full rounded-xl"
+          className="mt-4 w-full rounded-xl bg-[#FF4D00] text-white hover:bg-[#E64500]"
           onClick={handleAddToCart}
           disabled={stock < 1}
+          aria-label={`Add ${name} to cart`}
         >
           <ShoppingCart className="mr-2 h-4 w-4" />
           Add to cart
         </Button>
       </div>
-    </Link>
+    </article>
   );
 }
