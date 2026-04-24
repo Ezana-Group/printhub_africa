@@ -80,6 +80,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
+  const productUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://printhub.africa"}/shop/${slug}`;
   const business = await getBusinessPublic();
   const shippingSettings = await prisma.shippingSettings
     .findUnique({
@@ -236,7 +237,7 @@ export default async function ProductPage({ params }: Props) {
               "price": Number(product.basePrice),
               "priceCurrency": "KES",
               "availability": (product.stock ?? 0) > 0 ? "https://schema.org/InStock" : (product.isPOD ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"),
-              "url": url,
+              "url": productUrl,
               "seller": {
                 "@type": "Organization",
                 "name": "PrintHub Africa"
