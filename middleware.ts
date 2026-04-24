@@ -193,7 +193,7 @@ export async function middleware(request: NextRequest) {
       response = NextResponse.rewrite(url);
     }
 
-    response.headers.set("Content-Security-Policy", "frame-ancestors 'none'");
+    response.headers.set("Content-Security-Policy", "frame-ancestors 'none'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://analytics.printhub.africa;");
     response.headers.set("X-Frame-Options", "DENY");
     // Apply CORS headers for cross-origin requests (e.g. printhub.africa fetching admin.printhub.africa RSC)
     applyCors(response, origin, allowedOrigins);
