@@ -16,21 +16,26 @@ export const dynamic = "force-dynamic"; // no DB at Docker build — render at r
 export const revalidate = 300;
 
 export async function generateMetadata(): Promise<Metadata> {
-  const meta = await getCachedBusinessMetadata();
-  const updatedAtTime = meta.updatedAt ? new Date(meta.updatedAt).getTime() : 0;
-  const faviconUrl =
-    meta.favicon
-      ? `${meta.favicon}?v=${updatedAtTime}`
-      : null;
-  return {
-    icons: faviconUrl
-      ? {
-          icon: [{ url: faviconUrl, sizes: "any" }, { url: faviconUrl, type: "image/png", sizes: "32x32" }],
-          apple: [{ url: faviconUrl, sizes: "180x180" }],
-          shortcut: [{ url: faviconUrl }],
-        }
-      : undefined,
-  };
+  try {
+    const meta = await getCachedBusinessMetadata();
+    const updatedAtTime = meta.updatedAt ? new Date(meta.updatedAt).getTime() : 0;
+    const faviconUrl =
+      meta.favicon
+        ? `${meta.favicon}?v=${updatedAtTime}`
+        : null;
+    return {
+      icons: faviconUrl
+        ? {
+            icon: [{ url: faviconUrl, sizes: "any" }, { url: faviconUrl, type: "image/png", sizes: "32x32" }],
+            apple: [{ url: faviconUrl, sizes: "180x180" }],
+            shortcut: [{ url: faviconUrl }],
+          }
+        : undefined,
+    };
+  } catch (error) {
+    console.error("[public-layout-metadata] Falling back to defaults:", error);
+    return {};
+  }
 }
 
 export default async function PublicLayout({
