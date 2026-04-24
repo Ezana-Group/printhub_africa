@@ -71,24 +71,6 @@ export function PixelTracker({ ga4Id }: { ga4Id?: string | null }) {
         />
       )}
 
-      {/* --- DYNAMIC GA4 (from DB) --- */}
-      {ga4Id && (consent.analytics || consent.marketing) && (
-        <>
-          <Script
-            src={`https://www.googletagmanager.com/gtag/js?id=${ga4Id}`}
-            strategy="afterInteractive"
-          />
-          <Script id="ga4-dynamic" strategy="afterInteractive">
-            {`
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', '${ga4Id}');
-            `}
-          </Script>
-        </>
-      )}
-
       {/* --- META PIXEL --- */}
       {MARKETING_CONFIG.META_PIXEL_ENABLED && consent.marketing && (
         <>
