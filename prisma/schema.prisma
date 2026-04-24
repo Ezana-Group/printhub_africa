@@ -1821,14 +1821,6 @@ model BusinessSettings {
   hoursSunday                String?
   hoursWeekdays              String?
   foundingDate               DateTime?
-  registrationInfo           String?
-  parentCompany              String?
-  supportResponseTime        String?
-  qualityRating              String?
-  qualityChecks              String?
-  materialsInfo              String?
-  warrantyInfo               String?
-  returnPolicyInfo           String?
   showStatsClients           Boolean   @default(false)
   showStatsExperience        Boolean   @default(false)
   showStatsMachines          Boolean   @default(false)

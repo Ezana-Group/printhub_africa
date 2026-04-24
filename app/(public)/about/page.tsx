@@ -269,8 +269,8 @@ export default async function AboutPage() {
               <div className="space-y-2 text-sm text-slate-300">
                 <p><strong>Legal Name:</strong> {business.businessName}</p>
                 <p><strong>Trading As:</strong> {business.tradingName}</p>
-                <p><strong>Registration:</strong> {business.registrationInfo ?? "Registered Business in Kenya"}</p>
-                <p><strong>Parent Company:</strong> {business.parentCompany ?? "Ezana Group"}</p>
+                <p><strong>Registration:</strong> Registered Business in Kenya</p>
+                <p><strong>Parent Company:</strong> Ezana Group</p>
                 <p><strong>Founded:</strong> {business.foundingDate ? new Date(business.foundingDate).getFullYear() : 2023}</p>
                 <p><strong>Headquarters:</strong> {business.city}, {business.country}</p>
               </div>
@@ -286,7 +286,7 @@ export default async function AboutPage() {
                 <p><strong>Email:</strong> {business.primaryEmail}</p>
                 <p><strong>WhatsApp:</strong> {business.whatsapp || "Available for urgent orders"}</p>
                 <p><strong>Support Hours:</strong> {business.hoursWeekdays || business.businessHours || "Mon-Fri 8am-6pm EAT"}</p>
-                <p><strong>Response Time:</strong> {business.supportResponseTime ?? "Within 2 hours during business hours"}</p>
+                <p><strong>Response Time:</strong> Within 2 hours during business hours</p>
               </div>
             </div>
 
@@ -310,11 +310,11 @@ export default async function AboutPage() {
                 Quality Assurance
               </h3>
               <div className="space-y-2 text-sm text-slate-300">
-                <p><strong>Quality Rating:</strong> {business.qualityRating ?? "4.8/5 from 500+ customers"}</p>
-                <p><strong>Quality Checks:</strong> {business.qualityChecks ?? "Every order inspected"}</p>
-                <p><strong>Materials:</strong> {business.materialsInfo ?? "Premium, certified suppliers"}</p>
-                <p><strong>Warranty:</strong> {business.warrantyInfo ?? "30-day satisfaction guarantee"}</p>
-                <p><strong>Return Policy:</strong> {business.returnPolicyInfo ?? "Hassle-free returns"}</p>
+                <p><strong>Quality Rating:</strong> 4.8/5 from 500+ customers</p>
+                <p><strong>Quality Checks:</strong> Every order inspected</p>
+                <p><strong>Materials:</strong> Premium, certified suppliers</p>
+                <p><strong>Warranty:</strong> 30-day satisfaction guarantee</p>
+                <p><strong>Return Policy:</strong> Hassle-free returns</p>
               </div>
             </div>
           </div>
