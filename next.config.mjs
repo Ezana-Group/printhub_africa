@@ -21,7 +21,7 @@ const nextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.sentry-cdn.com https://static.cloudflareinsights.com https://t.contentsquare.net",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.sentry-cdn.com https://static.cloudflareinsights.com https://t.contentsquare.net https://www.googletagmanager.com https://analytics.printhub.africa",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https: https://*.r2.dev https://images.unsplash.com",
