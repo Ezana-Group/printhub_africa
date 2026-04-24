@@ -175,7 +175,7 @@ export function FeaturedProductsClient({ products, gridCols = 4 }: { products: F
                       </div>
                     </div>
                   </Link>
-                  <CardContent className="p-4 flex h-full flex-col">
+                  <CardContent className="p-4">
                     <Link href={`/shop/${p.slug}`}>
                       <p className="font-semibold text-slate-900">{p.name}</p>
                     </Link>
@@ -187,12 +187,10 @@ export function FeaturedProductsClient({ products, gridCols = 4 }: { products: F
                       </span>
                       <span>{p.etaLabel ?? "Delivery in 2-5 days"}</span>
                     </div>
-                    <div className="mt-3 flex-1">
-                      <p className="text-lg font-bold text-[#FF4D00]">{formatPrice(p.basePrice)}</p>
-                    </div>
+                    <p className="mt-3 text-lg font-bold text-[#FF4D00]">{formatPrice(p.basePrice)}</p>
                     <Button
                       size="sm"
-                      className="mt-auto w-full rounded-xl bg-[#FF4D00] hover:bg-[#FF4D00]/90"
+                      className="mt-3 w-full rounded-xl bg-[#FF4D00] text-white hover:bg-[#FF4D00]/90"
                       onClick={() => handleAddToCart(p)}
                       disabled={p.stock < 1}
                       aria-label={`Add ${p.name} to cart`}
