@@ -6,7 +6,7 @@
 export const MARKETING_CONFIG = {
   // META (Facebook/Instagram)
   META_PIXEL_ENABLED: process.env.NEXT_PUBLIC_META_PIXEL_ENABLED === 'true' || true, // Always enabled in production
-  META_PIXEL_ID: process.env.NEXT_PUBLIC_META_PIXEL_ID ?? '1763268931304918',
+  META_PIXEL_ID: process.env.NEXT_PUBLIC_META_PIXEL_ID ?? '2035196960739715',
   META_CONVERSIONS_API_ENABLED: process.env.META_CONVERSIONS_API_ENABLED === 'true',
   META_ACCESS_TOKEN: process.env.META_ACCESS_TOKEN,
 
