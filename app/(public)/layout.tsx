@@ -9,6 +9,7 @@ import { CookieBanner } from "@/components/CookieBanner";
 import { TawkTo } from "@/components/TawkTo";
 import { getCachedBusinessPublic, getCachedBusinessMetadata } from "@/lib/cache/unstable-cache";
 import { getServiceFlags } from "@/lib/service-flags";
+import type { BusinessPublic } from "@/lib/business-public";
 
 export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
 // Revalidate every 5 min so public pages can be cached (TTFB optimisation)
@@ -37,9 +38,58 @@ export default async function PublicLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const business = await getCachedBusinessPublic();
-  const { largeFormatEnabled } = await getServiceFlags();
+  const fallbackBusiness: BusinessPublic = {
+    businessName: "PrintHub",
+    tradingName: "PrintHub (An Ezana Group Company)",
+    tagline: "Printing the Future, Made in Kenya",
+    website: "printhub.africa",
+    logo: null,
+    favicon: null,
+    primaryPhone: null,
+    whatsapp: null,
+    primaryEmail: "hello@printhub.africa",
+    supportEmail: "support@printhub.africa",
+    financeEmail: "finance@printhub.africa",
+    address1: null,
+    address2: null,
+    city: "Eldoret",
+    county: "Uasin Gishu County",
+    country: "Kenya",
+    googleMapsUrl: null,
+    foundingDate: null,
+    businessHours: "Mon–Fri 8am–6pm | Sat 9am–3pm",
+    hoursWeekdays: null,
+    hoursSaturday: null,
+    hoursSunday: null,
+    hoursHolidays: null,
+    socialFacebook: null,
+    socialInstagram: null,
+    socialTwitter: null,
+    socialLinkedIn: null,
+    socialTikTok: null,
+    socialYouTube: null,
+    showStatsOrders: false,
+    showStatsClients: false,
+    showStatsExperience: false,
+    showStatsMachines: false,
+    showStatsStaff: false,
+    whatsappFloatingButton: true,
+    whatsappPrefilledMessage: "Hi, I'd like to enquire about your printing services.",
+  };
+  let business = fallbackBusiness;
+  let largeFormatEnabled = false;
+  try {
+    const [businessData, flags] = await Promise.all([
+      getCachedBusinessPublic(),
+      getServiceFlags(),
+    ]);
+    business = businessData;
+    largeFormatEnabled = flags.largeFormatEnabled;
+  } catch (error) {
+    console.error("[public-layout] Falling back to defaults:", error);
+  }
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://printhub.africa";
+  const analyticsScriptUrl = process.env.NEXT_PUBLIC_ANALYTICS_SCRIPT_URL;
   const address = [business.address1, business.city, business.county, business.country].filter(Boolean).join(", ") || undefined;
   const localBusinessJsonLd = {
     "@context": "https://schema.org",
@@ -80,12 +130,14 @@ export default async function PublicLayout({
         visible={business.whatsappFloatingButton}
       />
       <CookieBanner />
-      <Script
-        defer
-        data-domain="printhub.africa"
-        src="https://analytics.printhub.africa/js/script.js"
-        strategy="lazyOnload"
-      />
+      {analyticsScriptUrl ? (
+        <Script
+          defer
+          data-domain="printhub.africa"
+          src={analyticsScriptUrl}
+          strategy="lazyOnload"
+        />
+      ) : null}
       <TawkTo />
     </>
   );
