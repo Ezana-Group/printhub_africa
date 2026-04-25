@@ -43,17 +43,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ? product.images.find((img) => typeof img === "string" && img.trim().length > 0) ?? "/images/og/default-og.webp"
       : "/images/og/default-og.webp";
 
-    const url = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://printhub.africa"}/shop/${slug}`;
+    const metaCanonicalUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://printhub.africa"}/shop/${slug}`;
     const price = product.variants?.[0]?.price ?? product.basePrice;
 
     return {
       title,
       description,
-      alternates: { canonical: url },
+      alternates: { canonical: metaCanonicalUrl },
       openGraph: {
         title,
         description,
-        url,
+        url: metaCanonicalUrl,
         siteName: "PrintHub Africa",
         images: [{ url: image, width: 1200, height: 630 }],
         type: "product",
