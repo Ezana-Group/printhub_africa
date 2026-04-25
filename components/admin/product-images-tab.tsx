@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { FileUploader } from "@/components/upload/FileUploader";
-import { Star, Trash2, ExternalLink } from "lucide-react";
+import { Star, Trash2, ExternalLink, CheckCircle2, Loader2 } from "lucide-react";
 
 const BROKEN_IMAGE_PLACEHOLDER =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect fill='%23f3f4f6' width='200' height='200'/%3E%3Ctext fill='%239ca3af' font-size='14' x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle'%3ENo image%3C/text%3E%3C/svg%3E";
@@ -31,7 +31,10 @@ export function ProductImagesTab({
   const [urlInput, setUrlInput] = useState("");
   const [urlError, setUrlError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [autoSaved, setAutoSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  // Track uploadIds already added to prevent duplicates from multi-file onUploadComplete bursts
+  const addedUploadIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!productId) {
@@ -102,14 +105,16 @@ export function ProductImagesTab({
     setUrlInput("");
   };
 
-  const save = async () => {
+  const saveImages = useCallback(async (imagesToSave: ProductImage[]) => {
+    if (!productId) return;
     setSaving(true);
+    setAutoSaved(false);
     try {
       const res = await fetch(`/api/admin/products/${productId}/images`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          images: images.map((img, i) => ({
+          images: imagesToSave.map((img, i) => ({
             id: img.id,
             url: img.url,
             storageKey: img.storageKey,
@@ -121,13 +126,15 @@ export function ProductImagesTab({
         }),
       });
       if (!res.ok) throw new Error("Failed to save");
-      onSave?.(images);
+      setAutoSaved(true);
+      setTimeout(() => setAutoSaved(false), 3000);
+      onSave?.(imagesToSave);
     } catch {
-      setUrlError("Failed to save images");
+      setUrlError("Failed to save images. Please try the Save button.");
     } finally {
       setSaving(false);
     }
-  };
+  }, [productId, onSave]);
 
   if (loading && !initialImages.length) {
     return (
@@ -254,8 +261,14 @@ export function ProductImagesTab({
                 typeof process !== "undefined" && process.env.NEXT_PUBLIC_R2_PUBLIC_URL
                   ? process.env.NEXT_PUBLIC_R2_PUBLIC_URL.replace(/\/$/, "")
                   : "";
-              const newImages = files
-                .map((f, idx) => {
+              // Deduplicate: only process uploadIds not yet added (FileUploader fires
+              // onUploadComplete with ALL done files on each individual completion)
+              const trulyNew = files.filter((f) => !addedUploadIds.current.has(f.uploadId));
+              if (trulyNew.length === 0) return;
+              trulyNew.forEach((f) => addedUploadIds.current.add(f.uploadId));
+
+              const newImages = trulyNew
+                .map((f) => {
                   const url =
                     f.publicUrl ?? (f.storageKey && baseUrl ? `${baseUrl}/${f.storageKey}` : "");
                   if (!url || !url.startsWith("http")) return null;
@@ -263,21 +276,37 @@ export function ProductImagesTab({
                     url,
                     storageKey: f.storageKey,
                     uploadId: f.uploadId,
-                    isMain: images.length === 0 && idx === 0,
-                    sortOrder: images.length + idx,
                     source: "uploaded" as const,
                   };
                 })
-                .filter((img): img is NonNullable<typeof img> => img !== null)
-                .map((img, i) => ({ ...img, sortOrder: images.length + i })) as ProductImage[];
-              if (newImages.length < files.length) {
+                .filter((img): img is NonNullable<typeof img> => img !== null);
+
+              if (newImages.length < trulyNew.length) {
                 setUrlError(
-                  "Some images had no public URL. Set R2_PUBLIC_URL and NEXT_PUBLIC_R2_PUBLIC_URL so uploads display correctly."
+                  "Some images had no public URL. Ensure R2_PUBLIC_URL and NEXT_PUBLIC_R2_PUBLIC_URL are set."
                 );
               } else {
                 setUrlError("");
               }
-              setImages((prev) => [...prev, ...newImages]);
+
+              if (newImages.length === 0) return;
+
+              // Merge with existing and auto-save immediately so images persist on refresh
+              setImages((prev) => {
+                const merged = [
+                  ...prev,
+                  ...newImages.map((img, i) => ({
+                    ...img,
+                    isMain: prev.length === 0 && i === 0,
+                    sortOrder: prev.length + i,
+                  })),
+                ];
+                // Auto-save after state update
+                if (productId) {
+                  setTimeout(() => saveImages(merged), 0);
+                }
+                return merged;
+              });
             }}
           />
         </div>
@@ -324,11 +353,25 @@ export function ProductImagesTab({
         </div>
       )}
 
-      <div className="flex justify-end pt-4 border-t border-gray-100">
+      <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          {saving && (
+            <span className="flex items-center gap-1.5 text-[#FF4D00]">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Saving…
+            </span>
+          )}
+          {autoSaved && !saving && (
+            <span className="flex items-center gap-1.5 text-green-600">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Saved
+            </span>
+          )}
+        </div>
         <button
           type="button"
-          onClick={save}
-          disabled={saving}
+          onClick={() => saveImages(images)}
+          disabled={saving || !productId}
           className="px-6 py-2.5 bg-[#FF4D00] hover:bg-[#e64400] text-white rounded-xl text-sm font-medium transition disabled:opacity-60"
         >
           {saving ? "Saving…" : "Save images"}

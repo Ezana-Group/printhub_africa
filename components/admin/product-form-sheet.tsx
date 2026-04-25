@@ -415,7 +415,7 @@ export function ProductFormSheet({
                   sortOrder: i,
                   source: "url" as const,
                 }))}
-                onSave={() => {}}
+                onSave={() => onSuccess()}
               />
             )}
 
