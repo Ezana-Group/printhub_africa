@@ -40,10 +40,10 @@ const playfairDisplay = Playfair_Display({
 });
 
 const defaultMetadataBase = (() => {
-  const raw = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  const url = raw || "https://printhub.africa";
+  const rawEnv = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  const appOriginStr = rawEnv || "https://printhub.africa";
   try {
-    return new URL(url);
+    return new URL(appOriginStr);
   } catch {
     return new URL("https://printhub.africa");
   }

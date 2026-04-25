@@ -93,7 +93,7 @@ export default async function PublicLayout({
   } catch (error) {
     console.error("[public-layout] Falling back to defaults:", error);
   }
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://printhub.africa";
+  const siteOriginHref = process.env.NEXT_PUBLIC_APP_URL ?? "https://printhub.africa";
   const analyticsScriptUrl = process.env.NEXT_PUBLIC_ANALYTICS_SCRIPT_URL;
   const address = [business.address1, business.city, business.county, business.country].filter(Boolean).join(", ") || undefined;
   const localBusinessJsonLd = {
@@ -101,7 +101,7 @@ export default async function PublicLayout({
     "@type": "LocalBusiness",
     name: business.businessName,
     description: business.tagline,
-    url: baseUrl,
+    url: siteOriginHref,
     telephone: business.primaryPhone ?? undefined,
     email: business.primaryEmail,
     address: address
