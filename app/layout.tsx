@@ -61,12 +61,12 @@ export async function generateMetadata(): Promise<Metadata> {
     "Professional 3D printing services in Kenya. FDM and resin printing for prototypes, products, engineering parts, and custom orders with nationwide delivery.";
   
   const updatedAtTime = meta.updatedAt ? new Date(meta.updatedAt).getTime() : 0;
-  const faviconUrl =
+  const faviconHref =
     meta.favicon
       ? `${meta.favicon}?v=${updatedAtTime}`
       : null;
 
-  const ogImage = meta.seo?.ogImageUrl || meta.logo || "/images/og/default-og.webp";
+  const ogImageSrc = meta.seo?.ogImageUrl || meta.logo || "/images/og/default-og.webp";
   const canonical = meta.seo?.canonicalDomain || process.env.NEXT_PUBLIC_APP_URL || "https://printhub.africa";
   const metadataBase = new URL(canonical);
 
@@ -92,16 +92,16 @@ export async function generateMetadata(): Promise<Metadata> {
     verification: {
       google: meta.googleSiteVerification || undefined,
     },
-    icons: faviconUrl
+    icons: faviconHref
       ? {
           icon: [
-            { url: faviconUrl, sizes: "any" },
-            { url: faviconUrl, type: "image/x-icon" },
-            { url: faviconUrl, type: "image/png", sizes: "32x32" },
-            { url: faviconUrl, type: "image/png", sizes: "16x16" },
+            { url: faviconHref, sizes: "any" },
+            { url: faviconHref, type: "image/x-icon" },
+            { url: faviconHref, type: "image/png", sizes: "32x32" },
+            { url: faviconHref, type: "image/png", sizes: "16x16" },
           ],
-          apple: [{ url: faviconUrl, sizes: "180x180" }],
-          shortcut: [{ url: faviconUrl }],
+          apple: [{ url: faviconHref, sizes: "180x180" }],
+          shortcut: [{ url: faviconHref }],
         }
       : {
           icon: "/api/branding/favicon",
@@ -116,7 +116,7 @@ export async function generateMetadata(): Promise<Metadata> {
       type: "website",
       images: [
         {
-          url: ogImage,
+          url: ogImageSrc,
           width: 1200,
           height: 630,
           alt: `${businessName} — 3D Printing Services Kenya`,
@@ -132,7 +132,7 @@ export async function generateMetadata(): Promise<Metadata> {
           : "summary_large_image",
       site: meta.seo?.twitterHandle || undefined,
       creator: meta.seo?.twitterHandle || undefined,
-      images: [ogImage],
+      images: [ogImageSrc],
     },
   };
 }

@@ -12,33 +12,31 @@ interface Props {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
-  const post = await prisma.blogPost.findUnique({
-    where: { slug }
-  });
-
-  if (!post) return { title: "Post Not Found" };
-
-  return {
-    title: `${post.title} | PrintHub Africa Blog`,
-    description: post.metaDescription || post.excerpt || "Expert insights on printing and branding in Kenya.",
-    openGraph: {
-      title: post.title,
-      description: post.metaDescription || post.excerpt || "",
-      type: "article",
-      publishedTime: post.publishedAt?.toISOString(),
-      tags: post.tags,
-    }
-  };
+  try {
+    const { slug } = await params;
+    const post = await prisma.blogPost.findUnique({ where: { slug } });
+    if (!post) return { title: "Post Not Found" };
+    return {
+      title: `${post.title} | PrintHub Africa Blog`,
+      description: post.metaDescription || post.excerpt || "Expert insights on printing and branding in Kenya.",
+      openGraph: {
+        title: post.title,
+        description: post.metaDescription || post.excerpt || "",
+        type: "article",
+        publishedTime: post.publishedAt?.toISOString(),
+        tags: post.tags,
+      },
+    };
+  } catch {
+    return { title: "Blog | PrintHub Africa" };
+  }
 }
 
 export const dynamic = "force-dynamic";
 
 export default async function BlogPostPage({ params }: Props) {
   const { slug } = await params;
-  const post = await prisma.blogPost.findUnique({
-    where: { slug }
-  });
+  const post = await prisma.blogPost.findUnique({ where: { slug } }).catch(() => null);
 
   if (!post || post.status !== "PUBLISHED") {
     notFound();

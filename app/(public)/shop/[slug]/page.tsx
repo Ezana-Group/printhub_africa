@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     const pageTitle = row.metaTitle ?? `${row.name} | PrintHub Kenya`;
     const pageDesc = formatDescription(row.metaDescription ?? row.shortDescription) || undefined;
-    const ogImage = Array.isArray(row.images)
+    const ogImageSrc = Array.isArray(row.images)
       ? (row.images.find((src) => typeof src === "string" && src.trim().length > 0) ?? "/images/og/default-og.webp")
       : "/images/og/default-og.webp";
     const pageHref = `${process.env.NEXT_PUBLIC_APP_URL ?? "https://printhub.africa"}/shop/${slug}`;
@@ -57,14 +57,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         description: pageDesc,
         url: pageHref,
         siteName: "PrintHub Africa",
-        images: [{ url: ogImage, width: 1200, height: 630 }],
-        type: "product",
+        images: [{ url: ogImageSrc, width: 1200, height: 630 }],
+        type: "website",
       },
       twitter: {
         card: "summary_large_image",
         title: pageTitle,
         description: pageDesc,
-        images: [ogImage],
+        images: [ogImageSrc],
       },
       other: {
         "product:price:amount": Number(displayPrice).toString(),
@@ -219,8 +219,8 @@ export default async function ProductPage({ params }: Props) {
   const legacyImageList = (Array.isArray(product.images) ? product.images : []).filter(
     (src): src is string => typeof src === "string" && src.trim().length > 0 && !seenImageUrls.has(src)
   );
-  const legacyAsGallery = legacyImageList.map((src, idx) => ({
-    url: src,
+  const legacyAsGallery = legacyImageList.map((legacySrc, idx) => ({
+    url: legacySrc,
     isPrimary: relationImages.length === 0 && idx === 0,
   }));
 

@@ -19,16 +19,16 @@ export async function generateMetadata(): Promise<Metadata> {
   try {
     const meta = await getCachedBusinessMetadata();
     const updatedAtTime = meta.updatedAt ? new Date(meta.updatedAt).getTime() : 0;
-    const faviconUrl =
+    const faviconHref =
       meta.favicon
         ? `${meta.favicon}?v=${updatedAtTime}`
         : null;
     return {
-      icons: faviconUrl
+      icons: faviconHref
         ? {
-            icon: [{ url: faviconUrl, sizes: "any" }, { url: faviconUrl, type: "image/png", sizes: "32x32" }],
-            apple: [{ url: faviconUrl, sizes: "180x180" }],
-            shortcut: [{ url: faviconUrl }],
+            icon: [{ url: faviconHref, sizes: "any" }, { url: faviconHref, type: "image/png", sizes: "32x32" }],
+            apple: [{ url: faviconHref, sizes: "180x180" }],
+            shortcut: [{ url: faviconHref }],
           }
         : undefined,
     };
