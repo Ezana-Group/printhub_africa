@@ -28,7 +28,7 @@ export async function NewArrivalsSection() {
         category: { select: { name: true, slug: true } },
         photos: { orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }], take: 1 },
       },
-    }),
+    }).catch(() => []),
     prisma.product.findMany({
       where: {
         isActive: true,
@@ -45,7 +45,7 @@ export async function NewArrivalsSection() {
         category: { select: { name: true, slug: true } },
         productImages: { orderBy: { sortOrder: "asc" } },
       },
-    }),
+    }).catch(() => []),
   ]);
 
   const hasCatalogue = catalogueItems.length > 0;
