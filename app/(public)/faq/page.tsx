@@ -28,6 +28,8 @@ export default async function FaqPage() {
     getBusinessPublic(),
   ]);
 
+  const allFaqs = categories.flatMap((c) => c.faqs);
+
   return (
     <div className="container max-w-4xl mx-auto px-4 py-10">
       <h1 className="font-display text-3xl font-bold text-slate-900">
@@ -42,6 +44,25 @@ export default async function FaqPage() {
         primaryPhone={business.primaryPhone}
         whatsapp={business.whatsapp}
       />
+      {allFaqs.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              mainEntity: allFaqs.map((faq) => ({
+                "@type": "Question",
+                name: faq.question,
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text: faq.answer,
+                },
+              })),
+            }),
+          }}
+        />
+      )}
     </div>
   );
 

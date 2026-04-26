@@ -9,7 +9,7 @@ export function ComingSoon({ title }: { title: string }) {
         <p className="text-gray-500 text-sm">Coming soon.</p>
         <Link
           href="/"
-          className="mt-4 inline-block text-sm text-[#FF4D00] hover:underline"
+          className="mt-4 inline-block text-sm text-[#CC3D00] hover:underline"
         >
           ← Back to home
         </Link>

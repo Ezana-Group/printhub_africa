@@ -68,7 +68,7 @@ export function AdminAuthPage() {
         const dateStr = format(loginDate, "MMM d, h:mm a");
         
         toast.success(`Welcome back!`, {
-          icon: <ShieldCheck className="h-5 w-5 text-[#FF4D00]" />,
+          icon: <ShieldCheck className="h-5 w-5 text-[#CC3D00]" />,
           description: (
             <div className="flex flex-col gap-0.5 mt-1">
               <p className="font-medium text-zinc-900 dark:text-zinc-100">Security Insight</p>
@@ -165,13 +165,13 @@ export function AdminAuthPage() {
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-[#050505] relative overflow-hidden font-sans">
       {/* Premium Background Elements */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#FF4D00]/10 blur-[120px] rounded-full" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#FF4D00]/5 blur-[120px] rounded-full" />
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#CC3D00]/10 blur-[120px] rounded-full" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#CC3D00]/5 blur-[120px] rounded-full" />
       <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.03] pointer-events-none" />
 
       <div className="relative w-full max-w-md px-6 py-12 z-10">
         <div className="flex flex-col items-center mb-10 space-y-4">
-          <div className="h-16 w-16 bg-[#FF4D00] rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(255,77,0,0.3)] transform -rotate-3 hover:rotate-0 transition-transform duration-500">
+          <div className="h-16 w-16 bg-[#CC3D00] rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(255,77,0,0.3)] transform -rotate-3 hover:rotate-0 transition-transform duration-500">
              <ShieldCheck className="h-10 w-10 text-white" strokeWidth={1.5} />
           </div>
           <div className="text-center">
@@ -183,7 +183,7 @@ export function AdminAuthPage() {
         <Card className="border-zinc-800/50 bg-zinc-900/40 backdrop-blur-xl shadow-2xl overflow-hidden rounded-3xl">
           <CardHeader className="pb-4">
             <CardTitle className="text-xl text-zinc-100 flex items-center gap-2">
-              <Lock className="h-4 w-4 text-[#FF4D00]" />
+              <Lock className="h-4 w-4 text-[#CC3D00]" />
               {show2FA ? "Two-Factor Authentication" : "Secure Login"}
             </CardTitle>
             <CardDescription className="text-zinc-500">
@@ -227,7 +227,7 @@ export function AdminAuthPage() {
                       Work Email
                     </Label>
                     <div className="relative group">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-600 group-focus-within:text-[#FF4D00] transition-colors" />
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-600 group-focus-within:text-[#CC3D00] transition-colors" />
                       <Input
                         id="email"
                         type="email"
@@ -235,7 +235,7 @@ export function AdminAuthPage() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required
-                        className="pl-10 bg-zinc-950/50 border-zinc-800 text-zinc-200 h-11 rounded-xl focus:ring-[#FF4D00] focus:border-[#FF4D00] transition-all"
+                        className="pl-10 bg-zinc-950/50 border-zinc-800 text-zinc-200 h-11 rounded-xl focus:ring-[#CC3D00] focus:border-[#CC3D00] transition-all"
                       />
                     </div>
                   </div>
@@ -247,22 +247,22 @@ export function AdminAuthPage() {
                       </Label>
                     </div>
                     <div className="relative group">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-600 group-focus-within:text-[#FF4D00] transition-colors" />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-600 group-focus-within:text-[#CC3D00] transition-colors" />
                       <Input
                         id="password"
                         type="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
-                        className="pl-10 bg-zinc-950/50 border-zinc-800 text-zinc-200 h-11 rounded-xl focus:ring-[#FF4D00] focus:border-[#FF4D00] transition-all"
+                        className="pl-10 bg-zinc-950/50 border-zinc-800 text-zinc-200 h-11 rounded-xl focus:ring-[#CC3D00] focus:border-[#CC3D00] transition-all"
                       />
                     </div>
                   </div>
                 </>
               ) : (
                 <div className="space-y-5 animate-in slide-in-from-bottom-2 duration-500">
-                  <div className="bg-[#FF4D00]/10 p-4 rounded-2xl border border-[#FF4D00]/20 flex items-start gap-3">
-                    <ShieldCheck className="h-5 w-5 text-[#FF4D00] mt-0.5" />
+                  <div className="bg-[#CC3D00]/10 p-4 rounded-2xl border border-[#CC3D00]/20 flex items-start gap-3">
+                    <ShieldCheck className="h-5 w-5 text-[#CC3D00] mt-0.5" />
                     <div className="space-y-1">
                       <p className="text-sm font-semibold text-zinc-100">Verify Identity</p>
                       <p className="text-xs text-zinc-500">Enter the 6-digit code from your authenticator app.</p>
@@ -281,13 +281,13 @@ export function AdminAuthPage() {
                       onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ""))}
                       required
                       autoFocus
-                      className="bg-zinc-950/50 border-zinc-800 text-zinc-100 h-14 rounded-2xl focus:ring-[#FF4D00] focus:border-[#FF4D00] transition-all text-center text-2xl tracking-[0.4em] font-mono"
+                      className="bg-zinc-950/50 border-zinc-800 text-zinc-100 h-14 rounded-2xl focus:ring-[#CC3D00] focus:border-[#CC3D00] transition-all text-center text-2xl tracking-[0.4em] font-mono"
                     />
                   </div>
                   <Button 
                     variant="link" 
                     type="button" 
-                    className="p-0 h-auto text-[10px] text-zinc-500 uppercase tracking-widest hover:text-[#FF4D00]"
+                    className="p-0 h-auto text-[10px] text-zinc-500 uppercase tracking-widest hover:text-[#CC3D00]"
                     onClick={() => setShow2FA(false)}
                   >
                     ← Back to Password
@@ -298,7 +298,7 @@ export function AdminAuthPage() {
               <Button
                 type="submit"
                 disabled={loading || cooldown > 0}
-                className="w-full h-12 bg-[#FF4D00] hover:bg-[#FF6622] text-white font-bold rounded-xl shadow-lg shadow-[#FF4D00]/20 transition-all active:scale-[0.98] mt-4 overflow-hidden relative"
+                className="w-full h-12 bg-[#CC3D00] hover:bg-[#FF6622] text-white font-bold rounded-xl shadow-lg shadow-[#CC3D00]/20 transition-all active:scale-[0.98] mt-4 overflow-hidden relative"
               >
                 {loading ? (
                   <Loader2 className="h-5 w-5 animate-spin mx-auto" />

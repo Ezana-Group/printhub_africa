@@ -35,7 +35,7 @@ export default function ProductPageError({
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <button
             onClick={reset}
-            className="flex items-center gap-2 justify-center px-4 py-2 rounded-xl bg-[#FF4D00] text-white text-sm font-semibold hover:bg-[#e04400] transition-colors"
+            className="flex items-center gap-2 justify-center px-4 py-2 rounded-xl bg-[#CC3D00] text-white text-sm font-semibold hover:bg-[#e04400] transition-colors"
           >
             <RefreshCw className="w-4 h-4" /> Try again
           </button>

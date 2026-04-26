@@ -111,7 +111,7 @@ export default function AccountOrdersPage() {
                 onClick={() => setActiveTab(key)}
                 className={`whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
                   activeTab === key
-                    ? "bg-[#FF4D00] text-white shadow-sm"
+                    ? "bg-[#CC3D00] text-white shadow-sm"
                     : "hover:brightness-95"
                 }`}
                 style={activeTab === key ? undefined : { backgroundColor: bgColor, color: textColor }}

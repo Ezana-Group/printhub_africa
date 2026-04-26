@@ -48,12 +48,12 @@ export async function FeaturedCatalogueSection() {
       <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <span className="mb-3 block h-[3px] w-10 rounded-[2px] bg-[#FF4D00]" />
+            <span className="mb-3 block h-[3px] w-10 rounded-[2px] bg-[#CC3D00]" />
             <h2 className="font-display text-2xl font-extrabold text-slate-900 md:text-[2rem]">
               Print on Demand
             </h2>
           </div>
-          <Link href="/catalogue" className="text-[15px] font-medium text-[#FF4D00] hover:underline">
+          <Link href="/catalogue" className="text-[15px] font-medium text-[#CC3D00] hover:underline">
             Browse catalogue →
           </Link>
         </div>
@@ -95,13 +95,13 @@ export async function FeaturedCatalogueSection() {
                     <p className="mt-1 text-sm text-slate-500 line-clamp-2">
                       {item.shortDescription ?? "Customisable print-on-demand product."}
                     </p>
-                    <p className="mt-3 text-lg font-bold text-[#FF4D00]">
+                    <p className="mt-3 text-lg font-bold text-[#CC3D00]">
                       {priceKes != null ? `From ${formatPrice(priceKes)}` : "From price on page"}
                     </p>
                     <Button
                       asChild
                       size="sm"
-                      className="mt-4 w-full rounded-xl bg-[#FF4D00] hover:bg-[#FF4D00]/90"
+                      className="mt-4 w-full rounded-xl bg-[#CC3D00] hover:bg-[#CC3D00]/90"
                     >
                       <Link href={`/catalogue/${item.slug}`}>Customise &amp; Order</Link>
                     </Button>

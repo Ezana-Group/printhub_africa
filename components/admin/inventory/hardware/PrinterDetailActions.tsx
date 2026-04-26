@@ -44,7 +44,7 @@ export function PrinterDetailActions({
           <Pencil className="w-4 h-4" />
           Edit
         </Button>
-        <Button size="sm" onClick={() => setShowLog(true)} className="gap-2 bg-[#FF4D00] hover:bg-[#e04400]">
+        <Button size="sm" onClick={() => setShowLog(true)} className="gap-2 bg-[#CC3D00] hover:bg-[#e04400]">
           <Wrench className="w-4 h-4" />
           Log Maintenance
         </Button>

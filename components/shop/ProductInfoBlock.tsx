@@ -49,7 +49,7 @@ export function ProductInfoBlock({ product, business, freeDeliveryThresholdKes }
       
       <div className="mt-8 flex flex-col gap-1">
         <div className="flex items-baseline gap-4">
-          <span className="text-4xl font-black text-[#FF4D00] tracking-tighter">{formatPrice(basePrice)}</span>
+          <span className="text-4xl font-black text-[#CC3D00] tracking-tighter">{formatPrice(basePrice)}</span>
           {comparePrice != null && comparePrice > basePrice && (
             <span className="text-2xl text-slate-300 line-through font-bold">
               {formatPrice(comparePrice)}

@@ -142,7 +142,7 @@ export function ProductDetailConversionRails({
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
               <div
-                className="h-full rounded-full bg-[#FF4D00] transition-all"
+                className="h-full rounded-full bg-[#CC3D00] transition-all"
                 style={{ width: `${fbtProgress}%` }}
               />
             </div>
@@ -186,7 +186,7 @@ export function ProductDetailConversionRails({
 
           <Button
             onClick={handleAddSelectedBundle}
-            className="mt-5 w-full rounded-xl bg-[#FF4D00] hover:bg-[#E64500]"
+            className="mt-5 w-full rounded-xl bg-[#CC3D00] hover:bg-[#E64500]"
           >
             Add bundle to cart
           </Button>
@@ -256,7 +256,7 @@ export function ProductDetailConversionRails({
           </div>
           <Button
             onClick={handleStickyAdd}
-            className="rounded-xl bg-[#FF4D00] px-4 hover:bg-[#E64500]"
+            className="rounded-xl bg-[#CC3D00] px-4 hover:bg-[#E64500]"
             disabled={currentProduct.stock < 1}
           >
             {addedSticky ? (

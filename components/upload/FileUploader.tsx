@@ -357,10 +357,10 @@ export function FileUploader({
           }}
           className={[
             "border-2 border-dashed rounded-xl p-6 text-center transition cursor-pointer",
-            dragging ? "border-[#FF4D00] bg-orange-50 scale-[1.01]" : "",
+            dragging ? "border-[#CC3D00] bg-orange-50 scale-[1.01]" : "",
             disabled
               ? "border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed"
-              : "border-gray-300 hover:border-[#FF4D00] hover:bg-orange-50",
+              : "border-gray-300 hover:border-[#CC3D00] hover:bg-orange-50",
           ]
             .filter(Boolean)
             .join(" ")}
@@ -372,13 +372,13 @@ export function FileUploader({
           >
             <Upload
               className={`w-5 h-5 transition ${
-                dragging ? "text-[#FF4D00]" : "text-gray-400"
+                dragging ? "text-[#CC3D00]" : "text-gray-400"
               }`}
             />
           </div>
           <p
             className={`text-sm font-medium transition ${
-              dragging ? "text-[#FF4D00]" : "text-gray-600"
+              dragging ? "text-[#CC3D00]" : "text-gray-600"
             }`}
           >
             {dragging
@@ -497,7 +497,7 @@ function FileEntryRow({
               </div>
               <div className="w-full bg-blue-100 rounded-full h-1.5">
                 <div
-                  className="bg-[#FF4D00] h-1.5 rounded-full transition-all duration-200"
+                  className="bg-[#CC3D00] h-1.5 rounded-full transition-all duration-200"
                   style={{ width: `${entry.progress}%` }}
                 />
               </div>

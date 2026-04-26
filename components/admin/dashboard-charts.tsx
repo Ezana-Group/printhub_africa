@@ -34,7 +34,7 @@ export function RevenueChart({ data }: { data: ChartData[] }) {
           <XAxis dataKey="date" />
           <YAxis tickFormatter={(v) => `KES ${v}`} />
           <Tooltip formatter={(v) => [v != null ? formatPrice(Number(v)) : "", "Revenue"]} />
-          <Line type="monotone" dataKey="revenue" stroke="#FF4D00" strokeWidth={2} />
+          <Line type="monotone" dataKey="revenue" stroke="#CC3D00" strokeWidth={2} />
         </LineChart>
       </ResponsiveContainer>
     </div>
@@ -43,7 +43,7 @@ export function RevenueChart({ data }: { data: ChartData[] }) {
 
 export function StatusPieChart({ data }: { data: PieData[] }) {
   if (data.length === 0) return <p className="text-muted-foreground text-sm">No orders yet</p>;
-  const colors = ["#FF4D00", "#00C896", "#6B6B6B", "#FF9500"];
+  const colors = ["#CC3D00", "#00C896", "#6B6B6B", "#FF9500"];
   return (
     <div className="h-64">
       <ResponsiveContainer width="100%" height="100%">

@@ -104,7 +104,7 @@ export function CategoryImageField({
               value={urlInput}
               onChange={(e) => setUrlInput(e.target.value)}
               placeholder="https://..."
-              className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[#FF4D00]"
+              className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[#CC3D00]"
             />
             <button
               type="button"

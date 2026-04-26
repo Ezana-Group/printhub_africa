@@ -132,7 +132,7 @@ export function LogMaintenanceModal({ machine, open, onClose, onLogged }: LogMai
               <select
                 value={form.type}
                 onChange={(e) => setForm((f) => ({ ...f, type: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF4D00]/20 focus:border-[#FF4D00]"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC3D00]/20 focus:border-[#CC3D00]"
               >
                 {MAINTENANCE_TYPES.map((t) => (
                   <option key={t.value} value={t.value}>{t.label}</option>
@@ -145,7 +145,7 @@ export function LogMaintenanceModal({ machine, open, onClose, onLogged }: LogMai
                 type="date"
                 value={form.performedAt}
                 onChange={(e) => setForm((f) => ({ ...f, performedAt: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF4D00]/20 focus:border-[#FF4D00]"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC3D00]/20 focus:border-[#CC3D00]"
               />
             </div>
           </div>
@@ -157,7 +157,7 @@ export function LogMaintenanceModal({ machine, open, onClose, onLogged }: LogMai
                 value={form.performedBy}
                 onChange={(e) => setForm((f) => ({ ...f, performedBy: e.target.value }))}
                 placeholder="Staff name or tech company"
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF4D00]/20 focus:border-[#FF4D00]"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC3D00]/20 focus:border-[#CC3D00]"
               />
             </div>
             <div>
@@ -166,7 +166,7 @@ export function LogMaintenanceModal({ machine, open, onClose, onLogged }: LogMai
                 type="number"
                 value={form.hoursAtService}
                 onChange={(e) => setForm((f) => ({ ...f, hoursAtService: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF4D00]/20 focus:border-[#FF4D00]"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC3D00]/20 focus:border-[#CC3D00]"
               />
             </div>
           </div>
@@ -177,7 +177,7 @@ export function LogMaintenanceModal({ machine, open, onClose, onLogged }: LogMai
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               placeholder="What was done?"
               rows={3}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF4D00]/20 focus:border-[#FF4D00] resize-none"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC3D00]/20 focus:border-[#CC3D00] resize-none"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -188,7 +188,7 @@ export function LogMaintenanceModal({ machine, open, onClose, onLogged }: LogMai
                 step="0.5"
                 value={form.labourHours}
                 onChange={(e) => setForm((f) => ({ ...f, labourHours: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF4D00]/20 focus:border-[#FF4D00]"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC3D00]/20 focus:border-[#CC3D00]"
               />
             </div>
             <div>
@@ -197,14 +197,14 @@ export function LogMaintenanceModal({ machine, open, onClose, onLogged }: LogMai
                 type="number"
                 value={form.labourCostKes}
                 onChange={(e) => setForm((f) => ({ ...f, labourCostKes: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF4D00]/20 focus:border-[#FF4D00]"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC3D00]/20 focus:border-[#CC3D00]"
               />
             </div>
           </div>
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs text-gray-500">Parts / consumables used</label>
-              <button type="button" onClick={addPart} className="flex items-center gap-1 text-xs text-[#FF4D00] hover:underline">
+              <button type="button" onClick={addPart} className="flex items-center gap-1 text-xs text-[#CC3D00] hover:underline">
                 <Plus className="w-3 h-3" /> Add part
               </button>
             </div>
@@ -215,7 +215,7 @@ export function LogMaintenanceModal({ machine, open, onClose, onLogged }: LogMai
                   value={part.partName}
                   onChange={(e) => updatePart(i, "partName", e.target.value)}
                   placeholder="Part name"
-                  className="col-span-5 border border-gray-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF4D00]/20 focus:border-[#FF4D00]"
+                  className="col-span-5 border border-gray-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC3D00]/20 focus:border-[#CC3D00]"
                 />
                 <input
                   type="number"
@@ -224,14 +224,14 @@ export function LogMaintenanceModal({ machine, open, onClose, onLogged }: LogMai
                   placeholder="Qty"
                   min={0.1}
                   step={0.1}
-                  className="col-span-2 border border-gray-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF4D00]/20 focus:border-[#FF4D00]"
+                  className="col-span-2 border border-gray-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC3D00]/20 focus:border-[#CC3D00]"
                 />
                 <input
                   type="number"
                   value={part.unitCostKes}
                   onChange={(e) => updatePart(i, "unitCostKes", e.target.value)}
                   placeholder="KES/unit"
-                  className="col-span-4 border border-gray-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF4D00]/20 focus:border-[#FF4D00]"
+                  className="col-span-4 border border-gray-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC3D00]/20 focus:border-[#CC3D00]"
                 />
                 <button type="button" onClick={() => removePart(i)} className="col-span-1 w-7 h-7 flex items-center justify-center text-red-400 hover:bg-red-50 rounded-lg">
                   <Trash2 className="w-3.5 h-3.5" />
@@ -254,7 +254,7 @@ export function LogMaintenanceModal({ machine, open, onClose, onLogged }: LogMai
                 )}
                 <div className="flex justify-between font-semibold text-gray-900 border-t border-gray-200 pt-1">
                   <span>Total cost</span>
-                  <span className="font-mono text-[#FF4D00]">KES {totalCost.toLocaleString()}</span>
+                  <span className="font-mono text-[#CC3D00]">KES {totalCost.toLocaleString()}</span>
                 </div>
               </div>
             )}
@@ -266,7 +266,7 @@ export function LogMaintenanceModal({ machine, open, onClose, onLogged }: LogMai
                 type="date"
                 value={form.nextServiceDate}
                 onChange={(e) => setForm((f) => ({ ...f, nextServiceDate: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF4D00]/20 focus:border-[#FF4D00]"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC3D00]/20 focus:border-[#CC3D00]"
               />
             </div>
             <div>
@@ -275,7 +275,7 @@ export function LogMaintenanceModal({ machine, open, onClose, onLogged }: LogMai
                 type="number"
                 value={form.nextServiceHours}
                 onChange={(e) => setForm((f) => ({ ...f, nextServiceHours: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF4D00]/20 focus:border-[#FF4D00]"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC3D00]/20 focus:border-[#CC3D00]"
               />
             </div>
           </div>
@@ -286,7 +286,7 @@ export function LogMaintenanceModal({ machine, open, onClose, onLogged }: LogMai
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               placeholder="Any additional notes..."
               rows={2}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF4D00]/20 focus:border-[#FF4D00] resize-none"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC3D00]/20 focus:border-[#CC3D00] resize-none"
             />
           </div>
           {error && <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">{error}</div>}
@@ -295,7 +295,7 @@ export function LogMaintenanceModal({ machine, open, onClose, onLogged }: LogMai
           <button type="button" onClick={onClose} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-600 hover:bg-gray-50">
             Cancel
           </button>
-          <button type="button" onClick={handleSubmit} disabled={saving || !form.performedBy.trim() || !form.description.trim()} className="flex-1 bg-[#FF4D00] text-white rounded-xl py-2.5 text-sm font-semibold disabled:opacity-40 hover:bg-[#e04400]">
+          <button type="button" onClick={handleSubmit} disabled={saving || !form.performedBy.trim() || !form.description.trim()} className="flex-1 bg-[#CC3D00] text-white rounded-xl py-2.5 text-sm font-semibold disabled:opacity-40 hover:bg-[#e04400]">
             {saving ? "Saving..." : "Log Maintenance"}
           </button>
         </div>

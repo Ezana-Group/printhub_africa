@@ -112,7 +112,7 @@ export function ProductImageGallery({ images }: { images: ImageItem[] }) {
                 className={cn(
                   "relative flex-[0_0_100px] aspect-square rounded-[24px] overflow-hidden border-[3px] transition-all duration-300",
                   index === selectedIndex
-                    ? "border-[#FF4D00] shadow-lg shadow-orange-100 scale-105 z-10"
+                    ? "border-[#CC3D00] shadow-lg shadow-orange-100 scale-105 z-10"
                     : "border-transparent opacity-50 hover:opacity-100 hover:border-slate-200"
                 )}
               >

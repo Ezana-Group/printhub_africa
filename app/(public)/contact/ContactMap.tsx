@@ -31,7 +31,7 @@ export function ContactMap({ googleMapsUrl }: { googleMapsUrl: string | null }) 
         </div>
       )}
       <p className={isEmbed ? "mt-2 text-sm text-gray-600" : "text-sm text-gray-600"}>
-        <Link href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="text-[#FF4D00] hover:underline">
+        <Link href={googleMapsUrl} target="_blank" rel="noopener noreferrer" className="text-[#CC3D00] hover:underline">
           Open in Maps
         </Link>
       </p>

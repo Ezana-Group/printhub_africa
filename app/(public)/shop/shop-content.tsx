@@ -68,7 +68,7 @@ const DualRangeSlider = ({ min, max, value, onChange }: { min: number, max: numb
     <div className="relative w-full pt-4 pb-4">
       <div className="absolute top-5 left-0 right-0 h-[6px] bg-slate-200 rounded-full" />
       <div 
-        className="absolute top-5 h-[6px] bg-[#FF4D00] rounded-full transition-all duration-75 ease-linear pointer-events-none"
+        className="absolute top-5 h-[6px] bg-[#CC3D00] rounded-full transition-all duration-75 ease-linear pointer-events-none"
         style={{ left: `${percentMin}%`, width: `${percentMax - percentMin}%` }}
       />
       <input
@@ -91,8 +91,8 @@ const DualRangeSlider = ({ min, max, value, onChange }: { min: number, max: numb
       />
       
       {/* Visual thumbs */}
-      <div className="absolute top-[15px] h-4 w-4 rounded-full bg-white border-[3px] border-[#FF4D00] shadow pointer-events-none transition-all duration-75 ease-linear" style={{ left: `calc(${percentMin}% - 8px)` }} />
-      <div className="absolute top-[15px] h-4 w-4 rounded-full bg-white border-[3px] border-[#FF4D00] shadow pointer-events-none transition-all duration-75 ease-linear" style={{ left: `calc(${percentMax}% - 8px)` }} />
+      <div className="absolute top-[15px] h-4 w-4 rounded-full bg-white border-[3px] border-[#CC3D00] shadow pointer-events-none transition-all duration-75 ease-linear" style={{ left: `calc(${percentMin}% - 8px)` }} />
+      <div className="absolute top-[15px] h-4 w-4 rounded-full bg-white border-[3px] border-[#CC3D00] shadow pointer-events-none transition-all duration-75 ease-linear" style={{ left: `calc(${percentMax}% - 8px)` }} />
     </div>
   );
 };
@@ -379,7 +379,7 @@ export function ShopContent() {
         <div className="space-y-2 max-h-[240px] overflow-y-auto pr-2 custom-scrollbar">
           <button 
             onClick={() => { setCategory(""); setPage(1); }}
-            className={cn("text-sm flex w-full items-center justify-between text-left", !category ? "text-[#FF4D00] font-medium" : "text-slate-600 hover:text-slate-900")}
+            className={cn("text-sm flex w-full items-center justify-between text-left", !category ? "text-[#CC3D00] font-medium" : "text-slate-600 hover:text-slate-900")}
           >
             All Products
           </button>
@@ -397,7 +397,7 @@ export function ShopContent() {
                     className={cn(
                       "text-sm flex w-full items-center justify-between text-left transition-colors", 
                       count === 0 ? "opacity-40" : "hover:text-slate-900", 
-                      isSelected ? "text-[#FF4D00] font-bold" : "text-slate-600"
+                      isSelected ? "text-[#CC3D00] font-bold" : "text-slate-600"
                     )}
                   >
                     <span className="truncate">{node.name}</span>
@@ -420,7 +420,7 @@ export function ShopContent() {
       {/* Price Options */}
       <div>
         <h3 className="text-sm font-semibold text-slate-900 mb-3">Price Range</h3>
-        <div className="text-sm text-[#FF4D00] font-medium mb-2 flex items-center justify-between">
+        <div className="text-sm text-[#CC3D00] font-medium mb-2 flex items-center justify-between">
             <span>KES {sliderRange?.[0].toLocaleString() ?? absMin.toLocaleString()}</span>
             <span>KES {sliderRange?.[1].toLocaleString() ?? absMax.toLocaleString()}</span>
         </div>
@@ -441,7 +441,7 @@ export function ShopContent() {
           <div className="flex items-center justify-between mb-3">
              <h3 className="text-sm font-semibold text-slate-900">Tags</h3>
              {selectedTags.length > 0 && (
-                <button onClick={() => { setSelectedTags([]); setPage(1); }} className="text-xs text-[#FF4D00] hover:underline">Clear tags</button>
+                <button onClick={() => { setSelectedTags([]); setPage(1); }} className="text-xs text-[#CC3D00] hover:underline">Clear tags</button>
              )}
           </div>
           <div className="flex flex-wrap gap-2">
@@ -453,7 +453,7 @@ export function ShopContent() {
                     onClick={() => handleTagToggle(tag)}
                     className={cn(
                        "px-2.5 py-1 text-xs rounded-full border transition-colors",
-                       isActive ? "bg-[#FF4D00] text-white border-[#FF4D00]" : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
+                       isActive ? "bg-[#CC3D00] text-white border-[#CC3D00]" : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
                     )}
                   >
                     {tag}
@@ -471,7 +471,7 @@ export function ShopContent() {
           id="inStock"
           checked={inStock}
           onChange={(e) => { setInStock(e.target.checked); setPage(1); }}
-          className="rounded border-slate-300 text-[#FF4D00] focus:ring-[#FF4D00]"
+          className="rounded border-slate-300 text-[#CC3D00] focus:ring-[#CC3D00]"
         />
         <Label htmlFor="inStock" className="text-slate-700 cursor-pointer">In stock only</Label>
       </div>
@@ -491,7 +491,7 @@ export function ShopContent() {
           <select
             value={sort}
             onChange={(e) => { setSort(e.target.value); setPage(1); }}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 focus:outline-none focus:border-[#FF4D00] transition-colors"
+            className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-800 focus:outline-none focus:border-[#CC3D00] transition-colors"
           >
             <option value="newest">Newest</option>
             <option value="price-asc">Price: Low to High</option>
@@ -503,8 +503,8 @@ export function ShopContent() {
       </div>
 
       {activeFiltersCount > 0 && !loading && (
-        <div className="flex flex-wrap items-center gap-2 mb-6 p-2 rounded-xl border border-[#FF4D00]/20 bg-[#FF4D00]/5">
-           <span className="text-xs font-semibold text-[#FF4D00] uppercase tracking-wider ml-2 mr-1">Active Filters:</span>
+        <div className="flex flex-wrap items-center gap-2 mb-6 p-2 rounded-xl border border-[#CC3D00]/20 bg-[#CC3D00]/5">
+           <span className="text-xs font-semibold text-[#CC3D00] uppercase tracking-wider ml-2 mr-1">Active Filters:</span>
            {q && (
              <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-white border border-slate-200 text-slate-700 shadow-sm">
                Search: {q} <button onClick={() => removeFilter('q')} className="hover:text-red-500"><X className="h-3 w-3" /></button>
@@ -540,7 +540,7 @@ export function ShopContent() {
                 placeholder="Search products..."
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                className="pl-9 bg-slate-50/50 rounded-xl border-slate-200 focus:border-[#FF4D00] transition-colors"
+                className="pl-9 bg-slate-50/50 rounded-xl border-slate-200 focus:border-[#CC3D00] transition-colors"
                 onKeyDown={(e) => { if (e.key === "Enter") setPage(1); }}
               />
             </div>
@@ -614,7 +614,7 @@ export function ShopContent() {
                            <button 
                              key={p} 
                              onClick={() => { setPage(p); window.scrollTo({ top: 0, behavior: "smooth" }) }}
-                             className={cn("w-9 h-9 rounded-xl flex items-center justify-center text-sm font-medium transition-colors", page === p ? "bg-[#FF4D00] text-white" : "text-slate-600 hover:bg-slate-100")}
+                             className={cn("w-9 h-9 rounded-xl flex items-center justify-center text-sm font-medium transition-colors", page === p ? "bg-[#CC3D00] text-white" : "text-slate-600 hover:bg-slate-100")}
                            >
                              {p}
                            </button>
@@ -641,7 +641,7 @@ export function ShopContent() {
                <p className="text-slate-500 mb-6 text-center max-w-sm">
                  We couldn&apos;t find any products matching your active filters. Try adjusting them or clearing filters to see more.
                </p>
-               <Button onClick={clearFilters} className="rounded-xl bg-[#FF4D00] hover:bg-[#FF4D00]/90 text-white">
+               <Button onClick={clearFilters} className="rounded-xl bg-[#CC3D00] hover:bg-[#CC3D00]/90 text-white">
                  Clear all filters
                </Button>
              </div>
@@ -652,9 +652,9 @@ export function ShopContent() {
       <div className="fixed bottom-6 left-0 right-0 z-40 mx-4 md:hidden flex justify-center pointer-events-none">
          <Sheet open={isMobileOpen} onOpenChange={setIsMobileOpen}>
             <SheetTrigger asChild>
-               <Button className="pointer-events-auto shadow-xl rounded-full h-14 bg-[#FF4D00] hover:bg-[#FF4D00]/90 text-white px-8 font-semibold uppercase tracking-wider text-sm flex items-center gap-2">
+               <Button className="pointer-events-auto shadow-xl rounded-full h-14 bg-[#CC3D00] hover:bg-[#CC3D00]/90 text-white px-8 font-semibold uppercase tracking-wider text-sm flex items-center gap-2">
                  <SlidersHorizontal className="w-5 h-5" />
-                 Filters {activeFiltersCount > 0 && <span className="bg-white text-[#FF4D00] w-6 h-6 rounded-full flex items-center justify-center text-xs ml-1">{activeFiltersCount}</span>}
+                 Filters {activeFiltersCount > 0 && <span className="bg-white text-[#CC3D00] w-6 h-6 rounded-full flex items-center justify-center text-xs ml-1">{activeFiltersCount}</span>}
                </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-[85vw] sm:w-[400px] p-0 flex flex-col bg-slate-50 border-r-0">
@@ -676,7 +676,7 @@ export function ShopContent() {
                       placeholder="Search products..."
                       value={q}
                       onChange={(e) => setQ(e.target.value)}
-                      className="pl-9 bg-white rounded-xl border-slate-200 focus:border-[#FF4D00]"
+                      className="pl-9 bg-white rounded-xl border-slate-200 focus:border-[#CC3D00]"
                     />
                   </div>
                   <FilterContent />
@@ -688,7 +688,7 @@ export function ShopContent() {
                         Clear All
                      </Button>
                   )}
-                  <Button onClick={() => setIsMobileOpen(false)} className="flex-1 rounded-xl bg-[#FF4D00] hover:bg-[#FF4D00]/90 text-white h-12">
+                  <Button onClick={() => setIsMobileOpen(false)} className="flex-1 rounded-xl bg-[#CC3D00] hover:bg-[#CC3D00]/90 text-white h-12">
                      Show {filteredProducts.length} Results
                   </Button>
                </div>

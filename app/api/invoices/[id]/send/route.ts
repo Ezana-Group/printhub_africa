@@ -58,7 +58,7 @@ export async function POST(
   const subject = `Your invoice ${invoice.invoiceNumber} – Order ${invoice.order.orderNumber} – ${business.businessName}`;
   const html = `
     <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-      <h2 style="color: #FF4D00;">${business.businessName}</h2>
+      <h2 style="color: #CC3D00;">${business.businessName}</h2>
       <p>Please find your tax invoice for order <strong>${invoice.order.orderNumber}</strong> attached.</p>
       <p>Invoice number: <strong>${invoice.invoiceNumber}</strong></p>
       <p>If you have any questions, reply to this email or contact us.</p>

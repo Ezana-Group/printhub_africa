@@ -203,7 +203,7 @@ export function CorporateApplyForm() {
             <li>Immediately access corporate pricing and start placing orders</li>
           </ol>
         </div>
-        <Link href="/account" className="text-sm text-[#FF4D00] underline">
+        <Link href="/account" className="text-sm text-[#CC3D00] underline">
           Return to your account
         </Link>
       </div>
@@ -216,7 +216,7 @@ export function CorporateApplyForm() {
         {[1, 2, 3, 4].map((s) => (
           <div
             key={s}
-            className={`h-2 flex-1 rounded-full ${step >= s ? "bg-[#FF4D00]" : "bg-slate-200"}`}
+            className={`h-2 flex-1 rounded-full ${step >= s ? "bg-[#CC3D00]" : "bg-slate-200"}`}
             aria-hidden
           />
         ))}
@@ -297,7 +297,7 @@ export function CorporateApplyForm() {
                     type="button"
                     onClick={() => update({ companySize: opt.value })}
                     className={`rounded-xl border-2 px-4 py-3 text-sm font-medium text-left transition ${
-                      form.companySize === opt.value ? "border-[#FF4D00] bg-orange-50 text-[#FF4D00]" : "border-slate-200 hover:border-slate-300"
+                      form.companySize === opt.value ? "border-[#CC3D00] bg-orange-50 text-[#CC3D00]" : "border-slate-200 hover:border-slate-300"
                     }`}
                   >
                     {opt.label}
@@ -486,14 +486,14 @@ export function CorporateApplyForm() {
                 type="checkbox"
                 checked={form.termsAccepted}
                 onChange={(e) => update({ termsAccepted: e.target.checked })}
-                className="mt-1 rounded accent-[#FF4D00]"
+                className="mt-1 rounded accent-[#CC3D00]"
                 required
               />
               <span className="text-sm text-slate-600 leading-relaxed">
                 I confirm I have authority to bind <strong>{form.companyName}</strong> to PrintHub&apos;s{" "}
-                <Link href="/corporate-terms" target="_blank" rel="noopener noreferrer" className="text-[#FF4D00] underline">Corporate Account Terms and Conditions</Link>
+                <Link href="/corporate-terms" target="_blank" rel="noopener noreferrer" className="text-[#CC3D00] underline">Corporate Account Terms and Conditions</Link>
                 {" "}and the incorporated{" "}
-                <Link href="/terms-of-service" target="_blank" rel="noopener noreferrer" className="text-[#FF4D00] underline">Terms of Service</Link>.
+                <Link href="/terms-of-service" target="_blank" rel="noopener noreferrer" className="text-[#CC3D00] underline">Terms of Service</Link>.
                 I confirm the information I have provided is accurate and complete.
               </span>
             </label>

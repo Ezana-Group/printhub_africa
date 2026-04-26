@@ -45,7 +45,7 @@ export async function POST(req: Request) {
         subject: "Your PrintHub sign-in code",
         html: `
           <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-            <h1 style="color: #FF4D00;">PrintHub</h1>
+            <h1 style="color: #CC3D00;">PrintHub</h1>
             <p>Your sign-in code is: <strong>${sixDigit}</strong></p>
             <p>It expires in 10 minutes. If you didn't request this, ignore this email.</p>
             <p style="color: #6B6B6B; font-size: 12px;">PrintHub · Nairobi, Kenya</p>

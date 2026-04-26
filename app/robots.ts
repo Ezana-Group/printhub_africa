@@ -4,7 +4,16 @@ import { prisma } from "@/lib/prisma";
 const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://printhub.africa";
 
 const defaultRobots: MetadataRoute.Robots = {
-  rules: { userAgent: "*", allow: "/", disallow: ["/admin/", "/api/", "/account/"] },
+  rules: [
+    { userAgent: "*", allow: "/", disallow: ["/admin/", "/api/", "/account/", "/cart", "/checkout"] },
+    { userAgent: "GPTBot", disallow: "/" },
+    { userAgent: "Google-Extended", disallow: "/" },
+    { userAgent: "CCBot", disallow: "/" },
+    { userAgent: "anthropic-ai", disallow: "/" },
+    { userAgent: "Claude-Web", disallow: "/" },
+    { userAgent: "Omgilibot", disallow: "/" },
+    { userAgent: "FacebookBot", disallow: "/" },
+  ],
   sitemap: `${base}/sitemap.xml`,
 };
 

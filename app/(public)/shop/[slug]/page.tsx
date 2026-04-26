@@ -320,11 +320,11 @@ export default async function ProductPage({ params }: Props) {
             aria-label="Breadcrumb"
             className="text-[13px] font-bold flex items-center gap-2 overflow-x-auto whitespace-nowrap scrollbar-hide text-slate-400"
           >
-            <Link href="/" className="hover:text-[#FF4D00] transition-colors">
+            <Link href="/" className="hover:text-[#CC3D00] transition-colors">
               Home
             </Link>
             <ChevronRight className="h-4 w-4 text-slate-200 shrink-0" />
-            <Link href="/shop" className="hover:text-[#FF4D00] transition-colors">
+            <Link href="/shop" className="hover:text-[#CC3D00] transition-colors">
               Shop
             </Link>
             {product.category && (
@@ -332,7 +332,7 @@ export default async function ProductPage({ params }: Props) {
                 <ChevronRight className="h-4 w-4 text-slate-200 shrink-0" />
                 <Link
                   href={`/shop?category=${product.category.slug}`}
-                  className="hover:text-[#FF4D00] transition-colors"
+                  className="hover:text-[#CC3D00] transition-colors"
                 >
                   {product.category.name}
                 </Link>
@@ -368,7 +368,7 @@ export default async function ProductPage({ params }: Props) {
         <div className="mt-14 grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5 flex items-start gap-4">
             <div className="mt-0.5 shrink-0 w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center">
-              <Truck className="h-4 w-4 text-[#FF4D00]" />
+              <Truck className="h-4 w-4 text-[#CC3D00]" />
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-900">Nationwide delivery</p>
@@ -379,7 +379,7 @@ export default async function ProductPage({ params }: Props) {
           </div>
           <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5 flex items-start gap-4">
             <div className="mt-0.5 shrink-0 w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center">
-              <ShieldCheck className="h-4 w-4 text-[#FF4D00]" />
+              <ShieldCheck className="h-4 w-4 text-[#CC3D00]" />
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-900">Quality checked</p>
@@ -390,7 +390,7 @@ export default async function ProductPage({ params }: Props) {
           </div>
           <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5 flex items-start gap-4">
             <div className="mt-0.5 shrink-0 w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center">
-              <BadgeCheck className="h-4 w-4 text-[#FF4D00]" />
+              <BadgeCheck className="h-4 w-4 text-[#CC3D00]" />
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-900">Secure checkout</p>
@@ -407,21 +407,21 @@ export default async function ProductPage({ params }: Props) {
             <TabsList className="bg-transparent border-b border-slate-100 w-full justify-start rounded-none h-auto p-0 gap-10">
               <TabsTrigger
                 value="description"
-                className="rounded-none border-b-4 border-transparent data-[state=active]:border-[#FF4D00] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-5 font-black text-sm text-slate-400 data-[state=active]:text-slate-900 transition-all uppercase tracking-widest"
+                className="rounded-none border-b-4 border-transparent data-[state=active]:border-[#CC3D00] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-5 font-black text-sm text-slate-400 data-[state=active]:text-slate-900 transition-all uppercase tracking-widest"
               >
                 Story
               </TabsTrigger>
               {typedProduct.isPOD && (
                 <TabsTrigger
                   value="specs"
-                  className="rounded-none border-b-4 border-transparent data-[state=active]:border-[#FF4D00] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-5 font-black text-sm text-slate-400 data-[state=active]:text-slate-900 transition-all uppercase tracking-widest"
+                  className="rounded-none border-b-4 border-transparent data-[state=active]:border-[#CC3D00] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-5 font-black text-sm text-slate-400 data-[state=active]:text-slate-900 transition-all uppercase tracking-widest"
                 >
                   Tech specs
                 </TabsTrigger>
               )}
               <TabsTrigger
                 value="reviews"
-                className="rounded-none border-b-4 border-transparent data-[state=active]:border-[#FF4D00] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-5 font-black text-sm text-slate-400 data-[state=active]:text-slate-900 transition-all uppercase tracking-widest"
+                className="rounded-none border-b-4 border-transparent data-[state=active]:border-[#CC3D00] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-0 pb-5 font-black text-sm text-slate-400 data-[state=active]:text-slate-900 transition-all uppercase tracking-widest"
               >
                 Reviews
               </TabsTrigger>
@@ -457,7 +457,7 @@ export default async function ProductPage({ params }: Props) {
                       </p>
                       <h4 className="text-xl font-bold text-slate-900">
                         Designed by{" "}
-                        <span className="text-[#FF4D00]">
+                        <span className="text-[#CC3D00]">
                           {product.externalModel.designerName}
                         </span>
                       </h4>
@@ -520,7 +520,7 @@ export default async function ProductPage({ params }: Props) {
                   </dl>
                 </div>
                 <div className="p-8 bg-[#FFF5F0] rounded-3xl border border-orange-100/60">
-                  <h4 className="text-lg font-black text-[#FF4D00] uppercase tracking-tight mb-3">
+                  <h4 className="text-lg font-black text-[#CC3D00] uppercase tracking-tight mb-3">
                     Material quality
                   </h4>
                   <p className="text-slate-700 leading-relaxed text-sm">

@@ -394,7 +394,7 @@ export function AuthPage({
                 onClick={() => setActiveTab("login")}
                 className={`shrink-0 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
                   activeTab === "login"
-                    ? "bg-[#FF4D00] text-white shadow-sm"
+                    ? "bg-[#CC3D00] text-white shadow-sm"
                     : "bg-[#E3F2FD] text-[#1565C0] hover:brightness-95"
                 }`}
               >
@@ -405,7 +405,7 @@ export function AuthPage({
                 onClick={() => setActiveTab("register")}
                 className={`shrink-0 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
                   activeTab === "register"
-                    ? "bg-[#FF4D00] text-white shadow-sm"
+                    ? "bg-[#CC3D00] text-white shadow-sm"
                     : "bg-[#FFF3E0] text-[#E65100] hover:brightness-95"
                 }`}
               >

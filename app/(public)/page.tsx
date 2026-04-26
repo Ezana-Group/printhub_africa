@@ -60,6 +60,7 @@ export default async function HomePage() {
       <FeaturedProducts gridCols={homeGridCols} maxItems={homeGridCols * homeGridRows} />
       <section className="bg-slate-50 py-10">
         <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
+          <h2 className="sr-only">Services and offers</h2>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="rounded-2xl border border-slate-200 bg-white p-5">
               <p className="text-xs font-semibold uppercase tracking-wide text-primary">Custom jobs</p>
@@ -98,6 +99,50 @@ export default async function HomePage() {
         ]}
       />
       <StickyMiniCartCTA />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            name: "PrintHub Africa",
+            url: "https://printhub.africa",
+            logo: "https://printhub.africa/logo.png",
+            description: "Professional 3D printing service in Africa",
+            address: {
+              "@type": "PostalAddress",
+              addressLocality: "Nairobi",
+              addressCountry: "KE",
+            },
+            contactPoint: {
+              "@type": "ContactPoint",
+              contactType: "customer service",
+              availableLanguage: "English",
+            },
+            sameAs: ["https://printhub.africa"],
+          }),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            name: "PrintHub Africa",
+            url: "https://printhub.africa",
+            description: "Professional 3D printing service in Africa",
+            potentialAction: {
+              "@type": "SearchAction",
+              target: {
+                "@type": "EntryPoint",
+                urlTemplate: "https://printhub.africa/shop?q={search_term_string}",
+              },
+              "query-input": "required name=search_term_string",
+            },
+          }),
+        }}
+      />
     </>
   );
 }

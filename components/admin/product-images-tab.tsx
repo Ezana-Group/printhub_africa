@@ -163,7 +163,7 @@ export function ProductImagesTab({
                 <div
                   className={`aspect-square rounded-xl overflow-hidden border-2 transition ${
                     img.isMain
-                      ? "border-[#FF4D00] shadow-md shadow-orange-100"
+                      ? "border-[#CC3D00] shadow-md shadow-orange-100"
                       : "border-gray-200"
                   }`}
                 >
@@ -180,7 +180,7 @@ export function ProductImagesTab({
                 </div>
 
                 {img.isMain && (
-                  <span className="absolute top-1.5 left-1.5 bg-[#FF4D00] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wide">
+                  <span className="absolute top-1.5 left-1.5 bg-[#CC3D00] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wide">
                     Featured
                   </span>
                 )}
@@ -201,7 +201,7 @@ export function ProductImagesTab({
                       type="button"
                       onClick={() => setMain(i)}
                       title="Set as featured"
-                      className="w-8 h-8 bg-[#FF4D00] rounded-lg flex items-center justify-center hover:bg-[#e64400] transition"
+                      className="w-8 h-8 bg-[#CC3D00] rounded-lg flex items-center justify-center hover:bg-[#e64400] transition"
                     >
                       <Star className="w-4 h-4 text-white" />
                     </button>
@@ -234,7 +234,7 @@ export function ProductImagesTab({
                       )
                     )
                   }
-                  className="mt-1 w-full text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-[#FF4D00]"
+                  className="mt-1 w-full text-xs border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-[#CC3D00]"
                 />
               </div>
             ))}
@@ -330,7 +330,7 @@ export function ProductImagesTab({
             }}
             onKeyDown={(e) => e.key === "Enter" && addFromUrl()}
             placeholder="https://images.unsplash.com/..."
-            className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#FF4D00]"
+            className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-[#CC3D00]"
           />
           <button
             type="button"
@@ -356,7 +356,7 @@ export function ProductImagesTab({
       <div className="flex items-center justify-between pt-4 border-t border-gray-100">
         <div className="flex items-center gap-2 text-sm text-gray-500">
           {saving && (
-            <span className="flex items-center gap-1.5 text-[#FF4D00]">
+            <span className="flex items-center gap-1.5 text-[#CC3D00]">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
               Saving…
             </span>
@@ -372,7 +372,7 @@ export function ProductImagesTab({
           type="button"
           onClick={() => saveImages(images)}
           disabled={saving || !productId}
-          className="px-6 py-2.5 bg-[#FF4D00] hover:bg-[#e64400] text-white rounded-xl text-sm font-medium transition disabled:opacity-60"
+          className="px-6 py-2.5 bg-[#CC3D00] hover:bg-[#e64400] text-white rounded-xl text-sm font-medium transition disabled:opacity-60"
         >
           {saving ? "Saving…" : "Save images"}
         </button>

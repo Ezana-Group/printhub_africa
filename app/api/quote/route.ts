@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       subject: `[Quote Request] ${typeLabel} – ${data.name}`,
       html: `
         <div style="font-family: sans-serif; max-width: 560px;">
-          <h2 style="color: #FF4D00;">${business.businessName} – Quote request</h2>
+          <h2 style="color: #CC3D00;">${business.businessName} – Quote request</h2>
           <p><strong>Type:</strong> ${typeLabel}</p>
           <p><strong>From:</strong> ${data.name} &lt;${data.email}&gt;</p>
           ${data.phone ? `<p><strong>Phone:</strong> ${data.phone}</p>` : ""}

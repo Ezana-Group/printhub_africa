@@ -48,7 +48,7 @@ export default function CorporateApplyStatusPage() {
     return (
       <div className="max-w-md mx-auto py-16 text-center">
         <p className="text-slate-600 mb-4">Sign in to view your application status.</p>
-        <Link href="/login?callbackUrl=/corporate/apply/status" className="text-[#FF4D00] underline">
+        <Link href="/login?callbackUrl=/corporate/apply/status" className="text-[#CC3D00] underline">
           Log in
         </Link>
       </div>
@@ -72,7 +72,7 @@ export default function CorporateApplyStatusPage() {
         </p>
         <Link
           href="/corporate/apply"
-          className="inline-flex items-center gap-2 rounded-lg bg-[#FF4D00] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#e64500]"
+          className="inline-flex items-center gap-2 rounded-lg bg-[#CC3D00] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#e64500]"
         >
           <Building2 className="w-4 h-4" />
           Apply for a Corporate Account
@@ -91,7 +91,7 @@ export default function CorporateApplyStatusPage() {
         <CardHeader>
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-[#FF4D00]" />
+              <Building2 className="w-6 h-6 text-[#CC3D00]" />
             </div>
             <div>
               <CardTitle>Corporate application</CardTitle>
@@ -137,7 +137,7 @@ export default function CorporateApplyStatusPage() {
             </p>
           )}
           <div className="pt-4 border-t">
-            <Link href="/account" className="text-sm text-[#FF4D00] underline">
+            <Link href="/account" className="text-sm text-[#CC3D00] underline">
               Back to account
             </Link>
           </div>

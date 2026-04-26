@@ -147,7 +147,7 @@ export function ProductCard({ id, name, slug, image, imagesCount, basePrice, com
         </div>
         <Button
           size="sm"
-          className="mt-4 w-full rounded-xl bg-[#FF4D00] text-white hover:bg-[#E64500]"
+          className="mt-4 w-full rounded-xl bg-[#CC3D00] text-white hover:bg-[#E64500]"
           onClick={handleAddToCart}
           disabled={stock < 1}
           aria-label={`Add ${name} to cart`}

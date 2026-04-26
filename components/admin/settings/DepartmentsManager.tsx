@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 const PRESET_COLOURS = [
-  "#FF4D00",
+  "#CC3D00",
   "#0A0A0A",
   "#7C3AED",
   "#059669",
@@ -46,7 +46,7 @@ export function DepartmentsManager() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
-  const [newColour, setNewColour] = useState("#FF4D00");
+  const [newColour, setNewColour] = useState("#CC3D00");
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState("");
 
@@ -89,7 +89,7 @@ export function DepartmentsManager() {
       setDepartments((ds) => [...ds, { ...data.department, _count: { staff: 0 } }]);
       setNewName("");
       setNewDesc("");
-      setNewColour("#FF4D00");
+      setNewColour("#CC3D00");
       setShowAddForm(false);
     } catch (err) {
       setAddError(err instanceof Error ? err.message : "Failed to add");
@@ -102,7 +102,7 @@ export function DepartmentsManager() {
     setEditId(dept.id);
     setEditName(dept.name);
     setEditDesc(dept.description ?? "");
-    setEditColour(dept.colour ?? "#FF4D00");
+    setEditColour(dept.colour ?? "#CC3D00");
     setSaveError("");
   };
 
@@ -199,7 +199,7 @@ export function DepartmentsManager() {
             setShowAddForm(true);
             setAddError("");
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-[#FF4D00] text-white rounded-xl text-sm font-medium hover:bg-[#e04400] transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-[#CC3D00] text-white rounded-xl text-sm font-medium hover:bg-[#e04400] transition-colors"
         >
           <Plus className="w-4 h-4" />
           Add Department
@@ -207,7 +207,7 @@ export function DepartmentsManager() {
       </div>
 
       {showAddForm && (
-        <div className="bg-orange-50 border border-[#FF4D00]/20 rounded-2xl p-4 mb-4">
+        <div className="bg-orange-50 border border-[#CC3D00]/20 rounded-2xl p-4 mb-4">
           <h4 className="text-sm font-semibold text-gray-900 mb-3">New Department</h4>
           <div className="space-y-3">
             <div>
@@ -222,7 +222,7 @@ export function DepartmentsManager() {
                 }}
                 placeholder="e.g. Finishing, Accounts, HR..."
                 autoFocus
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF4D00]/20 focus:border-[#FF4D00]"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC3D00]/20 focus:border-[#CC3D00]"
               />
             </div>
             <div>
@@ -231,7 +231,7 @@ export function DepartmentsManager() {
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value)}
                 placeholder="What does this department do?"
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF4D00]/20 focus:border-[#FF4D00]"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC3D00]/20 focus:border-[#CC3D00]"
               />
             </div>
             <div>
@@ -276,7 +276,7 @@ export function DepartmentsManager() {
               type="button"
               onClick={handleAdd}
               disabled={!newName.trim() || adding}
-              className="flex-1 bg-[#FF4D00] text-white rounded-xl py-2 text-sm font-semibold disabled:opacity-40 hover:bg-[#e04400]"
+              className="flex-1 bg-[#CC3D00] text-white rounded-xl py-2 text-sm font-semibold disabled:opacity-40 hover:bg-[#e04400]"
             >
               {adding ? "Adding…" : "Add Department"}
             </button>
@@ -308,7 +308,7 @@ export function DepartmentsManager() {
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
                       autoFocus
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF4D00]/20 focus:border-[#FF4D00]"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC3D00]/20 focus:border-[#CC3D00]"
                     />
                   </div>
                   <div>
@@ -317,7 +317,7 @@ export function DepartmentsManager() {
                       value={editDesc}
                       onChange={(e) => setEditDesc(e.target.value)}
                       placeholder="Optional description"
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF4D00]/20 focus:border-[#FF4D00]"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC3D00]/20 focus:border-[#CC3D00]"
                     />
                   </div>
                 </div>
@@ -356,7 +356,7 @@ export function DepartmentsManager() {
                     type="button"
                     onClick={() => handleSave(dept.id)}
                     disabled={!editName.trim() || saving}
-                    className="px-4 py-1.5 bg-[#FF4D00] text-white rounded-xl text-sm font-medium disabled:opacity-40"
+                    className="px-4 py-1.5 bg-[#CC3D00] text-white rounded-xl text-sm font-medium disabled:opacity-40"
                   >
                     {saving ? "Saving…" : "Save"}
                   </button>

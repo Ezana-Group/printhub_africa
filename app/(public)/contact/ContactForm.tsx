@@ -94,7 +94,7 @@ export function ContactForm() {
       )}
         {status === "error" && <p className="text-red-600 text-sm">{errorMsg}</p>}
         <div className="flex gap-3">
-          <Button type="submit" disabled={status === "loading"} className="rounded-xl bg-[#FF4D00] hover:bg-[#E04500]">
+          <Button type="submit" disabled={status === "loading"} className="rounded-xl bg-[#CC3D00] hover:bg-[#E04500]">
             {status === "loading" ? "Sending..." : "Send message"}
           </Button>
           <Link href="/">

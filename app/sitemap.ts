@@ -20,27 +20,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const includeProducts = settings?.sitemapIncludeProducts ?? true;
   const includeCategories = settings?.sitemapIncludeCategories ?? true;
 
+  const PAGE_CONFIG: { path: string; changeFrequency: "weekly" | "monthly"; priority: number }[] = [
+    { path: "", changeFrequency: "weekly", priority: 1.0 },
+    { path: "/shop", changeFrequency: "weekly", priority: 0.9 },
+    { path: "/catalogue", changeFrequency: "weekly", priority: 0.9 },
+    { path: "/services/3d-printing", changeFrequency: "monthly", priority: 0.8 },
+    { path: "/services/3d-scanning", changeFrequency: "monthly", priority: 0.8 },
+    { path: "/materials", changeFrequency: "monthly", priority: 0.8 },
+    { path: "/get-a-quote", changeFrequency: "monthly", priority: 0.8 },
+    ...(largeFormatEnabled ? [{ path: "/services/large-format", changeFrequency: "monthly" as const, priority: 0.8 }] : []),
+    { path: "/about", changeFrequency: "monthly", priority: 0.6 },
+    { path: "/faq", changeFrequency: "monthly", priority: 0.6 },
+    { path: "/blog/what-is-3d-printing-kenya", changeFrequency: "monthly", priority: 0.6 },
+    { path: "/blog/3d-printing-cost-kenya", changeFrequency: "monthly", priority: 0.6 },
+    { path: "/careers", changeFrequency: "monthly", priority: 0.5 },
+    { path: "/track", changeFrequency: "monthly", priority: 0.4 },
+  ];
+
   const staticPages = includePages
-    ? [
-        "",
-        "/about",
-        "/careers",
-        "/shop",
-        "/catalogue",
-        "/get-a-quote",
-        "/cart",
-        "/checkout",
-        ...(largeFormatEnabled ? ["/services/large-format"] : []),
-        "/services/3d-printing",
-        "/faq",
-        "/track",
-        "/login",
-        "/register",
-      ].map((path) => ({
+    ? PAGE_CONFIG.map(({ path, changeFrequency, priority }) => ({
         url: `${base}${path}`,
         lastModified: new Date(),
-        changeFrequency: path === "" ? ("weekly" as const) : ("monthly" as const),
-        priority: path === "" ? 1 : 0.8,
+        changeFrequency,
+        priority,
       }))
     : [];
 
@@ -109,19 +111,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   }
 
-  const feedUrls: MetadataRoute.Sitemap = [
-    { url: `${base}/api/products/feed`, lastModified: new Date(), changeFrequency: "always", priority: 0.5 },
-    { url: `${base}/api/products/google`, lastModified: new Date(), changeFrequency: "always", priority: 0.5 },
-    { url: `${base}/api/products/tiktok`, lastModified: new Date(), changeFrequency: "always", priority: 0.5 },
-  ];
-
   return [
     ...staticPages,
     ...(Array.isArray(jobSlugs) ? jobSlugs : []),
     ...productUrls,
     ...categoryUrls,
     ...catalogueItemUrls,
-    ...feedUrls,
   ];
 }
 

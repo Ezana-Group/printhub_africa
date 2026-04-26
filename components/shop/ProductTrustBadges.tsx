@@ -5,10 +5,10 @@ import { Truck, ShieldCheck, Award, Zap } from "lucide-react";
 
 export function ProductTrustBadges() {
   const badges = [
-    { icon: <Truck className="h-5 w-5 text-[#FF4D00]" />, label: "Fast Shipping", subtext: "Delivery across Kenya" },
-    { icon: <ShieldCheck className="h-5 w-5 text-[#FF4D00]" />, label: "Secure Payment", subtext: "MPESA & Cards" },
-    { icon: <Award className="h-5 w-5 text-[#FF4D00]" />, label: "Quality Guarenteed", subtext: "Hand-inspected" },
-    { icon: <Zap className="h-5 w-5 text-[#FF4D00]" />, label: "Quick Turnaround", subtext: "POD specialists" },
+    { icon: <Truck className="h-5 w-5 text-[#CC3D00]" />, label: "Fast Shipping", subtext: "Delivery across Kenya" },
+    { icon: <ShieldCheck className="h-5 w-5 text-[#CC3D00]" />, label: "Secure Payment", subtext: "MPESA & Cards" },
+    { icon: <Award className="h-5 w-5 text-[#CC3D00]" />, label: "Quality Guarenteed", subtext: "Hand-inspected" },
+    { icon: <Zap className="h-5 w-5 text-[#CC3D00]" />, label: "Quick Turnaround", subtext: "POD specialists" },
   ];
 
   return (

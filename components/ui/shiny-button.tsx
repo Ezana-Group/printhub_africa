@@ -50,7 +50,7 @@ export function ShinyButton({
           --shiny-cta-bg: #000000;
           --shiny-cta-bg-subtle: #1a1818;
           --shiny-cta-fg: #ffffff;
-          --shiny-cta-highlight: #FF4D00;
+          --shiny-cta-highlight: #CC3D00;
           --shiny-cta-highlight-subtle: #FF8A5C;
           --animation: gradient-angle linear infinite;
           --duration: 3s;

@@ -249,7 +249,7 @@ export function QuotesList({
               href={tab.id === 'all' ? '/account/quotes' : `/account/quotes?status=${tab.id}`}
               className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
                 isActive
-                  ? 'bg-[#FF4D00] text-white shadow-sm'
+                  ? 'bg-[#CC3D00] text-white shadow-sm'
                   : 'hover:brightness-95'
               }`}
               style={isActive ? undefined : { backgroundColor: tab.bgColor, color: tab.textColor }}
@@ -298,7 +298,7 @@ export function QuotesList({
           </p>
           <Link
             href="/get-a-quote"
-            className="inline-block rounded-xl bg-[#FF4D00] px-6 py-3 font-medium text-white transition hover:bg-[#e64400]"
+            className="inline-block rounded-xl bg-[#CC3D00] px-6 py-3 font-medium text-white transition hover:bg-[#e64400]"
           >
             {activeTab === 'all' ? 'Get your first quote →' : 'New quote request'}
           </Link>
@@ -314,7 +314,7 @@ export function QuotesList({
               <div
                 key={quote.id}
                 className={`overflow-hidden rounded-2xl border transition-all ${
-                  isOpen ? 'border-[#FF4D00]/30 shadow-sm' : 'border-gray-100'
+                  isOpen ? 'border-[#CC3D00]/30 shadow-sm' : 'border-gray-100'
                 } ${quote.status === 'quoted' ? 'border-amber-300 bg-amber-50/30' : 'bg-white'}`}
               >
                 <button
@@ -354,7 +354,7 @@ export function QuotesList({
                           </span>
                         )}
                         {quote.quotedAmount != null && (
-                          <span className="flex items-center gap-1 font-semibold text-[#FF4D00]">
+                          <span className="flex items-center gap-1 font-semibold text-[#CC3D00]">
                             <Tag className="h-3 w-3" />
                             KES {quote.quotedAmount.toLocaleString()}
                           </span>
@@ -518,7 +518,7 @@ export function QuotesList({
                     )}
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Button
-                        className="bg-[#FF4D00] hover:bg-[#e64400]"
+                        className="bg-[#CC3D00] hover:bg-[#e64400]"
                         disabled={!!isLoading}
                         onClick={() => performAction(quote.id, 'ACCEPT')}
                       >
@@ -609,7 +609,7 @@ export function QuotesList({
                       href="https://wa.me/254727410320"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[#FF4D00] hover:underline"
+                      className="text-[#CC3D00] hover:underline"
                     >
                       WhatsApp
                     </a>{' '}
@@ -663,7 +663,7 @@ export function QuotesList({
             onChange={(e) => setWithdrawReason(e.target.value)}
             placeholder="e.g. Changed my mind, found another supplier, budget constraints..."
             rows={3}
-            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-[#FF4D00] focus:outline-none focus:ring-2 focus:ring-[#FF4D00]/20"
+            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:border-[#CC3D00] focus:outline-none focus:ring-2 focus:ring-[#CC3D00]/20"
           />
           <div className="flex gap-3">
             <Button

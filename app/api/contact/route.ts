@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
       subject: `[Contact #${ticketNumber}] ${subject}`,
       html: `
         <div style="font-family: sans-serif; max-width: 560px;">
-          <h2 style="color: #FF4D00;">${business.businessName} – Contact form</h2>
+          <h2 style="color: #CC3D00;">${business.businessName} – Contact form</h2>
           <p><strong>Ticket:</strong> ${ticket.ticketNumber}</p>
           <p><strong>From:</strong> ${name} &lt;${email}&gt;</p>
           ${phone ? `<p><strong>Phone:</strong> ${phone}</p>` : ""}

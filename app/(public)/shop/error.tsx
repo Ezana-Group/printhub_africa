@@ -25,7 +25,7 @@ export default function SectionError({
         </p>
         <button
           onClick={reset}
-          className="flex items-center gap-2 mx-auto text-sm text-[#FF4D00] hover:underline"
+          className="flex items-center gap-2 mx-auto text-sm text-[#CC3D00] hover:underline"
         >
           <RefreshCw className="w-4 h-4" /> Try again
         </button>

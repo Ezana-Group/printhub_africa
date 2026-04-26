@@ -63,11 +63,11 @@ export async function GET(req: Request) {
       subject: "Action Required: Your password has expired",
       html: `
         <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-          <h1 style="color: #FF4D00;">${b.businessName}</h1>
+          <h1 style="color: #CC3D00;">${b.businessName}</h1>
           <p>Hi ${user.name || "there"},</p>
           <p>For security reasons, we require users to change their passwords every ${expiry}. Your password has now expired.</p>
           <p>Please click the link below to reset your password and regain access to your account:</p>
-          <p><a href="${baseUrl}/forgot-password" style="color: #FF4D00; font-weight: bold;">Reset my password</a></p>
+          <p><a href="${baseUrl}/forgot-password" style="color: #CC3D00; font-weight: bold;">Reset my password</a></p>
           <p>If you have any questions, please contact our support team.</p>
           <p style="color: #6B6B6B; font-size: 12px;">${b.businessName} · Nairobi, Kenya</p>
         </div>

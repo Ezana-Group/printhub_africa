@@ -101,7 +101,7 @@ export function ProductMaterialSelector({ productSlug, onSelectionChange }: Prop
       {/* Material Type Selection */}
       <div className="space-y-3">
         <label className="text-[13px] font-bold text-slate-900 uppercase tracking-wider">
-          Material: <span className="text-[#FF4D00] ml-1">{selectedGroupName}</span>
+          Material: <span className="text-[#CC3D00] ml-1">{selectedGroupName}</span>
         </label>
         <div className="flex flex-wrap gap-2">
           {groups.map((group) => (
@@ -111,7 +111,7 @@ export function ProductMaterialSelector({ productSlug, onSelectionChange }: Prop
               className={cn(
                 "px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 border-2",
                 selectedGroupName === group.name
-                  ? "bg-[#FF4D00] border-[#FF4D00] text-white shadow-lg shadow-orange-200"
+                  ? "bg-[#CC3D00] border-[#CC3D00] text-white shadow-lg shadow-orange-200"
                   : "bg-white border-slate-100 text-slate-600 hover:border-slate-200"
               )}
             >
@@ -125,7 +125,7 @@ export function ProductMaterialSelector({ productSlug, onSelectionChange }: Prop
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <label className="text-[13px] font-bold text-slate-900 uppercase tracking-wider">
-            Colour: <span className="text-[#FF4D00] ml-1">{currentOption?.name || "Select"}</span>
+            Colour: <span className="text-[#CC3D00] ml-1">{currentOption?.name || "Select"}</span>
           </label>
         </div>
         
@@ -140,7 +140,7 @@ export function ProductMaterialSelector({ productSlug, onSelectionChange }: Prop
                 onClick={() => handleOptionSelect(option)}
                 className={cn(
                   "group relative h-12 w-12 rounded-full flex items-center justify-center transition-all duration-300 ring-offset-4",
-                  isSelected ? "ring-2 ring-[#FF4D00] scale-110 shadow-lg" : "hover:scale-105 active:scale-95",
+                  isSelected ? "ring-2 ring-[#CC3D00] scale-110 shadow-lg" : "hover:scale-105 active:scale-95",
                   !inStock && "opacity-50"
                 )}
                 title={`${option.name} ${inStock ? "" : "(Out of stock)"}`}

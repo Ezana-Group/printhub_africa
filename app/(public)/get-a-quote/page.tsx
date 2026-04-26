@@ -574,7 +574,7 @@ export default function GetAQuotePage() {
                               className={cn(
                                 "rounded-full px-5 py-2 text-sm font-medium transition-all",
                                 hasBrandLogo === true
-                                  ? "bg-[#FF4D00] text-white"
+                                  ? "bg-[#CC3D00] text-white"
                                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                               )}
                             >
@@ -589,7 +589,7 @@ export default function GetAQuotePage() {
                               className={cn(
                                 "rounded-full px-5 py-2 text-sm font-medium transition-all",
                                 hasBrandLogo === false
-                                  ? "bg-[#FF4D00] text-white"
+                                  ? "bg-[#CC3D00] text-white"
                                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                               )}
                             >

@@ -27,7 +27,7 @@ export default function Error({
         )}
         <div className="flex flex-col gap-2 mt-4">
           <button onClick={reset}
-            className="flex items-center justify-center gap-2 w-full py-2.5 bg-[#FF4D00] text-white rounded-xl text-sm font-medium">
+            className="flex items-center justify-center gap-2 w-full py-2.5 bg-[#CC3D00] text-white rounded-xl text-sm font-medium">
             <RefreshCw className="w-4 h-4" /> Try again
           </button>
           <a href="https://wa.me/254727410320" target="_blank"

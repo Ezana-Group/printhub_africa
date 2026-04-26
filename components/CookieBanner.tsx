@@ -104,8 +104,12 @@ export function CookieBanner() {
           <div className="container max-w-4xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">
               We use cookies to improve your experience.{" "}
-              <Link href="/cookie-policy" className="text-primary hover:underline">
-                Learn more
+              <Link
+                href="/cookie-policy"
+                className="text-primary hover:underline"
+                aria-label="Learn more about our cookie policy"
+              >
+                Learn more about our cookie policy
               </Link>
             </p>
             <div className="flex flex-wrap gap-2 shrink-0">

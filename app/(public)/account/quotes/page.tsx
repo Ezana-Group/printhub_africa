@@ -55,7 +55,7 @@ export default async function QuotesPage({
         </div>
         <Link
           href="/get-a-quote"
-          className="bg-[#FF4D00] hover:bg-[#e64400] text-white px-4 py-2 rounded-lg text-sm font-medium transition"
+          className="bg-[#CC3D00] hover:bg-[#e64400] text-white px-4 py-2 rounded-lg text-sm font-medium transition"
         >
           + New Quote
         </Link>

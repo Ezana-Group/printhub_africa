@@ -29,7 +29,7 @@ export default function QuotesError({
             : 'Something went wrong loading your quotes. Please try again.'}
         </p>
         <div className="flex gap-3 justify-center">
-          <Button onClick={reset} className="bg-[#FF4D00] text-white">
+          <Button onClick={reset} className="bg-[#CC3D00] text-white">
             Try again
           </Button>
           <Button variant="outline" onClick={() => (window.location.href = '/account')}>

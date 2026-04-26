@@ -123,9 +123,9 @@ export function FeaturedProductsClient({ products, gridCols = 4 }: { products: F
       <div className="container max-w-7xl mx-auto px-4 md:px-6 lg:px-8">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <span className="mb-3 block h-[3px] w-10 rounded-[2px] bg-[#FF4D00]" />
+            <span className="mb-3 block h-[3px] w-10 rounded-[2px] bg-[#CC3D00]" />
           </div>
-          <Link href="/shop" className="text-[15px] font-medium text-[#FF4D00] hover:underline">
+          <Link href="/shop" className="text-[15px] font-medium text-[#CC3D00] hover:underline">
             View all products →
           </Link>
         </div>
@@ -138,7 +138,7 @@ export function FeaturedProductsClient({ products, gridCols = 4 }: { products: F
               onClick={() => setActiveTab(tab.id)}
               className={`whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
                 activeTab === tab.id
-                  ? "bg-[#FF4D00] text-white shadow-sm"
+                  ? "bg-[#CC3D00] text-white shadow-sm"
                   : "hover:brightness-95"
               }`}
               style={
@@ -187,10 +187,10 @@ export function FeaturedProductsClient({ products, gridCols = 4 }: { products: F
                       </span>
                       <span>{p.etaLabel ?? "Delivery in 2-5 days"}</span>
                     </div>
-                    <p className="mt-3 text-lg font-bold text-[#FF4D00]">{formatPrice(p.basePrice)}</p>
+                    <p className="mt-3 text-lg font-bold text-[#CC3D00]">{formatPrice(p.basePrice)}</p>
                     <Button
                       size="sm"
-                      className="mt-3 w-full rounded-xl bg-[#FF4D00] text-white hover:bg-[#FF4D00]/90"
+                      className="mt-3 w-full rounded-xl bg-[#CC3D00] text-white hover:bg-[#CC3D00]/90"
                       onClick={() => handleAddToCart(p)}
                       disabled={p.stock < 1}
                       aria-label={`Add ${p.name} to cart`}
@@ -214,7 +214,7 @@ export function FeaturedProductsClient({ products, gridCols = 4 }: { products: F
           ) : (
             <div
               className="col-span-full rounded-2xl px-8 py-[60px] text-center text-white"
-              style={{ background: "linear-gradient(135deg, #FF4D00 0%, #FF8C42 100%)" }}
+              style={{ background: "linear-gradient(135deg, #CC3D00 0%, #FF8C42 100%)" }}
             >
               <Cuboid className="mx-auto h-12 w-12 text-white" />
               <h3 className="mt-4 text-2xl font-bold text-white">Products Coming Soon</h3>
@@ -223,7 +223,7 @@ export function FeaturedProductsClient({ products, gridCols = 4 }: { products: F
               </p>
               <button
                 type="button"
-                className="mt-6 rounded-xl border border-white bg-transparent px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-white hover:text-[#FF4D00]"
+                className="mt-6 rounded-xl border border-white bg-transparent px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-white hover:text-[#CC3D00]"
               >
                 Get Notified
               </button>

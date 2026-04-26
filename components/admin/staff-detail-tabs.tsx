@@ -880,7 +880,7 @@ export function StaffDetailTabs({
                     <XAxis dataKey="week" tick={{ fontSize: 12 }} />
                     <YAxis tick={{ fontSize: 12 }} />
                     <Tooltip />
-                    <Bar dataKey="orders" fill="#FF4D00" name="Orders" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="orders" fill="#CC3D00" name="Orders" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="quotes" fill="#00C896" name="Quotes" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>

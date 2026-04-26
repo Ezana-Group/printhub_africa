@@ -176,7 +176,7 @@ export function EditHardwareModal({ machine, open, onClose, onSaved }: EditHardw
           onChange={(e) => setForm((f) => ({ ...f, [name]: type === "number" ? (e.target.value === "" ? (name === "setupTimeHours" ? 0.25 : 0) : Number(e.target.value)) : e.target.value }))}
           step={step}
           min={min}
-          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF4D00]/20 focus:border-[#FF4D00] pr-12"
+          className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC3D00]/20 focus:border-[#CC3D00] pr-12"
         />
         {suffix && (
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">{suffix}</span>
@@ -217,7 +217,7 @@ export function EditHardwareModal({ machine, open, onClose, onSaved }: EditHardw
               <select
                 value={form.status}
                 onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF4D00]/20 focus:border-[#FF4D00]"
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC3D00]/20 focus:border-[#CC3D00]"
               >
                 <option value="ACTIVE">Active</option>
                 <option value="IDLE">Idle</option>
@@ -280,9 +280,9 @@ export function EditHardwareModal({ machine, open, onClose, onSaved }: EditHardw
               <Field label="Insurance policy ref" name="insurancePolicyRef" />
             </div>
             {totalCostPerHr != null && (
-              <div className="mt-4 p-4 bg-orange-50 border border-[#FF4D00]/20 rounded-xl">
+              <div className="mt-4 p-4 bg-orange-50 border border-[#CC3D00]/20 rounded-xl">
                 <div className="flex items-center gap-2 mb-3">
-                  <Calculator className="w-4 h-4 text-[#FF4D00]" />
+                  <Calculator className="w-4 h-4 text-[#CC3D00]" />
                   <span className="text-sm font-semibold text-gray-900">Live cost preview</span>
                 </div>
                 <div className="grid grid-cols-2 gap-y-1.5 text-sm">
@@ -292,8 +292,8 @@ export function EditHardwareModal({ machine, open, onClose, onSaved }: EditHardw
                   <span className="font-mono font-medium text-right">KES {maintenancePerHr}/hr</span>
                   <span className="text-gray-500">Electricity (est.)</span>
                   <span className="font-mono font-medium text-right">KES {electricityPerHr}/hr</span>
-                  <span className="font-semibold text-gray-900 border-t border-[#FF4D00]/20 pt-1.5">Machine total</span>
-                  <span className="font-mono font-bold text-[#FF4D00] border-t border-[#FF4D00]/20 pt-1.5 text-right">KES {totalCostPerHr}/hr</span>
+                  <span className="font-semibold text-gray-900 border-t border-[#CC3D00]/20 pt-1.5">Machine total</span>
+                  <span className="font-mono font-bold text-[#CC3D00] border-t border-[#CC3D00]/20 pt-1.5 text-right">KES {totalCostPerHr}/hr</span>
                 </div>
               </div>
             )}
@@ -313,7 +313,7 @@ export function EditHardwareModal({ machine, open, onClose, onSaved }: EditHardw
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               rows={3}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FF4D00]/20 focus:border-[#FF4D00] resize-none"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#CC3D00]/20 focus:border-[#CC3D00] resize-none"
             />
           </div>
 
@@ -325,7 +325,7 @@ export function EditHardwareModal({ machine, open, onClose, onSaved }: EditHardw
           <button type="button" onClick={onClose} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm text-gray-600 hover:bg-gray-50">
             Cancel
           </button>
-          <button type="button" onClick={handleSave} disabled={saving || !form.name.trim()} className="flex-1 bg-[#FF4D00] text-white rounded-xl py-2.5 text-sm font-semibold disabled:opacity-40 hover:bg-[#e04400]">
+          <button type="button" onClick={handleSave} disabled={saving || !form.name.trim()} className="flex-1 bg-[#CC3D00] text-white rounded-xl py-2.5 text-sm font-semibold disabled:opacity-40 hover:bg-[#e04400]">
             {saving ? "Saving..." : "Save Changes"}
           </button>
         </div>

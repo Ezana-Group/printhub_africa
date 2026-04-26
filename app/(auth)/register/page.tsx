@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { getAuthPanelForPublic } from "@/lib/auth-panel";
 import { AuthPage } from "@/components/auth/auth-page";
 
+export const metadata = { robots: { index: false, follow: false } };
+
 // Avoid prerender at build time (no DB in build env); render at request time.
 export const dynamic = "force-dynamic";
 

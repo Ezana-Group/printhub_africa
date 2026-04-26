@@ -20,7 +20,7 @@ export default function CorporateApplyPage() {
     return (
       <div className="max-w-md mx-auto py-16 text-center">
         <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <Building2 className="w-8 h-8 text-[#FF4D00]" />
+          <Building2 className="w-8 h-8 text-[#CC3D00]" />
         </div>
         <h1 className="text-2xl font-bold text-slate-900 mb-3">Apply for a Corporate Account</h1>
         <p className="text-slate-600 mb-6">
@@ -28,7 +28,7 @@ export default function CorporateApplyPage() {
         </p>
         <div className="flex gap-4 justify-center">
           <Link href="/login?callbackUrl=/corporate/apply">
-            <span className="inline-flex items-center justify-center rounded-lg bg-[#FF4D00] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#e64500]">
+            <span className="inline-flex items-center justify-center rounded-lg bg-[#CC3D00] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#e64500]">
               Log in
             </span>
           </Link>
@@ -49,7 +49,7 @@ export default function CorporateApplyPage() {
         <p className="text-slate-600 max-w-xl mx-auto mb-3">
           Get dedicated pricing, credit terms, and a single dashboard for your organisation&apos;s printing needs.
         </p>
-        <Link href="/corporate/apply/status" className="text-sm text-[#FF4D00] hover:underline">
+        <Link href="/corporate/apply/status" className="text-sm text-[#CC3D00] hover:underline">
           Already applied? Check your application status
         </Link>
       </div>

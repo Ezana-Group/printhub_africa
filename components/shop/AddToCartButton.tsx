@@ -121,13 +121,13 @@ export function AddToCartButton({
                 className={cn(
                   "flex flex-col p-4 rounded-2xl border-2 text-left transition-all duration-200",
                   variantId === v.id 
-                    ? "border-[#FF4D00] bg-orange-50/30 ring-1 ring-[#FF4D00]" 
+                    ? "border-[#CC3D00] bg-orange-50/30 ring-1 ring-[#CC3D00]" 
                     : "border-slate-100 hover:border-slate-200 bg-white",
                   v.stock < 1 && "opacity-50 grayscale cursor-not-allowed"
                 )}
               >
                 <span className="text-sm font-bold text-slate-900">{v.name}</span>
-                <span className="text-xs font-medium text-[#FF4D00] mt-1">KES {v.price.toLocaleString()}</span>
+                <span className="text-xs font-medium text-[#CC3D00] mt-1">KES {v.price.toLocaleString()}</span>
               </button>
             ))}
           </div>
@@ -142,7 +142,7 @@ export function AddToCartButton({
               type="button"
               onClick={() => setQuantity((q) => Math.max(minOrderQty, q - 1))}
               disabled={quantity <= minOrderQty}
-              className="flex h-12 w-12 items-center justify-center rounded-xl text-slate-500 hover:bg-white hover:text-[#FF4D00] hover:shadow-sm transition-all disabled:opacity-30 disabled:hover:bg-transparent"
+              className="flex h-12 w-12 items-center justify-center rounded-xl text-slate-500 hover:bg-white hover:text-[#CC3D00] hover:shadow-sm transition-all disabled:opacity-30 disabled:hover:bg-transparent"
               aria-label="Decrease quantity"
             >
               <Minus className="h-5 w-5" />
@@ -159,7 +159,7 @@ export function AddToCartButton({
               type="button"
               onClick={() => setQuantity((q) => Math.min(effectiveMax, q + 1))}
               disabled={quantity >= effectiveMax}
-              className="flex h-12 w-12 items-center justify-center rounded-xl text-slate-500 hover:bg-white hover:text-[#FF4D00] hover:shadow-sm transition-all disabled:opacity-30"
+              className="flex h-12 w-12 items-center justify-center rounded-xl text-slate-500 hover:bg-white hover:text-[#CC3D00] hover:shadow-sm transition-all disabled:opacity-30"
               aria-label="Increase quantity"
             >
               <Plus className="h-5 w-5" />
@@ -181,7 +181,7 @@ export function AddToCartButton({
             "h-14 rounded-2xl font-bold text-base transition-all duration-300 gap-2 shadow-lg shadow-orange-100",
             added 
               ? "bg-emerald-500 hover:bg-emerald-600 scale-[0.98]" 
-              : "bg-[#FF4D00] hover:bg-[#E64500] hover:scale-[1.02] active:scale-95 text-white"
+              : "bg-[#CC3D00] hover:bg-[#E64500] hover:scale-[1.02] active:scale-95 text-white"
           )}
         >
           {added ? (
