@@ -32,15 +32,20 @@ export default async function AdminSettingsIntegrationsPage() {
     googleBusinessConnected: !!googleToken,
   };
 
-  const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://printhub.africa"}/api/webhooks`;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://printhub.africa";
+  const webhookUrl = `${appUrl}/api/webhooks`;
+
+  // WhatsApp Express service URL — used to build the Meta webhook callback URL
+  const whatsappServiceUrl = (process.env.WHATSAPP_SERVICE_URL ?? "").replace(/\/$/, "");
 
   return (
     <div className="space-y-6">
       <h1 className="font-display text-2xl font-bold">Integrations</h1>
-      <IntegrationsClient 
-        initialData={initialData} 
-        webhookUrl={webhookUrl} 
+      <IntegrationsClient
+        initialData={initialData}
+        webhookUrl={webhookUrl}
         isSuperAdmin={isSuperAdmin}
+        whatsappServiceUrl={whatsappServiceUrl}
       />
     </div>
   );

@@ -43,7 +43,7 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   try {
     await requireAdminSettings();
-    const { slug, name, description, bodyText } = await req.json();
+    const { slug, name, description, bodyText, status } = await req.json();
 
     if (!slug) {
       return NextResponse.json({ error: "Slug is required" }, { status: 400 });
@@ -55,6 +55,7 @@ export async function PATCH(req: Request) {
         name,
         description,
         bodyText,
+        ...(status ? { status } : {}),
       },
     });
 

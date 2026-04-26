@@ -95,7 +95,7 @@ async function seedProduction() {
 
   const departments = [
     { name: "Management", colour: "#0A0A0A", sortOrder: 1 },
-    { name: "Production", colour: "#FF4D00", sortOrder: 2 },
+    { name: "Production", colour: "#CC3D00", sortOrder: 2 },
     { name: "Design", colour: "#7C3AED", sortOrder: 3 },
     { name: "Sales", colour: "#059669", sortOrder: 4 },
     { name: "Delivery", colour: "#2563EB", sortOrder: 5 },

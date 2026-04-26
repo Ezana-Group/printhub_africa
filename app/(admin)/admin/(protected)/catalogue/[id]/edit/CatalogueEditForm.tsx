@@ -332,7 +332,7 @@ export function CatalogueEditForm({
             onClick={() => setTab(t.id)}
             className={`px-4 py-2 text-sm font-medium rounded-t-lg transition ${
               tab === t.id
-                ? "bg-slate-100 text-slate-900 border-b-2 border-[#FF4D00] -mb-px"
+                ? "bg-slate-100 text-slate-900 border-b-2 border-[#CC3D00] -mb-px"
                 : "text-slate-500 hover:text-slate-700"
             }`}
           >
@@ -510,7 +510,7 @@ export function CatalogueEditForm({
                     <div
                       className={`rounded-xl overflow-hidden border-2 ${
                         photo.isPrimary
-                          ? "border-[#FF4D00]"
+                          ? "border-[#CC3D00]"
                           : "border-transparent"
                       }`}
                     >
@@ -522,7 +522,7 @@ export function CatalogueEditForm({
                       />
                     </div>
                     {photo.isPrimary && (
-                      <span className="absolute top-2 left-2 bg-[#FF4D00] text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                      <span className="absolute top-2 left-2 bg-[#CC3D00] text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                         MAIN
                       </span>
                     )}
@@ -640,7 +640,7 @@ export function CatalogueEditForm({
                       <div key={i} className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
-                            <Box className="w-4 h-4 text-[#FF4D00]" />
+                            <Box className="w-4 h-4 text-[#CC3D00]" />
                           </div>
                           <div>
                             <p className="text-sm font-medium text-slate-900 truncate max-w-[200px]">

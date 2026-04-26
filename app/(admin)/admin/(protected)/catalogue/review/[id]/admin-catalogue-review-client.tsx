@@ -266,7 +266,7 @@ export function AdminCatalogueReviewClient({ importItem, categories }: AdminCata
               <Button variant="destructive" onClick={() => setShowRejectDialog(true)} disabled={isRejecting}>
                 <TrashIcon className="w-4 h-4 mr-2" /> Reject
               </Button>
-              <Button className="bg-[#FF4D00] hover:bg-[#E64500]" onClick={handleApprove} disabled={isApproving}>
+              <Button className="bg-[#CC3D00] hover:bg-[#E64500]" onClick={handleApprove} disabled={isApproving}>
                 {isApproving ? <Loader2Icon className="w-4 h-4 animate-spin mr-2" /> : <CheckIcon className="w-4 h-4 mr-2" />}
                 Approve & Publish
               </Button>

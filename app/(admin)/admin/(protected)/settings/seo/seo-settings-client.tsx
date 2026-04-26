@@ -214,7 +214,7 @@ export function SeoSettingsClient() {
                 type="button"
                 onClick={() => save()}
                 disabled={saving}
-                className="bg-[#FF4D00] hover:bg-[#E64500] text-white"
+                className="bg-[#CC3D00] hover:bg-[#E64500] text-white"
               >
                 {saving ? "Saving…" : "Save SEO Settings"}
               </Button>

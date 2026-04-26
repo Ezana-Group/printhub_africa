@@ -6,14 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, ArrowLeft, Save, Search, Info, ExternalLink, MessageSquare, Briefcase, UserCircle, Calculator, Check, Phone, GripVertical } from "lucide-react";
+import { Loader2, ArrowLeft, Save, Search, Info, ExternalLink, MessageSquare, Briefcase, UserCircle, Calculator, Check, Phone, GripVertical, UploadCloud } from "lucide-react";
 import Link from "next/link";
 import { AdminBreadcrumbs } from "@/components/admin/admin-breadcrumbs";
 
 export default function WhatsAppTemplateEditPage({ 
   template 
 }: { 
-  template: { slug: string, name: string, description: string | null, bodyText: string, category: string | null } 
+  template: { slug: string, name: string, description: string | null, bodyText: string, category: string | null, status?: string | null } 
 }) {
   const router = useRouter();
   const [name, setName] = useState(template.name);
@@ -24,6 +24,9 @@ export default function WhatsAppTemplateEditPage({
   const [searchTerm, setSearchTerm] = useState("");
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [publishing, setPublishing] = useState(false);
+  const [publishResult, setPublishResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [publishMap, setPublishMap] = useState<Array<{ name: string; index: number; sample: string }>>([]);
 
   const bodyRef = useRef<HTMLTextAreaElement>(null);
 
@@ -166,6 +169,57 @@ export default function WhatsAppTemplateEditPage({
     }
   };
 
+  const handlePublishToMeta = async () => {
+    setPublishing(true);
+    setPublishResult(null);
+    setPublishMap([]);
+    try {
+      // Save latest local edits first to keep DB and publish payload in sync.
+      const saveRes = await fetch(`/api/admin/content/templates/whatsapp`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug: template.slug, name, description, bodyText }),
+      });
+      if (!saveRes.ok) throw new Error("Failed to save template before publish");
+
+      const publishRes = await fetch(`/api/admin/whatsapp/templates/publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug: template.slug,
+          name,
+          category: template.category || "UTILITY",
+          bodyText,
+          languageCode: "en_US",
+        }),
+      });
+      const publishData = await publishRes.json();
+      if (!publishRes.ok) {
+        throw new Error(publishData.error || "Failed to publish template to Meta");
+      }
+
+      await fetch(`/api/admin/content/templates/whatsapp`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug: template.slug,
+          status: "SUBMITTED_TO_META",
+        }),
+      });
+
+      setPublishMap(Array.isArray(publishData.variableMap) ? publishData.variableMap : []);
+      setPublishResult({
+        ok: true,
+        text: `Published to Meta as "${publishData.metaName || template.slug}" (${publishData.status || "PENDING"})`,
+      });
+      router.refresh();
+    } catch (err: any) {
+      setPublishResult({ ok: false, text: err.message || "Publish failed" });
+    } finally {
+      setPublishing(false);
+    }
+  };
+
 
   return (
     <div className="p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
@@ -185,6 +239,10 @@ export default function WhatsAppTemplateEditPage({
         <div className="flex items-center gap-3">
           {message === "saved" && <span className="text-sm text-green-600 font-medium">Changes saved!</span>}
           {message === "error" && <span className="text-sm text-red-600 font-medium">Error saving.</span>}
+          <Button onClick={handlePublishToMeta} disabled={publishing || saving} variant="outline" className="gap-2">
+            {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
+            Publish to Meta
+          </Button>
           <Button onClick={handleSave} disabled={saving} className="gap-2">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Save Changes
@@ -202,6 +260,32 @@ export default function WhatsAppTemplateEditPage({
             </div>
             
             <div className="p-6 space-y-6">
+              {publishResult && (
+                <div
+                  className={`rounded-md border px-3 py-2 text-sm ${
+                    publishResult.ok
+                      ? "border-green-200 bg-green-50 text-green-700"
+                      : "border-red-200 bg-red-50 text-red-700"
+                  }`}
+                >
+                  {publishResult.ok ? "✓ " : "✗ "}
+                  {publishResult.text}
+                </div>
+              )}
+
+              {publishMap.length > 0 && (
+                <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs font-semibold text-slate-700 mb-2">Meta variable mapping</p>
+                  <div className="space-y-1">
+                    {publishMap.map((v) => (
+                      <p key={v.name} className="text-xs text-slate-600 font-mono">
+                        {`{{${v.name}}} -> {{${v.index}}}`}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="name">Display Name</Label>

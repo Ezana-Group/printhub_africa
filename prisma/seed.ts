@@ -100,7 +100,7 @@ async function main() {
   // Default departments (admin-managed list for staff invite/edit)
   const defaultDepartments = [
     { name: "Management", description: "Directors, managers, and senior leadership", colour: "#0A0A0A", sortOrder: 1 },
-    { name: "Production", description: "Print operators, machine operators, 3D print technicians", colour: "#FF4D00", sortOrder: 2 },
+    { name: "Production", description: "Print operators, machine operators, 3D print technicians", colour: "#CC3D00", sortOrder: 2 },
     { name: "Design", description: "Graphic designers, pre-press, file preparation", colour: "#7C3AED", sortOrder: 3 },
     { name: "Sales", description: "Sales representatives and account executives", colour: "#059669", sortOrder: 4 },
     { name: "Delivery", description: "Riders, drivers, logistics, and dispatch", colour: "#2563EB", sortOrder: 5 },

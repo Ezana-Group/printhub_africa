@@ -52,7 +52,7 @@ export default function AdminError({
         </Button>
         <Button 
           onClick={() => reset()}
-          className="bg-[#FF4D00] hover:bg-[#E64500] text-white"
+          className="bg-[#CC3D00] hover:bg-[#E64500] text-white"
         >
           <RefreshCcw className="mr-2 h-4 w-4" />
           Try again

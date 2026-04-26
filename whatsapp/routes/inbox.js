@@ -11,14 +11,44 @@
 const express      = require('express');
 const router       = express.Router();
 const { requireAuth } = require('./auth');
+const axios = require('axios');
 
 const Message      = require('../models/Message');
 const Conversation = require('../models/Conversation');
 const Customer     = require('../models/Customer');
 const { sendText } = require('../services/sendMessage');
+const config = require('../config/whatsapp.config');
 
 // All inbox routes require auth
 router.use(requireAuth);
+
+function normalizeTemplateName(input = '') {
+  return String(input)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .substring(0, 512);
+}
+
+function mapBodyToMetaVariables(bodyText = '') {
+  const namedVars = [];
+  const transformed = String(bodyText).replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g, (_match, key) => {
+    const existingIdx = namedVars.indexOf(key);
+    const idx = existingIdx === -1 ? namedVars.push(key) : existingIdx + 1;
+    return `{{${idx}}}`;
+  });
+
+  return {
+    transformed,
+    variables: namedVars.map((name, i) => ({
+      name,
+      index: i + 1,
+      sample: `Sample ${name}`,
+    })),
+  };
+}
 
 // ─── GET /api/inbox/conversations ─────────────────────────────────────────────
 
@@ -134,6 +164,78 @@ router.post('/send', async (req, res) => {
   } catch (err) {
     console.error('[inbox/send]', err.message);
     res.status(500).json({ error: 'Send failed' });
+  }
+});
+
+// ─── POST /api/inbox/templates/publish ────────────────────────────────────────
+// Publishes a WhatsApp template to Meta Graph API.
+router.post('/templates/publish', async (req, res) => {
+  try {
+    const { slug, name, category, bodyText, languageCode = 'en_US' } = req.body || {};
+
+    if (!slug || !name || !bodyText) {
+      return res.status(400).json({ error: 'slug, name and bodyText are required' });
+    }
+
+    const templateName = normalizeTemplateName(slug || name);
+    if (!templateName) {
+      return res.status(400).json({ error: 'Template name is invalid after normalization' });
+    }
+
+    const metaCategory = String(category || 'UTILITY').toUpperCase();
+    const allowedCategories = ['MARKETING', 'UTILITY', 'AUTHENTICATION'];
+    if (!allowedCategories.includes(metaCategory)) {
+      return res.status(400).json({
+        error: `Invalid category "${metaCategory}". Allowed: ${allowedCategories.join(', ')}`,
+      });
+    }
+
+    const { transformed, variables } = mapBodyToMetaVariables(bodyText);
+    const bodyComponent = {
+      type: 'BODY',
+      text: transformed,
+      ...(variables.length
+        ? { example: { body_text: [variables.map((v) => v.sample)] } }
+        : {}),
+    };
+
+    const payload = {
+      name: templateName,
+      language: String(languageCode || 'en_US'),
+      category: metaCategory,
+      components: [bodyComponent],
+    };
+
+    const { data } = await axios.post(
+      `${config.baseUrl}/${config.businessAccountId}/message_templates`,
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${config.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 15000,
+      }
+    );
+
+    return res.json({
+      success: true,
+      status: data?.status || 'PENDING',
+      metaTemplateId: data?.id || null,
+      metaName: data?.name || templateName,
+      variableMap: variables,
+      transformedBodyText: transformed,
+      raw: data,
+    });
+  } catch (err) {
+    const apiError = err?.response?.data?.error;
+    const message = apiError?.message || err.message || 'Meta publish failed';
+    const code = apiError?.code || null;
+    return res.status(502).json({
+      error: message,
+      code,
+      details: apiError || null,
+    });
   }
 });
 

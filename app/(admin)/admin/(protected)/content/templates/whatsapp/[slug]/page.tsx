@@ -27,6 +27,7 @@ export default async function WhatsAppEditPage({
         description: template.description,
         bodyText: template.bodyText,
         category: template.category,
+        status: template.status,
       }} 
     />
   );
