@@ -190,6 +190,15 @@ export default function WhatsAppInboxPage() {
     );
   }, [search, conversations]);
 
+  // Auto-open the most recent conversation on first load.
+  useEffect(() => {
+    if (!activePhone && conversations.length > 0) {
+      openConversation(conversations[0].customerPhone);
+    }
+    // Intentionally only reacts to conversation list updates.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversations, activePhone]);
+
   // ── Mount: load convs + start list-poll ─────────────────────────────────
   useEffect(() => {
     loadConversations();
