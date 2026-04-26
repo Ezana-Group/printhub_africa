@@ -17,6 +17,7 @@ const Message      = require('../models/Message');
 const Conversation = require('../models/Conversation');
 const Customer     = require('../models/Customer');
 const { sendText } = require('../services/sendMessage');
+const { sendMessengerText, sendInstagramText } = require('../services/metaMessaging');
 const config = require('../config/whatsapp.config');
 
 // All inbox routes require auth
@@ -134,33 +135,97 @@ router.post('/conversations/:phone/read', async (req, res) => {
 
 router.post('/send', async (req, res) => {
   try {
-    const { to, message } = req.body;
+    const { to, message, channel, conversationId } = req.body;
 
     if (!to || !message) {
       return res.status(400).json({ error: 'to and message are required' });
     }
 
-    const phone = to.replace(/\D/g, ''); // strip non-digits
-    if (!phone || phone.length < 10) {
-      return res.status(400).json({ error: 'Invalid phone number' });
-    }
-
+    const rawTo = String(to).trim();
+    const phone = rawTo.replace(/\D/g, ''); // strip non-digits for whatsapp
     const text = String(message).trim().substring(0, 4096);
     if (!text) return res.status(400).json({ error: 'Message cannot be empty' });
 
-    const result = await sendText(phone, text);
+    let resolvedChannel = String(channel || '').toLowerCase();
+    if (!resolvedChannel && conversationId) {
+      const conversationFromId = await Conversation.findById(conversationId).lean();
+      resolvedChannel = conversationFromId?.channel || 'whatsapp';
+    }
+    if (!resolvedChannel) {
+      const existingConversation = await Conversation.findOne({ customerPhone: rawTo }).lean();
+      resolvedChannel = existingConversation?.channel || 'whatsapp';
+    }
+
+    if (resolvedChannel === 'whatsapp' && (!phone || phone.length < 10)) {
+      return res.status(400).json({ error: 'Invalid phone number' });
+    }
+    if (resolvedChannel !== 'whatsapp' && !rawTo) {
+      return res.status(400).json({ error: 'Invalid recipient id' });
+    }
+
+    let result;
+    let recipient = phone;
+    if (resolvedChannel === 'messenger') {
+      recipient = rawTo;
+      result = await sendMessengerText(recipient, text);
+    } else if (resolvedChannel === 'instagram') {
+      if (!config.instagramBusinessAccountId) {
+        return res.status(503).json({ error: 'INSTAGRAM_BUSINESS_ACCOUNT_ID is not configured' });
+      }
+      recipient = rawTo;
+      result = await sendInstagramText(recipient, text);
+    } else {
+      result = await sendText(phone, text);
+      recipient = phone;
+    }
 
     if (!result.success) {
       return res.status(502).json({ error: result.error || 'WhatsApp API error' });
     }
 
     // Mark agent as active → suppress auto-reply for 30 min
-    const conversation = await Conversation.findOne({ customerPhone: phone });
+    let conversation = await Conversation.findOne({ customerPhone: recipient });
+    if (!conversation) {
+      let customer = await Customer.findOne({ phone: recipient });
+      if (!customer) {
+        customer = await Customer.create({ phone: recipient, name: recipient });
+      }
+      conversation = await Conversation.create({
+        customerId: customer._id,
+        customerPhone: recipient,
+        customerName: customer.name || recipient,
+        channel: resolvedChannel,
+        lastDirection: 'outbound',
+        lastMessage: text.substring(0, 80),
+        lastMessageAt: new Date(),
+      });
+    }
     if (conversation) {
+      if (resolvedChannel !== 'whatsapp') {
+        await Message.create({
+          messageId: result.messageId || null,
+          conversationId: conversation._id,
+          customerId: conversation.customerId,
+          from: resolvedChannel === 'instagram' ? config.instagramBusinessAccountId : config.metaPageId || 'meta-page',
+          to: recipient,
+          channel: resolvedChannel,
+          direction: 'outbound',
+          type: 'text',
+          content: text,
+          status: 'sent',
+        });
+        await Conversation.findByIdAndUpdate(conversation._id, {
+          channel: resolvedChannel,
+          lastMessage: text.substring(0, 80),
+          lastMessageAt: new Date(),
+          lastDirection: 'outbound',
+          $inc: { totalMessages: 1 },
+        });
+      }
       await conversation.setAgentActive(30);
     }
 
-    res.json({ success: true, messageId: result.messageId });
+    res.json({ success: true, messageId: result.messageId, channel: resolvedChannel });
   } catch (err) {
     console.error('[inbox/send]', err.message);
     res.status(500).json({ error: 'Send failed' });

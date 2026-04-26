@@ -36,6 +36,7 @@ async function saveOutbound({ to, type, content, mediaId, mediaUrl, messageId, s
         customerId: customer._id,
         customerPhone: to,
         customerName: customer.name,
+        channel: 'whatsapp',
       });
     }
 
@@ -47,6 +48,7 @@ async function saveOutbound({ to, type, content, mediaId, mediaUrl, messageId, s
       customerId: customer._id,
       from: config.phoneNumber,
       to,
+      channel: 'whatsapp',
       direction: 'outbound',
       type,
       content: content || '',

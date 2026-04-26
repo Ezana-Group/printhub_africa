@@ -10,6 +10,12 @@ const conversationSchema = new mongoose.Schema(
     },
     customerPhone: { type: String, required: true, unique: true, trim: true },
     customerName:  { type: String, default: 'Unknown', trim: true },
+    channel: {
+      type: String,
+      enum: ['whatsapp', 'messenger', 'instagram'],
+      default: 'whatsapp',
+      index: true,
+    },
     // Last message preview for the conversation list
     lastMessage:   { type: String, default: '' },
     lastMessageAt: { type: Date, default: Date.now },

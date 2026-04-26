@@ -15,6 +15,7 @@ const path       = require('path');
 const rateLimit  = require('express-rate-limit');
 
 const webhookRouter         = require('./routes/webhook');
+const metaWebhookRouter     = require('./routes/metaWebhook');
 const inboxRouter           = require('./routes/inbox');
 const { router: authRouter } = require('./routes/auth');
 
@@ -88,6 +89,7 @@ app.get('/whatsapp-inbox/*', (_req, res) => {
 
 // ─── API routes ───────────────────────────────────────────────────────────────
 app.use('/webhook',       webhookRouter);
+app.use('/webhook/meta',  metaWebhookRouter);
 app.use('/api/auth',      authLimiter, authRouter);
 app.use('/api/inbox',     sendLimiter, inboxRouter);
 

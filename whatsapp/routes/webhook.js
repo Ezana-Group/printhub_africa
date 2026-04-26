@@ -141,6 +141,7 @@ async function handleIncomingMessage(message, contacts) {
       customerId: customer._id,
       customerPhone: from,
       customerName: customer.name || from,
+      channel: 'whatsapp',
     });
   }
 
@@ -154,6 +155,7 @@ async function handleIncomingMessage(message, contacts) {
     customerId: customer._id,
     from,
     to: config.phoneNumber.replace('+', ''),
+    channel: 'whatsapp',
     direction: 'inbound',
     type,
     content,
@@ -168,6 +170,7 @@ async function handleIncomingMessage(message, contacts) {
   // ── Update Conversation ───────────────────────────────────────────────────
   const preview = content ? content.substring(0, 80) : `[${type}]`;
   await Conversation.findByIdAndUpdate(conversation._id, {
+    channel: 'whatsapp',
     lastMessage: preview,
     lastMessageAt: new Date(waTimestamp * 1000),
     lastDirection: 'inbound',

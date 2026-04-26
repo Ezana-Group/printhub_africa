@@ -21,6 +21,12 @@ const messageSchema = new mongoose.Schema(
     },
     from: { type: String, required: true, trim: true },
     to:   { type: String, required: true, trim: true },
+    channel: {
+      type: String,
+      enum: ['whatsapp', 'messenger', 'instagram'],
+      default: 'whatsapp',
+      index: true,
+    },
     direction: {
       type: String,
       enum: ['inbound', 'outbound'],

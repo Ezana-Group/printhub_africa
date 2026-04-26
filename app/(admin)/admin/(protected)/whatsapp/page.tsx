@@ -26,8 +26,10 @@ import { cn } from "@/lib/utils";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Conversation {
+  _id?: string;
   customerPhone: string;
   customerName: string;
+  channel?: "whatsapp" | "messenger" | "instagram";
   lastMessage: string;
   lastMessageAt: string;
   lastDirection: "inbound" | "outbound";
@@ -42,6 +44,7 @@ interface Message {
   content: string;
   status: "pending" | "sent" | "delivered" | "read" | "failed";
   createdAt: string;
+  channel?: "whatsapp" | "messenger" | "instagram";
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -122,6 +125,8 @@ export default function WhatsAppInboxPage() {
   const [activePhone, setActivePhone]     = useState<string | null>(null);
   const [messages, setMessages]           = useState<Message[]>([]);
   const [activeName, setActiveName]       = useState("");
+  const [activeChannel, setActiveChannel] = useState<"whatsapp" | "messenger" | "instagram">("whatsapp");
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [agentActive, setAgentActive]     = useState(false);
   const [compose, setCompose]             = useState("");
   const [sending, setSending]             = useState(false);
@@ -228,6 +233,8 @@ export default function WhatsAppInboxPage() {
     try {
       const data = await apiFetch(`conversations/${phone}?limit=60`);
       setActiveName(data.conversation?.customerName ?? phone);
+      setActiveChannel(data.conversation?.channel ?? "whatsapp");
+      setActiveConversationId(data.conversation?._id ?? null);
       setAgentActive(!!data.conversation?.agentActive);
       const msgs: Message[] = data.messages ?? [];
       setMessages(msgs);
@@ -311,7 +318,12 @@ export default function WhatsAppInboxPage() {
     try {
       await apiFetch("send", {
         method: "POST",
-        body: JSON.stringify({ to: activePhone, message: text }),
+        body: JSON.stringify({
+          to: activePhone,
+          message: text,
+          channel: activeChannel,
+          conversationId: activeConversationId,
+        }),
       });
       setAgentActive(true);
       loadConversations(true);
@@ -498,6 +510,9 @@ export default function WhatsAppInboxPage() {
                       <span className="truncate text-sm font-semibold text-foreground">
                         {conv.customerName || conv.customerPhone}
                       </span>
+                      <span className="ml-1 rounded bg-muted px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-muted-foreground">
+                        {(conv.channel || "whatsapp")}
+                      </span>
                       <span className="ml-2 shrink-0 text-[10px] text-muted-foreground">
                         {formatTime(conv.lastMessageAt)}
                       </span>
@@ -561,7 +576,9 @@ export default function WhatsAppInboxPage() {
                 <p className="truncate font-semibold text-sm">
                   {activeName || activePhone}
                 </p>
-                <p className="text-xs opacity-75">+{activePhone}</p>
+                <p className="text-xs opacity-75">
+                  {activeChannel === "whatsapp" ? `+${activePhone}` : activePhone}
+                </p>
               </div>
               {agentActive && (
                 <span className="flex items-center gap-1 rounded-full bg-[#25d366] px-2 py-0.5 text-[10px] font-bold text-[#075e54]">
