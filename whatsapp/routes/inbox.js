@@ -12,6 +12,7 @@ const express      = require('express');
 const router       = express.Router();
 const { requireAuth } = require('./auth');
 const axios = require('axios');
+const rateLimit = require('express-rate-limit');
 
 const Message      = require('../models/Message');
 const Conversation = require('../models/Conversation');
@@ -22,6 +23,15 @@ const config = require('../config/whatsapp.config');
 
 // All inbox routes require auth
 router.use(requireAuth);
+
+// Limit only outbound send actions; reads/polling should not be throttled at this low rate.
+const sendLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Send rate limit exceeded. Max 30 messages/minute.' },
+});
 
 function normalizeTemplateName(input = '') {
   return String(input)
@@ -133,7 +143,7 @@ router.post('/conversations/:phone/read', async (req, res) => {
 
 // ─── POST /api/inbox/send ─────────────────────────────────────────────────────
 
-router.post('/send', async (req, res) => {
+router.post('/send', sendLimiter, async (req, res) => {
   try {
     const { to, message, channel, conversationId } = req.body;
 

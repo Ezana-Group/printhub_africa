@@ -34,12 +34,6 @@ const globalLimiter = rateLimit({
   message: { error: 'Too many requests — please slow down.' },
 });
 
-const sendLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 10, // max 10 outbound sends per minute
-  message: { error: 'Send rate limit exceeded. Max 10 messages/minute.' },
-});
-
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10,
@@ -91,7 +85,7 @@ app.get('/whatsapp-inbox/*', (_req, res) => {
 app.use('/webhook',       webhookRouter);
 app.use('/webhook/meta',  metaWebhookRouter);
 app.use('/api/auth',      authLimiter, authRouter);
-app.use('/api/inbox',     sendLimiter, inboxRouter);
+app.use('/api/inbox',     inboxRouter);
 
 // ─── 404 handler ──────────────────────────────────────────────────────────────
 app.use((_req, res) => {
