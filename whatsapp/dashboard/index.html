@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PrintHub Africa — WhatsApp Inbox</title>
+  <link rel="stylesheet" href="inbox.css" />
+  <meta name="robots" content="noindex, nofollow" />
+</head>
+<body>
+
+<!-- ── Login Screen ──────────────────────────────────────────────────────── -->
+<div id="login-screen" class="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="wa-icon">💬</div>
+      <h1>PrintHub Inbox</h1>
+      <p>WhatsApp Business Dashboard</p>
+    </div>
+    <form id="login-form">
+      <div class="field">
+        <label for="username">Username</label>
+        <input id="username" type="text" autocomplete="username" placeholder="admin" required />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" required />
+      </div>
+      <div id="login-error" class="error-banner" hidden></div>
+      <button type="submit" id="login-btn" class="btn-primary">Sign In</button>
+    </form>
+  </div>
+</div>
+
+<!-- ── App Shell ─────────────────────────────────────────────────────────── -->
+<div id="app" class="app" hidden>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title">
+        <span class="wa-dot"></span>
+        <strong>PrintHub Inbox</strong>
+      </div>
+      <div class="sidebar-actions">
+        <span id="stats-badge" class="stats-badge" title="Total unread"></span>
+        <button id="logout-btn" class="btn-icon" title="Log out">⏻</button>
+      </div>
+    </div>
+
+    <div class="search-wrap">
+      <input id="search-input" type="search" placeholder="Search conversations…" />
+    </div>
+
+    <div id="conversation-list" class="conversation-list">
+      <div class="loading-state">Loading conversations…</div>
+    </div>
+  </aside>
+
+  <!-- Chat panel -->
+  <main class="chat-panel" id="chat-panel">
+
+    <!-- Empty state -->
+    <div id="empty-state" class="empty-state">
+      <div class="empty-icon">💬</div>
+      <h2>Select a conversation</h2>
+      <p>Choose a customer from the list to view and reply to their messages.</p>
+    </div>
+
+    <!-- Active chat -->
+    <div id="active-chat" class="active-chat" hidden>
+
+      <!-- Chat header -->
+      <div class="chat-header">
+        <button id="back-btn" class="btn-icon back-btn" title="Back">←</button>
+        <div class="chat-header-info">
+          <div class="chat-avatar" id="chat-avatar">?</div>
+          <div>
+            <div class="chat-name" id="chat-name">—</div>
+            <div class="chat-phone" id="chat-phone">—</div>
+          </div>
+        </div>
+        <div class="chat-header-actions">
+          <span id="agent-active-badge" class="agent-badge" hidden>Agent Active</span>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div id="messages-container" class="messages-container">
+        <div class="loading-state">Loading messages…</div>
+      </div>
+
+      <!-- Compose -->
+      <div class="compose-area">
+        <textarea
+          id="compose-input"
+          class="compose-input"
+          placeholder="Type a message… (Shift+Enter for new line)"
+          rows="1"
+          maxlength="4096"
+        ></textarea>
+        <button id="send-btn" class="btn-send" title="Send">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+            <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="inbox.js"></script>
+</body>
+</html>
