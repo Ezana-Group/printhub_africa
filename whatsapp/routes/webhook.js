@@ -58,9 +58,21 @@ router.post('/', async (req, res) => {
   // Always respond 200 immediately — Meta will retry if we don't
   res.sendStatus(200);
 
-  if (!verifySignature(req)) {
-    console.warn('❌ Invalid webhook signature — request rejected');
+  const signatureOk = verifySignature(req);
+  if (!signatureOk && !config.skipSignatureVerification) {
+    console.warn(
+      '❌ Invalid webhook signature — request rejected',
+      {
+        hasSignature: !!req.headers['x-hub-signature-256'],
+        hasRawBody: !!req.rawBody,
+        hint: 'Check WHATSAPP_APP_SECRET. To debug quickly, set WHATSAPP_SKIP_SIGNATURE_VERIFY=true temporarily.',
+      }
+    );
     return;
+  }
+
+  if (!signatureOk && config.skipSignatureVerification) {
+    console.warn('⚠️ Signature verification bypassed (WHATSAPP_SKIP_SIGNATURE_VERIFY=true)');
   }
 
   let body;

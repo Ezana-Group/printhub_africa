@@ -14,6 +14,8 @@ const config = {
   metaPageAccessToken: process.env.META_PAGE_ACCESS_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN,
   instagramBusinessAccountId: process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID || '',
   metaPageId: process.env.META_PAGE_ID || '',
+  skipSignatureVerification:
+    String(process.env.WHATSAPP_SKIP_SIGNATURE_VERIFY || 'false').toLowerCase() === 'true',
   businessName: process.env.BUSINESS_NAME || 'PrintHub Africa',
   businessHoursStart: parseInt(process.env.BUSINESS_HOURS_START || '8', 10),
   businessHoursEnd: parseInt(process.env.BUSINESS_HOURS_END || '18', 10),
