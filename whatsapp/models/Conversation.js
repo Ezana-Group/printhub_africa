@@ -12,7 +12,7 @@ const conversationSchema = new mongoose.Schema(
     customerName:  { type: String, default: 'Unknown', trim: true },
     // Last message preview for the conversation list
     lastMessage:   { type: String, default: '' },
-    lastMessageAt: { type: Date, default: Date.now, index: -1 },
+    lastMessageAt: { type: Date, default: Date.now },
     lastDirection: { type: String, enum: ['inbound', 'outbound'], default: 'inbound' },
     // Unread count (messages not yet read by agent in dashboard)
     unreadCount:   { type: Number, default: 0, min: 0 },
