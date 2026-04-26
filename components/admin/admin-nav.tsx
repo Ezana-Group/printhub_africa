@@ -28,6 +28,7 @@ import {
   Truck,
   PanelLeft,
   CheckCircle2,
+  MessageSquare,
 } from "lucide-react";
 import { canAccessRoute } from "@/lib/admin-permissions";
 import { cn } from "@/lib/utils";
@@ -59,6 +60,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "COMMUNICATION",
     items: [
       { href: "/admin/email/inbox", label: "Email", icon: Mail },
+      { href: "/admin/whatsapp", label: "WhatsApp", icon: MessageSquare },
       { href: "/admin/content/templates", label: "Templates", icon: FileText },
       { href: "/admin/support", label: "Support", icon: HelpCircle },
       { href: "/admin/reviews", label: "Reviews", icon: BarChart3 },

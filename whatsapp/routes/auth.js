@@ -27,6 +27,13 @@ function requireAuth(req, res, next) {
 
   if (!token) return res.status(401).json({ error: 'No token provided' });
 
+  // Allow internal service-to-service calls from the Next.js admin
+  const internalSecret = process.env.INTERNAL_SECRET;
+  if (internalSecret && token === internalSecret) {
+    req.user = { username: 'admin-internal', role: 'admin' };
+    return next();
+  }
+
   try {
     req.user = jwt.verify(token, process.env.JWT_SECRET);
     next();
