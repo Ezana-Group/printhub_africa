@@ -14,9 +14,11 @@ interface Props {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   business: any;
   freeDeliveryThresholdKes?: number;
+  /** Body text from the "product-inquiry-whatsapp" template. Supports {{productName}}. */
+  waTemplateBody?: string | null;
 }
 
-export function ProductInfoBlock({ product, business, freeDeliveryThresholdKes }: Props) {
+export function ProductInfoBlock({ product, business, freeDeliveryThresholdKes, waTemplateBody }: Props) {
   const [selectedMaterial, setSelectedMaterial] = useState<{ id: string; name: string; colorHex: string; brand: string } | null>(null);
   
   const basePrice = Number(product.basePrice);
@@ -32,17 +34,11 @@ export function ProductInfoBlock({ product, business, freeDeliveryThresholdKes }
     return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
   };
 
-  // Build the pre-fill message: use admin-configured template (supports {{productName}})
-  // Set in Admin → Settings → Notifications → "WhatsApp pre-filled message"
-  const waProductMessage = (() => {
-    const template = business.whatsappPrefilledMessage as string | null | undefined;
-    if (template) {
-      return template.includes("{{productName}}")
-        ? template.replace(/\{\{productName\}\}/g, product.name)
-        : `${template} — I'm asking about "${product.name}".`;
-    }
-    return `Hi PrintHub! I'm interested in "${product.name}". Can I get more details?`;
-  })();
+  // Build the pre-fill message from the "product-inquiry-whatsapp" WhatsApp template
+  // (Admin → Content → Templates → WhatsApp → Product Inquiry). Supports {{productName}}.
+  const waProductMessage = waTemplateBody
+    ? waTemplateBody.replace(/\{\{productName\}\}/g, product.name)
+    : `Hi PrintHub! I'm interested in "${product.name}". Can I get more details?`;
 
   return (
     <div className="flex flex-col h-full">

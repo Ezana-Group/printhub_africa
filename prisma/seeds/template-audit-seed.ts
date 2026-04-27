@@ -56,6 +56,14 @@ async function main() {
       category: "UTILITY",
       status: "DRAFT",
       bodyText: "PrintHub: {{title}} – Order {{orderNumber}}. Track: {{trackUrl}}"
+    },
+    {
+      slug: "product-inquiry-whatsapp",
+      name: "Product Inquiry (WhatsApp)",
+      description: "Pre-filled message shown when a customer taps the WhatsApp button on a product page. Use {{productName}} to insert the product name.",
+      category: "UTILITY",
+      status: "DRAFT",
+      bodyText: "Hi PrintHub! I'm interested in \"{{productName}}\". Can I get more details?"
     }
   ];
 

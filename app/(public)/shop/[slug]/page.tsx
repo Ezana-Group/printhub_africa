@@ -166,7 +166,7 @@ export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
 
   // All DB calls are guarded — a connection hiccup never crashes the render
-  const [rawProduct, business, shippingSettings] = await Promise.all([
+  const [rawProduct, business, shippingSettings, waTemplate] = await Promise.all([
     prisma.product
       .findFirst({
         where: { slug, isActive: true },
@@ -184,6 +184,10 @@ export default async function ProductPage({ params }: Props) {
         where: { id: "default" },
         select: { freeShippingEnabled: true, freeShippingThresholdKes: true },
       })
+      .catch(() => null),
+    // WhatsApp product inquiry message — editable in Admin → Content → Templates → WhatsApp
+    prisma.whatsAppTemplate
+      .findUnique({ where: { slug: "product-inquiry-whatsapp" }, select: { bodyText: true } })
       .catch(() => null),
   ]);
 
@@ -360,6 +364,7 @@ export default async function ProductPage({ params }: Props) {
               product={product}
               business={business}
               freeDeliveryThresholdKes={freeShippingThreshold}
+              waTemplateBody={waTemplate?.bodyText ?? null}
             />
           </div>
         </div>
