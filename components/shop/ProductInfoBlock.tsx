@@ -35,10 +35,27 @@ export function ProductInfoBlock({ product, business, freeDeliveryThresholdKes, 
   };
 
   // Build the pre-fill message from the "product-inquiry-whatsapp" WhatsApp template
-  // (Admin → Content → Templates → WhatsApp → Product Inquiry). Supports {{productName}}.
-  const waProductMessage = waTemplateBody
-    ? waTemplateBody.replace(/\{\{productName\}\}/g, product.name)
-    : `Hi PrintHub! I'm interested in "${product.name}". Can I get more details?`;
+  // (Admin → Content → Templates → WhatsApp → Product Inquiry).
+  // All {{placeholder}} tokens are replaced with real product data before the link is built.
+  const waProductMessage = (() => {
+    const template = waTemplateBody
+      ?? `Hi PrintHub! I'm interested in "{{productName}}". Can I get more details?`;
+
+    const siteBase = (process.env.NEXT_PUBLIC_APP_URL ?? "https://printhub.africa").replace(/\/$/, "");
+    const productUrl = `${siteBase}/shop/${product.slug}`;
+    const productPrice = basePrice > 0 ? formatPrice(basePrice) : "";
+    const firstImage: string = product.images?.[0] ?? "";
+
+    return template
+      .replace(/\{\{productName\}\}/g, product.name)
+      .replace(/\{\{productUrl\}\}/g, productUrl)
+      .replace(/\{\{productImage\}\}/g, firstImage)
+      .replace(/\{\{productSlug\}\}/g, product.slug ?? "")
+      .replace(/\{\{productPrice\}\}/g, productPrice)
+      .replace(/\{\{productSku\}\}/g, product.sku ?? "")
+      .replace(/\{\{productCategory\}\}/g, product.category?.name ?? product.categoryName ?? "")
+      .replace(/\{\{productDescription\}\}/g, product.shortDescription ?? "");
+  })();
 
   return (
     <div className="flex flex-col h-full">
