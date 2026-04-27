@@ -193,7 +193,20 @@ export async function middleware(request: NextRequest) {
       response = NextResponse.rewrite(url);
     }
 
-    response.headers.set("Content-Security-Policy", "frame-ancestors 'none'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://analytics.printhub.africa;");
+    response.headers.set(
+      "Content-Security-Policy",
+      [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.sentry-cdn.com https://static.cloudflareinsights.com https://t.contentsquare.net https://www.googletagmanager.com https://analytics.printhub.africa",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com",
+        "img-src 'self' data: blob: https: https://*.r2.dev https://images.unsplash.com",
+        "connect-src 'self' https: wss: https://*.ingest.sentry.io https://*.ingest.de.sentry.io https://cloudflareinsights.com https://t.contentsquare.net",
+        "worker-src 'self' blob:",
+        "child-src 'self' blob:",
+        "frame-ancestors 'none'",
+      ].join("; ")
+    );
     response.headers.set("X-Frame-Options", "DENY");
     // Apply CORS headers for cross-origin requests (e.g. printhub.africa fetching admin.printhub.africa RSC)
     applyCors(response, origin, allowedOrigins);
