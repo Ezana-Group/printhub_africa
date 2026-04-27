@@ -188,6 +188,9 @@ export function NotificationsSettingsForm() {
           <div className="grid gap-2">
             <Label>Pre-filled Message</Label>
             <Input name="whatsappPrefilledMessage" placeholder="Hi PrintHub, I'd like to get a quote for..." defaultValue={val("whatsappPrefilledMessage", "")} />
+            <p className="text-xs text-muted-foreground">
+              Used on the floating button and product pages. Use <code className="rounded bg-muted px-1">{"{{productName}}"}</code> on product pages to insert the product name — e.g. <em>Hi PrintHub! I&apos;m interested in {"{{"} productName {"}}"}. Can I get more details?</em>
+            </p>
           </div>
           <div className="pt-2">
             <SettingsSwitch 

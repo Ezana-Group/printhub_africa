@@ -66,5 +66,6 @@ export async function GET() {
     hotjarSiteId: row.hotjarSiteId,
     searchConsoleVerification: row.searchConsoleVerification,
     algoliaEnabled: row.algoliaEnabled ?? false,
+    whatsappPrefilledMessage: row.whatsappPrefilledMessage ?? null,
   });
 }

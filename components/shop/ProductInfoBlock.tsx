@@ -32,6 +32,18 @@ export function ProductInfoBlock({ product, business, freeDeliveryThresholdKes }
     return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
   };
 
+  // Build the pre-fill message: use admin-configured template (supports {{productName}})
+  // Set in Admin → Settings → Notifications → "WhatsApp pre-filled message"
+  const waProductMessage = (() => {
+    const template = business.whatsappPrefilledMessage as string | null | undefined;
+    if (template) {
+      return template.includes("{{productName}}")
+        ? template.replace(/\{\{productName\}\}/g, product.name)
+        : `${template} — I'm asking about "${product.name}".`;
+    }
+    return `Hi PrintHub! I'm interested in "${product.name}". Can I get more details?`;
+  })();
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-2 mb-4">
@@ -92,7 +104,7 @@ export function ProductInfoBlock({ product, business, freeDeliveryThresholdKes }
 
       <div className="mt-auto pt-6">
         <a
-          href={waHref(`Hi PrintHub! I'm interested in "${product.name}". Can I get more details?`)}
+          href={waHref(waProductMessage)}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-3 w-full py-4 rounded-2xl bg-[#E8FFF3] text-[#00A34C] font-extrabold text-base border border-[#BFFFD9] hover:bg-[#D5FFE7] transition-all duration-300 shadow-sm group"
