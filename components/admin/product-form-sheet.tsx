@@ -265,13 +265,13 @@ export function ProductFormSheet({
           </SheetTitle>
         </SheetHeader>
         <form onSubmit={handleSubmit} className="flex flex-col h-full">
-          <div className="flex border-b border-[#E5E7EB] gap-1 mt-4">
+          <div className="flex border-b border-[#E5E7EB] gap-1 mt-4 overflow-x-auto scrollbar-hide">
             {tabs.map((t) => (
               <button
                 key={t.id}
                 type="button"
                 onClick={() => setActiveTab(t.id)}
-                className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap shrink-0 ${
                   activeTab === t.id
                     ? "border-primary text-primary"
                     : "border-transparent text-[#6B7280] hover:text-[#111]"
@@ -363,14 +363,24 @@ export function ProductFormSheet({
                     className="mt-1"
                   />
                 </div>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-2">
-                    <Switch checked={isActive} onCheckedChange={setIsActive} />
-                    <span className="text-sm">Active</span>
+                <div className="space-y-3">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <Switch checked={isActive} onCheckedChange={setIsActive} className="mt-0.5" />
+                    <div>
+                      <span className="text-sm font-medium">Published in shop</span>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {isActive
+                          ? "Visible to customers on the public shop."
+                          : "Hidden — internal / workshop use only. Customers cannot see this product."}
+                      </p>
+                    </div>
                   </label>
-                  <label className="flex items-center gap-2">
+                  <label className="flex items-center gap-3 cursor-pointer">
                     <Switch checked={isPOD} onCheckedChange={setIsPOD} />
-                    <span className="text-sm">Is Print-on-Demand</span>
+                    <div>
+                      <span className="text-sm font-medium">Print-on-Demand</span>
+                      <p className="text-xs text-muted-foreground mt-0.5">No stock tracking — printed per order.</p>
+                    </div>
                   </label>
                 </div>
               </div>

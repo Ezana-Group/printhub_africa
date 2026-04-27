@@ -212,6 +212,79 @@ export async function PATCH(
     void sendQuoteInProductionEmail(quote.customerEmail, quote.quoteNumber).catch((err) =>
       console.error("Quote in production email error:", err)
     );
+
+    // ── Filament deduction ──────────────────────────────────────────────────
+    // Only applies to 3D print quotes. Extract per-material weight from the
+    // calculator lines stored in specifications.calculatorLines, then decrement
+    // the matching ThreeDConsumable and log a movement record.
+    if (quote.type === "three_d_print") {
+      void (async () => {
+        try {
+          const specs = quote.specifications as Record<string, unknown> | null;
+          const lines = (specs?.calculatorLines ?? []) as Array<{
+            materialCode?: string;
+            materialName?: string;
+            weightGrams?: number;
+            quantity?: number;
+          }>;
+
+          if (!lines.length) return;
+
+          // Sum total grams per material code
+          const gramsByMaterial: Record<string, { totalGrams: number; name: string }> = {};
+          for (const line of lines) {
+            const code = (line.materialCode ?? line.materialName ?? "unknown").toLowerCase();
+            const grams = (line.weightGrams ?? 0) * (line.quantity ?? 1);
+            if (!gramsByMaterial[code]) gramsByMaterial[code] = { totalGrams: 0, name: line.materialName ?? code };
+            gramsByMaterial[code].totalGrams += grams;
+          }
+
+          for (const [code, { totalGrams, name }] of Object.entries(gramsByMaterial)) {
+            if (totalGrams <= 0) continue;
+
+            // Find the consumable — match by kind or name (case-insensitive)
+            const consumable = await prisma.threeDConsumable.findFirst({
+              where: {
+                OR: [
+                  { kind: { equals: code, mode: "insensitive" } },
+                  { name: { contains: code, mode: "insensitive" } },
+                  { kind: { contains: name, mode: "insensitive" } },
+                ],
+              },
+            });
+
+            if (!consumable) continue;
+
+            // Log the movement (negative = usage/deduction)
+            await prisma.threeDConsumableMovement.create({
+              data: {
+                consumableId: consumable.id,
+                type: "PRINT_DEDUCTION",
+                quantity: -Math.round(totalGrams), // grams used (negative)
+                notes: `Auto-deducted ${Math.round(totalGrams)}g for quote ${quote.quoteNumber} → In Production`,
+                reference: quote.quoteNumber,
+              },
+            });
+
+            // Decrement consumable quantity only when a full spool is consumed
+            // (quantity = number of spools; weightPerSpoolKg converts to grams)
+            if (consumable.weightPerSpoolKg && consumable.weightPerSpoolKg > 0) {
+              const gramsPerSpool = consumable.weightPerSpoolKg * 1000;
+              const spoolsUsed = Math.floor(totalGrams / gramsPerSpool);
+              if (spoolsUsed >= 1) {
+                await prisma.threeDConsumable.update({
+                  where: { id: consumable.id },
+                  data: { quantity: { decrement: spoolsUsed } },
+                });
+              }
+            }
+          }
+        } catch (err) {
+          console.error("[Filament deduction] Error:", err);
+        }
+      })();
+    }
+    // ────────────────────────────────────────────────────────────────────────
   }
 
   if (data.assignedStaffId !== undefined && data.assignedStaffId !== quote.assignedStaffId && data.assignedStaffId) {

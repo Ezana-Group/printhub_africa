@@ -21,7 +21,8 @@ export type PlaceholderCategory =
   | "cart"
   | "staff"
   | "admin"
-  | "utility";
+  | "utility"
+  | "product";
 
 export const EMAIL_PLACEHOLDER_CATEGORIES: Record<
   PlaceholderCategory,
@@ -210,6 +211,19 @@ export const EMAIL_PLACEHOLDER_CATEGORIES: Record<
       { key: "currentYear", label: "currentYear", description: "Current year (e.g. 2026)" },
       { key: "preferencesUrl", label: "preferencesUrl", description: "Link to email / notification preferences" },
       { key: "accountUrl", label: "accountUrl", description: "Link to customer account page" },
+    ],
+  },
+  product: {
+    label: "Product",
+    placeholders: [
+      { key: "productName", label: "productName", description: "Product name e.g. 3D Printed Key Holder" },
+      { key: "productUrl", label: "productUrl", description: "Full URL to the product page" },
+      { key: "productImage", label: "productImage", description: "Product image URL (first / primary image)" },
+      { key: "productSlug", label: "productSlug", description: "URL slug e.g. 3d-printed-key-holder" },
+      { key: "productPrice", label: "productPrice", description: "Product base price with currency" },
+      { key: "productSku", label: "productSku", description: "Product SKU / reference code" },
+      { key: "productCategory", label: "productCategory", description: "Product category name" },
+      { key: "productDescription", label: "productDescription", description: "Short product description" },
     ],
   },
 };

@@ -97,7 +97,7 @@ export async function POST(req: Request) {
         printTimeEstimate: printTimeStr,
         materials: materials,
         colors: colors,
-        isActive: true,
+        isActive: false, // Saved as hidden — publish manually once ready for the shop
         // Carry over specifications
         specifications: {
           calculationId: calculationData?.id || null,
