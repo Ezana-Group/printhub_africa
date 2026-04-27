@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, ArrowLeft, Save, Search, Info, ExternalLink, MessageSquare, Briefcase, UserCircle, Calculator, Check, Phone, GripVertical, UploadCloud } from "lucide-react";
+import { Loader2, ArrowLeft, Save, Search, Info, ExternalLink, MessageSquare, Briefcase, UserCircle, Calculator, Check, Phone, GripVertical, UploadCloud, Package, CreditCard, Truck, RotateCcw, HeadphonesIcon, Building2, Tag } from "lucide-react";
 import Link from "next/link";
 import { AdminBreadcrumbs } from "@/components/admin/admin-breadcrumbs";
 
@@ -48,31 +48,103 @@ export default function WhatsAppTemplateEditPage({
   }, [bodyText]);
 
   const SAMPLE_DATA: Record<string, string> = {
+    // Quotes
     quoteNumber: "Q-2024-0406",
     totalAmount: "KES 12,500.00",
     finalTotal: "KES 12,500.00",
     depositAmount: "KES 6,250.00",
     balanceAmount: "KES 6,250.00",
-    quoteLink: "https://printhub.africa/q/abc123",
+    quoteLink: "https://printhub.africa/account/quotes/Q-2024-0406",
+    validUntil: "April 20th, 2024",
+    quotedAmountKes: "KES 12,500",
+    projectName: "Event banners",
+    quoteDeadline: "30 April 2024",
+    quoteStatus: "Quoted",
+    assignedStaff: "Alice Njeri",
+    // Orders
     orderNumber: "#ORD-9920",
     orderStatus: "Processing",
+    orderDate: "April 6th, 2024",
+    orderUrl: "https://printhub.africa/account/orders/ORD-9920",
+    orderTotal: "KES 15,000",
+    orderSubtotal: "KES 12,931",
+    orderTax: "KES 2,069",
+    shippingCost: "KES 350",
+    orderDiscount: "KES 0",
+    lineItemsDetails: "- 3D Printed Key Holder (x5)\n- Vinyl Banner 1m² (x1)",
+    paymentStatus: "Partially Paid",
+    paymentMethod: "M-Pesa",
+    estimatedDelivery: "April 15th, 2024",
+    shippingStreet: "Waiyaki Way, Westlands",
+    // Delivery
     deliveryDate: "April 15th, 2024",
+    trackingNumber: "TRK-20240406",
+    trackUrl: "https://printhub.africa/track?ref=ORD-9920",
+    courierName: "FastCourier Kenya",
+    deliveryMethod: "Standard delivery",
+    deliveryZone: "Nairobi CBD",
+    estimatedDeliveryDate: "April 15th, 2024",
+    pickupLocationName: "PrintHub Nairobi Studio",
+    failureReason: "Address not found",
+    pickupCode: "PICK-789",
+    // Payments
+    reference: "MPESA-ABC123",
+    mpesaReceiptNo: "QJE3ABCXYZ",
+    mpesaPhone: "+254 712 345 678",
+    vatAmount: "KES 2,069",
+    paymentDate: "April 6th, 2024",
+    totalKes: "KES 12,500",
+    // Refunds
+    refundNumber: "REF-001",
+    amountKes: "KES 5,000",
+    rejectionReason: "Outside refund window",
+    // Support
+    ticketNumber: "TKT-001",
+    ticketSubject: "Order delay query",
+    supportUrl: "https://printhub.africa/account/support",
+    ticketStatus: "Open",
+    // Product
+    productName: "3D Printed Key Holder",
+    productUrl: "https://printhub.africa/shop/3d-printed-key-holder",
+    productImage: "https://printhub.africa/images/product-sample.jpg",
+    productSlug: "3d-printed-key-holder",
+    productPrice: "KES 1,200",
+    productSku: "SKU-3DKH-001",
+    productCategory: "3D Printing",
+    // Customer
     clientName: "John Doe",
     clientFirst: "John",
     clientCompany: "Alpha Designs Ltd",
     clientPhone: "+254 700 000 000",
     clientEmail: "john@alpha.co.ke",
+    customerName: "John Doe",
+    loyaltyPoints: "1,250",
+    // Business / Organization
     companyName: "PrintHub Africa",
+    businessName: "PrintHub Africa",
     companyPhone: "+254 712 345 678",
     supportPhone: "+254 712 345 678",
-    shippingStreet: "Waiyaki Way, Westlands",
-    paymentStatus: "Partially Paid",
-    orderDate: "April 6th, 2024",
-    validUntil: "April 20th, 2024",
-    lineItemsDetails: "- 3D Printed Key Holder (x5)\n- Vinyl Banner 1m² (x1)",
+    site: "printhub.africa",
+    baseUrl: "https://printhub.africa",
+    whatsappNumber: "+254 727 410 320",
+    // Utility
+    currentYear: new Date().getFullYear().toString(),
   };
 
   const PLACEHOLDERS = [
+    {
+      label: "Product",
+      icon: <Package className="h-3 w-3" />,
+      variables: [
+        { key: "productName", desc: "Product name e.g. 3D Printed Key Holder" },
+        { key: "productUrl", desc: "Full URL to the product page" },
+        { key: "productImage", desc: "Product image URL (first image)" },
+        { key: "productSlug", desc: "URL slug e.g. 3d-printed-key-holder" },
+        { key: "productPrice", desc: "Product base price with currency" },
+        { key: "productSku", desc: "Product SKU / reference code" },
+        { key: "productCategory", desc: "Product category name" },
+      ]
+    },
     {
       label: "Quotes & Numbers",
       icon: <Calculator className="h-3 w-3" />,
@@ -80,10 +152,15 @@ export default function WhatsAppTemplateEditPage({
         { key: "quoteNumber", desc: "Quote ID e.g. Q-2024-001" },
         { key: "totalAmount", desc: "Total price with currency" },
         { key: "finalTotal", desc: "Final amount after tax" },
-        { key: "depositAmount", desc: "Required deposit" },
+        { key: "quotedAmountKes", desc: "Quoted amount in KES" },
+        { key: "depositAmount", desc: "Required deposit amount" },
         { key: "balanceAmount", desc: "Outstanding balance" },
-        { key: "quoteLink", desc: "Direct quote link" },
-        { key: "validUntil", desc: "Expiry date of quote" },
+        { key: "quoteLink", desc: "Direct link to view the quote" },
+        { key: "validUntil", desc: "Quote expiry date" },
+        { key: "projectName", desc: "Project / job name" },
+        { key: "quoteDeadline", desc: "Customer-requested deadline" },
+        { key: "quoteStatus", desc: "Quote status e.g. Quoted, In Production" },
+        { key: "assignedStaff", desc: "Staff member handling the quote" },
       ]
     },
     {
@@ -92,11 +169,68 @@ export default function WhatsAppTemplateEditPage({
       variables: [
         { key: "orderNumber", desc: "Order ID e.g. #ORD-5520" },
         { key: "orderStatus", desc: "Processing, Shipped, etc." },
-        { key: "deliveryDate", desc: "Est. delivery date" },
-        { key: "shippingStreet", desc: "Customer street address" },
+        { key: "orderUrl", desc: "Link to view the order" },
         { key: "orderDate", desc: "Date order was placed" },
+        { key: "orderTotal", desc: "Order total with currency" },
+        { key: "orderSubtotal", desc: "Subtotal before tax & shipping" },
+        { key: "orderTax", desc: "VAT/tax amount" },
+        { key: "shippingCost", desc: "Shipping fee" },
+        { key: "orderDiscount", desc: "Discount applied" },
+        { key: "lineItemsDetails", desc: "List of items in the order" },
         { key: "paymentStatus", desc: "Paid, Unpaid, Pending" },
-        { key: "lineItemsDetails", desc: "List of items in order" },
+        { key: "paymentMethod", desc: "M-Pesa, Card, etc." },
+        { key: "estimatedDelivery", desc: "Estimated delivery date" },
+        { key: "shippingStreet", desc: "Customer street address" },
+      ]
+    },
+    {
+      label: "Delivery & Tracking",
+      icon: <Truck className="h-3 w-3" />,
+      variables: [
+        { key: "trackingNumber", desc: "Shipment tracking number" },
+        { key: "trackUrl", desc: "Order tracking page URL" },
+        { key: "deliveryDate", desc: "Actual / scheduled delivery date" },
+        { key: "estimatedDeliveryDate", desc: "Estimated delivery date" },
+        { key: "courierName", desc: "Assigned courier name" },
+        { key: "deliveryMethod", desc: "Standard, Express, Pickup" },
+        { key: "deliveryZone", desc: "Delivery zone / area name" },
+        { key: "pickupCode", desc: "Collection code for click-and-collect" },
+        { key: "pickupLocationName", desc: "Pickup branch / studio name" },
+        { key: "failureReason", desc: "Delivery failure reason" },
+      ]
+    },
+    {
+      label: "Payments & Finance",
+      icon: <CreditCard className="h-3 w-3" />,
+      variables: [
+        { key: "reference", desc: "Payment reference number" },
+        { key: "mpesaReceiptNo", desc: "M-Pesa receipt number" },
+        { key: "mpesaPhone", desc: "M-Pesa phone number used" },
+        { key: "vatAmount", desc: "VAT amount" },
+        { key: "paymentDate", desc: "Date payment was made" },
+        { key: "totalKes", desc: "Amount to pay (KES)" },
+        { key: "totalAmount", desc: "Total price with currency" },
+        { key: "finalTotal", desc: "Final total after tax" },
+      ]
+    },
+    {
+      label: "Refunds",
+      icon: <RotateCcw className="h-3 w-3" />,
+      variables: [
+        { key: "refundNumber", desc: "Refund reference e.g. REF-001" },
+        { key: "amountKes", desc: "Refund amount in KES" },
+        { key: "mpesaReceiptNo", desc: "M-Pesa receipt number for refund" },
+        { key: "rejectionReason", desc: "Reason the refund was declined" },
+      ]
+    },
+    {
+      label: "Support",
+      icon: <HeadphonesIcon className="h-3 w-3" />,
+      variables: [
+        { key: "ticketNumber", desc: "Support ticket ID e.g. TKT-001" },
+        { key: "ticketSubject", desc: "Ticket subject / topic" },
+        { key: "supportUrl", desc: "Link to the support / tickets page" },
+        { key: "ticketStatus", desc: "Open, In Progress, Resolved" },
       ]
     },
     {
@@ -105,20 +239,33 @@ export default function WhatsAppTemplateEditPage({
       variables: [
         { key: "clientName", desc: "Customer full name" },
         { key: "clientFirst", desc: "First name only" },
-        { key: "clientCompany", desc: "Business/Entity name" },
+        { key: "customerName", desc: "Customer full name (alt key)" },
+        { key: "clientCompany", desc: "Business / entity name" },
         { key: "clientPhone", desc: "Customer phone number" },
         { key: "clientEmail", desc: "Customer email address" },
+        { key: "loyaltyPoints", desc: "Customer loyalty points balance" },
       ]
     },
     {
       label: "Organization",
-      icon: <Briefcase className="h-3 w-3" />,
+      icon: <Building2 className="h-3 w-3" />,
       variables: [
-        { key: "companyName", desc: "Your business name" },
-        { key: "supportPhone", desc: "Customer support line" },
+        { key: "companyName", desc: "Your registered business name" },
+        { key: "businessName", desc: "Trading / brand name" },
+        { key: "supportPhone", desc: "Customer support phone line" },
         { key: "companyPhone", desc: "Main office phone" },
+        { key: "whatsappNumber", desc: "Business WhatsApp number" },
+        { key: "site", desc: "Website domain e.g. printhub.africa" },
+        { key: "baseUrl", desc: "Full site URL e.g. https://printhub.africa" },
       ]
-    }
+    },
+    {
+      label: "Utility",
+      icon: <Tag className="h-3 w-3" />,
+      variables: [
+        { key: "currentYear", desc: "Current year e.g. 2026" },
+      ]
+    },
   ];
 
   const filteredPlaceholders = useMemo(() => {

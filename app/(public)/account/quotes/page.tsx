@@ -33,13 +33,24 @@ export default async function QuotesPage({
     in_progress: 0,
     closed: 0,
   }
+  let waQuestionTemplate = "Hi PrintHub, I have a question about quote {{quoteNumber}}. Can you help?"
+  let waAcceptedTemplate = "Hi PrintHub, I've accepted quote {{quoteNumber}}. Please let me know the next steps."
+  let whatsappNumber = "254727410320"
+
   try {
-    const [quotesList, countsResult] = await Promise.all([
+    const [quotesList, countsResult, business, waQuestion, waAccepted] = await Promise.all([
       fetchQuotes(userId, userEmail, statusFilter),
       fetchCounts(userId, userEmail),
+      prisma.businessSettings.findUnique({ where: { id: "default" }, select: { whatsapp: true, whatsappNumber: true } }).catch(() => null),
+      prisma.whatsAppTemplate.findUnique({ where: { slug: "quote-question-whatsapp" }, select: { bodyText: true } }).catch(() => null),
+      prisma.whatsAppTemplate.findUnique({ where: { slug: "quote-accepted-whatsapp" }, select: { bodyText: true } }).catch(() => null),
     ])
     quotes = quotesList
     counts = countsResult
+    const rawWa = business?.whatsapp ?? business?.whatsappNumber ?? null
+    if (rawWa) whatsappNumber = rawWa.replace(/\D/g, "")
+    if (waQuestion?.bodyText) waQuestionTemplate = waQuestion.bodyText
+    if (waAccepted?.bodyText) waAcceptedTemplate = waAccepted.bodyText
   } catch {
     quotes = []
   }
@@ -62,7 +73,14 @@ export default async function QuotesPage({
       </div>
 
       <Suspense fallback={<div className="animate-pulse rounded-xl h-12 bg-gray-100" />}>
-        <QuotesList initialQuotes={quotes} initialStatus={statusFilter} counts={counts} />
+        <QuotesList
+          initialQuotes={quotes}
+          initialStatus={statusFilter}
+          counts={counts}
+          whatsappNumber={whatsappNumber}
+          waQuestionTemplate={waQuestionTemplate}
+          waAcceptedTemplate={waAcceptedTemplate}
+        />
       </Suspense>
     </div>
   )

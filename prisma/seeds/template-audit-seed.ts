@@ -64,6 +64,38 @@ async function main() {
       category: "UTILITY",
       status: "DRAFT",
       bodyText: "Hi PrintHub! I'm interested in \"{{productName}}\". Can I get more details?"
+    },
+    {
+      slug: "quote-question-whatsapp",
+      name: "Quote Question (WhatsApp)",
+      description: "Pre-filled message shown on the customer's Quotes page when they tap 'Ask a question'. Use {{quoteNumber}} to reference the quote.",
+      category: "UTILITY",
+      status: "DRAFT",
+      bodyText: "Hi PrintHub, I have a question about quote {{quoteNumber}}. Can you help?"
+    },
+    {
+      slug: "quote-accepted-whatsapp",
+      name: "Quote Accepted (WhatsApp)",
+      description: "Pre-filled message shown when a customer accepts a quote and wants to confirm next steps. Use {{quoteNumber}} to reference the quote.",
+      category: "UTILITY",
+      status: "DRAFT",
+      bodyText: "Hi PrintHub, I've accepted quote {{quoteNumber}}. Please let me know the next steps."
+    },
+    {
+      slug: "general-inquiry-whatsapp",
+      name: "General Inquiry (WhatsApp)",
+      description: "Default pre-filled message for the floating WhatsApp button site-wide. Shown when no product-specific message applies.",
+      category: "UTILITY",
+      status: "DRAFT",
+      bodyText: "Hi PrintHub! I'd like to enquire about your printing services. Can you help?"
+    },
+    {
+      slug: "careers-share-whatsapp",
+      name: "Job Share (WhatsApp)",
+      description: "Message pre-filled when a visitor shares a job listing via WhatsApp from the careers page. Use {{jobTitle}} and {{companyName}}.",
+      category: "UTILITY",
+      status: "DRAFT",
+      bodyText: "Check out this role at {{companyName}}: {{jobTitle}} — {{productUrl}}"
     }
   ];
 

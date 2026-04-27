@@ -142,10 +142,16 @@ export function QuotesList({
   initialQuotes,
   initialStatus = 'all',
   counts = defaultCounts,
+  whatsappNumber = "254727410320",
+  waQuestionTemplate = "Hi PrintHub, I have a question about quote {{quoteNumber}}. Can you help?",
+  waAcceptedTemplate = "Hi PrintHub, I've accepted quote {{quoteNumber}}. Please let me know the next steps.",
 }: {
   initialQuotes: QuoteItem[]
   initialStatus?: string
   counts?: TabCounts
+  whatsappNumber?: string
+  waQuestionTemplate?: string
+  waAcceptedTemplate?: string
 }) {
   const searchParams = useSearchParams()
   const [quotes, setQuotes] = useState(initialQuotes)
@@ -534,7 +540,7 @@ export function QuotesList({
                       </Button>
                     </div>
                     <a
-                      href={`https://wa.me/254727410320?text=${encodeURIComponent(`Hi PrintHub, I have a question about quote ${quote.quoteNumber}.`)}`}
+                      href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(waQuestionTemplate.replace(/\{\{quoteNumber\}\}/g, quote.quoteNumber))}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="mt-3 flex items-center justify-center gap-2 py-2 text-sm text-gray-600 hover:bg-amber-100/50 rounded-xl transition"
@@ -557,7 +563,7 @@ export function QuotesList({
                       </div>
                     </div>
                     <a
-                      href={`https://wa.me/254727410320?text=${encodeURIComponent(`Hi PrintHub, I've accepted quote ${quote.quoteNumber}. Please let me know the next steps.`)}`}
+                      href={`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(waAcceptedTemplate.replace(/\{\{quoteNumber\}\}/g, quote.quoteNumber))}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-2.5 text-sm font-medium text-white transition hover:bg-green-700"
@@ -606,7 +612,7 @@ export function QuotesList({
                   <p className="mt-4 text-sm text-gray-600">
                     Our team is handling your order. Contact us on{' '}
                     <a
-                      href="https://wa.me/254727410320"
+                      href={`https://wa.me/${whatsappNumber}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-[#CC3D00] hover:underline"
