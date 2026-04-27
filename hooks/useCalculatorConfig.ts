@@ -91,8 +91,9 @@ export function compute3DEstimateFromConfig(
     monthlyRentKes: config.monthlyOverhead,
     monthlyUtilitiesKes: 0,
     monthlyInsuranceKes: 0,
-    workingDaysPerMonth: 26,
-    workingHoursPerDay: 8, // 208 hrs/month
+    // Use saved capacity from Business Costs (workingDays × workingHours) instead of hardcoded values
+    workingDaysPerMonth: 1,
+    workingHoursPerDay: config.monthlyCapacityHrs, // e.g. 26 days × 8 hrs = 208 hrs/month
     postProcessingTimeHours: postProcessingTimeHoursOverride ?? 0.5,
     postProcessingFeePerUnit: config.postProcessingFeePerUnit ?? 200,
   };

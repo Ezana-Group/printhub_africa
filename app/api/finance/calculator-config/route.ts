@@ -31,7 +31,7 @@ export async function GET() {
       console.warn("Could not fetch lFBusinessSettings (maybe column mismatch?):", dbErr);
     }
 
-    const labourRate = business?.labourRateKesPerHour ?? DEFAULT_LABOUR_RATE;
+    const labourRate = business?.threeDLabourRateKesPerHour ?? business?.labourRateKesPerHour ?? DEFAULT_LABOUR_RATE;
     const profitMargin = business?.defaultProfitMarginPct ?? DEFAULT_PROFIT_MARGIN;
     const vatPercent = business?.vatRatePct ?? DEFAULT_VAT_PCT;
     const monthlyOverhead =
