@@ -109,17 +109,18 @@ export async function PATCH(
       }
     }
 
-    // 3. Trigger n8n Logistics Alert
-    const { n8n } = await import("@/lib/n8n");
-    if (n8n.productionFinished) {
-      n8n.productionFinished({
-        orderId: item.orderId,
-        orderNumber: item.orderItem.order.orderNumber,
-        productName,
-        quantity: item.orderItem.quantity,
-        completedAt: item.completedAt?.toISOString() || new Date().toISOString(),
-      }).catch(err => console.error("n8n productionFinished trigger failed:", err));
-    }
+    void (async () => {
+      try {
+        const { sendAdminAlert } = await import("@/lib/email");
+        await sendAdminAlert({
+          event: "New Order",
+          subject: `Production finished: ${productName} — Order #${item.orderItem.order.orderNumber}`,
+          html: `<p>Production complete for <strong>${productName}</strong> × ${item.orderItem.quantity}.<br>Order: #${item.orderItem.order.orderNumber}<br><a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/orders/${item.orderId}">View order</a></p>`,
+        });
+      } catch (err) {
+        console.error("Admin alert (production finished) failed:", err);
+      }
+    })();
   }
 
   return NextResponse.json({

@@ -184,64 +184,19 @@ export async function POST(
     revalidatePath("/shop");
     revalidatePath("/catalogue");
 
-    // --- AUTOMATION TRIGGERS ---
-    try {
-      const { n8n } = await import("@/lib/n8n");
-      
-      // 1. Internal Staff Alert (WhatsApp/Telegram)
-      void n8n.staffAlert({
-        type: 'PRODUCT_PUBLISHED',
-        title: `🚀 New Product Published: ${product.name}`,
-        message: `A new product has been successfully imported and published to the shop.\n\nCategory: ${data.categoryId}\nPrice: KES ${data.basePrice}\nSource: ${importQueue ? 'Printables/External' : 'Manual Upload'}`,
-        urgency: 'low',
-        actionUrl: `${process.env.NEXT_PUBLIC_APP_URL}/shop/product/${product.slug}`,
-        targetRoles: ['STAFF', 'ADMIN']
-      });
-
-      // 2. Global Marketing Trigger (Socials/Search)
-      void n8n.productPublished({
-        productId: product.id,
-        productName: product.name,
-        productSlug: product.slug,
-        description: product.description || "",
-        price: Number(product.basePrice),
-        currency: 'KES',
-        imageUrls: data.imageUrls || [],
-        category: data.categoryId,
-        productUrl: `${process.env.NEXT_PUBLIC_APP_URL}/shop/product/${product.slug}`,
-        exportFlags: {
-          google: product.exportToGoogle,
-          meta: product.exportToMeta,
-          tiktok: product.exportToTiktok,
-          linkedin: product.exportToLinkedIn,
-          pinterest: product.exportToPinterest,
-          x: product.exportToX,
-          googleBusiness: product.exportToGoogleBiz,
-          snapchat: product.exportToSnapchat,
-          youtube: product.exportToYoutube,
-          instagramStories: product.exportToInstagramStories,
-          instagramReels: product.exportToInstagramReels,
-          youtubeShorts: product.exportToYoutubeShorts,
-          whatsappStatus: product.exportToWhatsappStatus,
-          whatsappChannel: product.exportToWhatsappChannel,
-          telegram: product.exportToTelegram,
-          googleDiscover: product.exportToGoogleDiscover,
-          googleMapsPost: product.exportToGoogleMapsPost,
-          bingPlaces: product.exportToBingPlaces,
-          appleMaps: product.exportToAppleMaps,
-          pigiaMe: product.exportToPigiaMe,
-          olxKenya: product.exportToOlxKenya,
-          reddit: product.exportToReddit,
-          linkedinNewsletter: product.exportToLinkedInNewsletter,
-          medium: product.exportToMedium,
-          nextdoor: product.exportToNextdoor,
-          jiji: product.exportToJiji,
-          postiz: product.exportToPostiz
-        }
-      });
-    } catch (err) {
-      console.error("n8n triggers failed:", err);
-    }
+    // Staff alert for new product published
+    void (async () => {
+      try {
+        const { sendAdminAlert } = await import("@/lib/email");
+        await sendAdminAlert({
+          event: "New Order",
+          subject: `New Product Published: ${product.name}`,
+          html: `<p>A new product has been published to the shop.<br><strong>${product.name}</strong><br>Price: KES ${data.basePrice}<br><a href="${process.env.NEXT_PUBLIC_APP_URL}/shop/product/${product.slug}">View product</a></p>`,
+        });
+      } catch (err) {
+        console.error("Admin alert (product published) failed:", err);
+      }
+    })();
 
     return NextResponse.json({ productId: product.id });
   } catch (error: unknown) {

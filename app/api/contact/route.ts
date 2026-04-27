@@ -72,20 +72,16 @@ export async function POST(req: NextRequest) {
         </div>
       `,
     });
-    // --- AUTOMATION: Staff Alert ---
     void (async () => {
       try {
-        const { n8n } = await import("@/lib/n8n");
-        await n8n.staffAlert({
-          type: 'SUPPORT_TICKET',
-          title: `🎟️ New Support Ticket #${ticket.ticketNumber}`,
-          message: `Subject: ${subject}\nFrom: ${name} (${email})\nPriority: MEDIUM`,
-          urgency: 'medium',
-          actionUrl: `${process.env.NEXT_PUBLIC_APP_URL}/admin/support/${ticket.id}`,
-          targetRoles: ['STAFF', 'ADMIN']
+        const { sendAdminAlert } = await import("@/lib/email");
+        await sendAdminAlert({
+          event: "Support Ticket",
+          subject: `New Support Ticket #${ticket.ticketNumber} — ${subject}`,
+          html: `<p>New support ticket from <strong>${name}</strong> (${email}).<br>Subject: ${subject}<br><a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/support/${ticket.id}">View ticket</a></p>`,
         });
       } catch (err) {
-        console.error("Failed to trigger n8n support alert:", err);
+        console.error("Failed to send support ticket alert:", err);
       }
     })();
 

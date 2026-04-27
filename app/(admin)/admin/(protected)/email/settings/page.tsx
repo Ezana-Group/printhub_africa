@@ -8,23 +8,28 @@ export default async function AdminEmailSettingsPage() {
 
   await requireAdminSection("/admin/email/settings");
 
-  const mailboxes = await prisma.emailAddress.findMany({
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      address: true,
-      label: true,
-      isActive: true,
-      createdAt: true,
-    },
-  });
-
-  const staff = await prisma.user.findMany({
-    where: { role: "STAFF" },
-    select: { id: true, name: true, email: true },
-    orderBy: { name: "asc" },
-    take: 200,
-  });
+  const [mailboxes, staff, businessSettings] = await Promise.all([
+    prisma.emailAddress.findMany({
+      orderBy: { createdAt: "desc" },
+      select: { id: true, address: true, label: true, isActive: true, createdAt: true },
+    }),
+    prisma.user.findMany({
+      where: { role: "STAFF" },
+      select: { id: true, name: true, email: true },
+      orderBy: { name: "asc" },
+      take: 200,
+    }),
+    prisma.businessSettings.findUnique({
+      where: { id: "default" },
+      select: {
+        emailFrom: true,
+        emailFromName: true,
+        emailReplyTo: true,
+        adminAlertEmail: true,
+        resendApiKey: true,
+      },
+    }).catch(() => null),
+  ]);
 
   const mailboxIds = mailboxes.map((m) => m.id);
   const viewers = mailboxIds.length
@@ -40,6 +45,20 @@ export default async function AdminEmailSettingsPage() {
     viewersByMailboxId[v.mailboxId].push(v.userId);
   }
 
+  // Setup status — check env vars server-side, pass booleans only (no secret values)
+  const setupStatus = {
+    resendApiKey: !!(businessSettings?.resendApiKey || process.env.RESEND_API_KEY),
+    resendWebhookSecret: !!process.env.RESEND_WEBHOOK_SECRET,
+    cloudflareConfigured:
+      !!process.env.CLOUDFLARE_API_TOKEN &&
+      !!process.env.CLOUDFLARE_ZONE_ID &&
+      !!process.env.RESEND_INBOUND_ADDRESS,
+    fromEmail: businessSettings?.emailFrom || process.env.FROM_EMAIL || null,
+    fromName: businessSettings?.emailFromName || null,
+    replyTo: businessSettings?.emailReplyTo || null,
+    adminAlertEmail: businessSettings?.adminAlertEmail || null,
+  };
+
   return (
     <EmailMailboxSettingsClient
       mailboxes={mailboxes.map((m) => ({
@@ -51,6 +70,7 @@ export default async function AdminEmailSettingsPage() {
       }))}
       staff={staff.map((s) => ({ id: s.id, name: s.name, email: s.email }))}
       viewersByMailboxId={viewersByMailboxId}
+      setupStatus={setupStatus}
     />
   );
 
@@ -66,4 +86,3 @@ export default async function AdminEmailSettingsPage() {
     );
   }
 }
-

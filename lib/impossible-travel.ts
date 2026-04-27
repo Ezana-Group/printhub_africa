@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getLocationFromIp } from "@/lib/geo-detection";
-import { n8n } from "@/lib/n8n";
+import { sendAdminAlert } from "@/lib/email";
 
 export async function checkImpossibleTravel(params: {
   userId: string;
@@ -40,20 +40,11 @@ export async function checkImpossibleTravel(params: {
       const timeDiffMins = Math.floor(timeDiffMs / (60 * 1000));
       const reason = `Country changed from ${recentSession.ipCountry} to ${params.currentLocation.country} within ${timeDiffMins} minutes.`;
 
-      // Trigger n8n Alert Workflow
-      n8n.impossibleTravel({
-        userId: params.userId,
-        userEmail: recentSession.user?.email || "unknown",
-        userName: recentSession.user?.name || "Admin",
-        previousCountry: recentSession.ipCountry,
-        previousIp: recentSession.ipAddress || "unknown",
-        previousLoginAt: recentSession.lastActiveAt.toISOString(),
-        newCountry: params.currentLocation?.country || "unknown",
-        newIp: params.currentIp,
-        newLoginAt: new Date().toISOString(),
-        superAdminEmail: "it@printhub.africa",
-        adminProfileUrl: `${process.env.NEXT_PUBLIC_APP_URL}/admin/staff/${params.userId}`
-      }).catch(err => console.error("n8n impossible-travel alert failed:", err));
+      sendAdminAlert({
+        event: "Negative Review",
+        subject: `Impossible Travel Detected — ${recentSession.user?.email || params.userId}`,
+        html: `<p><strong>Security Alert: Impossible Travel</strong><br>${reason}<br>User: ${recentSession.user?.email}<br>Previous country: ${recentSession.ipCountry}<br>New country: ${params.currentLocation?.country}<br><a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/staff/${params.userId}">View profile</a></p>`,
+      }).catch(err => console.error("Admin alert (impossible travel) failed:", err));
 
       return { isSuspicious: true, reason };
     }

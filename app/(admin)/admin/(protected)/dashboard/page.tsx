@@ -10,7 +10,6 @@ import { formatPrice } from "@/lib/utils";
 import { RevenueChart, StatusPieChart } from "@/components/admin/dashboard-charts";
 import { canAccessRoute } from "@/lib/admin-permissions";
 import { ShoppingCart, Printer, FileText, ShieldCheck } from "lucide-react";
-import { N8nHealthCard } from "@/components/admin/n8n-health-card";
 
 const PRINT_JOB_TYPES = ["LARGE_FORMAT", "THREE_D_PRINT", "CUSTOM_PRINT"] as const;
 

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdminApi } from "@/lib/admin-api-guard";
 import { scrapeModelSource } from "@/lib/catalogue-scraper";
-import { n8n } from "@/lib/n8n";
 
 export async function POST(req: Request) {
   const auth = await requireAdminApi({ permission: "catalogue_import" }, req);
@@ -132,7 +131,7 @@ export async function POST(req: Request) {
       }
     });
 
-    // 2. Start background processing (Scrape -> Update -> n8n)
+    // 2. Start background processing (Scrape -> Update)
     // We execute this without awaiting to return a response to the admin UI immediately.
     (async () => {
       try {
@@ -183,23 +182,6 @@ export async function POST(req: Request) {
           console.error(`[Import] Re-host process failed:`, rehostError);
         }
 
-        /* 
-        // 3. Trigger n8n enhancement workflow (DISABLED: Use manual trigger on Review Page)
-        await n8n.catalogueImportEnhance({
-          importId: importQueue.id,
-          sourceUrl: importUrl,
-          platform: scrapedData.platform,
-          originalName: scrapedData.originalName,
-          originalDescription: scrapedData.originalDescription,
-          originalTags: scrapedData.originalTags,
-          imageUrls: (scrapedData.imageUrls || []).slice(0, 3),
-          designerName: scrapedData.designerName,
-          licenseType: scrapedData.licenseType,
-          downloadCount: scrapedData.downloadCount,
-          likeCount: scrapedData.likeCount
-        });
-        */
-        
         await prisma.catalogueImportQueue.update({
           where: { id: importQueue.id },
           data: { 

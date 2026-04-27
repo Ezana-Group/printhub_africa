@@ -28,7 +28,7 @@ function checkCronAuth(req: Request): boolean {
 
 export async function GET(req: Request) {
   return NextResponse.json({ 
-    message: "This cron task has been migrated to n8n automation. n8n pulls from /api/n8n/get-abandoned-carts every hour.",
+    message: "Abandoned cart detection is handled by the cron job. Enable and wire to email/WA notification logic.",
     migrated: true 
   });
 }

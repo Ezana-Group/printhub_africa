@@ -55,6 +55,7 @@ export async function PATCH(req: Request) {
       const row = await prisma.lFBusinessSettings.findFirst();
       const baseData = {
         labourRateKesPerHour: business.labourRateKesPerHour ?? row?.labourRateKesPerHour ?? 200,
+        threeDLabourRateKesPerHour: business.threeDLabourRateKesPerHour ?? row?.threeDLabourRateKesPerHour ?? 200,
         finishingTimeEyeletStd: business.finishingTimeEyeletStd ?? row?.finishingTimeEyeletStd ?? 0.1,
         finishingTimeEyeletHeavy: business.finishingTimeEyeletHeavy ?? row?.finishingTimeEyeletHeavy ?? 0.2,
         finishingTimeHemAll4: business.finishingTimeHemAll4 ?? row?.finishingTimeHemAll4 ?? 0.25,

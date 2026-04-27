@@ -124,37 +124,17 @@ export async function PATCH(
       }
     }
 
-    // --- AUTOMATION: n8n Status Trigger ---
-    if (status) {
+    if (status && (status === 'DELIVERED' || status === 'FAILED')) {
       void (async () => {
         try {
-          const { n8n } = await import("@/lib/n8n");
-          // Trigger staff alert for completion/failure
-          if (status === 'DELIVERED' || status === 'FAILED') {
-            await n8n.staffAlert({
-              type: 'PRODUCTION_DELAYED', // Using PRODUCTION_DELAYED as a generic status update bucket for now
-              title: `🚚 Delivery ${status}: #${delivery.order.orderNumber}`,
-              message: `Customer: ${customerName}\nStatus: ${status}${failureReason ? `\nReason: ${failureReason}` : ''}`,
-              urgency: status === 'FAILED' ? 'high' : 'low',
-              actionUrl: `${process.env.NEXT_PUBLIC_APP_URL}/admin/orders/${delivery.orderId}`,
-              targetRoles: ['STAFF', 'ADMIN']
-            });
-          }
-          
-          // Trigger global workflow (for WhatsApp/SMS)
-          await n8n.deliveryStatusChanged({
-            deliveryId: id,
-            orderId: delivery.orderId,
-            orderNumber: delivery.order.orderNumber,
-            status,
-            customerName,
-            customerEmail,
-            customerPhone: delivery.order.shippingAddress?.phone ?? undefined,
-            trackingNumber: trackingNumber ?? delivery.trackingNumber,
-            failureReason: failureReason ?? undefined
+          const { sendAdminAlert } = await import("@/lib/email");
+          await sendAdminAlert({
+            event: "Payment Received",
+            subject: `Delivery ${status}: Order #${delivery.order.orderNumber}`,
+            html: `<p>Delivery for <strong>#${delivery.order.orderNumber}</strong> marked <strong>${status}</strong>.<br>Customer: ${customerName}${failureReason ? `<br>Reason: ${failureReason}` : ''}<br><a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/orders/${delivery.orderId}">View order</a></p>`,
           });
         } catch (err) {
-          console.error("Failed to trigger n8n delivery alert:", err);
+          console.error("Admin alert (delivery status) failed:", err);
         }
       })();
     }

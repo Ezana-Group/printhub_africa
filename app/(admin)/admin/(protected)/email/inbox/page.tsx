@@ -204,6 +204,11 @@ export default async function AdminEmailInboxPage() {
     }
   }
 
+  const inboundReady =
+    !!process.env.RESEND_WEBHOOK_SECRET &&
+    !!process.env.RESEND_API_KEY &&
+    !!(process.env.CLOUDFLARE_API_TOKEN && process.env.CLOUDFLARE_ZONE_ID && process.env.RESEND_INBOUND_ADDRESS);
+
   return (
     <EmailInboxThreePane
       initialThreads={serializedThreads}
@@ -211,6 +216,7 @@ export default async function AdminEmailInboxPage() {
       currentUserEmail={session?.user?.email ?? undefined}
       initialSelectedThread={initialSelectedThread}
       initialEmails={initialEmails}
+      inboundReady={inboundReady}
     />
   );
 

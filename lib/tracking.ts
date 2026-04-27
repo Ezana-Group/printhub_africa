@@ -10,7 +10,7 @@ import { sendSMS } from "@/lib/africas-talking";
 import { klaviyoPlacedOrder } from "@/lib/marketing/klaviyo";
 import { waOrderConfirmation, waShippingUpdate } from "@/lib/marketing/whatsapp";
 import { sendMetaConversionsEvent, sendTikTokEventsApi, sendSnapConversionsEvent } from "@/lib/marketing/conversions-api";
-import { n8n } from "@/lib/n8n";
+import { sendAdminAlert } from "@/lib/email";
 
 export const TRACKING_EVENTS: Record<
   string,
@@ -196,56 +196,16 @@ export async function createTrackingEvent(
     const email = order.shippingAddress?.email ?? order.user?.email;
     const phone = order.shippingAddress?.phone ?? order.user?.phone;
 
-    // 1. Central n8n status update trigger
-    n8n.orderStatusChanged({
-      orderId: order.id,
-      orderNumber: order.orderNumber,
-      customerEmail: email || "unknown",
-      customerPhone: phone || "",
-      customerName: order.user?.name || "Customer",
-      previousStatus: "UNKNOWN", 
-      newStatus: status,
-      trackingUrl: order.trackingNumber ? `${process.env.NEXT_PUBLIC_APP_URL}/track?ref=${order.orderNumber}` : undefined,
-      estimatedDelivery: order.estimatedDelivery?.toISOString()
-    }).catch(err => console.error("n8n order-status-changed trigger failed:", err));
-
-    // 2. Specific n8n trigger for confirmed orders
+    // Staff alert for new confirmed orders
     if (status === "CONFIRMED") {
-      n8n.orderConfirmed({
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        customerId: order.userId || "guest",
-        customerEmail: email || "unknown",
-        customerPhone: phone || "",
-        customerName: order.user?.name || "Customer",
-        totalAmount: Number(order.total),
-        currency: "KES",
-        items: order.items.map(i => ({
-          name: i.product?.name || "Product",
-          quantity: i.quantity,
-          price: Number(i.unitPrice),
-          imageUrl: i.product?.images?.[0]
-        })),
-        paymentMethod: order.paymentMethod || "UNKNOWN",
-        deliveryMethod: (order as any).deliveryMethod || "UNKNOWN",
-        isCorporate: !!order.corporateId,
-        corporateId: order.corporateId || undefined
-      }).catch(err => console.error("n8n order-confirmed trigger failed:", err));
-
-      // 2b. Urgent Staff Alert for new revenue
-      n8n.staffAlert({
-        type: 'NEW_ORDER',
-        title: `💰 New Order #${order.orderNumber}`,
-        message: `New order from ${order.user?.name || 'Guest'} for KES ${Number(order.total).toLocaleString()}. Items: ${order.items.length}`,
-        urgency: 'high',
-        actionUrl: `${process.env.NEXT_PUBLIC_APP_URL}/admin/orders/${order.id}`,
-        targetRoles: ['STAFF', 'ADMIN']
-      }).catch(err => console.error("n8n staff-alert trigger failed:", err));
+      sendAdminAlert({
+        event: "New Order",
+        subject: `New Order #${order.orderNumber}`,
+        html: `<p>New order from <strong>${order.user?.name || 'Guest'}</strong> for <strong>KES ${Number(order.total).toLocaleString()}</strong>.<br>Items: ${order.items.length}<br><a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/orders/${order.id}">View order</a></p>`,
+      }).catch(err => console.error("Admin alert (new order) failed:", err));
     }
 
     // 3. Conversion API triggers (Server-side tracking)
-    // We keep these here for now as they are low-level tracking events, 
-    // though they could also move to n8n if desired.
     if (status === "CONFIRMED" && email && options?.userData) {
       const eventId = `order-${order.id}-${Date.now()}`;
       const userData = { ...options.userData, email, phone: phone || undefined };

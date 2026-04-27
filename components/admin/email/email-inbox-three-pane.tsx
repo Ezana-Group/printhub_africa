@@ -23,6 +23,7 @@ import {
   Settings,
   Download,
   Search,
+  AlertCircle,
 } from "lucide-react";
 import {
   Dialog,
@@ -148,12 +149,14 @@ export function EmailInboxThreePane({
   currentUserEmail,
   initialSelectedThread,
   initialEmails,
+  inboundReady = true,
 }: {
   initialThreads: ThreadRow[];
   mailboxes: Mailbox[];
   currentUserEmail?: string;
   initialSelectedThread?: ThreadDetail | null;
   initialEmails?: EmailRow[];
+  inboundReady?: boolean;
 }) {
   const router = useRouter();
 
@@ -387,10 +390,21 @@ export function EmailInboxThreePane({
 
   /* ───────── Render ───────── */
   return (
-    <div
-      className="flex h-full"
-      style={{ height: "calc(100vh - 3.5rem)" }}
-    >
+    <div className="flex flex-col h-full" style={{ height: "calc(100vh - 3.5rem)" }}>
+      {!inboundReady && (
+        <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 flex items-center gap-2 shrink-0">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>
+            Inbound email is not configured — emails sent to your mailboxes won&apos;t appear here.{" "}
+            <a href="/admin/email/settings" className="underline font-medium">
+              Configure in Email Settings →
+            </a>
+          </span>
+        </div>
+      )}
+      <div
+        className="flex flex-1 min-h-0"
+      >
       {/* ═══════════ PANE 1: MAILBOX SIDEBAR ═══════════ */}
       <div
         className="flex flex-col border-r border-border bg-white shrink-0 overflow-hidden"
@@ -634,9 +648,18 @@ export function EmailInboxThreePane({
               <p className="text-xs text-muted-foreground/60 mt-1">Drafting is not yet implemented</p>
             </div>
           ) : filteredThreads.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-              <Mail className="h-8 w-8 text-muted-foreground/40 mb-2" />
+            <div className="flex flex-col items-center justify-center py-12 px-4 text-center gap-2">
+              <Mail className="h-8 w-8 text-muted-foreground/40" />
               <p className="text-sm text-muted-foreground">No emails found</p>
+              {mailboxes.length === 0 && (
+                <p className="text-xs text-muted-foreground/70 max-w-[220px]">
+                  No mailboxes configured yet.{" "}
+                  <a href="/admin/email/settings" className="underline underline-offset-2 hover:text-foreground">
+                    Go to Email Settings
+                  </a>{" "}
+                  to add one.
+                </p>
+              )}
             </div>
           ) : (
             filteredThreads.map((t) => {
@@ -915,6 +938,7 @@ export function EmailInboxThreePane({
             </div>
           </>
         )}
+      </div>
       </div>
     </div>
   );

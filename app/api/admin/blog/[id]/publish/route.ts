@@ -45,7 +45,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       after: { status: "PUBLISHED", publishedAt: updated.publishedAt, publishedBy: userId },
     });
 
-    // TODO: Trigger n8n workflow for Medium/LinkedIn sync here if needed
+    // TODO: Wire direct Medium/LinkedIn sync when implemented
 
     return NextResponse.json(updated);
   } catch (error) {

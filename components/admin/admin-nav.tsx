@@ -166,7 +166,7 @@ export function AdminNav({
                 ) : false;
                 const showQuotesBadge = item.badge === "quotes" && newQuotesCount > 0;
                 const showApprovalBadge = item.badge === "approval" && pendingApprovalCount > 0;
-                const isExternal = item.href.startsWith("/api/admin/n8n");
+                const isExternal = false;
                 
                 if (isExternal) {
                   return (

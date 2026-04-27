@@ -6,8 +6,7 @@ import { prisma } from "@/lib/prisma";
 import * as bcrypt from "bcryptjs";
 import * as crypto from "crypto";
 import { verifySync } from "otplib";
-import { sendEmail } from "@/lib/email";
-import { n8n } from "@/lib/n8n";
+import { sendEmail, sendAdminAlert } from "@/lib/email";
 
 /**
  * Server-side authentication helper for Admin/Staff routes.
@@ -143,29 +142,10 @@ export const authOptionsAdmin: NextAuthOptions = {
               data: { revokedAt: new Date() },
             });
             
-            // n8n Trigger: Security Alert (Impossible Travel)
-            n8n.securityAlert({
-              type: 'IMPOSSIBLE_TRAVEL',
-              affectedUserId: user.id,
-              affectedUserEmail: user.email,
-              affectedUserName: user.name || user.email,
-              details: { reason, location: currentLocation, ip },
-              superAdminEmail: process.env.SUPER_ADMIN_EMAIL || "admin@printhub.africa"
-            }).catch(err => console.error("n8n security-alert trigger failed:", err));
-            
-            // n8n Trigger: Specific Impossible Travel Trigger (if using separate workflow)
-            n8n.impossibleTravel({
-              userId: user.id,
-              userEmail: user.email,
-              userName: user.name || user.email,
-              previousCountry: "UNKNOWN", // Fetching this would require another query
-              previousIp: "UNKNOWN",
-              previousLoginAt: new Date().toISOString(),
-              newCountry: currentLocation?.country || "unknown",
-              newIp: ip,
-              newLoginAt: new Date().toISOString(),
-              superAdminEmail: process.env.SUPER_ADMIN_EMAIL || "admin@printhub.africa",
-              adminProfileUrl: `${process.env.NEXT_PUBLIC_ADMIN_URL}/admin/staff/${user.id}`
+            sendAdminAlert({
+              event: "Negative Review",
+              subject: `Security Alert: Impossible Travel — ${user.email}`,
+              html: `<p><strong>Impossible travel detected for ${user.email}.</strong><br>${reason}<br>New country: ${currentLocation?.country}<br>IP: ${ip}<br><a href="${process.env.NEXT_PUBLIC_ADMIN_URL}/admin/staff/${user.id}">View profile</a></p>`,
             }).catch(console.error);
 
             // Write to AuditLog (FIXED: added entity)
@@ -210,18 +190,11 @@ export const authOptionsAdmin: NextAuthOptions = {
             data: { userId: user.id, fingerprint: fingerprint },
           });
           
-          // Trigger n8n: New Device login
-          n8n.newStaffLogin({
-            userId: user.id,
-            userEmail: user.email,
-            userName: user.name || user.email,
-            ipAddress: ip,
-            userAgent: userAgent,
-            city: currentLocation?.city || null,
-            country: currentLocation?.country || null,
-            loginAt: new Date().toISOString(),
-            revokeUrl: `${process.env.NEXT_PUBLIC_ADMIN_URL}/security/revoke?token=${adminSession.sessionToken}`
-          }).catch(err => console.error("n8n new-staff-login trigger failed:", err));
+          sendAdminAlert({
+            event: "Maintenance Alert",
+            subject: `New device login — ${user.email}`,
+            html: `<p>Staff login from a new device.<br>User: ${user.email}<br>IP: ${ip} (${currentLocation?.city}, ${currentLocation?.country})<br><a href="${process.env.NEXT_PUBLIC_ADMIN_URL}/security/revoke?token=${adminSession.sessionToken}">Revoke session</a></p>`,
+          }).catch(err => console.error("Admin alert (new device) failed:", err));
         } else {
           // @ts-ignore - KnownAdminDevice is in schema
           await prisma.knownAdminDevice.update({

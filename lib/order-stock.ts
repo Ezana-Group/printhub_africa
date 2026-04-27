@@ -78,19 +78,13 @@ export async function decrementOrderStock(orderId: string): Promise<void> {
         },
       });
 
-      // Check for low stock alert
       if (updatedInv.quantity <= updatedInv.lowStockThreshold) {
-        const { n8n } = await import("@/lib/n8n");
-        n8n.lowStock({
-          items: [{
-            itemId: updatedInv.id,
-            itemName: updatedInv.product.name,
-            itemType: 'Product',
-            currentStock: updatedInv.quantity,
-            minimumStock: updatedInv.lowStockThreshold,
-            unit: 'units'
-          }]
-        }).catch(err => console.error("n8n low-stock trigger failed:", err));
+        const { sendAdminAlert } = await import("@/lib/email");
+        sendAdminAlert({
+          event: "Low Stock",
+          subject: `Low stock: ${updatedInv.product.name}`,
+          html: `<p><strong>${updatedInv.product.name}</strong> is low on stock.<br>Current: ${updatedInv.quantity} units · Threshold: ${updatedInv.lowStockThreshold}</p>`,
+        }).catch(err => console.error("Admin alert (low stock) failed:", err));
       }
     } else {
       if (variantId) {
@@ -109,19 +103,13 @@ export async function decrementOrderStock(orderId: string): Promise<void> {
           },
         });
 
-        // Simple check for variant stock
-        if (variant.stock <= 5) { // default threshold for variants without explicit inventory
-          const { n8n } = await import("@/lib/n8n");
-          n8n.lowStock({
-            items: [{
-              itemId: variant.id,
-              itemName: `${variant.product.name} (${variant.name})`,
-              itemType: 'Product',
-              currentStock: variant.stock,
-              minimumStock: 5,
-              unit: 'units'
-            }]
-          }).catch(err => console.error("n8n low-stock trigger failed:", err));
+        if (variant.stock <= 5) {
+          const { sendAdminAlert } = await import("@/lib/email");
+          sendAdminAlert({
+            event: "Low Stock",
+            subject: `Low stock: ${variant.product.name} (${variant.name})`,
+            html: `<p><strong>${variant.product.name} (${variant.name})</strong> is low on stock.<br>Current: ${variant.stock} units · Threshold: 5</p>`,
+          }).catch(err => console.error("Admin alert (low stock variant) failed:", err));
         }
       } else {
         const product = await prisma.product.update({
@@ -139,17 +127,12 @@ export async function decrementOrderStock(orderId: string): Promise<void> {
         });
 
         if (product.stock !== null && product.lowStockThreshold !== null && product.stock <= product.lowStockThreshold) {
-          const { n8n } = await import("@/lib/n8n");
-          n8n.lowStock({
-            items: [{
-              itemId: product.id,
-              itemName: product.name,
-              itemType: 'Product',
-              currentStock: product.stock,
-              minimumStock: product.lowStockThreshold,
-              unit: 'units'
-            }]
-          }).catch(err => console.error("n8n low-stock trigger failed:", err));
+          const { sendAdminAlert } = await import("@/lib/email");
+          sendAdminAlert({
+            event: "Low Stock",
+            subject: `Low stock: ${product.name}`,
+            html: `<p><strong>${product.name}</strong> is low on stock.<br>Current: ${product.stock} units · Threshold: ${product.lowStockThreshold}</p>`,
+          }).catch(err => console.error("Admin alert (low stock product) failed:", err));
         }
       }
     }

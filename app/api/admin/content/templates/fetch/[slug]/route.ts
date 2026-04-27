@@ -4,7 +4,7 @@ import crypto from "crypto";
 
 /**
  * GET /api/admin/content/templates/fetch/[slug]
- * Secure endpoint for n8n to fetch a template by slug.
+ * Secure endpoint to fetch a template by slug.
  * Requires x-printhub-signature for internal security.
  */
 export async function GET(
@@ -14,14 +14,14 @@ export async function GET(
   const { slug } = params;
   const signature = request.headers.get("x-printhub-signature");
   
-  // Verification logic using N8N_WEBHOOK_SECRET
-  const secret = process.env.N8N_WEBHOOK_SECRET || "";
+  // Verification logic using INTERNAL_WEBHOOK_SECRET
+  const secret = process.env.INTERNAL_WEBHOOK_SECRET ?? process.env.N8N_WEBHOOK_SECRET || "";
   if (!signature || signature !== secret) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    // Check WhatsApp templates first (most common for n8n)
+    // Check WhatsApp templates first
     let template: any = await prisma.whatsAppTemplate.findUnique({
       where: { slug },
     });

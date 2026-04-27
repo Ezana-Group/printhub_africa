@@ -186,41 +186,13 @@ export async function POST(req: NextRequest) {
         quote.quoteNumber,
         typeLabels[typeDb] ?? typeDb
       ),
-      // 2. Staff Alerts (WhatsApp/Telegram)
+      // 2. Staff alert email
       (async () => {
-        const { n8n } = await import("@/lib/n8n");
-        return n8n.staffAlert({
-          type: 'NEW_QUOTE',
-          title: `📄 New Quote Request #${quote.quoteNumber}`,
-          message: `Type: ${typeLabels[typeDb] || typeDb}\nCustomer: ${quote.customerName}\nProject: ${quote.projectName || 'N/A'}\nBudget: ${quote.budgetRange || 'Unspecified'}`,
-          urgency: 'medium',
-          actionUrl: `${process.env.NEXT_PUBLIC_APP_URL}/admin/quotes/${quote.id}`,
-          targetRoles: ['STAFF', 'ADMIN']
-        });
-      })(),
-      // 3. n8n Master Trigger (with PDF)
-      (async () => {
-        const { n8n } = await import("@/lib/n8n");
-        let pdfBase64: string | undefined;
-        try {
-          const { generateQuotePdfBuffer } = await import("@/lib/quote-pdf");
-          const buffer = await generateQuotePdfBuffer(quote.id);
-          if (buffer) {
-            pdfBase64 = buffer.toString("base64");
-          }
-        } catch (err) {
-          console.error("Failed to generate quote PDF for n8n:", err);
-        }
-
-        return n8n.quoteSubmitted({
-          quoteId: quote.id,
-          customerEmail: quote.customerEmail,
-          customerName: quote.customerName,
-          quoteType: typeDb,
-          projectName: quote.projectName || undefined,
-          reviewUrl: `${process.env.NEXT_PUBLIC_APP_URL}/admin/quotes/${quote.id}`,
-          pdfBase64,
-          specifications: quote.specifications
+        const { sendAdminAlert } = await import("@/lib/email");
+        return sendAdminAlert({
+          event: "Quote Request",
+          subject: `New Quote #${quote.quoteNumber} — ${quote.customerName}`,
+          html: `<p>New quote request from <strong>${quote.customerName}</strong>.<br>Type: ${typeLabels[typeDb] || typeDb}<br>Project: ${quote.projectName || 'N/A'}<br><a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/quotes/${quote.id}">Review quote</a></p>`,
         });
       })()
     ]).catch((err) => console.error("Quote triggers error:", err));

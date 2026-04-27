@@ -55,19 +55,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  if (!process.env.CLOUDFLARE_API_TOKEN || !process.env.CLOUDFLARE_ZONE_ID) {
-    return NextResponse.json(
-      { error: "Cloudflare Email Routing is not configured (missing CLOUDFLARE_API_TOKEN or CLOUDFLARE_ZONE_ID)" },
-      { status: 503 }
-    );
-  }
-  const resendInboundAddress = process.env.RESEND_INBOUND_ADDRESS;
-  if (!resendInboundAddress) {
-    return NextResponse.json(
-      { error: "Missing RESEND_INBOUND_ADDRESS for Cloudflare forwarding rule" },
-      { status: 503 }
-    );
-  }
+  const cloudflareConfigured =
+    !!process.env.CLOUDFLARE_API_TOKEN &&
+    !!process.env.CLOUDFLARE_ZONE_ID &&
+    !!process.env.RESEND_INBOUND_ADDRESS;
 
   let json: unknown;
   try {
@@ -88,55 +79,62 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Mailbox address must end with @printhub.africa" }, { status: 400 });
   }
 
-  // 1) Call Cloudflare Email Routing API to add a forwarding rule.
-  const zoneId = process.env.CLOUDFLARE_ZONE_ID;
-  const cfToken = process.env.CLOUDFLARE_API_TOKEN;
-  // [Cloudflare] API — updated to use header auth + error handling
-  const cfResp = await fetch(
-    `https://api.cloudflare.com/client/v4/zones/${zoneId}/email/routing/rules`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${cfToken}`,
-        "Content-Type": "application/json",
-        "User-Agent": "PrintHub/1.0 (https://printhub.africa)"
-      },
-      body: JSON.stringify({
-        actions: [{ type: "forward", value: [resendInboundAddress] }],
-        matchers: [{ type: "literal", field: "to", value: address }],
-        enabled: true,
-        name: label,
-      }),
-    }
-  );
+  // 1) Optionally register forwarding rule in Cloudflare Email Routing.
+  if (cloudflareConfigured) {
+    const zoneId = process.env.CLOUDFLARE_ZONE_ID;
+    const cfToken = process.env.CLOUDFLARE_API_TOKEN;
+    const resendInboundAddress = process.env.RESEND_INBOUND_ADDRESS!;
 
-  if (!cfResp.ok) {
-    const text = await cfResp.text().catch(() => "");
-    console.error(`[Cloudflare] API error ${cfResp.status}:`, text);
-    return NextResponse.json(
-      { error: "Failed to create Cloudflare forwarding rule", details: text || undefined },
-      { status: 502 }
+    const cfResp = await fetch(
+      `https://api.cloudflare.com/client/v4/zones/${zoneId}/email/routing/rules`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${cfToken}`,
+          "Content-Type": "application/json",
+          "User-Agent": "PrintHub/1.0 (https://printhub.africa)",
+        },
+        body: JSON.stringify({
+          actions: [{ type: "forward", value: [resendInboundAddress] }],
+          matchers: [{ type: "literal", field: "to", value: address }],
+          enabled: true,
+          name: label,
+        }),
+      }
     );
+
+    if (!cfResp.ok) {
+      const text = await cfResp.text().catch(() => "");
+      console.error(`[Cloudflare] API error ${cfResp.status}:`, text);
+      return NextResponse.json(
+        { error: "Failed to create Cloudflare forwarding rule", details: text || undefined },
+        { status: 502 }
+      );
+    }
   }
 
   // 2) Create EmailAddress in DB.
   try {
     const emailAddress = await prisma.emailAddress.create({
-      data: {
-        address,
-        label,
-        isActive: true,
-      },
+      data: { address, label, isActive: true },
     });
 
     return NextResponse.json({
       success: true,
+      inboundReady: cloudflareConfigured,
+      warning: cloudflareConfigured
+        ? undefined
+        : "Mailbox saved. Inbound email will not work until CLOUDFLARE_API_TOKEN, CLOUDFLARE_ZONE_ID, and RESEND_INBOUND_ADDRESS are configured.",
       emailAddress,
     });
   } catch (e) {
-    // If Cloudflare succeeded but DB failed (e.g. duplicate address), we still return a useful error.
     return NextResponse.json(
-      { error: "Mailbox created in Cloudflare but failed to save in DB", details: String(e) },
+      {
+        error: cloudflareConfigured
+          ? "Mailbox created in Cloudflare but failed to save in DB"
+          : "Failed to save mailbox in DB",
+        details: String(e),
+      },
       { status: 500 }
     );
   }
