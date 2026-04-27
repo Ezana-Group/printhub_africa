@@ -10,6 +10,7 @@ import { TawkTo } from "@/components/TawkTo";
 import { getCachedBusinessPublic, getCachedBusinessMetadata } from "@/lib/cache/unstable-cache";
 import { getServiceFlags } from "@/lib/service-flags";
 import type { BusinessPublic } from "@/lib/business-public";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic"; // no DB at Docker build — render at request time
 // Revalidate every 5 min so public pages can be cached (TTFB optimisation)
@@ -83,13 +84,21 @@ export default async function PublicLayout({
   };
   let business = fallbackBusiness;
   let largeFormatEnabled = false;
+  let floatMessage: string | null = null;
   try {
-    const [businessData, flags] = await Promise.all([
+    const [businessData, flags, waTemplate] = await Promise.all([
       getCachedBusinessPublic(),
       getServiceFlags(),
+      // Read the "general-inquiry-whatsapp" template for the float button.
+      // Falls back to business.whatsappPrefilledMessage if not found.
+      prisma.whatsAppTemplate
+        .findUnique({ where: { slug: "general-inquiry-whatsapp" }, select: { bodyText: true } })
+        .catch(() => null),
     ]);
     business = businessData;
     largeFormatEnabled = flags.largeFormatEnabled;
+    // Template takes priority over the settings field
+    floatMessage = waTemplate?.bodyText ?? business.whatsappPrefilledMessage ?? null;
   } catch (error) {
     console.error("[public-layout] Falling back to defaults:", error);
   }
@@ -129,9 +138,9 @@ export default async function PublicLayout({
       <EmailVerificationBanner />
       <main id="main-content" className="min-h-[calc(100vh-8rem)]">{children}</main>
       <Footer business={business} largeFormatEnabled={largeFormatEnabled} />
-      <WhatsAppFloat 
-        whatsapp={business.whatsapp} 
-        message={business.whatsappPrefilledMessage}
+      <WhatsAppFloat
+        whatsapp={business.whatsapp}
+        message={floatMessage}
         visible={business.whatsappFloatingButton}
       />
       <CookieBanner />

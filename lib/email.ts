@@ -417,13 +417,24 @@ export async function sendQuoteSentToCustomerEmail(
   quoteNumber: string,
   quotedAmountKes: number,
   breakdown: string | null,
-  validityDays: number | null
+  validityDays: number | null,
+  opts?: {
+    projectName?: string | null;
+    customerName?: string | null;
+    assignedStaff?: string | null;
+    quoteDeadline?: Date | string | null;
+  }
 ) {
   const { businessName, footer } = await getEmailBranding();
   const quotesUrl = `${baseUrl}/account/quotes`;
   const validity = validityDays ? `Valid for ${validityDays} days.` : "";
   const breakdownHtml = breakdown
     ? `<p><strong>Breakdown:</strong></p><p style="white-space: pre-wrap;">${breakdown.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`
+    : "";
+  const customerName = opts?.customerName ?? "";
+  const firstName = customerName.split(" ")[0] ?? "";
+  const deadlineStr = opts?.quoteDeadline
+    ? new Date(opts.quoteDeadline).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
     : "";
   const context = {
     businessName,
@@ -434,6 +445,12 @@ export async function sendQuoteSentToCustomerEmail(
     validity,
     breakdownHtml,
     quotesUrl,
+    projectName: opts?.projectName ?? "",
+    customerName,
+    firstName,
+    assignedStaff: opts?.assignedStaff ?? "",
+    quoteDeadline: deadlineStr,
+    quoteStatus: "Quoted",
   };
   const defaultSubject = `Your quote ${quoteNumber} – ${businessName}`;
   const defaultHtml = `
@@ -821,12 +838,21 @@ export async function sendCorporateApplicationRejectedEmail(
 export async function sendDeliveryDispatchedEmail(
   email: string,
   orderNumber: string,
-  trackingNumber?: string | null
+  trackingNumber?: string | null,
+  opts?: {
+    courierName?: string | null;
+    deliveryMethod?: string | null;
+    estimatedDeliveryDate?: Date | string | null;
+    deliveryZone?: string | null;
+  }
 ) {
   const { businessName, footer } = await getEmailBranding();
   const trackUrl = `${baseUrl}/track?ref=${encodeURIComponent(orderNumber)}`;
   const trackingLine = trackingNumber
     ? `<p><strong>Tracking:</strong> ${trackingNumber}</p>`
+    : "";
+  const estimatedStr = opts?.estimatedDeliveryDate
+    ? new Date(opts.estimatedDeliveryDate).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
     : "";
   const context = {
     businessName,
@@ -835,6 +861,10 @@ export async function sendDeliveryDispatchedEmail(
     trackingNumber: trackingNumber ?? "",
     trackingLine,
     trackUrl,
+    courierName: opts?.courierName ?? "",
+    deliveryMethod: opts?.deliveryMethod ?? "",
+    estimatedDeliveryDate: estimatedStr,
+    deliveryZone: opts?.deliveryZone ?? "",
   };
   const defaultSubject = `Order ${orderNumber} is on its way – ${businessName}`;
   const defaultHtml = `

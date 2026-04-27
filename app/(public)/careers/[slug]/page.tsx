@@ -37,7 +37,13 @@ export default async function JobPage({ params }: Props) {
   try {
 
   const { slug } = await params;
-  const [job, business] = await Promise.all([getJob(slug), getBusinessPublic()]);
+  const [job, business, waShareTemplate] = await Promise.all([
+    getJob(slug),
+    getBusinessPublic(),
+    prisma.whatsAppTemplate
+      .findUnique({ where: { slug: "careers-share-whatsapp" }, select: { bodyText: true } })
+      .catch(() => null),
+  ]);
   if (!job) notFound();
 
   const typeLabel =
@@ -180,9 +186,19 @@ export default async function JobPage({ params }: Props) {
                     LinkedIn
                   </a>
                   <a
-                    href={`https://wa.me/${(business.whatsapp ?? "").replace(/\D/g, "") || "254700000000"}?text=${encodeURIComponent(
-                      `Check out this role at ${business.businessName}: ${job.title}`
-                    )}`}
+                    href={(() => {
+                      const siteBase = (process.env.NEXT_PUBLIC_APP_URL ?? `https://${business.website}`).replace(/\/$/, "");
+                      const jobUrl = `${siteBase}/careers/${slug}`;
+                      const waDigits = (business.whatsapp ?? "").replace(/\D/g, "") || "254700000000";
+                      const template = waShareTemplate?.bodyText
+                        ?? `Check out this role at {{companyName}}: {{jobTitle}} — {{productUrl}}`;
+                      const msg = template
+                        .replace(/\{\{jobTitle\}\}/g, job.title)
+                        .replace(/\{\{companyName\}\}/g, business.businessName)
+                        .replace(/\{\{productUrl\}\}/g, jobUrl)
+                        .replace(/\{\{jobUrl\}\}/g, jobUrl);
+                      return `https://wa.me/${waDigits}?text=${encodeURIComponent(msg)}`;
+                    })()}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-white/60 hover:text-white text-sm"

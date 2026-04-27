@@ -37,6 +37,8 @@ export async function PATCH(
     const delivery = await prisma.delivery.findUnique({
       where: { id },
       include: {
+        assignedCourier: { select: { name: true } },
+        deliveryZone: { select: { name: true } },
         order: {
           include: {
             shippingAddress: true,
@@ -100,7 +102,13 @@ export async function PATCH(
           await sendDeliveryDispatchedEmail(
             customerEmail,
             delivery.order.orderNumber,
-            trackingNumber ?? delivery.trackingNumber
+            trackingNumber ?? delivery.trackingNumber,
+            {
+              courierName: delivery.assignedCourier?.name ?? null,
+              deliveryMethod: delivery.method ?? null,
+              estimatedDeliveryDate: delivery.estimatedDelivery ?? null,
+              deliveryZone: delivery.deliveryZone?.name ?? null,
+            }
           );
         } else if (status === "DELIVERED") {
           await sendDeliveryDeliveredEmail(customerEmail, delivery.order.orderNumber);

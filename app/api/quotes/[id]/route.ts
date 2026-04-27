@@ -82,7 +82,7 @@ export async function PATCH(
 
   const quote = await prisma.quote.findUnique({
     where: { id },
-    include: { assignedStaff: { select: { user: { select: { email: true } } } } },
+    include: { assignedStaff: { select: { user: { select: { email: true, name: true } } } } },
   });
   if (!quote) return NextResponse.json({ error: "Quote not found" }, { status: 404 });
 
@@ -204,7 +204,13 @@ export async function PATCH(
       quote.quoteNumber,
       data.quotedAmount,
       data.quoteBreakdown ?? null,
-      data.quoteValidityDays ?? null
+      data.quoteValidityDays ?? null,
+      {
+        projectName: quote.projectName ?? null,
+        customerName: quote.customerName ?? null,
+        assignedStaff: quote.assignedStaff?.user?.name ?? null,
+        quoteDeadline: quote.deadline ?? null,
+      }
     ).catch((err) => console.error("Quote sent to customer email error:", err));
   }
 
