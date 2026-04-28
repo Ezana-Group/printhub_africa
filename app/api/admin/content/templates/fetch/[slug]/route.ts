@@ -9,13 +9,13 @@ import crypto from "crypto";
  */
 export async function GET(
   request: Request,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
-  const { slug } = params;
+  const { slug } = await params;
   const signature = request.headers.get("x-printhub-signature");
   
   // Verification logic using INTERNAL_WEBHOOK_SECRET
-  const secret = process.env.INTERNAL_WEBHOOK_SECRET ?? process.env.N8N_WEBHOOK_SECRET || "";
+  const secret = (process.env.INTERNAL_WEBHOOK_SECRET ?? process.env.N8N_WEBHOOK_SECRET) || "";
   if (!signature || signature !== secret) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
